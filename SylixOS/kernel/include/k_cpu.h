@@ -1,0 +1,183 @@
+/*********************************************************************************************************
+**
+**                                    中国软件开源组织
+**
+**                                   嵌入式实时操作系统
+**
+**                                       SylixOS(TM)
+**
+**                               Copyright  All Rights Reserved
+**
+**--------------文件信息--------------------------------------------------------------------------------
+**
+** 文   件   名: k_cpu.h
+**
+** 创   建   人: Han.Hui (韩辉)
+**
+** 文件创建日期: 2009 年 04 月 07 日
+**
+** 描        述: CPU 信息描述.
+**
+** BUG:
+2013.07.18  去掉 cpu 信息中 优先级的记录, 1.0.0-rc40 以后的 SylixOS 不再使用. 
+*********************************************************************************************************/
+
+#ifndef __K_CPU_H
+#define __K_CPU_H
+
+/*********************************************************************************************************
+  CPU 工作状态 (目前只支持 ACTIVE 模式)
+*********************************************************************************************************/
+
+#define LW_CPU_STATUS_ACTIVE            0x80000000                      /*  CPU 有效                    */
+#define LW_CPU_STATUS_INACTIVE          0x00000000                      /*  CPU 无效                    */
+
+/*********************************************************************************************************
+  CPU 内容 (全部使用 ulong 和 指针型, 使移植方便)
+*********************************************************************************************************/
+
+typedef struct __lw_cpu {
+    /*
+     *  运行线程情况
+     */
+    PLW_CLASS_TCB            CPU_ptcbTCBCur;                            /*  当前 TCB                    */
+    PLW_CLASS_TCB            CPU_ptcbTCBHigh;                           /*  需要运行的高优先 TCB        */
+    
+#if LW_CFG_COROUTINE_EN > 0
+    /*
+     *  协程切换信息
+     */
+    PLW_CLASS_COROUTINE      CPU_pcrcbCur;                              /*  当前协程                    */
+    PLW_CLASS_COROUTINE      CPU_pcrcbNext;                             /*  需要切换的目标协程          */
+#else
+    PVOID                    CPU_pvNull[2];                             /*  保存下面成员偏移量一致      */
+#endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */
+
+    /*
+     *  当前发生调度的调度方式
+     */
+    BOOL                     CPU_bIsIntSwtich;                          /*  是否为中断调度              */
+
+    /*
+     *  候选运行结构
+     */
+    LW_CLASS_CAND            CPU_cand;                                  /*  候选运行的线程              */
+
+    /*
+     *  内核锁定状态
+     */
+    volatile INT             CPU_iKernelCounter;                        /*  内核状态计数器              */
+
+    /*
+     *  核间中断待处理标志, 这里最多有 ULONG 位数个核间中断类型, 和 CPU 硬件中断向量原理相同
+     */
+    LW_SPINLOCK_DEFINE      (CPU_slIpi);                                /*  核间中断锁                  */
+    PLW_LIST_RING            CPU_pringMsg;                              /*  自定义核间中断参数          */
+    ULONG                    CPU_ulIPIVector;                           /*  核间中断向量                */
+    volatile ULONG           CPU_ulIPIPend;                             /*  核间中断标志码              */
+
+#define LW_IPI_NOP              0                                       /*  测试用核间中断向量          */
+#define LW_IPI_SCHED            1                                       /*  调度请求                    */
+#define LW_IPI_STATUS_REQ       2                                       /*  任务状态切换请求            */
+#define LW_IPI_FLUSH_TLB        3                                       /*  更新页表                    */
+#define LW_IPI_CALL             4                                       /*  自定义调用 (有参数可选等待) */
+
+#define LW_IPI_NOP_MSK          (1 << LW_IPI_NOP)
+#define LW_IPI_SCHED_MSK        (1 << LW_IPI_SCHED)
+#define LW_IPI_STATUS_REQ_MSK   (1 << LW_IPI_STATUS_REQ)
+#define LW_IPI_FLUSH_TLB_MSK    (1 << LW_IPI_FLUSH_TLB)
+#define LW_IPI_CALL_MSK         (1 << LW_IPI_CALL)
+
+    /*
+     *  spinlock 等待表
+     */
+    union {
+        LW_LIST_LINE         CPUQ_lineSpinlock;                         /*  PRIORITY 等待表             */
+        LW_LIST_RING         CPUQ_ringSpinlock;                         /*  FIFO 等待表                 */
+    } CPU_cpuq;
+
+#define CPU_lineSpinlock     CPU_cpuq.CPUQ_lineSpinlock
+#define CPU_ringSpinlock     CPU_cpuq.CPUQ_ringSpinlock
+
+    /*
+     *  CPU 基本信息
+     */
+    volatile ULONG           CPU_ulCPUId;                               /*  CPU ID 号                   */
+    volatile ULONG           CPU_ulStatus;                              /*  CPU 工作状态                */
+
+    /*
+     *  中断信息
+     */
+    ULONG                    CPU_ulInterNesting;                        /*  中断嵌套计数器              */
+    ULONG                    CPU_ulInterNestingMax;                     /*  中断嵌套最大值              */
+    ULONG                    CPU_ulInterError[LW_CFG_MAX_INTER_SRC];    /*  中断错误信息                */
+    
+#if LW_CFG_CPU_FPU_EN > 0
+    /*
+     *  中断时使用的 FPU 上下文. 只有 _K_bInterFpuEn 有效时才进行中断状态的 FPU 上下文操作.
+     */
+    LW_FPU_CONTEXT           CPU_fpuctxContext[LW_CFG_MAX_INTER_SRC];   /*  中断时使用的 FPU 上下文     */
+#endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
+} LW_CLASS_CPU;
+typedef LW_CLASS_CPU        *PLW_CLASS_CPU;
+
+/*********************************************************************************************************
+  当前 CPU 信息 LW_NCPUS 决不能大于 LW_CFG_MAX_PROCESSORS
+*********************************************************************************************************/
+
+#ifdef  __SYLIXOS_KERNEL
+
+#if LW_CFG_SMP_EN > 0
+ULONG   archMpCur(VOID);
+#define LW_CPU_GET_CUR_ID()  archMpCur()                                /*  获得当前 CPU ID             */
+#define LW_NCPUS             (_K_ulNCpus)
+#else
+#define LW_CPU_GET_CUR_ID()  0
+#define LW_NCPUS             1
+#endif                                                                  /*  LW_CFG_SMP_EN               */
+
+extern LW_CLASS_CPU          _K_cpuTable[];                             /*  处理器表                    */
+#define LW_CPU_GET_CUR()     (&_K_cpuTable[LW_CPU_GET_CUR_ID()])        /*  获得当前 CPU 结构           */
+#define LW_CPU_GET(id)       (&_K_cpuTable[(id)])                       /*  获得指定 CPU 结构           */
+
+/*********************************************************************************************************
+  CPU 状态
+*********************************************************************************************************/
+
+#define LW_CPU_IS_ACTIVE(pcpu)  \
+        ((pcpu)->CPU_ulStatus & LW_CPU_STATUS_ACTIVE)
+
+/*********************************************************************************************************
+  CPU 核间中断
+*********************************************************************************************************/
+
+#define LW_CPU_ADD_IPI_PEND(id, ipi_msk)    \
+        (_K_cpuTable[(id)].CPU_ulIPIPend |= (ipi_msk))                  /*  加入指定 CPU 核间中断 pend  */
+#define LW_CPU_CLR_IPI_PEND(id, ipi_msk)    \
+        (_K_cpuTable[(id)].CPU_ulIPIPend &= ~(ipi_msk))                 /*  清除指定 CPU 核间中断 pend  */
+#define LW_CPU_GET_IPI_PEND(id)             \
+        (_K_cpuTable[(id)].CPU_ulIPIPend)                               /*  获取指定 CPU 核间中断 pend  */
+        
+#define LW_CPU_ADD_IPI_PEND2(pcpu, ipi_msk)    \
+        (pcpu->CPU_ulIPIPend |= (ipi_msk))                              /*  加入指定 CPU 核间中断 pend  */
+#define LW_CPU_CLR_IPI_PEND2(pcpu, ipi_msk)    \
+        (pcpu->CPU_ulIPIPend &= ~(ipi_msk))                             /*  清除指定 CPU 核间中断 pend  */
+#define LW_CPU_GET_IPI_PEND2(pcpu)             \
+        (pcpu->CPU_ulIPIPend)                                           /*  获取指定 CPU 核间中断 pend  */
+        
+/*********************************************************************************************************
+  当前 CPU 中断信息
+*********************************************************************************************************/
+
+#define LW_CPU_GET_NESTING(id)          (_K_cpuTable[(id)].CPU_ulInterNesting)
+#define LW_CPU_GET_NESTING_MAX(id)      (_K_cpuTable[(id)].CPU_ulInterNestingMax)
+
+#define LW_CPU_GET_CUR_NESTING()        LW_CPU_GET_CUR()->CPU_ulInterNesting
+#define LW_CPU_GET_CUR_NESTING_MAX()    LW_CPU_GET_CUR()->CPU_ulInterNestingMax
+
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
+
+#endif                                                                  /*  __K_CPU_H                   */
+/*********************************************************************************************************
+  END
+*********************************************************************************************************/

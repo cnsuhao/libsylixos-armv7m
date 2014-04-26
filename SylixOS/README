@@ -1,0 +1,133 @@
+20:34 2009-3-5
+
+--SylixOS--
+
+overview:
+SylixOS(TM) [www.sylixos.com] is real-time operating system, that support SMP and MPI multiprocessor.
+Longwind(TM) is SylixOS kernel name.
+
+1: here is SylixOS source code root directory.
+
+compiler:
+1: compiler SylixOS:
+    It is recommended to use GCC, of course, you can also use arm-cc or other C compiler.
+    If you use GCC and have 'make' tools, you can use 'make all' command compiler SylixOS source code.
+    If you use other C compiler, you must see SylixOS Makefile file and setting the compiler paramter like this.
+    For example, you must add the following path into the compiler default search path:
+    
+    1: "SylixOS"
+    2: "SylixOS/include"
+    3: "SylixOS/include/inet"
+    4: "SylixOS/include/inet/ipv4"
+    5: "SylixOS/include/inet/ipv6"
+    6: "SylixOS/include/arch/arm" (ARM)
+    7: "SylixOS/include/arch/arm" (x86)
+    ...
+    
+2: compiler application:
+    It is recommended that you can use our 'helloword' project Makefile template.
+
+----------------------------------------------------------------------------------------------------------------------
+Note that if not SYLIXOS macro has been defined, you must define SYLIXOS preprocessor macro.
+    For example: -DSYLIXOS
+----------------------------------------------------------------------------------------------------------------------
+
+WARNING:
+
+1: you must not use the compiler option : "-fpack-struct".
+
+2: you must use the compiler option : "-fno-short-enums". 
+
+   it can maintaining SDL(Simple DirectMedia Layer) binary compatibility.
+   
+----------------------------------------------------------------------------------------------------------------------
+
+VFP:
+
+kernel MUST NOT compiler with VFP instructions!
+
+    For example: Using ARM architecture:
+
+1: if you used arm cpu without VFP, you must use the compiler option : "-mfloat-abi=soft". to compile kernel, module, bsp, drivers
+
+   if you use arm VFP, you must use the compiler option : "-mfloat-abi=softfp" to maintain compatibility with the "-mfloat-abi=soft"
+   
+   if you use arm VFP, you can use the compiler option : "-mfpu=?" to choose the VFP code type.
+
+----------------------------------------------------------------------------------------------------------------------
+23:05 2009-4-18
+
+   SylixOS 作者 2005 年毕业于西安科技大学测控技术专业, 是一名操作系统业余爱好者, 在学习与工作之余设计了本套操作系统. 
+
+   内核相关代码早在作者大四初就已经开始编写, 经过了很多次失败, 险些放弃, 但最终还是坚持下来了. 由于限于当时的编程水平, 
+
+所以在早期的内核代码中, 很多对象的抽象没有做的很好, 而且对公共对象行为的封装做的很不够, 这也恰恰是作者成长的历程... 
+
+这几年的业余时间都放在这里啦!
+
+   SylixOS 采用微内核设计, 最小可裁至 60K Bytes, 她吸取了 N 多操作系统的优点, 例如: ucos rtems vxworks BSD/unix linux ... 
+   
+同时可能会涉及到一些版权问题, 这里声明: SylixOS 符合 GPL 与 BSD 版权. 主要为了提高编程水平, 学习之用, 并且保持永久商业免费! 
+
+希望 SylixOS 可以作为大家学习, 项目设计的理想选择. 如果侵犯到一些公司的版权, 请告之作者.
+
+   QQ:8270789
+
+   email:sylixos@gmail.com
+
+----------------------------------------------------------------------------------------------------------------------
+0:44 2011-7-8
+
+   关于开源软件: SylixOS 采用了众多开源软件的设计思想与源码, 作者(们)同时非常感激为开源事业奋斗的人们, 我们深知如果没有
+
+众多开源社区与形形色色的开源软件, 就没有软件今天的繁荣, 正因如此我们也将持续为社区贡献微薄的力量.
+
+----------------------------------------------------------------------------------------------------------------------
+23:02 2012-3-16
+
+   当前 SylixOS 内核的开发工作已经基本告于段落, 版本为 0.9.9-0232 . 此版本已经是较为成熟的系统, 实际应用已超过 20 个项目.
+
+涵盖工业, 军用, 民用, 新能源领域, 其中多个项目产品已出口到美国, 日本等国家. 还有一些已装备到我国现代化军事工业产品上.
+
+即日起, 作者(韩辉)决定 SylixOS 开始转战一项全新的, 富有挑战意义的工作: SMP 支持. 
+
+使用测试处理器为 S5PV310 (ARM Cortex-A9) SMP 双核处理器. 项目代号: [双子星座(GEMINI)]. 
+
+早在 2009 年, 韩辉已经为 SylixOS 支持 SMP 做了大量的工作, 其中包括全世界独一无二的多核硬实时调度器, 但是一直没有经过验证. 
+
+从即日起, 将开始在 S5PV310 处理器上进行验证, 同时由于设计之初为了兼容性和移植方便, SylixOS 采用了 uC/OS-II BSP 接口, 
+
+此次为了适应 SMP 作者计划微调一些 BSP 函数接口, 但尽量保持与之前版本的一致性. 
+
+最后, 预祝 [双子星座(GEMINI)] 计划圆满成功!
+
+----------------------------------------------------------------------------------------------------------------------
+23:58 2009-5-12
+
+    开发者名单 (排名不分先后) : 
+
+                 韩辉(操作系统开发)
+
+                 张铮(前期GCC工程支持)
+
+                 李孝成(前期系统测试)
+
+                 徐贵州(网络驱动开发eth, wlan.../网络测试, mtd 移植)
+
+                 侯小龙(ATA设备驱动, V4L层移植)
+
+                 王锋(CAN设备模型)
+
+                 蒋太金(装载器)
+
+                 曾波(SD总线抽象层)
+
+                 焦进星(多媒体库和其他诸多第三方库移植)
+
+                 梁耀展(早期 Makefile 脚本支持)
+                 
+                 任海波(6lowpan 实现)
+
+    特别感谢: 
+
+                 广州致远电子股份有限公司, 广州周立功单片机科技有限公司董事长兼总经理: 周立功教授.

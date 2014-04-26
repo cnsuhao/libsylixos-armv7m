@@ -1,0 +1,7 @@
+23:29 2009-2-23
+
+--SylixOS--
+
+1: SylixOS kernel license : BSD/GPL
+
+2: other software such as FatFs, yaffs, lwip... use it's own license.

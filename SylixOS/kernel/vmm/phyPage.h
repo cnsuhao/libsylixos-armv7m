@@ -1,0 +1,44 @@
+/*********************************************************************************************************
+**
+**                                    中国软件开源组织
+**
+**                                   嵌入式实时操作系统
+**
+**                                SylixOS(TM)  LW : long wing
+**
+**                               Copyright All Rights Reserved
+**
+**--------------文件信息--------------------------------------------------------------------------------
+**
+** 文   件   名: phyPage.h
+**
+** 创   建   人: Han.Hui (韩辉)
+**
+** 文件创建日期: 2008 年 12 月 09 日
+**
+** 描        述: 物理页面管理.
+*********************************************************************************************************/
+
+#ifndef __PHYPAGE_H
+#define __PHYPAGE_H
+
+ULONG           __vmmPhysicalCreate(ULONG  ulZoneIndex, addr_t  ulAddr, size_t  stSize, UINT  uiAttr);
+PLW_VMM_PAGE    __vmmPhysicalPageAlloc(ULONG  ulPageNum, UINT  uiAttr, ULONG  *pulZoneIndex);
+PLW_VMM_PAGE    __vmmPhysicalPageAllocZone(ULONG  ulZoneIndex, ULONG  ulPageNum, UINT  uiAttr);
+PLW_VMM_PAGE    __vmmPhysicalPageAllocAlign(ULONG   ulPageNum, 
+                                            size_t  stAlign, 
+                                            UINT    uiAttr, 
+                                            ULONG  *pulZoneIndex);
+PLW_VMM_PAGE    __vmmPhysicalPageClone(PLW_VMM_PAGE  pvmpage);
+PLW_VMM_PAGE    __vmmPhysicalPageRef(PLW_VMM_PAGE  pvmpage);
+VOID            __vmmPhysicalPageFree(PLW_VMM_PAGE  pvmpage);
+VOID            __vmmPhysicalPageFreeAll(PLW_VMM_PAGE  pvmpageVirtual);
+VOID            __vmmPhysicalPageSetFlag(PLW_VMM_PAGE  pvmpage, ULONG  ulFlag);
+VOID            __vmmPhysicalPageSetFlagAll(PLW_VMM_PAGE  pvmpageVirtual, ULONG  ulFlag);
+ULONG           __vmmPhysicalGetZone(addr_t  ulAddr);
+ULONG           __vmmPhysicalPageGetMinContinue(ULONG  *pulZoneIndex, UINT  uiAttr);
+
+#endif                                                                  /*  __PHYPAGE_H                 */
+/*********************************************************************************************************
+  END
+*********************************************************************************************************/

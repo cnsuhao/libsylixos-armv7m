@@ -1,0 +1,61 @@
+/*********************************************************************************************************
+** 函数名称: __sys_thread_cleanup_timeout
+** 功能描述: 线程 timeout 清除
+** 输　入  : ptcb     任务控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if (LWIP_VERSION_MAJOR >= 1 && LWIP_VERSION_MINOR < 4) ||  \
+    (LWIP_VERSION_MAJOR < 1)
+
+/*********************************************************************************************************
+  警告!!! TCB_ulReserve0 已将交给 shell 系统使用, lwip 不允许继续使用
+*********************************************************************************************************/
+
+#error TCB_ulReserve0 has been used by shell, so timeout could not be correct!
+
+static void  __sys_thread_cleanup_timeout (PLW_CLASS_TCB  ptcb)
+{
+    if (ptcb->TCB_ulReserve0) {
+        mem_free((PVOID)ptcb->TCB_ulReserve0);
+        ptcb->TCB_ulReserve0 = 0ul;                                     /*  防止 restart 错误           */
+    }
+}
+/*********************************************************************************************************
+** 函数名称: sys_arch_timeouts
+** 功能描述: 返回当前任务的超时控制块
+** 输　入  : NONE
+** 输　出  : 系统时钟
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+struct sys_timeouts  *sys_arch_timeouts (void)
+{
+    PLW_CLASS_TCB           ptcb = API_ThreadTcbSelf();
+    struct sys_timeouts    *ptimeout;
+    
+    if (ptcb) {
+        ptimeout = (struct sys_timeouts  *)ptcb->TCB_ulReserve0;
+        if (ptimeout == LW_NULL) {
+            API_ThreadSafe();
+            ptimeout = (struct sys_timeouts *)mem_calloc(sizeof(struct sys_timeouts), 1);
+            if (ptimeout == LW_NULL) {
+                API_ThreadUnsafe();
+                _DebugHandle(__ERRORMESSAGE_LEVEL, "lwip can not create timeouts.\r\n");
+                return  (LW_NULL);
+            }
+            /*
+             *  创建清除函数.
+             */
+            API_ThreadCleanupPush(__sys_thread_cleanup_timeout, (PVOID)ptcb);
+            ptcb->TCB_ulReserve0 = (ULONG)ptimeout;
+            API_ThreadUnsafe();
+        }
+        return  (ptimeout);
+    } else {
+        return  (LW_NULL);
+    }
+}
+
+#endif                                                                  /*  LWIP 1.4.0 以下版本         */
