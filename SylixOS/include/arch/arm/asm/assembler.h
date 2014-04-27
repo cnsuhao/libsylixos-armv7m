@@ -119,6 +119,9 @@ func:
 #  define FILE_END()    \
         .end
         
+#  define SECTION(sec)  \
+        .section sec
+		
 #else                                                                   /*  __GNUC__                    */
 #  define EXPORT_LABEL(label)       EXPORT label
 #  define IMPORT_LABEL(label)       IMPORT label
@@ -145,6 +148,8 @@ func
 #  define FILE_END()    \
         END
 
+#  define SECTION(sec)  \
+        AREA sec
 #endif                                                                  /*  !__GNUC__                   */
 
 /*********************************************************************************************************

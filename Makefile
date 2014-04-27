@@ -106,7 +106,7 @@ SylixOS/appl/zip/zlib/src/inftrees.c \
 SylixOS/appl/zip/zlib/src/minigzip.c \
 SylixOS/appl/zip/zlib/src/trees.c \
 SylixOS/appl/zip/zlib/src/uncompr.c \
-SylixOS/appl/zip/zlib/src/zutil.c 
+SylixOS/appl/zip/zlib/src/zutil.c
 
 #*********************************************************************************************************
 # arch source
@@ -152,13 +152,13 @@ SylixOS/arch/arm/mm/armCache.c \
 SylixOS/arch/arm/mm/armMmu.c \
 SylixOS/arch/arm/mpcore/scu/armScu.c \
 SylixOS/arch/arm/mpcore/armMpCoreAsm.S \
-SylixOS/arch/arm/mpcore/armSpinlock.c 
+SylixOS/arch/arm/mpcore/armSpinlock.c
 
 #*********************************************************************************************************
 # debug source
 #*********************************************************************************************************
 DEBUG_SRCS = \
-SylixOS/debug/dtrace/dtrace.c 
+SylixOS/debug/dtrace/dtrace.c
 
 #*********************************************************************************************************
 # file system source
@@ -224,13 +224,13 @@ SylixOS/fs/yaffs2/yaffs_yaffs2.c \
 SylixOS/fs/yaffs2/direct/yaffscfg.c \
 SylixOS/fs/yaffs2/direct/yaffsfs.c \
 SylixOS/fs/yaffs2/direct/yaffs_hweight.c \
-SylixOS/fs/yaffs2/direct/yaffs_qsort.c 
+SylixOS/fs/yaffs2/direct/yaffs_qsort.c
 
 #*********************************************************************************************************
 # gui tools source
 #*********************************************************************************************************
 GUI_SRCS = \
-SylixOS/gui/input_device/input_device.c 
+SylixOS/gui/input_device/input_device.c
 
 #*********************************************************************************************************
 # kernel source
@@ -494,7 +494,7 @@ SylixOS/kernel/vmm/vmm.c \
 SylixOS/kernel/vmm/vmmAbort.c \
 SylixOS/kernel/vmm/vmmArea.c \
 SylixOS/kernel/vmm/vmmMalloc.c \
-SylixOS/kernel/vmm/vmmSwap.c 
+SylixOS/kernel/vmm/vmmSwap.c
 
 #*********************************************************************************************************
 # buildin library source
@@ -671,7 +671,7 @@ SylixOS/lib/libc/wchar/wmemcmp.c \
 SylixOS/lib/libc/wchar/wmemcpy.c \
 SylixOS/lib/libc/wchar/wmemmove.c \
 SylixOS/lib/libc/wchar/wmemset.c \
-SylixOS/lib/nl_compatible/nl_reent.c 
+SylixOS/lib/nl_compatible/nl_reent.c
 
 #*********************************************************************************************************
 # loader source
@@ -686,7 +686,7 @@ SylixOS/loader/src/loader_proc.c \
 SylixOS/loader/src/loader_shell.c \
 SylixOS/loader/src/loader_symbol.c \
 SylixOS/loader/src/loader_vppatch.c \
-SylixOS/loader/src/loader_wait.c 
+SylixOS/loader/src/loader_wait.c
 
 #*********************************************************************************************************
 # monitor source
@@ -696,7 +696,7 @@ SylixOS/monitor/src/monitorBuffer.c \
 SylixOS/monitor/src/monitorFileUpload.c \
 SylixOS/monitor/src/monitorNetUpload.c \
 SylixOS/monitor/src/monitorTrace.c \
-SylixOS/monitor/src/monitorUpload.c 
+SylixOS/monitor/src/monitorUpload.c
 
 #*********************************************************************************************************
 # mpi source
@@ -704,7 +704,7 @@ SylixOS/monitor/src/monitorUpload.c
 MPI_SRCS = \
 SylixOS/mpi/dualportmem/dualportmem.c \
 SylixOS/mpi/dualportmem/dualportmemLib.c \
-SylixOS/mpi/src/mpiInit.c 
+SylixOS/mpi/src/mpiInit.c
 
 #*********************************************************************************************************
 # net source
@@ -858,7 +858,7 @@ SylixOS/net/lwip/tools/vpn/lwip_vpnclient.c \
 SylixOS/net/lwip/tools/vpn/lwip_vpnnetif.c \
 SylixOS/net/lwip/tools/vpn/lwip_vpnshell.c \
 SylixOS/net/lwip/unix/af_unix.c \
-SylixOS/net/lwip/unix/af_unix_msg.c 
+SylixOS/net/lwip/unix/af_unix_msg.c
 
 #*********************************************************************************************************
 # posix source
@@ -893,7 +893,7 @@ SylixOS/posix/sysconf/sysconf.c \
 SylixOS/posix/syslog/syslog.c \
 SylixOS/posix/timeb/timeb.c \
 SylixOS/posix/timeb/times.c \
-SylixOS/posix/utsname/utsname.c 
+SylixOS/posix/utsname/utsname.c
 
 #*********************************************************************************************************
 # shell source
@@ -915,7 +915,7 @@ SylixOS/shell/ttinyShell/ttinyString.c \
 SylixOS/shell/ttinyUser/ttinyUserAuthen.c \
 SylixOS/shell/ttinyUser/ttinyUserCache.c \
 SylixOS/shell/ttinyVar/ttinyVar.c \
-SylixOS/shell/ttinyVar/ttinyVarLib.c 
+SylixOS/shell/ttinyVar/ttinyVarLib.c
 
 #*********************************************************************************************************
 # symbol source
@@ -924,7 +924,7 @@ SYMBOL_SRCS = \
 SylixOS/symbol/symBsp/symBsp.c \
 SylixOS/symbol/symLibc/symLibc.c \
 SylixOS/symbol/symTable/symProc.c \
-SylixOS/symbol/symTable/symTable.c 
+SylixOS/symbol/symTable/symTable.c
 
 #*********************************************************************************************************
 # system source
@@ -1026,7 +1026,7 @@ SylixOS/cplusplus/cppRtLib/cppEabiLib.cpp \
 SylixOS/cplusplus/cppRtLib/cppMemLib.cpp \
 SylixOS/cplusplus/cppRtLib/cppRtBegin.cpp \
 SylixOS/cplusplus/cppRtLib/cppRtEnd.cpp \
-SylixOS/cplusplus/cppRtLib/cppSupLib.cpp 
+SylixOS/cplusplus/cppRtLib/cppSupLib.cpp
 
 #*********************************************************************************************************
 # all libsylixos source
@@ -1071,7 +1071,7 @@ SylixOS/vpmpdm/vpmpdm.c
 #*********************************************************************************************************
 XINPUT_SRCS = \
 SylixOS/xinput/xdev.c \
-SylixOS/xinput/xinput.c 
+SylixOS/xinput/xinput.c
 
 #*********************************************************************************************************
 # libxsiipc source
@@ -1081,7 +1081,7 @@ SylixOS/xsiipc/msg.c \
 SylixOS/xsiipc/proc.c \
 SylixOS/xsiipc/sem.c \
 SylixOS/xsiipc/shm.c \
-SylixOS/xsiipc/xsiipc.c 
+SylixOS/xsiipc/xsiipc.c
 
 #*********************************************************************************************************
 # build path
@@ -1212,7 +1212,7 @@ COMPILE.c       = $(CC)  $(CFLAGS) -c
 COMPILE.cxx     = $(CXX) $(CXXFLAGS) -c
 
 #*********************************************************************************************************
-# target 
+# target
 #*********************************************************************************************************
 ifeq ($(BUILD_PROCESS_SUP_LIB), 1)
 ifeq ($(BUILD_KERNEL_MODULE), 1)
@@ -1260,7 +1260,7 @@ $(DEPPATH)/%.d: %.cpp
 $(OBJPATH)/%.o: %.S
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		$(COMPILE.S) $< -o $@
-		
+
 $(OBJPATH)/%.o: %.c
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		$(COMPILE.c) $< -o $@
@@ -1275,7 +1275,7 @@ $(OBJPATH)/%.o: %.cpp
 $(OBJPATH)/SylixOS/arch/arm/fpu/vfp9/armVfp9Asm.o: ./SylixOS/arch/arm/fpu/vfp9/armVfp9Asm.S
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		$(COMPILE_VFP.S) $< -o $@
-		
+
 $(OBJPATH)/SylixOS/arch/arm/fpu/vfp11/armVfp11Asm.o: ./SylixOS/arch/arm/fpu/vfp11/armVfp11Asm.S
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		$(COMPILE_VFP.S) $< -o $@
@@ -1284,7 +1284,7 @@ $(OBJPATH)/SylixOS/arch/arm/fpu/vfpv3/armVfpV3Asm.o: ./SylixOS/arch/arm/fpu/vfpv
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		$(COMPILE_VFP.S) $< -o $@
 
-#*********************************************************************************************************		
+#*********************************************************************************************************
 # link libsylixos.a object files
 #*********************************************************************************************************
 $(TARGET): $(OBJS)
