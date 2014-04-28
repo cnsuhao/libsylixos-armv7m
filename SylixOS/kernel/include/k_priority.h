@@ -52,9 +52,9 @@
 #define LW_PRIO_T_NETPROTO      (LW_PRIO_REALTIME + 10)                 /*  网络系统线程                */
 #define LW_PRIO_T_NETJOB        (LW_PRIO_REALTIME + 10)                 /*  网络接口驱动服务线程        */
 #define LW_PRIO_T_BUS           (LW_PRIO_REALTIME + 10)                 /*  所有总线服务线程 USB / SD 等*/
-#define LW_PRIO_T_SHELL         (LW_PRIO_HIGH)                          /*  服务类线程 ftp / tftp 等    */
-#define LW_PRIO_T_SERVICE       (LW_PRIO_HIGH + 10)                     /*  t_shell 线程                */
-#define LW_PRIO_T_SYSMSG        (LW_PRIO_LOW)                           /*  操作系统基本信息            */
+#define LW_PRIO_T_SHELL         (LW_PRIO_HIGH)                          /*  t_shell 线程                */
+#define LW_PRIO_T_SERVICE       (LW_PRIO_HIGH + 10)                     /*  服务类线程 ftp / tftp 等    */
+#define LW_PRIO_T_SYSMSG        (LW_PRIO_LOW)                           /*  热插拔等操作系统基本信息服务*/
 #define LW_PRIO_T_CACHE         (LW_PRIO_IDLE - 3)                      /*  磁盘 CACHE 回写             */
 #define LW_PRIO_T_RECLAIM       (LW_PRIO_IDLE - 2)                      /*  资源回收                    */
 #define LW_PRIO_T_POWER         (LW_PRIO_IDLE - 1)                      /*  电源管理                    */

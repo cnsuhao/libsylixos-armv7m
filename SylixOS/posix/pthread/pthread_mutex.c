@@ -37,7 +37,7 @@
 /*********************************************************************************************************
   默认的天花板优先级
 *********************************************************************************************************/
-#define __PX_MUTEX_PRIOCEIL_PRIORITY    __PX_PRIORITY_CONVERT(LW_PRIO_REALTIME)
+#define __PX_MUTEX_PRIOCEIL_PRIORITY    PX_PRIORITY_CONVERT(LW_PRIO_REALTIME)
 /*********************************************************************************************************
   默认属性
 *********************************************************************************************************/
@@ -328,7 +328,7 @@ int  pthread_mutex_init (pthread_mutex_t  *pmutex, const pthread_mutexattr_t *pm
         mutexattr = _G_pmutexattrDefault;                               /*  使用默认属性                */
     }
     
-    ucPriority= (UINT8)__PX_PRIORITY_CONVERT(mutexattr.PMUTEXATTR_iPrioceiling);
+    ucPriority= (UINT8)PX_PRIORITY_CONVERT(mutexattr.PMUTEXATTR_iPrioceiling);
     
     if (mutexattr.PMUTEXATTR_iType == PTHREAD_MUTEX_NORMAL) {
         mutexattr.PMUTEXATTR_ulOption |= LW_OPTION_NORMAL;              /*  不检查死锁 (不推荐)         */

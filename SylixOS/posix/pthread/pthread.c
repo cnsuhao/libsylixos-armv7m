@@ -116,7 +116,7 @@ int  pthread_create (pthread_t              *pthread,
             lwattr.THREADATTR_ucPriority =  ptcbCur->TCB_ucPriority;
         } else {
             lwattr.THREADATTR_ucPriority = 
-                (UINT8)__PX_PRIORITY_CONVERT(pattr->PTHREADATTR_schedparam.sched_priority);
+                (UINT8)PX_PRIORITY_CONVERT(pattr->PTHREADATTR_schedparam.sched_priority);
         }
         
         lwattr.THREADATTR_ulOption = pattr->PTHREADATTR_ulOption;
@@ -394,7 +394,7 @@ int  pthread_getschedparam (pthread_t            thread,
             errno = ESRCH;
             return  (ESRCH);
         }
-        pschedparam->sched_priority = __PX_PRIORITY_CONVERT(ucPriority);
+        pschedparam->sched_priority = PX_PRIORITY_CONVERT(ucPriority);
     }
     
     if (piPolicy) {
@@ -443,7 +443,7 @@ int  pthread_setschedparam (pthread_t                  thread,
         return  (EINVAL);
     }
     
-    ucPriority= (UINT8)__PX_PRIORITY_CONVERT(pschedparam->sched_priority);
+    ucPriority= (UINT8)PX_PRIORITY_CONVERT(pschedparam->sched_priority);
     
     PX_ID_VERIFY(thread, pid_t);
     
@@ -509,7 +509,7 @@ int  pthread_setschedprio (pthread_t  thread, int  prio)
     
     PX_ID_VERIFY(thread, pthread_t);
     
-    ucPriority= (UINT8)__PX_PRIORITY_CONVERT(prio);
+    ucPriority= (UINT8)PX_PRIORITY_CONVERT(prio);
     
     if (API_ThreadSetPriority(thread, ucPriority)) {
         errno = ESRCH;
@@ -540,7 +540,7 @@ int  pthread_getschedprio (pthread_t  thread, int  *prio)
             errno = ESRCH;
             return  (ESRCH);
         }
-        *prio = __PX_PRIORITY_CONVERT(ucPriority);
+        *prio = PX_PRIORITY_CONVERT(ucPriority);
     }
     
     return  (ERROR_NONE);

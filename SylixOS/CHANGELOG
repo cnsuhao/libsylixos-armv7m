@@ -476,6 +476,9 @@ HISTORY
 ++ Bugfixes:.
 
     2014-04-21: han.hui
+    修正一些注释, 加入 PX_PRIORITY_CONVERT() 宏用来转换 SylixOS 优先级与 POSIX 优先级.
+    
+    2014-04-21: han.hui
     升级中断系统, 加入对中断返回值的判断, 提升中断服务效率.
     同一中断向量服务不能多次重复安装.
     

@@ -614,7 +614,7 @@ int  pthread_attr_get_np (pthread_t  thread, pthread_attr_t *pattr)
     pattr->PTHREADATTR_iSchedPolicy    = (INT)ucPolicy;
     pattr->PTHREADATTR_iInherit        = PTHREAD_EXPLICIT_SCHED;        /*  目前不能确定                */
     pattr->PTHREADATTR_ulOption        = lwattr.THREADATTR_ulOption;
-    pattr->PTHREADATTR_schedparam.sched_priority = __PX_PRIORITY_CONVERT(lwattr.THREADATTR_ucPriority);
+    pattr->PTHREADATTR_schedparam.sched_priority = PX_PRIORITY_CONVERT(lwattr.THREADATTR_ucPriority);
     
     return  (ERROR_NONE);
 }

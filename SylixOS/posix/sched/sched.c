@@ -102,7 +102,7 @@ int  sched_setparam (pid_t  lThreadId, const struct sched_param  *pschedparam)
         return  (PX_ERROR);
     }
     
-    ucPriority= (UINT8)__PX_PRIORITY_CONVERT(pschedparam->sched_priority);
+    ucPriority= (UINT8)PX_PRIORITY_CONVERT(pschedparam->sched_priority);
     
     PX_ID_VERIFY(lThreadId, pid_t);
     
@@ -142,7 +142,7 @@ int  sched_getparam (pid_t  lThreadId, struct sched_param  *pschedparam)
         errno = ESRCH;
         return  (PX_ERROR);
     } else {
-        pschedparam->sched_priority = __PX_PRIORITY_CONVERT(ucPriority);
+        pschedparam->sched_priority = PX_PRIORITY_CONVERT(ucPriority);
         return  (ERROR_NONE);
     }
 }
@@ -182,7 +182,7 @@ int  sched_setscheduler (pid_t                      lThreadId,
         return  (PX_ERROR);
     }
     
-    ucPriority= (UINT8)__PX_PRIORITY_CONVERT(pschedparam->sched_priority);
+    ucPriority= (UINT8)PX_PRIORITY_CONVERT(pschedparam->sched_priority);
     
     PX_ID_VERIFY(lThreadId, pid_t);
     
