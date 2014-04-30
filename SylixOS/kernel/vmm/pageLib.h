@@ -70,6 +70,7 @@ typedef struct __lw_vmm_page {
     INT                     PAGE_iPageType;                             /*  页面类型                    */
     ULONG                   PAGE_ulFlags;                               /*  页面属性                    */
     BOOL                    PAGE_bUsed;                                 /*  页面是否在使用              */
+    PLW_VMM_ZONE            PAGE_pvmzoneOwner;                          /*  页面所属区域                */
     
     union {
         struct {
@@ -82,7 +83,6 @@ typedef struct __lw_vmm_page {
             INT                     PPAGE_iChange;                      /*  物理页面已经变化            */
             ULONG                   PPAGE_ulRef;                        /*  物理页面引用次数            */
             struct __lw_vmm_page   *PPAGE_pvmpageReal;                  /*  指向真实物理页面            */
-            PLW_VMM_ZONE            PPAGE_pvmzoneOwner;                 /*  物理页面所属区域            */
         } __phy_page_status;
         
         struct {
@@ -103,7 +103,7 @@ typedef LW_VMM_PAGE        *PLW_VMM_PAGE;
 #define PAGE_iChange        __lw_vmm_page_status.__phy_page_status.PPAGE_iChange
 #define PAGE_ulRef          __lw_vmm_page_status.__phy_page_status.PPAGE_ulRef
 #define PAGE_pvmpageReal    __lw_vmm_page_status.__phy_page_status.PPAGE_pvmpageReal
-#define PAGE_pvmzoneOwner   __lw_vmm_page_status.__phy_page_status.PPAGE_pvmzoneOwner
+
 #define PAGE_pvAreaCb       __lw_vmm_page_status.__vir_page_status.VPAGE_pvAreaCb
 #define PAGE_plinePhyLink   __lw_vmm_page_status.__vir_page_status.VPAGE_plinePhyLink
 
@@ -140,6 +140,12 @@ PLW_VMM_PAGE  __pageAllocateAlign(PLW_VMM_ZONE  pvmzone,
                                   INT           iPageType);             /*  分配指定对齐关系连续分页    */
 VOID          __pageFree(PLW_VMM_ZONE   pvmzone, 
                          PLW_VMM_PAGE   pvmpage);                       /*  回收连续分页                */
+ULONG         __pageSplit(PLW_VMM_PAGE   pvmpage, 
+                          PLW_VMM_PAGE  *ppvmpageSplit, 
+                          ULONG          ulPageNum,
+                          PVOID          pvAreaCb);
+ULONG         __pageExpand(PLW_VMM_PAGE   pvmpage, 
+                           ULONG          ulExpPageNum);
 VOID          __pageLink(PLW_VMM_PAGE   pvmpageVirtual, 
                          PLW_VMM_PAGE   pvmpagePhysical);               /*  页面连接                    */
 VOID          __pageUnlink(PLW_VMM_PAGE  pvmpageVirtual, 

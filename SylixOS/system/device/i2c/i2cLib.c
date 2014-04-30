@@ -334,7 +334,7 @@ INT  API_I2cDeviceUsageInc (PLW_I2C_DEVICE   pi2cdevice)
     return  (API_AtomicInc(&pi2cdevice->I2CDEV_atomicUsageCnt));
 }
 /*********************************************************************************************************
-** 函数名称: API_I2cDeviceUsageInc
+** 函数名称: API_I2cDeviceUsageDec
 ** 功能描述: 将指定 i2c 设备使用计数--
 ** 输　入  : pi2cdevice        指定的 i2c 设备控制块
 ** 输　出  : 当前的使用计数值

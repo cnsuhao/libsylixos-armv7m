@@ -69,6 +69,7 @@ ULONG  API_InterVectorConnect (ULONG            ulVector,
 ** 功能描述: 设置系统指定向量中断服务
 ** 输　入  : ulVector                      中断向量号
 **           pfuncIsr                      服务函数
+**           pfuncClear                    附加中断清除函数(可为 NULL)
 **           pvArg                         服务函数参数
 **           pcName                        中断服务名称
 ** 输　出  : ERROR CODE

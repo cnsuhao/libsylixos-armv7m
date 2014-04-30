@@ -33,7 +33,7 @@
 ** 函数名称: API_SemaphoreBCreate
 ** 功能描述: 二进制型信号量建立
 ** 输　入  : 
-**           pcName          事件名缓冲区
+**           pcName          事件名
 **           bInitValue      初始化值
 **           ulOption        事件选项
 **           pulId           事件ID指针

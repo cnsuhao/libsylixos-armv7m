@@ -254,9 +254,9 @@
   等待选项
 *********************************************************************************************************/
 #define  LW_OPTION_EVENTSET_WAIT_CLR_ALL                0x00000000      /*  指定位都为0时激活           */
-#define  LW_OPTION_EVENTSET_WAIT_CLR_ANY                0x00000001      /*  指定位都中任何一位为0时激活 */
+#define  LW_OPTION_EVENTSET_WAIT_CLR_ANY                0x00000001      /*  指定位中任何一位为0时激活   */
 #define  LW_OPTION_EVENTSET_WAIT_SET_ALL                0x00000002      /*  指定位都为1时激活           */
-#define  LW_OPTION_EVENTSET_WAIT_SET_ANY                0x00000003      /*  指定位都中任何一位为1时激活 */
+#define  LW_OPTION_EVENTSET_WAIT_SET_ANY                0x00000003      /*  指定位中任何一位为1时激活   */
 
 #define  LW_OPTION_EVENTSET_RESET                       0x00000080      /*  获得事件后是否自动清除事件  */
 /*********************************************************************************************************

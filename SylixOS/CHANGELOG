@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-04-30: han.hui
+    加入对虚拟空间的扩展和拆分操作.
+
     2014-03-22: han.hui
     加入 AF_PACKET 支持, 可以直接操作网卡收发链路层数据包.
 

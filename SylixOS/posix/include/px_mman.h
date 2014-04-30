@@ -86,6 +86,13 @@ extern "C" {
 #define MAP_ANON_FD                     (-1)
 
 /*********************************************************************************************************
+  mremap() flag
+*********************************************************************************************************/
+
+#define MREMAP_MAYMOVE                  1
+#define MREMAP_FIXED                    2
+
+/*********************************************************************************************************
   API
 *********************************************************************************************************/
 
@@ -97,6 +104,7 @@ LW_API int      mprotect(void  *pvAddr, size_t  stLen, int  iProt);
 LW_API int      mmapfd(void  *pvAddr);
 LW_API void    *mmap(void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, off_t  off);
 LW_API void    *mmap64(void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, off64_t  off);
+LW_API void    *mremap(void *pvAddr, size_t stOldSize, size_t stNewSize, int iFlag, ...);
 LW_API int      munmap(void  *pvAddr, size_t  stLen);
 LW_API int      msync(void  *pvAddr, size_t  stLen, int  iFlag);
 

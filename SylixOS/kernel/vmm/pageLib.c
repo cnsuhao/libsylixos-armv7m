@@ -30,6 +30,7 @@
 2011.12.08  物理页面的页面控制块需要预先从 kheap 分配, 这样可以避免在 VMM_LOCK() 中等待 kheap lock.
 2013.05.30  加入对新加入页面字段的初始化.
 2013.06.03  加入物理页面与虚拟页面的连接关系处理.
+2014.04.30  加入 split 与 expand 函数进行页面分离与扩展.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -223,10 +224,11 @@ static VOID  __pageStructSeparate (PLW_VMM_PAGE  pvmpage,
     PLW_LIST_LINE      plineHeader = &pvmpage->PAGE_lineManage;
 
     _List_Line_Add_Tail(&pvmpageNew->PAGE_lineManage, &plineHeader);    /*  加入邻居链表                */
-    pvmpageNew->PAGE_ulCount    = pvmpage->PAGE_ulCount - ulPageNum;
-    pvmpageNew->PAGE_ulPageAddr = pvmpage->PAGE_ulPageAddr + (ulPageNum * LW_CFG_VMM_PAGE_SIZE);
-    pvmpageNew->PAGE_iPageType  = iPageType;
-    pvmpageNew->PAGE_ulFlags    = pvmpage->PAGE_ulFlags;                /*  页面属性                    */
+    pvmpageNew->PAGE_ulCount      = pvmpage->PAGE_ulCount - ulPageNum;
+    pvmpageNew->PAGE_ulPageAddr   = pvmpage->PAGE_ulPageAddr + (ulPageNum * LW_CFG_VMM_PAGE_SIZE);
+    pvmpageNew->PAGE_iPageType    = iPageType;
+    pvmpageNew->PAGE_ulFlags      = pvmpage->PAGE_ulFlags;              /*  页面属性                    */
+    pvmpageNew->PAGE_pvmzoneOwner = pvmpage->PAGE_pvmzoneOwner;         /*  记录所属区域                */
     
     pvmpage->PAGE_ulCount = ulPageNum;                                  /*  修改主页面控制块的大小      */
 }
@@ -395,6 +397,7 @@ __check_hash:
         _List_Line_Del(&pvmpageFit->PAGE_lineFreeHash,
                        &pvmfaEntry->FA_lineFreeHeader);                 /*  从空闲表中删除              */
         pvmfaEntry->FA_ulCount--;
+        
         pvmpageFit->PAGE_bUsed = LW_TRUE;                               /*  正在使用的分页段            */
     }
     
@@ -403,7 +406,6 @@ __check_hash:
         pvmpageFit->PAGE_iChange       = 0;                             /*  没有变化过                  */
         pvmpageFit->PAGE_ulRef         = 1ul;                           /*  引用计数初始为 1            */
         pvmpageFit->PAGE_pvmpageReal   = LW_NULL;                       /*  真实页面                    */
-        pvmpageFit->PAGE_pvmzoneOwner  = pvmzone;                       /*  记录所属 zone               */
     
     } else {
         pvmpageFit->PAGE_pvAreaCb = LW_NULL;
@@ -542,7 +544,6 @@ PLW_VMM_PAGE  __pageAllocateAlign (PLW_VMM_ZONE  pvmzone,
         __pageAddToFreeHash(pvmzone, pvmpageNewFreeRight);              /*  将剩余页面插入空闲 hash 表  */
     
     } else {
-        
         pvmpageFit->PAGE_bUsed = LW_TRUE;                               /*  正在使用的分页段            */
     }
     
@@ -551,7 +552,6 @@ PLW_VMM_PAGE  __pageAllocateAlign (PLW_VMM_ZONE  pvmzone,
         pvmpageFit->PAGE_iChange       = 0;                             /*  没有变化过                  */
         pvmpageFit->PAGE_ulRef         = 1ul;                           /*  引用计数初始为 1            */
         pvmpageFit->PAGE_pvmpageReal   = LW_NULL;                       /*  真实页面                    */
-        pvmpageFit->PAGE_pvmzoneOwner  = pvmzone;                       /*  记录所属 zone               */
     
     } else {
         pvmpageFit->PAGE_pvAreaCb = LW_NULL;
@@ -561,6 +561,140 @@ PLW_VMM_PAGE  __pageAllocateAlign (PLW_VMM_ZONE  pvmzone,
     pvmzone->ZONE_ulFreePage -= ulPageNum;                              /*  更新 zone 控制块            */
     
     return  (pvmpageFit);
+}
+/*********************************************************************************************************
+** 函数名称: __pageExpand
+** 功能描述: 将一个虚拟页面控制块扩大
+** 输　入  : pvmpage              主页面控制块
+**           ulExpPageNum         需要扩大的页面个数
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+ULONG  __pageExpand (PLW_VMM_PAGE   pvmpage, 
+                     ULONG          ulExpPageNum)
+{
+    PLW_LIST_LINE       plineRight;
+    PLW_LIST_LINE       plineDummyHeader = LW_NULL;                     /*  用于参数传递的头            */
+    
+    PLW_VMM_PAGE        pvmpageRight;
+    PLW_VMM_PAGE        pvmpageNewFree;
+    
+    INT                 iHashIndex;
+    PLW_VMM_FREEAREA    pvmfaEntry;
+    PLW_VMM_ZONE        pvmzone;
+    
+    if (pvmpage->PAGE_iPageType != __VMM_PAGE_TYPE_VIRTUAL) {           /*  只能拓展虚拟页面            */
+        _ErrorHandle(ERROR_VMM_PAGE_INVAL);                             /*  缺少内核内存                */
+        return  (ERROR_VMM_PAGE_INVAL);
+    }
+    
+    plineRight = _list_line_get_next(&pvmpage->PAGE_lineManage);        /*  右分页段                    */
+    if (plineRight) {
+        pvmpageRight = _LIST_ENTRY(plineRight, LW_VMM_PAGE, 
+                                   PAGE_lineManage);                    /*  右分页段地址                */
+    } else {
+        _ErrorHandle(ERROR_VMM_LOW_PAGE);                               /*  缺少可供扩展的页面          */
+        return  (ERROR_VMM_LOW_PAGE);
+    }
+    
+    if ((pvmpageRight->PAGE_bUsed) ||
+        (pvmpageRight->PAGE_ulCount < ulExpPageNum)) {
+        _ErrorHandle(ERROR_VMM_LOW_PAGE);                               /*  缺少可供扩展的页面          */
+        return  (ERROR_VMM_LOW_PAGE);
+    }
+    
+    pvmzone    = pvmpage->PAGE_pvmzoneOwner;
+    iHashIndex = __pageFreeHashIndex(pvmpageRight->PAGE_ulCount);
+    pvmfaEntry = &pvmzone->ZONE_vmfa[iHashIndex];                       /*  获得右分页段 hash 入口      */
+    
+    if (pvmpageRight->PAGE_ulCount > ulExpPageNum) {                    /*  右侧分段还有剩余            */
+        
+        pvmpageNewFree = __pageCbAlloc(pvmpageRight->PAGE_iPageType);
+        if (pvmpageNewFree == LW_NULL) {
+            _ErrorHandle(ERROR_KERNEL_LOW_MEMORY);                      /*  缺少内核内存                */
+            return  (ERROR_KERNEL_LOW_MEMORY);
+        }
+        
+        _List_Line_Del(&pvmpageRight->PAGE_lineFreeHash,
+                       &pvmfaEntry->FA_lineFreeHeader);                 /*  从空闲表中删除              */
+        pvmfaEntry->FA_ulCount--;
+        
+        pvmpageRight->PAGE_bUsed   = LW_TRUE;                           /*  正在使用的分页段            */
+        pvmpageNewFree->PAGE_bUsed = LW_FALSE;                          /*  没有使用的分页段            */
+        __pageStructSeparate(pvmpageRight, 
+                             pvmpageNewFree, 
+                             ulExpPageNum, 
+                             pvmpageRight->PAGE_iPageType);             /*  页面分离                    */
+                             
+        __pageAddToFreeHash(pvmzone, pvmpageNewFree);                   /*  将剩余页面插入空闲 hash 表  */
+    
+    } else {
+        _List_Line_Del(&pvmpageRight->PAGE_lineFreeHash,
+                       &pvmfaEntry->FA_lineFreeHeader);                 /*  从空闲表中删除              */
+        pvmfaEntry->FA_ulCount--;
+        
+        pvmpageRight->PAGE_bUsed = LW_TRUE;                             /*  正在使用的分页段            */
+    }
+    
+    pvmzone->ZONE_ulFreePage -= ulExpPageNum;                           /*  更新 zone 控制块            */
+    
+    pvmpage->PAGE_ulCount += ulExpPageNum;                              /*  合并到 pvmpage 中           */
+    
+    _List_Line_Del(&pvmpageRight->PAGE_lineManage,
+                   &plineDummyHeader);                                  /*  从邻居链表中删除            */
+    __pageCbFree(pvmpageRight);                                         /*  释放页面控制块内存          */
+    
+    _ErrorHandle(ERROR_NONE);
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __pageSplit
+** 功能描述: 将一个虚拟页面控制块分离成两个
+** 输　入  : pvmpage              主页面控制块
+**           ppvmpageSplit        被分离出的页面控制块
+**           ulPageNum            pvmpage 需要保留的页面个数, 剩余部分将分配给 pvmpageSplit.
+**           pvAreaCb             新的 AreaCb.
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+ULONG  __pageSplit (PLW_VMM_PAGE   pvmpage, 
+                    PLW_VMM_PAGE  *ppvmpageSplit, 
+                    ULONG          ulPageNum,
+                    PVOID          pvAreaCb)
+{
+    PLW_VMM_PAGE    pvmpageSplit;
+
+    if (pvmpage->PAGE_iPageType != __VMM_PAGE_TYPE_VIRTUAL) {           /*  只能拆分虚拟页面            */
+        _ErrorHandle(ERROR_VMM_PAGE_INVAL);                             /*  缺少内核内存                */
+        return  (ERROR_VMM_PAGE_INVAL);
+    }
+
+    if (pvmpage->PAGE_ulCount <= ulPageNum) {
+        _ErrorHandle(ERROR_VMM_LOW_PAGE);                               /*  缺少内核内存                */
+        return  (ERROR_VMM_LOW_PAGE);
+    }
+    
+    pvmpageSplit = __pageCbAlloc(pvmpage->PAGE_iPageType);
+    if (pvmpageSplit == LW_NULL) {
+        _ErrorHandle(ERROR_KERNEL_LOW_MEMORY);                          /*  缺少内核内存                */
+        return  (ERROR_KERNEL_LOW_MEMORY);
+    }
+    
+    pvmpageSplit->PAGE_bUsed = LW_TRUE;                                 /*  正在使用的分页段            */
+    __pageStructSeparate(pvmpage, 
+                         pvmpageSplit, 
+                         ulPageNum, 
+                         pvmpage->PAGE_iPageType);                      /*  页面分离                    */
+                         
+    pvmpageSplit->PAGE_pvAreaCb = pvAreaCb;
+    __pageInitLink(pvmpageSplit);
+    
+    *ppvmpageSplit = pvmpageSplit;
+    
+    _ErrorHandle(ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __pageLink
@@ -636,6 +770,7 @@ PLW_VMM_PAGE  __pageFindLink (PLW_VMM_PAGE  pvmpageVirtual, addr_t  ulVirAddr)
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : 这里使用安全的遍历方式.
 *********************************************************************************************************/
 VOID  __pageTraversalLink (PLW_VMM_PAGE   pvmpageVirtual,
                            VOIDFUNCPTR    pfunc, 
@@ -733,13 +868,13 @@ ULONG  __pageZoneCreate (PLW_VMM_ZONE   pvmzone,
     pvmpage->PAGE_iPageType     = iPageType;
     pvmpage->PAGE_ulFlags       = 0;
     pvmpage->PAGE_bUsed         = LW_FALSE;
+    pvmpage->PAGE_pvmzoneOwner  = pvmzone;                              /*  记录所属 zone               */
     
     if (iPageType == __VMM_PAGE_TYPE_PHYSICAL) {
         pvmpage->PAGE_ulMapPageAddr = PAGE_MAP_ADDR_INV;                /*  没有映射关系                */
         pvmpage->PAGE_iChange       = 0;                                /*  没有变化过                  */
         pvmpage->PAGE_ulRef         = 0ul;                              /*  引用计数初始为 0            */
         pvmpage->PAGE_pvmpageReal   = LW_NULL;                          /*  真实页面                    */
-        pvmpage->PAGE_pvmzoneOwner  = pvmzone;                          /*  记录所属 zone               */
     
     } else {
         pvmpage->PAGE_pvAreaCb = LW_NULL;

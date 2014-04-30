@@ -342,6 +342,7 @@ PCHAR  lib_strerror (INT  iNum)
     case ERROR_VMM_VIRTUAL_ADDR:        return  ("Invalid virtual address");
     case ERROR_VMM_ALIGN:               return  ("Miss page align");
     case ERROR_VMM_PAGE_INVAL:          return  ("Invalid page");
+    case ERROR_VMM_LOW_PAGE:            return  ("Low page");
 
     /*
      *  system

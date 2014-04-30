@@ -56,17 +56,6 @@
 #define printk
 #endif                                                                  /*  printk                      */
 /*********************************************************************************************************
-  外部全局变量声明
-*********************************************************************************************************/
-extern LW_VMM_ZONE          _G_vmzonePhysical[LW_CFG_VMM_ZONE_NUM];     /*  物理区域                    */
-/*********************************************************************************************************
-  统计变量
-*********************************************************************************************************/
-extern INT64                _K_i64VmmAbortCounter;                      /*  异常中止次数                */
-extern INT64                _K_i64VmmPageFailCounter;                   /*  缺页中断正常处理次数        */
-extern INT64                _K_i64VmmPageLackCounter;                   /*  系统缺少物理页面次数        */
-extern INT64                _K_i64VmmMapErrCounter;                     /*  映射错误次数                */
-/*********************************************************************************************************
   操作锁
 *********************************************************************************************************/
 extern  LW_OBJECT_HANDLE    _G_ulVmmLock;
@@ -115,7 +104,6 @@ static VOID  __vmmInvalidateAreaHook (PLW_VMM_PAGE  pvmpagePhysical,
 {
     if ((pvmpagePhysical->PAGE_ulMapPageAddr >= ulSubMem) &&
         (pvmpagePhysical->PAGE_ulMapPageAddr < (ulSubMem + stSize))) {  /*  判断对应的虚拟内存范围      */
-        
         __vmmLibPageMap(pvmpagePhysical->PAGE_ulMapPageAddr,
                         pvmpagePhysical->PAGE_ulMapPageAddr,
                         pvmpagePhysical->PAGE_ulCount,                  /*  一定是 1                    */
@@ -128,6 +116,27 @@ static VOID  __vmmInvalidateAreaHook (PLW_VMM_PAGE  pvmpagePhysical,
         if (pulCount) {
             (*pulCount)++;
         }
+    }
+}
+/*********************************************************************************************************
+** 函数名称: __vmmSplitAreaHook
+** 功能描述: API_VmmSplitArea 回调函数
+** 输　入  : pvmpagePhysical       pvmpageVirtual 内的一个物理页面控制块
+**           pvmpageVirtual        原始虚拟分区
+**           pvmpageVirtualSplit   新拆分出的虚拟分区
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __vmmSplitAreaHook (PLW_VMM_PAGE  pvmpagePhysical,
+                                 PLW_VMM_PAGE  pvmpageVirtual,
+                                 PLW_VMM_PAGE  pvmpageVirtualSplit)
+{
+    REGISTER addr_t     ulSubMem = pvmpageVirtualSplit->PAGE_ulPageAddr;
+
+    if (pvmpagePhysical->PAGE_ulMapPageAddr >= ulSubMem) {              /*  判断对应的虚拟内存范围      */
+        __pageUnlink(pvmpageVirtual, pvmpagePhysical);                  /*  解除连接关系                */
+        __pageLink(pvmpageVirtualSplit, pvmpagePhysical);
     }
 }
 /*********************************************************************************************************
@@ -272,7 +281,7 @@ __error_handle:                                                         /*  出现
 /*********************************************************************************************************
 ** 函数名称: API_VmmFree
 ** 功能描述: 释放连续虚拟内存
-** 输　入  : pvVirtualMem    连续虚拟地址 (必须为 vmmMalloc?? 返回地址)
+** 输　入  : pvVirtualMem    连续虚拟地址
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
@@ -426,7 +435,7 @@ PVOID  API_VmmMallocAreaAlign (size_t  stSize, size_t  stAlign,
 /*********************************************************************************************************
 ** 函数名称: API_VmmFreeArea
 ** 功能描述: 释放连续虚拟内存
-** 输　入  : pvVirtualMem    连续虚拟地址 (必须为 vmmMallocArea?? 返回地址)
+** 输　入  : pvVirtualMem    连续虚拟地址
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
@@ -482,6 +491,152 @@ VOID  API_VmmFreeArea (PVOID  pvVirtualMem)
                       pvVirtualMem, LW_NULL);
     
     _ErrorHandle(ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_VmmExpandArea
+** 功能描述: 扩展连续虚拟内存
+** 输　入  : pvVirtualMem    连续虚拟地址
+**           stExpSize       需要扩大的大小
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG  API_VmmExpandArea (PVOID  pvVirtualMem, size_t  stExpSize)
+{
+    REGISTER PLW_VMM_PAGE   pvmpageVirtual;
+             addr_t         ulAddr = (addr_t)pvVirtualMem;
+             ULONG          ulError;
+             
+    REGISTER ULONG          ulExpPageNum = (ULONG) (stExpSize >> LW_CFG_VMM_PAGE_SHIFT);
+    REGISTER size_t         stExcess     = (size_t)(stExpSize & ~LW_CFG_VMM_PAGE_MASK);
+             
+    if (pvVirtualMem == LW_NULL) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    
+    if (stExcess) {
+        ulExpPageNum++;                                                 /*  确定分页数量                */
+    }
+    
+    if (ulExpPageNum < 1) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    
+    __VMM_LOCK();
+    pvmpageVirtual = __areaVirtualSearchPage(ulAddr);
+    if (pvmpageVirtual == LW_NULL) {
+        __VMM_UNLOCK();
+        _ErrorHandle(ERROR_VMM_VIRTUAL_PAGE);                           /*  无法反向查询虚拟页面控制块  */
+        return  (ERROR_VMM_VIRTUAL_PAGE);
+    }
+    
+    ulError = __pageExpand(pvmpageVirtual, ulExpPageNum);               /*  拓展虚拟页面                */
+    if (ulError) {
+        __VMM_UNLOCK();
+        return  (ulError);
+    }
+    __VMM_UNLOCK();
+    
+    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_EXPAND, 
+                      pvVirtualMem, stExpSize, LW_NULL);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_VmmSplitArea
+** 功能描述: 拆分连续虚拟内存
+** 输　入  : pvVirtualMem    连续虚拟地址
+**           stSize          pvVirtualMem 虚拟段需要保留的大小.
+** 输　出  : 新的连续虚拟地址
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+PVOID  API_VmmSplitArea (PVOID  pvVirtualMem, size_t  stSize)
+{
+    REGISTER PLW_VMM_PAGE           pvmpageVirtual;
+             PLW_VMM_PAGE           pvmpageVirtualSplit;
+    REGISTER PLW_VMM_PAGE_PRIVATE   pvmpagep;
+    REGISTER PLW_VMM_PAGE_PRIVATE   pvmpagepSplit;
+    
+             addr_t         ulAddr = (addr_t)pvVirtualMem;
+             ULONG          ulError;
+             
+    REGISTER ULONG          ulPageNum = (ULONG) (stSize >> LW_CFG_VMM_PAGE_SHIFT);
+    REGISTER size_t         stExcess  = (size_t)(stSize & ~LW_CFG_VMM_PAGE_MASK);
+             
+    if (pvVirtualMem == LW_NULL) {
+        _ErrorHandle(EINVAL);
+        return  (LW_NULL);
+    }
+    
+    if (stExcess) {
+        ulPageNum++;                                                    /*  确定分页数量                */
+    }
+    
+    if (ulPageNum < 1) {
+        _ErrorHandle(EINVAL);
+        return  (LW_NULL);
+    }
+
+    pvmpagepSplit = (PLW_VMM_PAGE_PRIVATE)__KHEAP_ALLOC(sizeof(LW_VMM_PAGE_PRIVATE));
+    if (pvmpagepSplit == LW_NULL) {
+        _ErrorHandle(ERROR_KERNEL_LOW_MEMORY);
+        return  (LW_NULL);
+    }
+    
+    __VMM_LOCK();
+    pvmpageVirtual = __areaVirtualSearchPage(ulAddr);
+    if (pvmpageVirtual == LW_NULL) {
+        __VMM_UNLOCK();
+        __KHEAP_FREE(pvmpagepSplit);
+        _ErrorHandle(ERROR_VMM_VIRTUAL_PAGE);                           /*  无法反向查询虚拟页面控制块  */
+        return  (LW_NULL);
+    }
+    
+    pvmpagep = (PLW_VMM_PAGE_PRIVATE)pvmpageVirtual->PAGE_pvAreaCb;
+    if (pvmpagep == LW_NULL) {
+        __VMM_UNLOCK();
+        __KHEAP_FREE(pvmpagepSplit);
+        _ErrorHandle(ERROR_VMM_PAGE_INVAL);
+        return  (LW_NULL);
+    }
+    
+    ulError = __pageSplit(pvmpageVirtual, &pvmpageVirtualSplit, ulPageNum, pvmpagepSplit);
+    if (ulError) {
+        __VMM_UNLOCK();
+        __KHEAP_FREE(pvmpagepSplit);
+        return  (LW_NULL);
+    }
+    
+    __pageTraversalLink(pvmpageVirtual, 
+                        __vmmSplitAreaHook, 
+                        pvmpageVirtual,
+                        pvmpageVirtualSplit,
+                        LW_NULL,
+                        LW_NULL,
+                        LW_NULL,
+                        LW_NULL);                                       /*  遍历对应的物理页面          */
+                        
+    *pvmpagepSplit = *pvmpagep;
+    
+    _List_Line_Add_Ahead(&pvmpagepSplit->PAGEP_lineManage, 
+                         &_K_plineVmmVAddrSpaceHeader);                 /*  连入缺页中断查找表          */
+                         
+    __areaVirtualInsertPage(pvmpageVirtualSplit->PAGE_ulPageAddr, 
+                            pvmpageVirtualSplit);                       /*  插入逻辑空间反查表          */
+    __VMM_UNLOCK();
+
+    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_SPLIT, 
+                      pvVirtualMem, stSize, LW_NULL);
+
+    _ErrorHandle(ERROR_NONE);
+    return  ((PVOID)pvmpageVirtualSplit->PAGE_ulPageAddr);
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmSetFiller
