@@ -49,6 +49,7 @@
             ps 命令加入对进程组号显示.
 2013.12.04  整理 loader 初始化代码.
 2014.04.21  内核模块插入或卸载打印相关路径名.
+2014.05.02  加入 lsmod 命令.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -800,6 +801,21 @@ static INT  __tshellVProcShow (INT  iArgC, PCHAR  *ppcArgV)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __tshellLsmod
+** 功能描述: 系统命令 "ps"
+** 输　入  : iArgC         参数个数
+**           ppcArgV       参数表
+** 输　出  : 0
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __tshellLsmod (INT  iArgC, PCHAR  *ppcArgV)
+{
+    PCHAR   pcArgV[3] = {"modules", "kernel", LW_NULL};
+
+    return  (__tshellModuleShow(2, pcArgV));
+}
+/*********************************************************************************************************
 ** 函数名称: __ldShellInit
 ** 功能描述: 初始化 loader 内部 shell 命令.
 ** 输　入  : NONE
@@ -844,6 +860,9 @@ static VOID  __ldShellInit (VOID)
     API_TShellKeywordAdd("modules", __tshellModuleShow);
     API_TShellFormatAdd("modules", " [module name]");
     API_TShellHelpAdd("modules",   "show module information.\n");
+    
+    API_TShellKeywordAdd("lsmod", __tshellLsmod);
+    API_TShellHelpAdd("lsmod",    "show all kernel module.\n");
     
     API_TShellKeywordAdd("ps", __tshellVProcShow);
     API_TShellHelpAdd("ps",   "show vprocess information.\n");

@@ -47,6 +47,7 @@
 2013.12.21  支持 PROT_EXEC.
 2014.04.30  加入对 mremap() 的支持.
             存在 VMM 时不在使用 HEAP 进行分配, 保持算法一致性.
+2014.05.01  修正 mremap() 错误时的 errno.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -804,8 +805,11 @@ void  *mremap (void *pvAddr, size_t stOldSize, size_t stNewSize, int iFlag, ...)
                     __mmapFree(pmapnode, pvTmpAddr);                    /*  释放之前的内存              */
                 
                 } else {
+                    errno     = ENOMEM;
                     pvRetAddr = MAP_FAILED;
                 }
+            } else {
+                errno = ENOMEM;
             }
         } else {                                                        /*  直接扩展成功                */
             pmapnode->PMAPN_stLen = stNewSize;
@@ -918,7 +922,7 @@ int  munmap (void  *pvAddr, size_t  stLen)
         
 #if LW_CFG_VMM_EN > 0
         API_VmmInvalidateArea(pmapnode->PMAPN_pvAddr, pvAddr, stLen);   /*  释放相关区域物理内存        */
-                                                                        /*  SylixOS 暂不支持虚拟空间拆散*/
+                                                                        /*  暂不使用虚拟空间拆散        */
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
         pmapnode->PMAPN_bBusy = LW_FALSE;
         

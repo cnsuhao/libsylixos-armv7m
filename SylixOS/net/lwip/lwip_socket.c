@@ -36,6 +36,8 @@
 2013.11.21  加入 accept4() 函数.
 2014.03.22  加入 AF_PACKET 支持.
 2014.04.01  加入 socket 文件对 mmap 的支持.
+2014.05.02  __SOCKET_CHECHK() 判断出错时打印 debug 信息.
+            socket 加入 monitor 监控器功能.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -124,6 +126,7 @@ extern int              __packet_have_event(AF_PACKET_T *pafpacket, int type, in
                             }   \
                             iosFdGetType(s, &iType);    \
                             if (iType != LW_DRV_TYPE_SOCKET) { \
+                                _DebugHandle(__ERRORMESSAGE_LEVEL, "not a socket file.\r\n");   \
                                 _ErrorHandle(EBADF);    \
                                 return  (PX_ERROR); \
                             }
@@ -1439,6 +1442,9 @@ int  socketpair (int domain, int type, int protocol, int sv[2])
         return  (PX_ERROR);
     }
     
+    MONITOR_EVT_INT5(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SOCKPAIR, 
+                     domain, type, protocol, sv[0], sv[1], LW_NULL);
+    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -1544,6 +1550,9 @@ int  socket (int domain, int type, int protocol)
     if (iNonBlock) {
         __socketIoctl(psock, FIONBIO, &iNonBlock);
     }
+    
+    MONITOR_EVT_INT4(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SOCKET, 
+                     domain, type, protocol, iFd, LW_NULL);
     
     return  (iFd);
     
@@ -1668,6 +1677,9 @@ int  accept4 (int s, struct sockaddr *addr, socklen_t *addrlen, int flags)
         __socketIoctl(psockNew, FIONBIO, &iNonBlock);
     }
     
+    MONITOR_EVT_INT2(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_ACCEPT, 
+                     s, iFdNew, LW_NULL);
+    
     return  (iFdNew);
     
 __error_handle:
@@ -1737,6 +1749,10 @@ int  bind (int s, const struct sockaddr *name, socklen_t namelen)
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_INT1(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_BIND, 
+                         s, LW_NULL);
     }
     
     return  (iRet);
@@ -1777,6 +1793,10 @@ int  shutdown (int s, int how)
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_INT2(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SHUTDOWN, 
+                         s, how, LW_NULL);
     }
     
     return  (iRet);
@@ -1820,6 +1840,10 @@ int  connect (int s, const struct sockaddr *name, socklen_t namelen)
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_INT1(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_CONNECT, 
+                         s, LW_NULL);
     }
     
     return  (iRet);
@@ -1945,6 +1969,10 @@ int  setsockopt (int s, int level, int optname, const void *optval, socklen_t op
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_INT3(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SOCKOPT, 
+                         s, level, optname, LW_NULL);
     }
     
     return  (iRet);
@@ -2040,6 +2068,10 @@ int listen (int s, int backlog)
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_INT2(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_LISTEN, 
+                         s, backlog, LW_NULL);
     }
     
     return  (iRet);
@@ -2084,6 +2116,10 @@ ssize_t  recv (int s, void *mem, size_t len, int flags)
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_LONG3(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_RECV, 
+                          s, flags, sstRet, LW_NULL);
     }
     
     return  (sstRet);
@@ -2131,6 +2167,10 @@ ssize_t  recvfrom (int s, void *mem, size_t len, int flags,
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_LONG3(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_RECV, 
+                          s, flags, sstRet, LW_NULL);
     }
     
     return  (sstRet);
@@ -2174,6 +2214,10 @@ ssize_t  recvmsg (int  s, struct msghdr *msg, int flags)
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_LONG3(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_RECV, 
+                          s, flags, sstRet, LW_NULL);
     }
     
     return  (sstRet);
@@ -2218,6 +2262,10 @@ ssize_t  send (int s, const void *data, size_t size, int flags)
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_LONG3(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SEND, 
+                          s, flags, sstRet, LW_NULL);
     }
     
     return  (sstRet);
@@ -2263,6 +2311,10 @@ ssize_t  sendto (int s, const void *data, size_t size, int flags,
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_LONG3(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SEND, 
+                          s, flags, sstRet, LW_NULL);
     }
     
     return  (sstRet);
@@ -2306,6 +2358,10 @@ ssize_t  sendmsg (int  s, const struct msghdr *msg, int flags)
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
+    
+    } else {
+        MONITOR_EVT_LONG3(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SEND, 
+                          s, flags, sstRet, LW_NULL);
     }
     
     return  (sstRet);

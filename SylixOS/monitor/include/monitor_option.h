@@ -283,6 +283,23 @@
 #define MONITOR_EVENT_EXCEPTION_SOFT    0                               /*  _excJob message             */
 
 /*********************************************************************************************************
+  网络
+*********************************************************************************************************/
+
+#define MONITOR_EVENT_ID_NETWORK        19
+
+#define MONITOR_EVENT_NETWORK_SOCKPAIR  0                               /*  socketpair                  */
+#define MONITOR_EVENT_NETWORK_SOCKET    1                               /*  socket                      */
+#define MONITOR_EVENT_NETWORK_ACCEPT    2                               /*  accept, accept4             */
+#define MONITOR_EVENT_NETWORK_BIND      3                               /*  bind                        */
+#define MONITOR_EVENT_NETWORK_SHUTDOWN  4                               /*  shutdown                    */
+#define MONITOR_EVENT_NETWORK_CONNECT   5                               /*  connect                     */
+#define MONITOR_EVENT_NETWORK_SOCKOPT   6                               /*  setsocketopt                */
+#define MONITOR_EVENT_NETWORK_LISTEN    7                               /*  listen                      */
+#define MONITOR_EVENT_NETWORK_RECV      8                               /*  recv, recvfrom, recvmsg     */
+#define MONITOR_EVENT_NETWORK_SEND      9                               /*  send, sendto, sendmsg       */
+
+/*********************************************************************************************************
   限制数值
 *********************************************************************************************************/
 

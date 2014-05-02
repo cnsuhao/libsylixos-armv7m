@@ -1603,6 +1603,8 @@ static INT  __tshellSysCmdShutdown (INT  iArgC, PCHAR  ppcArgV[])
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
+#if LW_CFG_MONITOR_EN > 0
+
 static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
 {
     static PVOID    pvMonitor = LW_NULL;
@@ -1648,8 +1650,13 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
                 goto    __inval_args;
             }
             
+#if LW_CFG_NET_EN > 0
             pvMonitor = API_MonitorNetUploadCreate(pcFileOrIp, usPort,
                                                    16 * LW_CFG_KB_SIZE, LW_NULL);
+#else
+            pvMonitor = LW_NULL;
+            errno     = ENOSYS;
+#endif                                                                  /*  LW_CFG_NET_EN > 0           */
             if (!pvMonitor) {
                 printf("can not create monitor net upload path error : %s.\n", lib_strerror(errno));
                 return  (PX_ERROR);
@@ -1659,8 +1666,13 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
         } else {
             lib_strlcpy(pcFileOrIp, ppcArgV[2], MAX_FILENAME_LENGTH);
         
+#if LW_CFG_DEVICE_EN > 0
             pvMonitor = API_MonitorFileUploadCreate(pcFileOrIp, O_WRONLY | O_CREAT | O_APPEND, 0666,
                                                     16 * LW_CFG_KB_SIZE, 0, LW_NULL);
+#else
+            pvMonitor = LW_NULL;
+            errno     = ENOSYS;
+#endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
             if (!pvMonitor) {
                 printf("can not create monitor file upload path error : %s.\n", lib_strerror(errno));
                 return  (PX_ERROR);
@@ -1685,6 +1697,7 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
         }
         
         if (bIsNet) {
+#if LW_CFG_NET_EN > 0
             if (API_MonitorNetUploadDelete(pvMonitor)) {
                 printf("can not stop net upload monitor error : %s.\n", lib_strerror(errno));
                 return  (PX_ERROR);
@@ -1692,8 +1705,12 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
             } else {
                 pvMonitor = LW_NULL;
             }
+#else
+            pvMonitor = LW_NULL;
+#endif                                                                  /*  LW_CFG_NET_EN > 0           */
         
         } else {
+#if LW_CFG_DEVICE_EN > 0
             if (API_MonitorFileUploadDelete(pvMonitor)) {
                 printf("can not stop file upload monitor error : %s.\n", lib_strerror(errno));
                 return  (PX_ERROR);
@@ -1701,6 +1718,9 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
             } else {
                 pvMonitor = LW_NULL;
             }
+#else
+            pvMonitor = LW_NULL;
+#endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
         }
         
         printf("monitor stop.\n");
@@ -1751,12 +1771,33 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
         }
         
         return  (ERROR_NONE);
+    
+    } else if (lib_strcmp(ppcArgV[1], "pid") == 0) {
+        pid_t  pid = 0;
+        
+        if (!pvMonitor) {
+            printf("monitor has been already stopped.\n");
+            return  (ERROR_NONE);
+        }
+        
+        if (iArgC < 3) {
+            API_MonitorUploadGetPid(pvMonitor, &pid);
+            printf("monitor pid is %d\n", pid);
+            return  (ERROR_NONE);
+        }
+    
+        pid = lib_atoi(ppcArgV[2]);
+        API_MonitorUploadSetPid(pvMonitor, pid);
+        
+        return  (ERROR_NONE);
     }
     
 __inval_args:
     printf("argument error.\n");
     return  (PX_ERROR);
 }
+
+#endif                                                                  /*  LW_CFG_MONITOR_EN > 0       */
 /*********************************************************************************************************
 ** 函数名称: __tshellSysCmdLspci
 ** 功能描述: 系统命令 "lspci"
@@ -2030,14 +2071,21 @@ VOID  __tshellSysCmdInit (VOID)
                                   "-h    shutdown and power off\n"
                                   "no parameter means shutdown only\n");
                                   
+#if LW_CFG_MONITOR_EN > 0
     API_TShellKeywordAdd("monitor", __tshellSysCmdMonitor);
-    API_TShellFormatAdd("monitor",  " {[start {file | ip:port}] | [stop] | [filter [event allow-mask]]}");
+    API_TShellFormatAdd("monitor",  " {[start {file | ip:port}] | [stop] | [filter [event allow-mask]] | [pid [pid]]}");
     API_TShellHelpAdd("monitor",    "kernel moniter setting.\n"
                                     "monitor start 192.168.1.1:1234\n"
                                     "monitor start /mnt/nfs/monitor.data\n"
                                     "monitor stop\n"
                                     "monitor filter\n"
-                                    "monitor filter 10 1b\n");
+                                    "monitor filter 10 1b\n"
+                                    "monitor pid\n"
+                                    "monitor pid 20\n"
+                                    "            <  0 : all.\n"
+                                    "            == 0 : kernel.\n"
+                                    "            >  0 : whose process ID is equal to the value of pid.\n");
+#endif                                                                  /*  LW_CFG_MONITOR_EN > 0       */
                                     
     API_TShellKeywordAdd("lspci", __tshellSysCmdLspci);
     API_TShellHelpAdd("lspci", "show PCI Bus message.\n");
