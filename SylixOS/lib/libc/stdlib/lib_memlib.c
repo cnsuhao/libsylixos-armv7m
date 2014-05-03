@@ -159,9 +159,9 @@ VOID   lib_free (PVOID  pvPtr)
 {
     if (pvPtr) {
 #if LW_CFG_USER_HEAP_SAFETY > 0
-        _HeapFree(_K_pheapSystem, pvPtr, LW_TRUE);                      /*  需要加入安全性算法          */
+        _HeapFree(_K_pheapSystem, pvPtr, LW_TRUE, __func__);            /*  需要加入安全性算法          */
 #else
-        _HeapFree(_K_pheapSystem, pvPtr, LW_FALSE);
+        _HeapFree(_K_pheapSystem, pvPtr, LW_FALSE, __func__);
 #endif                                                                  /*  LW_CFG_USER_HEAP_SAFETY     */
     }
 }

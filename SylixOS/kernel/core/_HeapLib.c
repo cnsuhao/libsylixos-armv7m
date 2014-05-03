@@ -735,11 +735,12 @@ PVOID  _HeapZallocate (PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurp
 **           pheap              堆控制块
 **           pvStartAddress     归还的地址
 **           bIsNeedVerify      是否需要安全性检查
+**           pcPurpose          谁释放内存
 ** 输　出  : 正确返回 LW_NULL 否则返回 pvStartAddress
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL   bIsNeedVerify)
+PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL  bIsNeedVerify, CPCHAR  pcPurpose)
 {
     REGISTER BOOL               bIsMergeOk = LW_FALSE;
     REGISTER size_t             stSegmentByteSizeFree;
@@ -764,7 +765,7 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL   bIsNeedVe
     }
     if (bIsNeedVerify) {                                                /*  是否需要安全性检查          */
         bVerifyOk = _HeapVerify(pheap, pvStartAddress, 
-                                &psegment, __func__);                   /*  检查                        */
+                                &psegment, pcPurpose);                  /*  检查                        */
         if (bVerifyOk == LW_FALSE) {
             __heap_unlock(pheap);
             return  (pvStartAddress);                                   /*  检查错误                    */
@@ -777,7 +778,7 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL   bIsNeedVe
                                                                         /*  重新定位                    */
             if (!__HEAP_SEGMENT_IS_USED(psegment)) {                    /*  分段并没有使用              */
                 __heap_unlock(pheap);
-                __DEBUG_MEM_ERROR(__func__, pheap->HEAP_cHeapName, 
+                __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName, 
                                   "not in used or double free", pvStartAddress);
                 return  (pvStartAddress);
             }
@@ -785,7 +786,7 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL   bIsNeedVe
     }
     
     if (__heap_crossbord_check(psegment) == LW_FALSE) {                 /*  内存越界                    */
-        __DEBUG_MEM_ERROR(__func__, pheap->HEAP_cHeapName, 
+        __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName, 
                           "cross-border", pvStartAddress);
     }
     
@@ -912,7 +913,8 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
     
     if (stNewByteSize == 0) {
         if (pvStartAddress) {
-            return  (_HeapFree(pheap, pvStartAddress, bIsNeedVerify));  /*  释放先前分配的内存即可      */
+            return  (_HeapFree(pheap, pvStartAddress, 
+                               bIsNeedVerify, pcPurpose));              /*  释放先前分配的内存即可      */
         } else {
             return  (LW_NULL);
         }
@@ -1015,7 +1017,8 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
                        __HEAP_SEGMENT_DATA_PTR(psegment), 
                        (UINT)psegment->SEGMENT_stSegmentByteSize);      /*  复制原始信息                */
             _HeapFree(pheap, 
-                      __HEAP_SEGMENT_DATA_PTR(psegment), LW_FALSE);     /*  释放本块空间                */
+                      __HEAP_SEGMENT_DATA_PTR(psegment), 
+                      LW_FALSE, pcPurpose);                             /*  释放本块空间                */
         }
         
         ulLockErr = __heap_lock(pheap);                                 /*  这里 heap 绝对不能被删除    */
@@ -1060,7 +1063,8 @@ __split_segment:
     
     __heap_crossbord_mark(psegmentNew);                                 /*  加入内存越界标志            */
     
-    _HeapFree(pheap, __HEAP_SEGMENT_DATA_PTR(psegmentNew), LW_FALSE);   /*  进行内存重组                */
+    _HeapFree(pheap, __HEAP_SEGMENT_DATA_PTR(psegmentNew), 
+              LW_FALSE, pcPurpose);                                     /*  进行内存重组                */
     
     ulLockErr = __heap_lock(pheap);                                     /*  这里 heap 绝对不能被删除    */
     __HEAP_UPDATA_MAX_USED(pheap);                                      /*  更新统计变量                */

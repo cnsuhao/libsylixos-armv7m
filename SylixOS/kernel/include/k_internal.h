@@ -75,8 +75,8 @@ extern  __typeof (name) aliasname __attribute__ ((alias(#name)));
 #define  __SHEAP_REALLOC(pvMemory, stNBytes)      \
          _HeapRealloc(_K_pheapSystem, pvMemory, stNBytes, LW_FALSE, __func__)
 
-#define  __KHEAP_FREE(pvMemory)         _HeapFree(_K_pheapKernel, pvMemory, LW_FALSE)
-#define  __SHEAP_FREE(pvMemory)         _HeapFree(_K_pheapSystem, pvMemory, LW_FALSE)
+#define  __KHEAP_FREE(pvMemory)         _HeapFree(_K_pheapKernel, pvMemory, LW_FALSE, __func__)
+#define  __SHEAP_FREE(pvMemory)         _HeapFree(_K_pheapSystem, pvMemory, LW_FALSE, __func__)
 
 /*********************************************************************************************************
   ¶ÔÆëÄÚ´æ¶Ñºê²Ù×÷
@@ -571,7 +571,8 @@ PVOID          _HeapAllocate(PLW_CLASS_HEAP   pheap, size_t  stByteSize, CPCHAR 
 PVOID          _HeapAllocateAlign(PLW_CLASS_HEAP   pheap, size_t  stByteSize, 
                                   size_t  stAlign, CPCHAR  pcPurpose);
 PVOID          _HeapZallocate(PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurpose);
-PVOID          _HeapFree(PLW_CLASS_HEAP       pheap, PVOID      pvStartAddress, BOOL   bIsNeedVerify);
+PVOID          _HeapFree(PLW_CLASS_HEAP       pheap, PVOID pvStartAddress, 
+                         BOOL bIsNeedVerify, CPCHAR  pcPurpose);
 ULONG          _HeapGetInfo(PLW_CLASS_HEAP    pheap, PLW_CLASS_SEGMENT  psegmentList[], INT iMaxCounter);
 PVOID          _HeapRealloc(PLW_CLASS_HEAP    pheap, 
                             PVOID             pvStartAddress, 

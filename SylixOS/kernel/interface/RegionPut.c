@@ -83,9 +83,9 @@ PVOID  API_RegionPut (LW_OBJECT_HANDLE  ulId, PVOID  pvSegmentData)
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
 #if LW_CFG_USER_HEAP_SAFETY > 0
-    pvSegmentData = _HeapFree(pheap, pvSegmentData, LW_TRUE);           /*  带有内存检查的交还          */
+    pvSegmentData = _HeapFree(pheap, pvSegmentData, LW_TRUE, __func__); /*  带有内存检查的交还          */
 #else
-    pvSegmentData = _HeapFree(pheap, pvSegmentData, LW_FALSE);
+    pvSegmentData = _HeapFree(pheap, pvSegmentData, LW_FALSE, __func__);
 #endif                                                                  /*  LW_CFG_USER_HEAP_SAFETY     */
     
     if (pvSegmentData) {
