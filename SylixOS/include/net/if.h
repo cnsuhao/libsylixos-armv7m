@@ -40,7 +40,7 @@
 extern "C" {
 #endif                                                                  /*  __cplusplus                 */
 
-#define IF_NAMESIZE         4
+#define IF_NAMESIZE         16
 
 struct if_nameindex {
     unsigned                if_index;                                   /* Numeric index of interface   */
@@ -94,6 +94,7 @@ struct ifreq {
         int                 ifru_ifindex;
         int                 ifru_mtu;
         int                 ifru_metric;
+        int                 ifru_type;
         void               *ifru_data;
     } ifr_ifru;
 };
@@ -108,6 +109,7 @@ struct ifreq {
 #define ifr_ifindex         ifr_ifru.ifru_ifindex
 #define ifr_mtu             ifr_ifru.ifru_mtu
 #define ifr_metric          ifr_ifru.ifru_metric
+#define ifr_type            ifr_ifru.ifru_type
 #define ifr_data            ifr_ifru.ifru_data
 
 struct ifconf {
@@ -140,6 +142,7 @@ struct ifconf {
 #define SIOCGIFBRDADDR      _IOWR('i', 35, struct ifreq)
 #define SIOCGIFFLAGS        _IOWR('i', 17, struct ifreq)
 
+#define SIOCGIFTYPE         _IOR('i',  49, struct ifreq)
 #define SIOCGIFNAME         _IOWR('i', 50, struct ifreq)
 #define SIOCGIFINDEX        _IOWR('i', 51, struct ifreq)
 

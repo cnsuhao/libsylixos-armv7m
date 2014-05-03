@@ -55,15 +55,7 @@
 #include "lwip/dhcp.h"
 #include "lwip/tcpip.h"
 #include "lwip_route.h"
-/*********************************************************************************************************
-  全局变量
-*********************************************************************************************************/
-extern LW_OBJECT_HANDLE     _G_ulNetifLock;
-/*********************************************************************************************************
-  网络接口锁
-*********************************************************************************************************/
-#define LWIP_NETIF_LOCK()   API_SemaphoreBPend(_G_ulNetifLock, LW_OPTION_WAIT_INFINITE)
-#define LWIP_NETIF_UNLOCK() API_SemaphoreBPost(_G_ulNetifLock)
+#include "lwip_if.h"
 /*********************************************************************************************************
   ARP 子协议相关函数
 *********************************************************************************************************/
@@ -662,14 +654,14 @@ static INT  __tshellIfRouter (INT  iArgC, PCHAR  *ppcArgV)
     CHAR          cName[5] = "null";                                    /*  当前默认路由网络接口名      */
 
     if (iArgC != 2) {
-         LWIP_NETIF_LOCK();
+        LWIP_NETIF_LOCK();
         if (netif_default) {
             cName[0] = netif_default->name[0];
             cName[1] = netif_default->name[1];
             cName[2] = (CHAR)(netif_default->num + '0');
             cName[3] = PX_EOS;
         }
-         LWIP_NETIF_UNLOCK();
+        LWIP_NETIF_UNLOCK();
         
         printf("default router netif : %s\n", cName);
         return  (ERROR_NONE);

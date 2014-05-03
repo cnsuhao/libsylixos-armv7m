@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-05-03: han.hui
+    加入获取网络类型功能.
+
     2014-05-02: han.hui
     monitor 加入网络操作跟踪功能.
     
@@ -480,6 +483,9 @@ HISTORY
     SylixOS 根目录中加入 CHANGELOG 文件.
     
 ++ Bugfixes:.
+
+    2014-05-02: han.hui
+    修正 netif lock 递归问题.
 
     2014-04-21: han.hui
     修正一些注释, 加入 PX_PRIORITY_CONVERT() 宏用来转换 SylixOS 优先级与 POSIX 优先级.

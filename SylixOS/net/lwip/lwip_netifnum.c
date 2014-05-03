@@ -28,6 +28,7 @@
 2014.03.22  可以通过索引号, 快速得到 netif.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
+#define  __NETIF_MAIN_FILE
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
 /*********************************************************************************************************
@@ -39,6 +40,7 @@
 #include "lwip/dhcp.h"
 #include "lwip/err.h"
 #include "lwip_route.h"
+#include "lwip_if.h"
 /*********************************************************************************************************
   网络接口数量宏定义
 *********************************************************************************************************/
@@ -49,13 +51,7 @@
   全局变量
 *********************************************************************************************************/
 static struct netif        *_G_pnetifArray[__LW_NETIF_MAX_NUM];
-       LW_OBJECT_HANDLE     _G_ulNetifLock;
 static UINT                 _G_uiNetifNum = 0;
-/*********************************************************************************************************
-  网络接口锁
-*********************************************************************************************************/
-#define LWIP_NETIF_LOCK()   API_SemaphoreBPend(_G_ulNetifLock, LW_OPTION_WAIT_INFINITE)
-#define LWIP_NETIF_UNLOCK() API_SemaphoreBPost(_G_ulNetifLock)
 /*********************************************************************************************************
   函数声明
 *********************************************************************************************************/
@@ -76,7 +72,9 @@ INT  netif_add_hook (PVOID  pvNetif)
     INT            i;
     
     if (_G_ulNetifLock == 0) {
-        _G_ulNetifLock =  API_SemaphoreBCreate("netif_lock", LW_TRUE, 
+        _G_ulNetifLock =  API_SemaphoreMCreate("netif_lock", LW_PRIO_DEF_CEILING, 
+                                               LW_OPTION_DELETE_SAFE |
+                                               LW_OPTION_INHERIT_PRIORITY |
                                                LW_OPTION_OBJECT_GLOBAL, LW_NULL);
     }
     

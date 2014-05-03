@@ -38,6 +38,8 @@
 2014.04.01  加入 socket 文件对 mmap 的支持.
 2014.05.02  __SOCKET_CHECHK() 判断出错时打印 debug 信息.
             socket 加入 monitor 监控器功能.
+            修正 __ifIoctl() 对 if_indextoname 加锁的错误.
+2014.05.03  加入获取网络类型的接口.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -54,7 +56,9 @@
 #include "net/if.h"
 #include "net/if_dl.h"
 #include "net/if_arp.h"
+#include "net/if_type.h"
 #include "netdb.h"
+#include "lwip_if.h"
 #include "./packet/af_packet.h"
 #include "./unix/af_unix.h"
 /*********************************************************************************************************
@@ -66,15 +70,6 @@ const struct in6_addr in6addr_loopback           = IN6ADDR_LOOPBACK_INIT;
 const struct in6_addr in6addr_nodelocal_allnodes = IN6ADDR_NODELOCAL_ALLNODES_INIT;
 const struct in6_addr in6addr_linklocal_allnodes = IN6ADDR_LINKLOCAL_ALLNODES_INIT;
 #endif
-/*********************************************************************************************************
-  全局变量
-*********************************************************************************************************/
-extern LW_OBJECT_HANDLE     _G_ulNetifLock;
-/*********************************************************************************************************
-  网络接口锁
-*********************************************************************************************************/
-#define LWIP_NETIF_LOCK()   API_SemaphoreBPend(_G_ulNetifLock, LW_OPTION_WAIT_INFINITE)
-#define LWIP_NETIF_UNLOCK() API_SemaphoreBPost(_G_ulNetifLock)
 /*********************************************************************************************************
   文件结构 (支持的协议簇 AF_INET AF_INET6 AF_RAW AF_UNIX)
 *********************************************************************************************************/
@@ -427,6 +422,19 @@ static INT  __ifIoctlIf (INT iLwipFd, INT  iCmd, PVOID  pvArg)
         iRet = ERROR_NONE;
         break;
         
+    case SIOCGIFTYPE:                                                   /*  获得网卡类型                */
+        if (pnetif->flags & NETIF_FLAG_POINTTOPOINT) {
+            pifreq->ifr_type = IFT_PPP;
+        } else if (pnetif->flags & (NETIF_FLAG_ETHERNET | NETIF_FLAG_ETHARP)) {
+            pifreq->ifr_type = IFT_ETHER;
+        } else if (pnetif->num == 0) {
+            pifreq->ifr_type = IFT_LOOP;
+        } else {
+            pifreq->ifr_type = IFT_OTHER;
+        }
+        iRet = ERROR_NONE;
+        break;
+        
     case SIOCGIFINDEX:                                                  /*  获得网卡 index              */
         pifreq->ifr_ifindex = (int)pnetif->num;
         iRet = ERROR_NONE;
@@ -775,11 +783,9 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     } else if (iCmd == SIOCGIFNAME) {                                   /*  获得网卡名                  */
         struct ifreq *pifreq = (struct ifreq *)pvArg;
         
-        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
         if (if_indextoname(pifreq->ifr_ifindex, pifreq->ifr_name)) {
             iRet = ERROR_NONE;
         }
-        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
         return  (iRet);
     }
     
