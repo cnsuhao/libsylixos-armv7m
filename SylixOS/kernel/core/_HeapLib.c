@@ -54,6 +54,7 @@
 2013.02.22  减少分段管理内存开销.
 2013.05.01  加入内存越界检查.
 2013.10.09  修正一些错误打印信息的内容.
+2014.05.03  内存错误时, 打印堆的名字.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -126,11 +127,11 @@ VOIDFUNCPTR _K_pfuncHeapTraceFree;
 /*********************************************************************************************************
   当出现需要归还的内存不在内存堆时, 需要打印如下信息
 *********************************************************************************************************/
-#define __DEBUG_MEM_ERROR(caller, error, addr)  \
+#define __DEBUG_MEM_ERROR(caller, heap, error, addr)  \
         {   \
             CHAR    cBuffer[128];   \
             snprintf(cBuffer, sizeof(cBuffer),  \
-                     "\'%s\' memory is %s, address %p.\r\n", caller, error, addr);   \
+                     "\'%s\' heap %s memory is %s, address %p.\r\n", caller, heap, error, addr);   \
             _DebugHandle(__ERRORMESSAGE_LEVEL, cBuffer);    \
         }
 /*********************************************************************************************************
@@ -416,7 +417,8 @@ BOOL    _HeapVerify (PLW_CLASS_HEAP     pheap,
     if ((pvStartAddress < pheap->HEAP_pvStartAddress) ||
         (pvStartAddress >= (PVOID)((UINT8 *)pheap->HEAP_pvStartAddress
                          + pheap->HEAP_stTotalByteSize))) {
-        __DEBUG_MEM_ERROR(pcCaller, "not in this heap", pvStartAddress);
+        __DEBUG_MEM_ERROR(pcCaller, pheap->HEAP_cHeapName, 
+                          "not in this heap", pvStartAddress);
         return  (LW_FALSE);
     }
     
@@ -427,7 +429,8 @@ BOOL    _HeapVerify (PLW_CLASS_HEAP     pheap,
          plineSegment = _list_line_get_next(plineSegment)) {            /*  扫描各个分段                */
          
         if (plineSegment == LW_NULL) {                                  /*  扫描完成                    */
-            __DEBUG_MEM_ERROR(pcCaller, "in heap control block", pvStartAddress);
+            __DEBUG_MEM_ERROR(pcCaller, pheap->HEAP_cHeapName, 
+                              "in heap control block", pvStartAddress);
             return  (LW_FALSE);
         }
         
@@ -441,7 +444,8 @@ BOOL    _HeapVerify (PLW_CLASS_HEAP     pheap,
                 *ppsegmentUsed = psegment;                              /*  找到分段                    */
                 return  (LW_TRUE);
             } else {                                                    /*  分段使用标志错误            */
-                __DEBUG_MEM_ERROR(pcCaller, "not in used or double free", pvStartAddress);
+                __DEBUG_MEM_ERROR(pcCaller, pheap->HEAP_cHeapName, 
+                                  "not in used or double free", pvStartAddress);
                 return  (LW_FALSE);
             }
         }
@@ -773,14 +777,16 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL   bIsNeedVe
                                                                         /*  重新定位                    */
             if (!__HEAP_SEGMENT_IS_USED(psegment)) {                    /*  分段并没有使用              */
                 __heap_unlock(pheap);
-                __DEBUG_MEM_ERROR(__func__, "not in used or double free", pvStartAddress);
+                __DEBUG_MEM_ERROR(__func__, pheap->HEAP_cHeapName, 
+                                  "not in used or double free", pvStartAddress);
                 return  (pvStartAddress);
             }
         }
     }
     
     if (__heap_crossbord_check(psegment) == LW_FALSE) {                 /*  内存越界                    */
-        __DEBUG_MEM_ERROR(__func__, "cross-border", pvStartAddress);
+        __DEBUG_MEM_ERROR(__func__, pheap->HEAP_cHeapName, 
+                          "cross-border", pvStartAddress);
     }
     
     __HEAP_TRACE_FREE(pheap, pvStartAddress);                           /*  打印跟踪信息                */
@@ -939,19 +945,22 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
                                                                         /*  重新定位                    */
             if (!__HEAP_SEGMENT_IS_USED(psegment)) {                    /*  分段并没有使用              */
                 __heap_unlock(pheap);
-                __DEBUG_MEM_ERROR(__func__, "not in used or double free", pvStartAddress);
+                __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName,
+                                  "not in used or double free", pvStartAddress);
                 return  (LW_NULL);
             }
         }
     }
     
     if (__heap_crossbord_check(psegment) == LW_FALSE) {                 /*  内存越界                    */
-        __DEBUG_MEM_ERROR(__func__, "cross-border", pvStartAddress);
+        __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName, 
+                          "cross-border", pvStartAddress);
     }
     
     if (pvStartAddress != __HEAP_SEGMENT_DATA_PTR(psegment)) {          /*  realloc 不支持带有对齐特性  */
         __heap_unlock(pheap);
-        __DEBUG_MEM_ERROR(__func__, "bigger aligned", pvStartAddress);
+        __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName,
+                          "bigger aligned", pvStartAddress);
         return  (LW_NULL);
     }
     

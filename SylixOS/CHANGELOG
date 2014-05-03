@@ -484,6 +484,9 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-05-03: han.hui
+    堆内存出错时, 打印堆的名字.
+
     2014-05-02: han.hui
     修正 netif lock 递归问题.
 
