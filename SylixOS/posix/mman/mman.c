@@ -337,8 +337,13 @@ static INT  __mmapNodeAreaInsert (__PX_MAP_NODE  *pmapn, __PX_MAP_AREA  *pmapare
                 return  (PX_ERROR);                                     /*  有重叠                      */
             
             } else {
-                _List_Line_Add_Left(&pmaparea->PMAPA_lineManage, 
-                                    &pmapareaRight->PMAPA_lineManage);  /*  插到左边                    */
+                if (plineTemp == pmapn->PMAPN_plineUnmap) {             /*  插入至表头                  */
+                    _List_Line_Add_Ahead(&pmaparea->PMAPA_lineManage,
+                                         &pmapn->PMAPN_plineUnmap);
+                } else {                                                /*  插到左边                    */
+                    _List_Line_Add_Left(&pmaparea->PMAPA_lineManage, 
+                                        &pmapareaRight->PMAPA_lineManage);
+                }
                 return  (ERROR_NONE);
             }
         } else {
@@ -924,6 +929,7 @@ int  munmap (void  *pvAddr, size_t  stLen)
         API_VmmInvalidateArea(pmapnode->PMAPN_pvAddr, pvAddr, stLen);   /*  释放相关区域物理内存        */
                                                                         /*  暂不使用虚拟空间拆散        */
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+        KN_SMP_MB();
         pmapnode->PMAPN_bBusy = LW_FALSE;
         
         return  (ERROR_NONE);
@@ -1002,6 +1008,7 @@ int  msync (void  *pvAddr, size_t  stLen, int  iFlag)
                 if (pwrite(pmapnode->PMAPN_iFd, (CPVOID)ulAddr, 
                            LW_CFG_VMM_PAGE_SIZE, off) != 
                            LW_CFG_VMM_PAGE_SIZE) {                      /*  写入文件                    */
+                    KN_SMP_MB();
                     pmapnode->PMAPN_bBusy = LW_FALSE;
                     return  (PX_ERROR);
                 }
@@ -1019,6 +1026,7 @@ int  msync (void  *pvAddr, size_t  stLen, int  iFlag)
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
                 if (pwrite(pmapnode->PMAPN_iFd, (CPVOID)ulAddr, 
                            stExcess, off) != stExcess) {                /*  写入文件                    */
+                    KN_SMP_MB();
                     pmapnode->PMAPN_bBusy = LW_FALSE;
                     return  (PX_ERROR);
                 }
@@ -1052,6 +1060,7 @@ int  msync (void  *pvAddr, size_t  stLen, int  iFlag)
         }
         
         if (stTotal < stWriteLen) {
+            KN_SMP_MB();
             pmapnode->PMAPN_bBusy = LW_FALSE;
             errno = EIO;
             return  (PX_ERROR);
@@ -1059,6 +1068,7 @@ int  msync (void  *pvAddr, size_t  stLen, int  iFlag)
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
     }
 
+    KN_SMP_MB();
     pmapnode->PMAPN_bBusy = LW_FALSE;
     
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_MSYNC,
