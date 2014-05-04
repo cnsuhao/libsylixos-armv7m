@@ -249,6 +249,7 @@ LW_API pid_t    getpgrp(void);
 LW_API pid_t    getppid(void);
 LW_API pid_t    setsid(void);
 LW_API int      issetugid(void);
+LW_API int      daemon(int nochdir, int noclose);
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 
 LW_API int      getpagesize(void);

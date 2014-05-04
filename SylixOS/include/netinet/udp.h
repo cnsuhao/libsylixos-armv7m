@@ -10,42 +10,39 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: in.h
+** 文   件   名: udp.h
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2010 年 09 月 03 日
+** 文件创建日期: 2014 年 05 月 04 日
 **
-** 描        述: include/netinet/in .
+** 描        述: include/netinet/udp.
 *********************************************************************************************************/
 
-#include "in6.h"
+#ifndef __NETINET_UDP_H
+#define __NETINET_UDP_H
 
-#ifndef __NETINET_IN_H
-#define __NETINET_IN_H
+#include "lwip/sockets.h"
 
 /*********************************************************************************************************
- Local port number conventions:
- Ports < IPPORT_RESERVED are reserved for
- privileged processes (e.g. root).
- Ports > IPPORT_USERRESERVED are reserved
- for servers, not necessarily privileged.
+  Udp protocol header.
+  Per RFC 768, September, 1981.
 *********************************************************************************************************/
 
-#define IPPORT_RESERVED     1024
-#define IPPORT_USERRESERVED 5000
-
-#ifndef INET_ADDRSTRLEN
-#define INET_ADDRSTRLEN     16
-#endif
+struct udphdr {
+    u_short uh_sport;                                               /* source port                      */
+    u_short uh_dport;                                               /* destination port                 */
+    u_short uh_ulen;                                                /* udp length                       */
+    u_short uh_sum;                                                 /* udp checksum                     */
+};
 
 /*********************************************************************************************************
-  SylixOS add
+  User-settable options (used with setsockopt).
 *********************************************************************************************************/
 
-#define inet_network(cp)    ntohl(inet_addr(cp))
+#define UDP_NOCKSUM 0x01                                            /* don't checksum outbound payloads */
 
-#endif                                                                  /*  __NETINET_IN_H              */
+#endif                                                              /*  __NETINET_UDP_H                 */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

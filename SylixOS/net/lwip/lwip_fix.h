@@ -106,9 +106,14 @@ static inline u32_t  __LW_HTONL (u32_t  x)
 *********************************************************************************************************/
 
 void  sys_assert_print(const char *msg, const char *func, const char *file, int line);
+void  sys_error_print(const char *msg, const char *func, const char *file, int line);
 
 #define LWIP_PLATFORM_DIAG(x)	    {   printf x;   }
 #define LWIP_PLATFORM_ASSERT(x)     {   sys_assert_print(x, __func__, __FILE__, __LINE__);  }
+#define LWIP_PLATFORM_ERROR(x)      {   sys_error_print(x, __func__, __FILE__, __LINE__);  }
+
+#define LWIP_ERROR(message, expression, handler) do { if (!(expression)) { \
+        LWIP_PLATFORM_ERROR(message); handler;}} while(0)
 
 /*********************************************************************************************************
   关键区域保护

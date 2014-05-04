@@ -23,6 +23,7 @@
 2012.12.17  waitpid 如果是等待指定的子进程, 则首先应该当前进程是否存在指定的子进程.
 2013.01.10  加入 waitid 函数.
 2013.06.07  加入 detach 函数, 用于解除子进程与父进程的关系.
+2014.05.04  加入 daemon 函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -666,6 +667,45 @@ LW_API
 int detach (pid_t pid)
 {
     return  (vprocDetach(pid));
+}
+/*********************************************************************************************************
+** 函数名称: daemon
+** 功能描述: 将进程转换成守护进程
+** 输　入  : nochdir       0 chdir root
+**           noclose       0 change stdin stdout stderr to /dev/null
+** 输　出  : 0: 成功  -1: 失败
+** 全局变量:
+** 调用模块:
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+int daemon (int nochdir, int noclose)
+{
+    INT iFd;
+
+    if (getpid() <= 0) {
+        _ErrorHandle(ENOSYS);
+        return  (PX_ERROR);
+    }
+
+    if (!nochdir) {
+        chdir("/");
+    }
+    
+    if (!noclose) {
+        iFd = open("/dev/null", O_RDWR);
+        if (iFd < 0) {
+            return  (PX_ERROR);
+        }
+        dup2(iFd, 0);
+        dup2(iFd, 1);
+        dup2(iFd, 2);
+        close(iFd);
+    }
+    
+    setsid();
+    
+    return  (ERROR_NONE);
 }
 #else                                                                   /*  NO MODULELOADER             */
 /*********************************************************************************************************

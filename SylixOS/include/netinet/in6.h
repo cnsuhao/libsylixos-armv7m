@@ -19,8 +19,8 @@
 ** ร่        ส๖: include/netinet/in6 .
 *********************************************************************************************************/
 
-#ifndef __IN6_H
-#define __IN6_H
+#ifndef __NETINET_IN6_H
+#define __NETINET_IN6_H
 
 #include "lwip/inet.h"
 #include "lwip/inet6.h"
@@ -134,7 +134,7 @@ extern const struct in6_addr in6addr_loopback;
 extern const struct in6_addr in6addr_nodelocal_allnodes;
 extern const struct in6_addr in6addr_linklocal_allnodes;
 
-#endif                                                                  /*  __IN6_H                     */
+#endif                                                                  /*  __NETINET_IN6_H             */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

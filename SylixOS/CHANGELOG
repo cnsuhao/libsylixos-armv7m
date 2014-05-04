@@ -4,6 +4,10 @@ HISTORY
 
 ++ New features:
 
+    2014-05-04: han.hui
+    netinet 下加入一些标准头文件.
+    加入 daemon() 可以使进程变为守护进程.
+
     2014-05-03: han.hui
     加入获取网络类型功能.
 

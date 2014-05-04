@@ -16,19 +16,19 @@
 **
 ** 文件创建日期: 2011 年 02 月 21 日
 **
-** 描        述: include/netinet/tcp .
+** 描        述: include/netinet/tcp.
 *********************************************************************************************************/
 
-#include "lwip/sockets.h"
+#ifndef __NETINET_TCP_H
+#define __NETINET_TCP_H
 
-#ifndef __TCP_H
-#define __TCP_H
+#include "lwip/sockets.h"
 
 #ifndef TCP_NODELAY
 #define TCP_NODELAY         0x01
 #endif                                                                  /*  TCP_NODELAY                 */
 
-#endif                                                                  /*  __TCP_H                     */
+#endif                                                                  /*  __NETINET_TCP_H             */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

@@ -141,6 +141,21 @@ void  sys_assert_print (const char *msg, const char *func, const char *file, int
     printf("lwip assert: %s func: %s file: %s line: %d\n", msg, func, file, line);
 }
 /*********************************************************************************************************
+** 函数名称: sys_error_print
+** 功能描述: 系统错误打印
+** 输　入  : msg       失败信息
+**           func      所属函数
+**           file      所属文件
+**           line      所在行标
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+void  sys_error_print (const char *msg, const char *func, const char *file, int line)
+{
+    printf("lwip error: %s func: %s file: %s line: %d\n", msg, func, file, line);
+}
+/*********************************************************************************************************
 ** 函数名称: sys_mutex_new
 ** 功能描述: 创建一个 lwip 互斥量
 ** 输　入  : pmutex    创建的互斥量
