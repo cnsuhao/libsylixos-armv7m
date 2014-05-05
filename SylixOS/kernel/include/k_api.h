@@ -1000,6 +1000,10 @@ LW_API VOID             API_ThreadShow(VOID);                           /*  从 S
 
 LW_API VOID             API_ThreadShowEx(pid_t  pid);                   /*  显示指定进程内线程          */
 
+LW_API VOID             API_ThreadPendShow(VOID);                       /*  显示阻塞线程信息            */
+
+LW_API VOID             API_ThreadPendShowEx(pid_t  pid);               /*  显示阻塞线程信息            */
+
 LW_API VOID             API_StackShow(VOID);                            /*  打印所有线程堆栈使用信息    */
 #endif
 

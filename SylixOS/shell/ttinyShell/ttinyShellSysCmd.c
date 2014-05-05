@@ -355,6 +355,33 @@ static INT  __tshellSysCmdTs (INT  iArgC, PCHAR  ppcArgV[])
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __tshellSysCmdTp
+** 功能描述: 系统命令 "tp"
+** 输　入  : iArgC         参数个数
+**           ppcArgV       参数表
+** 输　出  : 0
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __tshellSysCmdTp (INT  iArgC, PCHAR  ppcArgV[])
+{
+    pid_t   pid = 0;
+
+    if (iArgC < 2) {
+        API_ThreadPendShow();
+        return  (ERROR_NONE);
+    }
+    
+    if (sscanf(ppcArgV[1], "%d", &pid) != 1) {
+        printf("argument error.\n");
+        return  (PX_ERROR);
+    }
+
+    API_ThreadPendShowEx(pid);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: __tshellSysCmdSs
 ** 功能描述: 系统命令 "ss"
 ** 输　入  : iArgC         参数个数
@@ -1891,6 +1918,11 @@ VOID  __tshellSysCmdInit (VOID)
     API_TShellKeywordAdd("ts", __tshellSysCmdTs);
     API_TShellFormatAdd("ts", " [pid]");
     API_TShellHelpAdd("ts", "show thread information.\n"
+                            "you can and pid argument to determine which process you want to see.\n");
+                            
+    API_TShellKeywordAdd("tp", __tshellSysCmdTp);
+    API_TShellFormatAdd("tp", " [pid]");
+    API_TShellHelpAdd("tp", "show thread pending information.\n"
                             "you can and pid argument to determine which process you want to see.\n");
     
     API_TShellKeywordAdd("ss", __tshellSysCmdSs);
