@@ -73,6 +73,10 @@ LW_API INT              API_AtomicGet(atomic_t  *patomic);
 
 LW_API INT              API_AtomicSwp(INT  iVal, atomic_t  *patomic);
 
+LW_API VOID             API_AtomicLock(INTREG  *piregInterLevel);
+
+LW_API VOID             API_AtomicUnlock(INTREG  iregInterLevel);
+
 /*********************************************************************************************************
   SPINLOCK
 *********************************************************************************************************/

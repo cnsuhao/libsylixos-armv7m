@@ -491,6 +491,9 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-05-05: han.hui
+    修正 Bug #3.
+    
     2014-05-03: han.hui
     堆内存出错时, 打印堆的名字.
 

@@ -200,18 +200,26 @@ typedef struct {
   POSIX signal
 *********************************************************************************************************/
 
-typedef VOID    (*PSIGNAL_HANDLE)(INT iSigNo);                          /*  信号处理句柄函数类型        */
+struct siginfo;
+
+typedef VOID    (*PSIGNAL_HANDLE)(INT);                                 /*  信号处理句柄函数类型        */
+typedef VOID    (*PSIGNAL_HANDLE_ACT)(INT, struct siginfo *, PVOID);
 
 typedef UINT64    sigset_t;                                             /*  信号集类型 (64bit)          */
 typedef INT       sig_atomic_t;                                         /*  信号原子操作类型            */
 
 struct sigaction {
-    PSIGNAL_HANDLE       sa_handler;                                    /*  信号服务函数句柄            */
-#define sa_sigaction     sa_handler
+    union {
+        PSIGNAL_HANDLE      _sa_handler;
+        PSIGNAL_HANDLE_ACT  _sa_sigaction;
+    } _u;                                                               /*  信号服务函数句柄            */
     sigset_t             sa_mask;                                       /*  执行时的信号屏蔽码          */
     INT                  sa_flags;                                      /*  该句柄处理标志              */
     PSIGNAL_HANDLE       sa_restorer;                                   /*  恢复处理函数指针            */
 };
+
+#define sa_handler       _u._sa_handler
+#define sa_sigaction     _u._sa_sigaction
 
 /*********************************************************************************************************
   UNIX BSD signal
