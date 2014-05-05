@@ -5,6 +5,9 @@ HISTORY
 ++ New features:
 
     2014-05-04: han.hui
+    加入 tp 内建命令查看线程阻塞情况.
+
+    2014-05-04: han.hui
     netinet 下加入一些标准头文件.
     加入 daemon() 可以使进程变为守护进程.
 

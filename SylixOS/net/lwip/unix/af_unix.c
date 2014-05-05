@@ -702,7 +702,7 @@ static AF_UNIX_T  *__unixCreate (INT  iType)
     }
     
     pafunix->UNIX_hCanWrite = API_SemaphoreBCreate("unix_wlock", LW_FALSE, 
-                                                  LW_OPTION_OBJECT_GLOBAL, LW_NULL);
+                                                   LW_OPTION_OBJECT_GLOBAL, LW_NULL);
     if (pafunix->UNIX_hCanWrite == LW_OBJECT_HANDLE_INVALID) {
         API_SemaphoreBDelete(&pafunix->UNIX_hCanRead);
         __SHEAP_FREE(pafunix);

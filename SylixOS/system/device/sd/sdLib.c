@@ -71,7 +71,7 @@ LW_API
 INT  API_SdLibInit (VOID)
 {
     if (_G_hSdListLock == LW_OBJECT_HANDLE_INVALID) {
-        _G_hSdListLock = API_SemaphoreBCreate("Sd_listlock",
+        _G_hSdListLock = API_SemaphoreBCreate("sd_listlock",
                                               LW_TRUE, LW_OPTION_WAIT_FIFO | LW_OPTION_OBJECT_GLOBAL,
                                               LW_NULL);
     }

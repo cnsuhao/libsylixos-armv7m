@@ -436,7 +436,7 @@ static __PX_MSG  *__mqueueCreate (const char  *name, mode_t mode, struct mq_attr
     /*
      *  初始化信号量
      */
-    pmq->PMSG_ulReadSync = API_SemaphoreBCreate("pxmqrdsync", LW_FALSE, 
+    pmq->PMSG_ulReadSync = API_SemaphoreBCreate("pxmq_rdsync", LW_FALSE, 
                                                 __PX_MQUEUE_OPTION, 
                                                 LW_NULL);               /*  初始化为不可读              */
     if (pmq->PMSG_ulReadSync == LW_OBJECT_HANDLE_INVALID) {
@@ -445,7 +445,7 @@ static __PX_MSG  *__mqueueCreate (const char  *name, mode_t mode, struct mq_attr
         goto    __error_handle;
     }
     
-    pmq->PMSG_ulWriteSync = API_SemaphoreBCreate("pxmqwrsync", LW_TRUE,
+    pmq->PMSG_ulWriteSync = API_SemaphoreBCreate("pxmq_wrsync", LW_TRUE,
                                                  __PX_MQUEUE_OPTION, 
                                                  LW_NULL);              /*  初始化为可写                */
     if (pmq->PMSG_ulWriteSync == LW_OBJECT_HANDLE_INVALID) {
@@ -454,7 +454,7 @@ static __PX_MSG  *__mqueueCreate (const char  *name, mode_t mode, struct mq_attr
         goto    __error_handle;
     }
     
-    pmq->PMSG_ulMutex = API_SemaphoreMCreate("pxmqmutex", LW_PRIO_DEF_CEILING, 
+    pmq->PMSG_ulMutex = API_SemaphoreMCreate("pxmq_mutex", LW_PRIO_DEF_CEILING, 
                                              LW_OPTION_INHERIT_PRIORITY | 
                                              LW_OPTION_DELETE_SAFE |
                                              LW_OPTION_OBJECT_GLOBAL, LW_NULL);
