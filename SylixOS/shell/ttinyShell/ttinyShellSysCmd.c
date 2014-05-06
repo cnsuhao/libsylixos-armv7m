@@ -1500,7 +1500,7 @@ static INT  __tshellSysCmdShStack (INT  iArgC, PCHAR  ppcArgV[])
 static INT  __tshellSysCmdCrypt (INT  iArgC, PCHAR  ppcArgV[])
 {
     PCHAR   pcRes;
-    CHAR    cResBuf[128];
+    CHAR    cResBuf[PASS_MAX];
 
     if (iArgC != 3) {
         printf("argument error.\n");

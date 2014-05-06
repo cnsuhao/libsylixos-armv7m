@@ -268,6 +268,9 @@ LW_API int      getgroups(int groupsize, gid_t grlist[]);
 LW_API int      getlogin_r(char *name, size_t namesize);
 LW_API char    *getlogin(void);
 
+LW_API char    *getpass_r(const char *prompt, char *buffer, size_t buflen);
+LW_API char    *getpass(const char *prompt);
+
 #include "../SylixOS/lib/libc/stdio/lib_stdio.h"						/*  include stdio.h				*/
 #include "../SylixOS/loader/include/loader_exec.h"                      /*  exec family of functions    */
 

@@ -793,6 +793,7 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     
     case SIOCSIFFLAGS:                                                  /*  基本网络接口操作            */
     case SIOCGIFFLAGS:
+    case SIOCGIFTYPE:
     case SIOCGIFINDEX:
     case SIOCGIFMTU:
     case SIOCSIFMTU:
@@ -1182,6 +1183,7 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
             case SIOCGIFDSTADDR:
             case SIOCGIFBRDADDR:
             case SIOCGIFFLAGS:
+            case SIOCGIFTYPE:
             case SIOCGIFNAME:
             case SIOCGIFINDEX:
             case SIOCGIFMTU:

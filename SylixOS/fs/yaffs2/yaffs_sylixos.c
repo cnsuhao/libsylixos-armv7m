@@ -1176,7 +1176,7 @@ static INT  __yaffsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
         }
         if (pyaffsNew != pyaffile->YAFFIL_pyaffs) {                     /*  必须为同一个 yaffs 设备节点 */
             __YAFFS_OPUNLOCK();
-            _ErrorHandle(ERROR_IO_VOLUME_ERROR);
+            _ErrorHandle(EXDEV);
             return (PX_ERROR);
         }
         

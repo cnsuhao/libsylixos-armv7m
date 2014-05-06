@@ -474,5 +474,59 @@ int userlogin (const char *name, const char *pass, int pass_delay_en)
   
   return -1;
 }
-/* end */
 
+/*
+ * Get pass
+ */
+char *getpass_r (const char *prompt, char *buffer, size_t buflen)
+{
+#if LW_CFG_DEVICE_EN > 0
+  INT iOldOpt;
+  ssize_t sstRet;
+  char *pcRet = NULL;
+
+  if (!buffer || !buflen) {
+    errno = EINVAL;
+    return NULL;
+  }
+  
+  if (!isatty(STD_IN)) {
+    errno = ENOTTY;
+    return NULL;
+  }
+  
+  ioctl(STD_IN, FIOGETOPTIONS, &iOldOpt);
+  ioctl(STD_IN, FIOSETOPTIONS, (OPT_TERMINAL & ~OPT_ECHO));
+  
+  if (prompt) {
+    write(STD_OUT, prompt, lib_strlen(prompt));
+  }
+  
+  sstRet = read(STD_IN, buffer, buflen);
+  if (sstRet <= 0) {
+    goto __out;
+  }
+  
+  buffer[sstRet - 1] = PX_EOS;
+  pcRet = buffer;
+
+__out:
+  ioctl(STD_IN, FIOFLUSH, 0);
+  ioctl(STD_IN, FIOSETOPTIONS, iOldOpt);
+  write(STD_OUT, "\n", 1);
+  return pcRet;
+  
+#else
+  errno = ENOSYS;
+  return NULL;
+#endif
+}
+ 
+char *getpass (const char *prompt)
+{
+  static char cPass[PASS_MAX + 1];
+  
+  return getpass_r(prompt, cPass, sizeof(cPass));
+}
+
+/* end */

@@ -25,7 +25,7 @@
 #include "./loader/include/loader_lib.h" /* need _Unwind_Ptr */
 #endif /* LW_CFG_CPU_ARCH_ARM */
 
-#define __VP_PATCH_VERSION      "1.2.2" /* vp patch version */
+#define __VP_PATCH_VERSION      "1.2.3" /* vp patch version */
 
 #ifdef __GNUC__
 #if __GNUC__ < 2  || (__GNUC__ == 2 && __GNUC_MINOR__ < 5)
@@ -694,6 +694,16 @@ wcsdup(const wchar_t *str)
         return NULL;
 
     return wmemcpy(copy, str, len);
+}
+
+/*
+ * getpass
+ */
+char *getpass (const char *prompt)
+{
+    static char cPass[PASS_MAX + 1];
+    
+    return getpass_r(prompt, cPass, sizeof(cPass));
 }
 
 #endif /* LW_CFG_VMM_EN > 0 */

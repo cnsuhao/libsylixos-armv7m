@@ -72,6 +72,8 @@
 #define HOST_NAME_MAX                       64
 #define FILESIZEBITS                        64
 
+#define PASS_MAX                            128
+
 /*********************************************************************************************************
   POSIX values
   Maximum Values

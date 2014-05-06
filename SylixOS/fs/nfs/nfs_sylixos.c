@@ -2477,7 +2477,7 @@ static INT  __nfsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
         }
         if (pnfsfsNew != pnfsfile->NFSFIL_nfsfs) {                      /*  必须为同一个 nfs 设备节点   */
             __NFS_FILE_UNLOCK(pnfsfile);
-            _ErrorHandle(ERROR_IO_VOLUME_ERROR);
+            _ErrorHandle(EXDEV);
             return (PX_ERROR);
         }
         

@@ -4,6 +4,10 @@ HISTORY
 
 ++ New features:
 
+    2014-05-05: han.hui
+    netstat 打印 tcp listen 时, 加入对 IPv6-ONLY 字段的打印.
+    加入 getpass 与 getpass_r 函数.
+    
     2014-05-04: han.hui
     加入 tp 内建命令查看线程阻塞情况.
 

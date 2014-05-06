@@ -1465,7 +1465,7 @@ static INT  __fatFsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
         }
         if (pfatvolNew != pfatfile->FATFIL_pfatvol) {                   /*  必须为同一个卷              */
             __FAT_FILE_UNLOCK(pfatfile);
-            _ErrorHandle(ERROR_IO_VOLUME_ERROR);
+            _ErrorHandle(EXDEV);
             return (PX_ERROR);
         }
         /*

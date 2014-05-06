@@ -27,6 +27,7 @@
 2013.09.24  加入 if_inet6 文件.
 2013.10.14  加入 aodv_rt 获取 aodv 当前路由表.
 2014.04.03  加入 packet.
+2014.05.06  tcp listen 打印, 如果是 IPv6 则打印是否只接受 IPv6 链接请求.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -405,7 +406,7 @@ static VOID  __procFsNetTcpPrint (struct tcp_pcb *pcb, PCHAR  pcBuffer,
     } else {
         if (pcb->state == LISTEN) {
             *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
-                               "%08X%08X%08X%08X:%04X %08X%08X%08X%08X:%04X %-8s %7d %7d %7d\n",
+                               "%08X%08X%08X%08X:%04X %08X%08X%08X%08X:%04X %-8s %-9s %7d %7d %7d\n",
                                pcb->local_ip.ip6.addr[0],
                                pcb->local_ip.ip6.addr[1],
                                pcb->local_ip.ip6.addr[2],
@@ -413,10 +414,11 @@ static VOID  __procFsNetTcpPrint (struct tcp_pcb *pcb, PCHAR  pcBuffer,
                                htons(pcb->local_port),
                                IPADDR_ANY, IPADDR_ANY, IPADDR_ANY, IPADDR_ANY, 0,
                                __procFsNetTcpGetStat((u8_t)pcb->state),
+                               (((struct tcp_pcb_listen *)pcb)->accept_any_ip_version) ? "NO" : "YES",
                                0, 0, 0);
         } else {
             *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
-                               "%08X%08X%08X%08X:%04X %08X%08X%08X%08X:%04X %-8s %7d %7d %7d\n",
+                               "%08X%08X%08X%08X:%04X %08X%08X%08X%08X:%04X %-8s %-9s %7d %7d %7d\n",
                                pcb->local_ip.ip6.addr[0],
                                pcb->local_ip.ip6.addr[1],
                                pcb->local_ip.ip6.addr[2],
@@ -428,6 +430,7 @@ static VOID  __procFsNetTcpPrint (struct tcp_pcb *pcb, PCHAR  pcBuffer,
                                pcb->remote_ip.ip6.addr[3],
                                htons(pcb->remote_port),
                                __procFsNetTcpGetStat((u8_t)pcb->state),
+                               "",
                                (u32_t)pcb->nrtx, (u32_t)pcb->rcv_wnd, (u32_t)pcb->snd_wnd);
         }
     }
@@ -539,7 +542,7 @@ static ssize_t  __procFsNetTcp6Read (PLW_PROCFS_NODE  p_pfsn,
 {
     const CHAR      cTcpInfoHdr[] = 
     "LOCAL                                 REMOTE                                "
-    "STATUS   RETRANS RCV_WND SND_WND\n";
+    "STATUS   IPv6-ONLY RETRANS RCV_WND SND_WND\n";
           PCHAR     pcFileBuffer;
           size_t    stRealSize;                                         /*  实际的文件内容大小          */
           size_t    stCopeBytes;

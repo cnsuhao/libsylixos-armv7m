@@ -20,6 +20,7 @@
 
 ** BUG:
 2013.09.11  网络接口打印直接访问 /proc/net/dev 文件.
+2014.05.06  tcp listen 打印, 如果是 IPv6 则打印是否只接受 IPv6 链接请求.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -483,11 +484,12 @@ static VOID  __TcpPrint (struct tcp_pcb *pcb, PCHAR  pcBuffer,
     } else {
         if (pcb->state == LISTEN) {
             *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
-                               "%-44s %-44s %-8s %7d %7d %7d\n",
+                               "%-44s %-44s %-8s %-9s %7d %7d %7d\n",
                                __ProtoAddrBuild(&pcb->local_ip, pcb->isipv6, pcb->local_port, 
                                                 cBuffer1, sizeof(cBuffer1)),
                                "*:*",
                                __TcpGetStat((u8_t)pcb->state),
+                               (((struct tcp_pcb_listen *)pcb)->accept_any_ip_version) ? "NO" : "YES",
                                0, 0, 0);
         } else {
             *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
@@ -516,7 +518,7 @@ VOID  __tshellNetstatTcpListen (INT  iNetType)
     
     const CHAR      cTcp6InfoHdr[] = 
     "\nLOCAL6                                       REMOTE6                                      "
-    "STATUS   RETRANS RCV_WND SND_WND\n";
+    "STATUS   IPv6-ONLY RETRANS RCV_WND SND_WND\n";
     
     struct tcp_pcb  *pcb;
     PCHAR            pcPrintBuf;
