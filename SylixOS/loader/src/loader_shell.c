@@ -378,6 +378,10 @@ static INT  __tshellExec (INT  iArgC, PCHAR  *ppcArgV)
         return  (PX_ERROR);
     }
     
+#if LW_CFG_POSIX_EN > 0
+    API_ThreadSetPriority(API_ThreadIdSelf(), LW_PRIO_NORMAL);
+#endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
+    
     pcSheBangLine = fgets(cSheBangBuffer, MAX_FILENAME_LENGTH, pfile);  /*  获得文件的第一行            */
     fclose(pfile);
     
@@ -386,10 +390,6 @@ static INT  __tshellExec (INT  iArgC, PCHAR  *ppcArgV)
             return  (__ldRunScript(&pcSheBangLine[2], iArgC, ppcArgV)); /*  执行脚本文件                */
         }
     }
-    
-#if LW_CFG_POSIX_EN > 0
-    API_ThreadSetPriority(API_ThreadIdSelf(), LW_PRIO_NORMAL);
-#endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
     
     return  (moduleRunEx(cFilePath, LW_LD_DEFAULT_ENTRY, iArgC - 1, (CPCHAR *)&ppcArgV[1], LW_NULL));
 }
