@@ -40,6 +40,7 @@
             socket 加入 monitor 监控器功能.
             修正 __ifIoctl() 对 if_indextoname 加锁的错误.
 2014.05.03  加入获取网络类型的接口.
+2014.05.07  __ifIoctlIf() 优先使用 netif ioctl.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -383,6 +384,13 @@ static INT  __ifIoctlIf (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     if (pnetif == LW_NULL) {
         _ErrorHandle(EADDRNOTAVAIL);                                    /*  未找到指定的网络接口        */
         return  (iRet);
+    }
+    
+    if (pnetif->ioctl) {                                                /*  优先调用网卡驱动            */
+        iRet = pnetif->ioctl(pnetif, iCmd, pvArg);
+        if ((iRet == ERROR_NONE) || (errno != ENOSYS)) {
+            return  (iRet);
+        }
     }
 
     switch (iCmd) {

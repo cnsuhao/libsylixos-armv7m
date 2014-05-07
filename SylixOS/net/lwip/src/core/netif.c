@@ -219,6 +219,10 @@ netif_add(struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask,
   /* netif not under DHCPv6 control by default */
   netif->dhcp6 = NULL;
 #endif /* LWIP_IPV6_DHCP6 */
+#ifdef SYLIXOS
+  netif->ioctl = NULL;
+  lib_bzero(netif->reserve, sizeof(void *[8]));
+#endif /* SYLIXOS */
 #if LWIP_NETIF_STATUS_CALLBACK
   netif->status_callback = NULL;
 #endif /* LWIP_NETIF_STATUS_CALLBACK */

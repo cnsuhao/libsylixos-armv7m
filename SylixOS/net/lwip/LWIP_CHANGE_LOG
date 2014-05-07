@@ -31,3 +31,5 @@
 11: ip6_addr.h add ip6_addr_isloopback()
 
 12: netif_set_link_up() and netif_set_link_down() add hotplug message.
+
+13: netif add ioctl();

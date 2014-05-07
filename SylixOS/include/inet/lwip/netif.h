@@ -201,6 +201,10 @@ struct netif {
   /** This function is called when the netif has been removed */
   netif_status_callback_fn remove_callback;
 #endif /* LWIP_NETIF_REMOVE_CALLBACK */
+#ifdef SYLIXOS
+  int (*ioctl)(struct netif *, int, void *);
+  void *reserve[8];
+#endif /* SYLIXOS */
   /** This field can be set by the device driver and could point
    *  to state information for the device. */
   void *state;

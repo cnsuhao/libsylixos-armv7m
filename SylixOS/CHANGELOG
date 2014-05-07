@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-05-07: han.hui
+    netif 加入 ioctl 接口.
+
     2014-05-05: han.hui
     netstat 打印 tcp listen 时, 加入对 IPv6-ONLY 字段的打印.
     加入 getpass 与 getpass_r 函数.
