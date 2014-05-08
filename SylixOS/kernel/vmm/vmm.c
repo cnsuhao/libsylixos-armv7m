@@ -227,55 +227,36 @@ ULONG  API_VmmLibSecondaryInit (CPCHAR  pcMachineName)
 LW_API  
 PVOID  API_VmmPhyAlloc (size_t  stSize)
 {
-    REGISTER ULONG          ulPageNum = (ULONG) (stSize >> LW_CFG_VMM_PAGE_SHIFT);
-    REGISTER size_t         stExcess  = (size_t)(stSize & ~LW_CFG_VMM_PAGE_MASK);
-
-    REGISTER PLW_VMM_PAGE   pvmpage;
-             ULONG          ulZoneIndex;
-    
-    if (stExcess) {
-        ulPageNum++;
-    }
-    
-    if (ulPageNum < 1) {
-        _ErrorHandle(EINVAL);
-        return  (LW_NULL);
-    }
-    
-    __VMM_LOCK();
-    pvmpage = __vmmPhysicalPageAlloc(ulPageNum, LW_ZONE_ATTR_NONE, 
-                                     &ulZoneIndex);                     /*  分配连续物理页面            */
-    if (pvmpage  == LW_NULL) {
-        __VMM_UNLOCK();
-        _ErrorHandle(ERROR_VMM_LOW_PHYSICAL_PAGE);
-        return  (LW_NULL);
-    }
-    
-    pvmpage->PAGE_ulMapPageAddr = PAGE_MAP_ADDR_INV;                    /*  记录映射关系                */
-    pvmpage->PAGE_ulFlags = LW_VMM_FLAG_FAIL;                           /*  记录分页类型                */
-    
-    __areaPhysicalInsertPage(ulZoneIndex, 
-                             pvmpage->PAGE_ulPageAddr, pvmpage);        /*  插入物理空间反查表          */
-    __VMM_UNLOCK();
-    
-    MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_PHY_ALLOC,
-                      pvmpage->PAGE_ulPageAddr, stSize, LW_CFG_VMM_PAGE_SIZE, LW_NULL);
-                      
-    _ErrorHandle(ERROR_NONE);
-    return  ((PVOID)pvmpage->PAGE_ulPageAddr);                          /*  直接返回物理内存地址        */
+    return  (API_VmmPhyAllocAlign(stSize, LW_CFG_VMM_PAGE_SIZE, LW_ZONE_ATTR_NONE));
 }
 /*********************************************************************************************************
-** 函数名称: API_VmmPhyAllocAlign
-** 功能描述: 从物理内存区分配连续的物理分页, (满足对齐关系)
+** 函数名称: API_VmmPhyAlloc
+** 功能描述: 从物理内存区分配连续的物理分页, 扩展接口.
 ** 输　入  : stSize     需要分配的内存大小
-**           stAlign    对齐关系
+**           uiAttr     需要满足的物理页面属性
 ** 输　出  : 连续分页首地址 (物理地址, 不能直接使用!)
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-PVOID  API_VmmPhyAllocAlign (size_t  stSize, size_t  stAlign)
+PVOID  API_VmmPhyAllocEx (size_t  stSize, UINT  uiAttr)
+{
+    return  (API_VmmPhyAllocAlign(stSize, LW_CFG_VMM_PAGE_SIZE, uiAttr));
+}
+/*********************************************************************************************************
+** 函数名称: API_VmmPhyAllocAlign
+** 功能描述: 从物理内存区分配连续的物理分页, (满足对齐关系)
+** 输　入  : stSize     需要分配的内存大小
+**           stAlign    对齐关系
+**           uiAttr     需要满足的物理页面属性
+** 输　出  : 连续分页首地址 (物理地址, 不能直接使用!)
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+PVOID  API_VmmPhyAllocAlign (size_t  stSize, size_t  stAlign, UINT  uiAttr)
 {
     REGISTER ULONG          ulPageNum = (ULONG) (stSize >> LW_CFG_VMM_PAGE_SHIFT);
     REGISTER size_t         stExcess  = (size_t)(stSize & ~LW_CFG_VMM_PAGE_MASK);
@@ -288,6 +269,7 @@ PVOID  API_VmmPhyAllocAlign (size_t  stSize, size_t  stAlign)
         _ErrorHandle(ERROR_VMM_ALIGN);
         return  (LW_NULL);
     }
+    
     if (stAlign < LW_CFG_VMM_PAGE_SIZE) {
         stAlign = LW_CFG_VMM_PAGE_SIZE;
     }
@@ -303,7 +285,7 @@ PVOID  API_VmmPhyAllocAlign (size_t  stSize, size_t  stAlign)
     
     __VMM_LOCK();
     pvmpage = __vmmPhysicalPageAllocAlign(ulPageNum, 
-                                          stAlign, LW_ZONE_ATTR_NONE,
+                                          stAlign, uiAttr,
                                           &ulZoneIndex);                /*  分配连续物理页面            */
     if (pvmpage  == LW_NULL) {
         __VMM_UNLOCK();

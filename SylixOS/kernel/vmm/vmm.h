@@ -215,7 +215,10 @@ LW_API ULONG        API_VmmGetFlag(PVOID  pvVirtualAddr,
 *********************************************************************************************************/
 
 LW_API PVOID        API_VmmPhyAlloc(size_t stSize);                     /*  分配物理内存                */
-LW_API PVOID        API_VmmPhyAllocAlign(size_t stSize, size_t stAlign);/*  分配物理内存, 指定对其关系  */
+LW_API PVOID        API_VmmPhyAllocEx(size_t  stSize, UINT  uiAttr);    /*  与上相同, 但可以指定内存属性*/
+LW_API PVOID        API_VmmPhyAllocAlign(size_t stSize, 
+                                         size_t stAlign,
+                                         UINT   uiAttr);                /*  分配物理内存, 指定对其关系  */
 LW_API VOID         API_VmmPhyFree(PVOID  pvPhyMem);                    /*  释放物理内存                */
 
 /*********************************************************************************************************
@@ -317,6 +320,7 @@ LW_API VOID         API_VmmAbortIsr(addr_t            ulAbortAddr,
 #define vmmAbortStatus          API_VmmAbortStatus
 
 #define vmmPhyAlloc             API_VmmPhyAlloc
+#define vmmPhyAllocEx           API_VmmPhyAllocEx
 #define vmmPhyAllocAlign        API_VmmPhyAllocAlign
 #define vmmPhyFree              API_VmmPhyFree
 
