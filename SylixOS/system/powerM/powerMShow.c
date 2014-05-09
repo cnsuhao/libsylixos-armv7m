@@ -56,7 +56,7 @@ VOID  API_PowerMShow (VOID)
              ULONG                  ulCounter;
     
     printf("active power management node show >>\n");
-    printf((PCHAR)_G_cPowerMInfoHdr);                                   /*  打印欢迎信息                */
+    printf(_G_cPowerMInfoHdr);                                          /*  打印欢迎信息                */
     
     __POWERM_LOCK();                                                    /*  上锁                        */
         

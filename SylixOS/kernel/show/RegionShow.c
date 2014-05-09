@@ -58,7 +58,7 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
     size_t      stMaxUsedByteSize;
     
     printf("heap show >>\n");
-    printf((PCHAR)_G_cHeapInfoHdr);                                     /*  打印欢迎信息                */
+    printf(_G_cHeapInfoHdr);                                            /*  打印欢迎信息                */
     
     if (ulId == 0) {
         API_KernelHeapInfo(LW_OPTION_HEAP_KERNEL, 

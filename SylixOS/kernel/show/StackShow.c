@@ -69,7 +69,7 @@ VOID    API_StackShow (VOID)
     }
     
     printf("thread stack usage show >>\n");
-    printf((PCHAR)_G_cThreadStackInfoHdr);                              /*  打印欢迎信息                */
+    printf(_G_cThreadStackInfoHdr);                                     /*  打印欢迎信息                */
     
     for (i = 0; i < LW_CFG_MAX_THREADS; i++) {
         ptcb = _K_ptcbTCBIdTable[i];                                    /*  获得 TCB 控制块             */
@@ -95,7 +95,7 @@ VOID    API_StackShow (VOID)
     }
     
     printf("\ninterrupt stack usage show >>\n");
-    printf((PCHAR)_G_cCPUStackInfoHdr);                                 /*  打印欢迎信息                */
+    printf(_G_cCPUStackInfoHdr);                                        /*  打印欢迎信息                */
     
     for (i = 0; i < LW_NCPUS; i++) {                                    /*  打印所有 CPU 的中断栈情况   */
         API_InterStackCheck((ULONG)i,

@@ -87,7 +87,7 @@ VOID    API_ThreadShowEx (pid_t  pid)
     }
     
     printf("thread show >>\n");
-    printf((PCHAR)_G_cThreadInfoHdr);                                   /*  打印欢迎信息                */
+    printf(_G_cThreadInfoHdr);                                          /*  打印欢迎信息                */
     
     for (i = 0; i < LW_CFG_MAX_THREADS; i++) {
         ptcb = _K_ptcbTCBIdTable[i];                                    /*  获得 TCB 控制块             */
@@ -192,7 +192,7 @@ VOID    API_ThreadPendShowEx (pid_t  pid)
     }
     
     printf("thread pending show >>\n");
-    printf((PCHAR)_G_cThreadPendHdr);                                   /*  打印欢迎信息                */
+    printf(_G_cThreadPendHdr);                                          /*  打印欢迎信息                */
     
     for (i = 0; i < LW_CFG_MAX_THREADS; i++) {
         ptcb = _K_ptcbTCBIdTable[i];                                    /*  获得 TCB 控制块             */

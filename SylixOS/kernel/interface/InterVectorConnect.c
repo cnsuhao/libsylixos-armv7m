@@ -122,6 +122,7 @@ ULONG  API_InterVectorConnectEx (ULONG              ulVector,
         _ErrorHandle(ERROR_KERNEL_LOW_MEMORY);
         return  (ERROR_KERNEL_LOW_MEMORY);
     }
+    lib_bzero(piaction, sizeof(LW_CLASS_INTACT));
     
     piaction->IACT_pfuncIsr   = pfuncIsr;
     piaction->IACT_pfuncClear = pfuncClear;

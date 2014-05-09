@@ -96,7 +96,7 @@ VOID    API_CPUUsageShow (INT  iWaitSec, INT  iTimes)
         }
         
         printf("CPU usage show >>\n");
-        printf((PCHAR)_G_cCPUUsageInfoHdr);                             /*  打印欢迎信息                */
+        printf(_G_cCPUUsageInfoHdr);                                    /*  打印欢迎信息                */
         
         iThreadNum = API_ThreadGetCPUUsageAll(ulId, ucThreadUsage, ucThreadKernel, LW_CFG_MAX_THREADS);
         if (iThreadNum <= 0) {

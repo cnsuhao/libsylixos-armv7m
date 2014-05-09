@@ -24,6 +24,7 @@
 2010.02.24  修改打印字符.
 2011.03.31  支持 inter queue 类型打印.
 2013.12.12  升级为新的向量中断系统.
+2014.05.09  加入对中断数量的打印.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -47,9 +48,10 @@ extern LW_OBJECT_HANDLE    _K_ulInterShowLock;
 /*********************************************************************************************************
   全局变量
 *********************************************************************************************************/
-static const CHAR   _G_cInterInfoHdr[] = "\n\
- IRQ      NAME        ENTRY   CLEAR    PARAM   ENABLE RND PREEMPTIVE\n\
----- -------------- -------- -------- -------- ------ --- ----------\n";
+static const CHAR   _G_cInterInfoHdr1[] = "\n\
+ IRQ      NAME        ENTRY   CLEAR    PARAM   ENABLE RND PREEMPTIVE";
+static const CHAR   _G_cInterInfoHdr2[] = "\n\
+---- -------------- -------- -------- -------- ------ --- ----------";
 #if LW_CFG_INTER_INFO > 0
 static const CHAR   _G_cNestingInfoHdr[] = "\n\
  CPU  MAX NESTING\n\
@@ -69,7 +71,7 @@ static const CHAR   _G_cNestingInfoHdr[] = "\n\
 LW_API  
 VOID   API_InterShow (VOID)
 {
-    INT        i;
+    INT        i, j;
     BOOL       bIsEnable = LW_FALSE;
     PCHAR      pcIsEnable;
     PCHAR      pcRnd;
@@ -81,7 +83,16 @@ VOID   API_InterShow (VOID)
     PLW_LIST_LINE      plineTemp;
         
     printf("interrupt vector show >>\n");
-    printf((PCHAR)_G_cInterInfoHdr);                                    /*  打印欢迎信息                */
+    printf(_G_cInterInfoHdr1);                                          /*  打印欢迎信息                */
+    for (i = 0; i < LW_NCPUS; i++) {
+        printf("     CPU%2d   ", i);
+    }
+    
+    printf(_G_cInterInfoHdr2);
+    for (i = 0; i < LW_NCPUS; i++) {
+        printf(" -------------");
+    }
+    printf("\n");
     
     if (_K_ulInterShowLock == LW_OBJECT_HANDLE_INVALID) {
         return;                                                         /*  还没有连接任何中断向量      */
@@ -104,7 +115,7 @@ VOID   API_InterShow (VOID)
              plineTemp  = _list_line_get_next(plineTemp)) {
             
             piaction = _LIST_ENTRY(plineTemp, LW_CLASS_INTACT, IACT_plineManage);
-            printf("%4d %-14s %8lx %8lx %8lx %-6s %-3s %s\n",
+            printf("%4d %-14s %8lx %8lx %8lx %-6s %-3s %-10s ",
                    i, 
                    piaction->IACT_cInterName, 
                    (ULONG)piaction->IACT_pfuncIsr, 
@@ -113,6 +124,11 @@ VOID   API_InterShow (VOID)
                    pcIsEnable, 
                    pcRnd, 
                    pcPreem);
+                   
+            for (j = 0; j < LW_NCPUS; j++) {                            /*  打印中断计数                */
+                printf("%13lld ", piaction->IACT_iIntCnt[j]);
+            }
+            printf("\n");
         }
     }
     
@@ -121,7 +137,7 @@ VOID   API_InterShow (VOID)
     printf("\n");
 #if LW_CFG_INTER_INFO > 0
     printf("interrupt nesting show >>\n");
-    printf((PCHAR)_G_cNestingInfoHdr);                                  /*  打印欢迎信息                */
+    printf(_G_cNestingInfoHdr);                                         /*  打印欢迎信息                */
     
     for (i = 0; i < LW_NCPUS; i++) {
         printf("%5d %11ld\n", i, LW_CPU_GET_NESTING_MAX(i));

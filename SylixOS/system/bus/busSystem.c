@@ -153,7 +153,7 @@ VOID  API_BusShow (VOID)
     REGISTER PLW_BUS_ADAPTER        pbusadapter;
              INT                    iCounter;
     
-    printf((PCHAR)cBusInfoHdr);
+    printf(cBusInfoHdr);
 
     __BUS_LIST_LOCK();                                                  /*  Ëø¶¨ BUS Á´±í               */
     for (plineTemp  = _G_plineBusAdapterHeader;

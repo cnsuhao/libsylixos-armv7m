@@ -228,9 +228,11 @@ __KERNEL_EXT  PLW_CLASS_COROUTINE     _K_pcrcbNext;                     下一个需
   以上这种方式在 SMP 系统已经淘汰, 当前只是作为程序中的简要称呼而已.
 *********************************************************************************************************/
 #ifdef __KERNEL_MAIN_FILE
-__KERNEL_EXT  ULONG                   _K_ulNCpus = 1;                   /*  当前有多少个 CPU (SMP)      */
-#else
+__KERNEL_EXT  const  ULONG            _K_ulNCpus = 1;                   /*  当前有多少个 CPU (SMP)      */
+#elif defined(__KERNEL_NCPUS_SET)
 __KERNEL_EXT  ULONG                   _K_ulNCpus;
+#else
+__KERNEL_EXT  const  ULONG            _K_ulNCpus;
 #endif                                                                  /*  __KERNEL_MAIN_FILE          */
 __KERNEL_EXT  LW_CLASS_CPU            _K_cpuTable[LW_CFG_MAX_PROCESSORS];   
                                                                         /*  每个 CPU 的内容             */
@@ -251,7 +253,7 @@ __KERNEL_EXT  LW_CLASS_TCB            _K_tcbDummyKernel;
 #ifdef __KERNEL_MAIN_FILE
        const  CHAR                    _K_cKernelLogo[] = __SYLIXOS_LOGO;
 #else
-__KERNEL_EXT const  CHAR              _K_cKernelLogo[];
+__KERNEL_EXT  const  CHAR             _K_cKernelLogo[];
 #endif                                                                  /*  __KERNEL_MAIN_FILE          */
 #endif                                                                  /*  LW_CFG_KERNEL_LOGO > 0      */
 

@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-05-08: han.hui
+    ints 加入中断计数器显示.
+
     2014-05-07: han.hui
     netif 加入 ioctl 接口.
 

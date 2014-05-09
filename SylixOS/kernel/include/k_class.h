@@ -107,6 +107,7 @@ typedef struct {
 
 typedef struct {
     LW_LIST_LINE          IACT_plineManage;                             /*  管理链表                    */
+    INT64                 IACT_iIntCnt[LW_CFG_MAX_PROCESSORS];          /*  中断计数器                  */
     PINT_SVR_ROUTINE      IACT_pfuncIsr;                                /*  中断服务函数                */
     VOIDFUNCPTR           IACT_pfuncClear;                              /*  中断清理函数                */
     PVOID                 IACT_pvArg;                                   /*  中断服务函数参数            */

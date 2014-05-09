@@ -72,7 +72,7 @@ VOID  API_VmmPhysicalShow (VOID)
              size_t             stUsed;
 
     printf("vmm physical zone show >>\n");
-    printf((PCHAR)_G_cZoneInfoHdr);                                     /*  打印欢迎信息                */
+    printf(_G_cZoneInfoHdr);                                            /*  打印欢迎信息                */
     
     __VMM_LOCK();
     for (i = 0; i < LW_CFG_VMM_ZONE_NUM; i++) {
@@ -138,7 +138,7 @@ VOID  API_VmmVirtualShow (VOID)
                   (addr_t)LW_CFG_VMM_VIRTUAL_SIZE);
     printf("vmm virtual area usage as follow :\n");
                   
-    printf((PCHAR)_G_cAreaInfoHdr);                                     /*  打印欢迎信息                */
+    printf(_G_cAreaInfoHdr);                                            /*  打印欢迎信息                */
     
     __VMM_LOCK();
     __areaVirtualSpaceTraversal(__vmmVirtualPrint);                     /*  遍历虚拟空间树, 打印信息    */

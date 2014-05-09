@@ -25,6 +25,7 @@
 2013.07.19  加入核间中断处理分支.
 2013.08.28  加入内核事件监视器.
 2014.04.21  中断被处理后不在遍历后面的中断服务函数.
+2014.05.09  加入对中断计数器的处理.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -75,6 +76,7 @@ VOID  API_InterVectorIsr (ULONG  ulVector)
         if (piaction->IACT_pfuncIsr) {
             irqret = piaction->IACT_pfuncIsr(piaction->IACT_pvArg, ulVector);
             if (LW_IRQ_RETVAL(irqret)) {                                /*  中断是否已经被处理          */
+                piaction->IACT_iIntCnt[pcpu->CPU_ulCPUId]++;
                 if (piaction->IACT_pfuncClear) {
                     piaction->IACT_pfuncClear(piaction->IACT_pvArg, ulVector);
                 }
