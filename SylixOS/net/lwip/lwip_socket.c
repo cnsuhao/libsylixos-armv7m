@@ -77,13 +77,21 @@ const struct in6_addr in6addr_linklocal_allnodes = IN6ADDR_LINKLOCAL_ALLNODES_IN
 typedef struct {
     LW_LIST_LINE        SOCK_lineManage;                                /*  管理链表                    */
     INT                 SOCK_iFamily;                                   /*  协议簇                      */
-    INT                 SOCK_iLwipFd;                                   /*  lwip 文件描述符             */
-    AF_UNIX_T          *SOCK_pafunix;                                   /*  AF_UNIX 控制块              */
-    AF_PACKET_T        *SOCK_pafpacket;                                 /*  AF_PACKET 控制块            */
+    
+    union {
+        INT             SOCKF_iLwipFd;                                  /*  lwip 文件描述符             */
+        AF_UNIX_T      *SOCKF_pafunix;                                  /*  AF_UNIX 控制块              */
+        AF_PACKET_T    *SOCKF_pafpacket;                                /*  AF_PACKET 控制块            */
+    } SOCK_family;
+    
     INT                 SOCK_iHash;                                     /*  hash 表下标                 */
     INT                 SOCK_iSoErr;                                    /*  最后一次错误                */
     LW_SEL_WAKEUPLIST   SOCK_selwulist;
 } SOCKET_T;
+
+#define SOCK_iLwipFd    SOCK_family.SOCKF_iLwipFd
+#define SOCK_pafunix    SOCK_family.SOCKF_pafunix
+#define SOCK_pafpacket  SOCK_family.SOCKF_pafpacket
 /*********************************************************************************************************
   驱动声明
 *********************************************************************************************************/
@@ -916,11 +924,9 @@ static LONG  __socketOpen (LW_DEV_HDR *pdevhdr, PCHAR  pcName, INT  iFlag, mode_
         return  (PX_ERROR);
     }
     
-    psock->SOCK_iFamily   = AF_UNSPEC;
-    psock->SOCK_iLwipFd   = PX_ERROR;
-    psock->SOCK_pafunix   = LW_NULL;
-    psock->SOCK_pafpacket = LW_NULL;
-    psock->SOCK_iHash     = PX_ERROR;
+    psock->SOCK_iFamily = AF_UNSPEC;
+    psock->SOCK_iLwipFd = PX_ERROR;
+    psock->SOCK_iHash   = PX_ERROR;
     
     lib_bzero(&psock->SOCK_selwulist, sizeof(LW_SEL_WAKEUPLIST));
     psock->SOCK_selwulist.SELWUL_hListLock = _G_hSockSelMutex;
