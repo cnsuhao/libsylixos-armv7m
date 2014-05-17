@@ -26,6 +26,7 @@
 #if LW_CFG_CACHE_EN > 0
 #include "../armCacheCommon.h"
 #include "../../mmu/armMmuCommon.h"
+#include "../../../common/cp15/armCp15.h"
 /*********************************************************************************************************
   L2 CACHE 支持
 *********************************************************************************************************/
@@ -215,6 +216,9 @@ VOID  armCacheV7Init (LW_CACHE_OP *pcacheop,
                       CACHE_MODE   uiData, 
                       CPCHAR       pcMachineName)
 {
+    armBranchPredictorInvalidate();
+    armBranchPredictionEnable();                                        /*  开启分支预测功能            */
+
 #if LW_CFG_ARM_CACHE_L2 > 0
     armL2Init(uiInstruction, uiData, pcMachineName);
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */

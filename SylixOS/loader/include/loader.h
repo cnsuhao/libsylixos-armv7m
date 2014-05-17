@@ -91,6 +91,7 @@ LW_API INT      API_ModuleRun(CPCHAR  pcFile, CPCHAR  pcEntry);         /*  运行
 
 LW_API INT      API_ModuleRunEx(CPCHAR  pcFile,
                                 CPCHAR  pcEntry,
+                                BOOL    bStop,
                                 INT     iArgC,
                                 CPCHAR  ppcArgV[],
                                 CPCHAR  ppcEnv[]);                      /*  带参数运行模块              */
@@ -109,6 +110,10 @@ LW_API INT      API_ModuleTimes(PVOID    pvVProc,
                                 clock_t *pclockCUser, 
                                 clock_t *pclockCSystem);
                                                                         /*  进程运行时间信息            */
+                                                                        
+LW_API INT      API_ModuleGetBase(pid_t   pid, 
+                                  PCHAR   pcModPath, 
+                                  addr_t *pulAddrBase);                 /*  获得模块装载基地址          */
                                                                         
 #define moduleRun           API_ModuleRun
 #define moduleRunEx         API_ModuleRunEx

@@ -114,7 +114,7 @@ ULONG  API_ThreadContinue (LW_OBJECT_HANDLE  ulId)
     
     ptcb = _K_ptcbTCBIdTable[usIndex];
     
-    ulError = _ThreadContinue(ptcb);
+    ulError = _ThreadContinue(ptcb, LW_FALSE);
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     _ErrorHandle(ulError);

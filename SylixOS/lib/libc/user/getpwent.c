@@ -151,7 +151,7 @@ scanInt(FILE *fp, int *val)
 /*
  * Extract a single password record from the database
  */
-static int scanpw(
+int scanpw(
   FILE *fp,
   struct passwd *pwd,
   char *buffer,
@@ -286,7 +286,7 @@ void endpwent(void)
 /*
  * Extract a single group record from the database
  */
-static int scangr(
+int scangr(
   FILE *fp,
   struct group *grp,
   char *buffer,

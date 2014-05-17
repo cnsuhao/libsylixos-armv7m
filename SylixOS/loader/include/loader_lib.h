@@ -24,6 +24,7 @@
 2012.10.25  加入进程 I/O 环境.
 2012.12.09  加入进程树功能.
 2012.12.18  加入进程私有 FD 表.
+2014.05.13  加入子线程链表.
 *********************************************************************************************************/
 
 #ifndef __LOADER_LIB_H
@@ -75,10 +76,10 @@ typedef struct lw_ld_vproc {
     LW_LIST_LINE_HEADER     VP_plineChild;                              /*  儿子进程链表头              */
     LW_LIST_LINE            VP_lineBrother;                             /*  兄弟进程                    */
     pid_t                   VP_pidGroup;                                /*  组 id 号                    */
+    LW_LIST_LINE_HEADER     VP_plineThread;                             /*  子线程链表                  */
     
     LW_FD_DESC              VP_fddescTbl[LW_VP_MAX_FILES];              /*  进程 fd 表                  */
-    
-    ULONG                   VP_ulPad[12];                               /*  预留                        */
+    ULONG                   VP_ulPad[11];                               /*  预留                        */
 } LW_LD_VPROC;
 
 /*********************************************************************************************************

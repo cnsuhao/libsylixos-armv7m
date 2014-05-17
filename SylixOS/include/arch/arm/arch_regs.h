@@ -40,23 +40,25 @@
   ¼Ä´æÆ÷±í
 *********************************************************************************************************/
 
+typedef UINT        ARCH_REG_T;
+
 typedef struct {
-    UINT            REG_uiCpsr;
-    UINT            REG_uiR0;
-    UINT            REG_uiR1;
-    UINT            REG_uiR2;
-    UINT            REG_uiR3;
-    UINT            REG_uiR4;
-    UINT            REG_uiR5;
-    UINT            REG_uiR6;
-    UINT            REG_uiR7;
-    UINT            REG_uiR8;
-    UINT            REG_uiR9;
-    UINT            REG_uiR10;
-    UINT            REG_uiFp;
-    UINT            REG_uiIp;
-    UINT            REG_uiLr;
-    UINT            REG_uiPc;
+    ARCH_REG_T      REG_uiCpsr;
+    ARCH_REG_T      REG_uiR0;
+    ARCH_REG_T      REG_uiR1;
+    ARCH_REG_T      REG_uiR2;
+    ARCH_REG_T      REG_uiR3;
+    ARCH_REG_T      REG_uiR4;
+    ARCH_REG_T      REG_uiR5;
+    ARCH_REG_T      REG_uiR6;
+    ARCH_REG_T      REG_uiR7;
+    ARCH_REG_T      REG_uiR8;
+    ARCH_REG_T      REG_uiR9;
+    ARCH_REG_T      REG_uiR10;
+    ARCH_REG_T      REG_uiFp;
+    ARCH_REG_T      REG_uiIp;
+    ARCH_REG_T      REG_uiLr;
+    ARCH_REG_T      REG_uiPc;
 } ARCH_REG_CTX;
 
 /*********************************************************************************************************
@@ -64,8 +66,8 @@ typedef struct {
 *********************************************************************************************************/
 
 typedef struct {
-    UINT            FP_uiFp;
-    UINT            FP_uiLr;
+    ARCH_REG_T      FP_uiFp;
+    ARCH_REG_T      FP_uiLr;
 } ARCH_FP_CTX;
 
 /*********************************************************************************************************

@@ -21,7 +21,7 @@ compiler:
     4: "SylixOS/include/inet/ipv4"
     5: "SylixOS/include/inet/ipv6"
     6: "SylixOS/include/arch/arm" (ARM)
-    7: "SylixOS/include/arch/arm" (x86)
+    7: "SylixOS/include/arch/x86" (x86)
     ...
     
 2: compiler application:
@@ -118,7 +118,7 @@ kernel MUST NOT compiler with VFP instructions!
 
                  王锋(CAN设备模型)
 
-                 蒋太金(装载器)
+                 蒋太金(装载器, GDBServer)
 
                  曾波(SD总线抽象层)
 

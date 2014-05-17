@@ -26,9 +26,16 @@
 2013.07.18  加入 _ThreadStop() 函数.
 2013.08.27  加入内核事件监控器.
 2013.12.02  将状态改变函数移动到 _ThreadStatus.c 文件中.
+2014.05.13  _ThreadContinue() 支持强制恢复.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
+/*********************************************************************************************************
+  进程相关
+*********************************************************************************************************/
+#if LW_CFG_MODULELOADER_EN > 0
+#include "../SylixOS/loader/include/loader_vppatch.h"
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 /*********************************************************************************************************
 ** 函数名称: _ThreadUserGet
 ** 功能描述: 获取线程用户信息
@@ -120,18 +127,19 @@ ULONG  _ThreadStop (PLW_CLASS_TCB  ptcb)
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_STOP, 
                       ptcb->TCB_ulId, LW_NULL);
 
-    return  (_ThreadStatusChange(ptcb, LW_THREAD_STATUS_STOP));
+    return  (_ThreadStatusChange(ptcb, LW_TCB_REQ_STOP));
 }
 /*********************************************************************************************************
 ** 函数名称: _ThreadContinue
 ** 功能描述: 被 _ThreadStop() 的线程继续执行 (进入内核后被调用)
 ** 输　入  : ptcb          线程控制块
+**           bForce        如果产生递归是否强制恢复.
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : ptcb != current tcb
 *********************************************************************************************************/
-ULONG  _ThreadContinue (PLW_CLASS_TCB  ptcb)
+ULONG  _ThreadContinue (PLW_CLASS_TCB  ptcb, BOOL  bForce)
 {
              INTREG         iregInterLevel;
     REGISTER PLW_CLASS_PCB  ppcb;
@@ -150,7 +158,8 @@ ULONG  _ThreadContinue (PLW_CLASS_TCB  ptcb)
     
     if (ptcb->TCB_ulStopNesting) {
         ptcb->TCB_ulStopNesting--;
-        if (ptcb->TCB_ulStopNesting == 0) {
+        if ((ptcb->TCB_ulStopNesting == 0ul) || bForce) {
+            ptcb->TCB_ulStopNesting = 0ul;
             ptcb->TCB_usStatus &= (~LW_THREAD_STATUS_STOP);
             if (__LW_THREAD_IS_READY(ptcb)) {                           /*  就绪 ?                      */
                 ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;     /*  中断激活方式                */
@@ -176,6 +185,7 @@ ULONG  _ThreadMakeGlobal (LW_HANDLE  ulId)
              INTREG         iregInterLevel;
     REGISTER UINT16         usIndex;
     REGISTER PLW_CLASS_TCB  ptcb;
+             BOOL           bVpDel;
     
     usIndex = _ObjectGetIndex(ulId);
     
@@ -194,13 +204,22 @@ ULONG  _ThreadMakeGlobal (LW_HANDLE  ulId)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
     ptcb = _K_ptcbTCBIdTable[usIndex];
-    
-    ptcb->TCB_ulOption |= LW_OPTION_OBJECT_GLOBAL;
+    if (!(ptcb->TCB_ulOption & LW_OPTION_OBJECT_GLOBAL)) {
+        ptcb->TCB_ulOption |= LW_OPTION_OBJECT_GLOBAL;
+        bVpDel = LW_TRUE;
+    } else {
+        bVpDel = LW_FALSE;
+    }
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
     
 #if LW_CFG_MODULELOADER_EN > 0
+    if (bVpDel) {
+        vprocThreadDel(ptcb->TCB_pvVProcessContext, ptcb);
+    }
     __resHandleMakeGlobal(ulId);
+#else
+    (VOID)bVpDel;
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
     
     _ErrorHandle(ERROR_NONE);
@@ -219,6 +238,7 @@ ULONG  _ThreadMakeLocal (LW_HANDLE  ulId)
              INTREG         iregInterLevel;
     REGISTER UINT16         usIndex;
     REGISTER PLW_CLASS_TCB  ptcb;
+             BOOL           bVpAdd;
     
     usIndex = _ObjectGetIndex(ulId);
     
@@ -237,13 +257,22 @@ ULONG  _ThreadMakeLocal (LW_HANDLE  ulId)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
     ptcb = _K_ptcbTCBIdTable[usIndex];
-    
-    ptcb->TCB_ulOption &= (~LW_OPTION_OBJECT_GLOBAL);
+    if (ptcb->TCB_ulOption & LW_OPTION_OBJECT_GLOBAL) {
+        ptcb->TCB_ulOption &= (~LW_OPTION_OBJECT_GLOBAL);
+        bVpAdd = LW_TRUE;
+    } else {
+        bVpAdd = LW_FALSE;
+    }
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
     
 #if LW_CFG_MODULELOADER_EN > 0
+    if (bVpAdd) {
+        vprocThreadAdd(ptcb->TCB_pvVProcessContext, ptcb);
+    }
     __resHandleMakeLocal(ulId);
+#else
+    (VOID)bVpAdd;
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
     
     _ErrorHandle(ERROR_NONE);

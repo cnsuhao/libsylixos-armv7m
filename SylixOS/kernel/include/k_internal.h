@@ -465,7 +465,7 @@ VOID           _ThreadUnwaitStatus(PLW_CLASS_TCB  ptcb);                /*  线程
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
 ULONG          _ThreadStop(PLW_CLASS_TCB  ptcb);
-ULONG          _ThreadContinue(PLW_CLASS_TCB  ptcb);
+ULONG          _ThreadContinue(PLW_CLASS_TCB  ptcb, BOOL  bForce);
 
 /*********************************************************************************************************
   线程全局属性相关
@@ -503,10 +503,12 @@ VOID           _TCBBuild(UINT8                    ucPriority,
                          PTHREAD_START_ROUTINE    pThread,
                          PLW_CLASS_TCB            ptcb,
                          PVOID                    pvArg);
+VOID           _TCBDestroy(PLW_CLASS_TCB  ptcb);
 ULONG          _TCBBuildExt(PLW_CLASS_TCB  ptcb);
-VOID           _TCBTryRun(PLW_CLASS_TCB  ptcb);
 VOID           _TCBDestroyExt(PLW_CLASS_TCB  ptcb);
+
 VOID           _TCBCleanupPopExt(PLW_CLASS_TCB  ptcb);
+VOID           _TCBTryRun(PLW_CLASS_TCB  ptcb);
 
 /*********************************************************************************************************
   堆栈警戒检查

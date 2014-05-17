@@ -783,7 +783,7 @@ INT    __tshellBgCreateEx (INT               iFd[3],
                         (PVOID)tsbg);                                   /*  构建属性块                  */
                         
     hTShellHandle = API_ThreadInit("t_tshellbg", __tshellBackground,
-                                    &threadattrTShell, LW_NULL);        /*  创建 tshell 线程            */
+                                   &threadattrTShell, LW_NULL);         /*  创建 tshell 线程            */
     if (!hTShellHandle) {
         __SHEAP_FREE(tsbg->TSBG_pcDefPath);
         __SHEAP_FREE(tsbg);

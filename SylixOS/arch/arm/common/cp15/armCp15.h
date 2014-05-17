@@ -63,10 +63,20 @@ VOID    armBranchPredictionEnable(VOID);
 VOID    armAuxControlFeatureDisable(UINT32  uiFeature);
 VOID    armAuxControlFeatureEnable(UINT32  uiFeature);
 
-#define CP15_CONTROL_TEXREMAP       0x10000000
-#define CP15_CONTROL_ACCESSFLAG     0x20000000
-#define CP15_CONTROL_ALIGN_CHCK     0x00000002
-#define CP15_CONTROL_MMU            0x00000001
+#define CP15_CONTROL_THUMB_EXCEPT                   (1 << 30)
+#define CP15_CONTROL_ACCESSFLAG                     (1 << 29)
+#define CP15_CONTROL_TEXREMAP                       (1 << 28)
+#define CP15_CONTROL_NMFI                           (1 << 27)
+#define CP15_CONTROL_EE                             (1 << 25)
+#define CP15_CONTROL_HA                             (1 << 17)
+#define CP15_CONTROL_RR_EN                          (1 << 14)
+#define CP15_CONTROL_HVECTOR_EN                     (1 << 13)
+#define CP15_CONTROL_ICACHE_EN                      (1 << 12)
+#define CP15_CONTROL_Z_EN                           (1 << 11)
+#define CP15_CONTROL_SWP_EN                         (1 << 10)
+#define CP15_CONTROL_DCACHE_EN                      (1 <<  2)
+#define CP15_CONTROL_ALIGN_CHCK                     (1 <<  1)
+#define CP15_CONTROL_MMU                            (1 <<  0)
 
 VOID    armControlFeatureEnable(UINT32  uiFeature);
 VOID    armControlFeatureDisable(UINT32  uiFeature);

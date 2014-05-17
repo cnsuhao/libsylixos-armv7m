@@ -55,7 +55,8 @@ typedef struct {
     INT                 SPA_iPolicy;
     PCHAR               SPA_pcWd;
     PLW_RESOURCE_RAW    SPA_presraw;                                    /*  资源管理节点                */
-    ULONG               SPA_ulPad[10];
+    BOOL                SPA_bStop;                                      /*  进程运行前是否等待调试器信号*/
+    ULONG               SPA_ulPad[9];
 } posix_spawnattr_t;
 
 /*********************************************************************************************************
@@ -129,6 +130,9 @@ LW_API int   posix_spawnp(pid_t *pid, const char *file,
                           
 LW_API int   posix_spawnattr_init(posix_spawnattr_t *attrp);
 LW_API int   posix_spawnattr_destroy(posix_spawnattr_t *attrp);
+
+LW_API int   posix_spawnattr_getstop(const posix_spawnattr_t *attrp, int *pstop);
+LW_API int   posix_spawnattr_setstop(posix_spawnattr_t *attrp, int stop);
 
 LW_API int   posix_spawnattr_getwd(const posix_spawnattr_t *attrp, char *pwd, size_t size);
 LW_API int   posix_spawnattr_setwd(posix_spawnattr_t *attrp, const char *pwd);

@@ -594,6 +594,9 @@ typedef struct __lw_tcb {
 
     atomic_t              TCB_atomicKernelSpace;                        /*  是否在内核空间              */
     PVOID                 TCB_pvVProcessContext;                        /*  进程上下文                  */
+#if LW_CFG_MODULELOADER_EN > 0
+    LW_LIST_LINE          TCB_lineProcess;
+#endif                                                                  /*  进程表                      */
     
 /*********************************************************************************************************
   缺页中断信息

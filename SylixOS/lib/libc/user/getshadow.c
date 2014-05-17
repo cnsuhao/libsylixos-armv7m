@@ -78,7 +78,7 @@ void endspent(void)
 /*
  * Extract a single shadow record from the database
  */
-static int scansp (
+int scansp (
   FILE *fp,
   struct spwd *spwd,
   char *buffer,

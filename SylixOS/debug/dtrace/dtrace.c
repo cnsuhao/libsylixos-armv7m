@@ -16,341 +16,711 @@
 **
 ** 文件创建日期: 2011 年 11 月 18 日
 **
-** 描        述: SylixOS 调试跟踪器, GDB server 可以使用此调试跟踪器调试装载的模块或者进程.
+** 描        述: SylixOS 调试跟踪器, GDB server 可以使用此调试进程.
 
 ** BUG:
 2012.09.05  今天凌晨, 重新设计 dtrace 的等待与接口机制, 开始为 GDB server 的编写扫平一切障碍.
 *********************************************************************************************************/
+#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
-#include "signal.h"
+#include "dtrace.h"
 /*********************************************************************************************************
-  dtrace 调试原理
-  
-  每一个 DTRACE_NODE 都保存一个 ptrace 节点相关信息. GDB server 首先创建一个 dtrace 节点, 然后可以创建断点
-  
-  创建一个断点就是让程序运行到指定的位置(一个地址)时产生异常, 例如, 通过 dtrace_read 先将原始的指令读出来,
-  
-  然后再用 dtrace_write 写入一条可以导致异常的指令, 当程序运行到这里, 就会产生异常. 操作系统会逐一查找每个
-  
-  创建了的节点, 然后调用 DTRACE_pfuncTrap() 来判断是哪一个 dtrace 节点创建的节点 (由 GDB server 实现), 
-  
-  如果找到, GDB server 应该判断此断点是否有效, 如果有效, 则应记录相关信息, 然后返回 0, DTRACE_pfuncTrap() 
-  
-  返回 0 说明这是一个正常的断点, 此时, dtrace_trap() 会将 "断点" 的线程停止, 并且向 GDB server 发送 SIGTRAP
-  
-  信号, 然后 GDB server 读取刚才 DTRACE_pfuncTrap() 记录的信息, 并通知 gdb 有事件产生. 
-  
-  注意: 如果异常类型是其他错误 (定义在 vmm.h 中), GDB server 则需要向 gdb 做适当的信息反馈!
-  
-  当断点执行完毕需要继续执行时, GDB server 首先需要还原断点的指令, 进行一次汇编单步, 然后再在刚才的位置设置
-  
-  断点并清除当前断点, 然后再执行, 如果体系结构支持硬件单步, 例如: x86 PowerPC 等处理器, 则使用硬件单步即可, 
-  
-  如果不支持如 ARM MIPS 则需要 GDB server 有能力进行软件单步, (需要进行软件的分支预测)
-  
-  注意: 如果统一断点打断了多个线程, DTRACE_pfuncTrap() 将会被多次调用! 而只要 GDB server 调用 
-  
-  dtrace_continue() 会使所有的线程继续执行.
+  裁剪支持
 *********************************************************************************************************/
-
+#if LW_CFG_GDB_EN > 0
+#include "../SylixOS/loader/include/loader_vppatch.h"
 /*********************************************************************************************************
   dtrace 结构
-  
-  以下信息由操作系统异常处理管理函数填写
-  DTRACE_ulTraceThread
-  DTRACE_pvFrame
-  DTRACE_ulAddress
 *********************************************************************************************************/
 typedef struct {
-    LW_LIST_LINE        DTRACE_lineManage;                              /*  管理链表                    */
-    LW_OBJECT_HANDLE    DTRACE_ulHostThread;                            /*  主控线程                    */
-    
-    BOOL              (*DTRACE_pfuncTrap)(PVOID  pvArg, 
-                                          PVOID  pvFrame, 
-                                          addr_t ulAddress, 
-                                          ULONG  ulType,
-                                          LW_OBJECT_HANDLE ulThread);   /*  硬件异常陷入                */
-    PVOID               DTRACE_pvArg;                                   /*  DTRACE_pfuncIsTrap 参数     */
-    
-    LW_OBJECT_HANDLE    DTRACE_ulStopSem;                               /*  所有被断点暂停的线程信号量  */
-} DTRACE_NODE;
-typedef DTRACE_NODE    *PDTRACE_NODE;
-/*********************************************************************************************************
-  dtrace 全局变量
-*********************************************************************************************************/
-static LW_LIST_LINE_HEADER      _G_plineDtraceHeader;
-static LW_OBJECT_HANDLE         _G_ulDtraceLock;
+    UINT                DMSG_uiIn;
+    UINT                DMSG_uiOut;
+    UINT                DMSG_uiNum;
+    LW_DTRACE_MSG       DMSG_dmsgBuffer[LW_CFG_MAX_THREADS];
+} LW_DTRACE_MSG_POOL;
 
-#define __DTRACE_LOCK()         API_SemaphoreMPend(_G_ulDtraceLock, LW_OPTION_WAIT_INFINITE)
-#define __DTRACE_UNLOCK()       API_SemaphoreMPost(_G_ulDtraceLock)
+typedef struct {
+    LW_LIST_LINE        DTRACE_lineManage;                              /*  管理链表                    */
+    pid_t               DTRACE_pid;                                     /*  进程描述符                  */
+    UINT                DTRACE_uiType;                                  /*  调试类型                    */
+    UINT                DTRACE_uiFlag;                                  /*  调试选项                    */
+    LW_DTRACE_MSG_POOL  DTRACE_dmsgpool;                                /*  调试暂停线程信息            */
+    LW_OBJECT_HANDLE    DTRACE_ulDbger;                                 /*  调试器                      */
+} LW_DTRACE;
+typedef LW_DTRACE      *PLW_DTRACE;
+
+#define DPOOL_IN        pdtrace->DTRACE_dmsgpool.DMSG_uiIn
+#define DPOOL_OUT       pdtrace->DTRACE_dmsgpool.DMSG_uiOut
+#define DPOOL_NUM       pdtrace->DTRACE_dmsgpool.DMSG_uiNum
+#define DPOOL_MSG       pdtrace->DTRACE_dmsgpool.DMSG_dmsgBuffer
 /*********************************************************************************************************
-** 函数名称: dtrace_create
+  dtrace 结构
+*********************************************************************************************************/
+static LW_LIST_LINE_HEADER  _G_plineDtraceHeader = LW_NULL;
+/*********************************************************************************************************
+** 函数名称: __dtraceWriteMsg
+** 功能描述: 插入一个调试信息
+** 输　入  : pdtrace       dtrace 节点
+**           dmsg          调试信息
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __dtraceWriteMsg (PLW_DTRACE  pdtrace, const PLW_DTRACE_MSG  pdmsg)
+{
+    if (DPOOL_NUM == LW_CFG_MAX_THREADS) {
+        return  (PX_ERROR);
+    }
+    
+    DPOOL_MSG[DPOOL_IN] = *pdmsg;
+    DPOOL_IN++;
+    DPOOL_NUM++;
+    
+    if (DPOOL_IN >= LW_CFG_MAX_THREADS) {
+        DPOOL_IN =  0;
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __dtraceReadMsg
+** 功能描述: 读取一个调试信息
+** 输　入  : pdtrace       dtrace 节点
+**           dmsg          调试信息
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __dtraceReadMsg (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg)
+{
+    if (DPOOL_NUM == 0) {
+        return  (PX_ERROR);
+    }
+    
+    *pdmsg = DPOOL_MSG[DPOOL_OUT];
+    DPOOL_OUT++;
+    DPOOL_NUM--;
+    
+    if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
+        DPOOL_OUT =  0;
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __dtraceThread
+** 功能描述: 获取一个线程的句柄
+** 输　入  : pdtrace       dtrace 节点
+**           dmsg          调试信息
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __dtraceThreadCb (LW_OBJECT_HANDLE  ulId, LW_OBJECT_HANDLE  ulThread[], 
+                               UINT  uiTableNum, UINT *uiNum)
+{
+    if (*uiNum < uiTableNum) {
+        ulThread[*uiNum] = ulId;
+        (*uiNum)++;
+    }
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceTrap
+** 功能描述: 有一个线程触发断点
+** 输　入  : ulAddr        触发地址
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  API_DtraceTrap (addr_t  ulAddr)
+{
+#if LW_CFG_MODULELOADER_EN > 0
+    LW_OBJECT_HANDLE    ulDbger;
+    PLW_LIST_LINE       plineTemp;
+    LW_LD_VPROC        *pvproc;
+    PLW_CLASS_TCB       ptcbCur;
+    PLW_DTRACE          pdtrace;
+    LW_DTRACE_MSG       dtm;
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);
+    
+    pvproc = __LW_VP_GET_TCB_PROC(ptcbCur);
+    if (!pvproc || (pvproc->VP_pid <= 0)) {
+        return  (PX_ERROR);
+    }
+    
+    dtm.DTM_ulAddr   = ulAddr;
+    dtm.DTM_ulThread = ptcbCur->TCB_ulId;
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    for (plineTemp  = _G_plineDtraceHeader;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {                 /*  查找对应的调试器            */
+        pdtrace = _LIST_ENTRY(plineTemp, LW_DTRACE, DTRACE_lineManage);
+        if (pdtrace->DTRACE_pid == pvproc->VP_pid) {
+            ulDbger = pdtrace->DTRACE_ulDbger;
+            __dtraceWriteMsg(pdtrace, &dtm);
+            break;
+        }
+    }
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    if (plineTemp == LW_NULL) {                                         /*  此进程不存在调试器          */
+        return  (PX_ERROR);
+    
+    } else {
+        _DebugHandle(__LOGMESSAGE_LEVEL, "dtrace trap.\r\n");
+        killTrap(ulDbger);                                              /*  通知调试器线程              */
+        return  (ERROR_NONE);
+    }
+#else
+    return  (PX_ERROR);
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceCreate
 ** 功能描述: 创建一个 dtrace 调试节点
-** 输　入  : pfuncTrap         断点陷入函数
-**           pvArg             断点陷入函数参数
+** 输　入  : uiType            调试类型
+**           uiFlag            调试选项
+**           ulDbger           调试器服务线程
 ** 输　出  : dtrace 节点
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-PVOID dtrace_create (BOOL (*pfuncTrap)(), PVOID pvArg)
+PVOID  API_DtraceCreate (UINT  uiType, UINT  uiFlag, LW_OBJECT_HANDLE  ulDbger)
 {
-    PDTRACE_NODE    pdtrace;
-
-    if (pfuncTrap == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (LW_NULL);
-    }
+    PLW_DTRACE  pdtrace;
     
-    if (_G_ulDtraceLock == LW_OBJECT_HANDLE_INVALID) {
-        _G_ulDtraceLock =  API_SemaphoreMCreate("dtrace_lock", 
-                                                LW_PRIO_DEF_CEILING, 
-                                                LW_OPTION_INHERIT_PRIORITY | 
-                                                LW_OPTION_DELETE_SAFE |
-                                                LW_OPTION_OBJECT_GLOBAL, 
-                                                LW_NULL);
-    }
-    
-    pdtrace = (PDTRACE_NODE)__SHEAP_ALLOC(sizeof(DTRACE_NODE));
+    pdtrace = (PLW_DTRACE)__SHEAP_ALLOC(sizeof(LW_DTRACE));
     if (pdtrace == LW_NULL) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system heap is low memory.\r\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (LW_NULL);
     }
-    lib_bzero(pdtrace, sizeof(DTRACE_NODE));
+    lib_bzero(pdtrace, sizeof(LW_DTRACE));
     
-    pdtrace->DTRACE_ulHostThread = API_ThreadIdSelf();
-    pdtrace->DTRACE_pfuncTrap    = pfuncTrap;
-    pdtrace->DTRACE_pvArg        = pvArg;
+    pdtrace->DTRACE_pid     = (pid_t)PX_ERROR;
+    pdtrace->DTRACE_uiType  = uiType;
+    pdtrace->DTRACE_uiFlag  = uiFlag;
+    pdtrace->DTRACE_ulDbger = ulDbger;
     
-    /*
-     *  DTRACE_ulStopSem 信号量可被信号打断恢复执行 (必须使用 FIFO 型等待)
-     */
-    pdtrace->DTRACE_ulStopSem = API_SemaphoreBCreate("dtrace_stopsem", LW_FALSE, 
-                                                     LW_OPTION_SIGNAL_INTER | 
-                                                     LW_OPTION_WAIT_FIFO |
-                                                     LW_OPTION_OBJECT_GLOBAL, 
-                                                     LW_NULL);
-    if (pdtrace->DTRACE_ulStopSem == LW_OBJECT_HANDLE_INVALID) {
-        __SHEAP_FREE(pdtrace);
-        return  (LW_NULL);
-    }
-    
-    __DTRACE_LOCK();
+    __KERNEL_ENTER();
     _List_Line_Add_Ahead(&pdtrace->DTRACE_lineManage, &_G_plineDtraceHeader);
-    __DTRACE_UNLOCK();
+    __KERNEL_EXIT();
     
+    _DebugHandle(__LOGMESSAGE_LEVEL, "dtrace create.\r\n");
     return  ((PVOID)pdtrace);
 }
 /*********************************************************************************************************
-** 函数名称: dtrace_delete
-** 功能描述: 删除一个 dtrace 节点
+** 函数名称: API_DtraceDelete
+** 功能描述: 删除一个 dtrace 调试节点
 ** 输　入  : pvDtrace      dtrace 节点
-** 输　出  : ERROR or NONE
+** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-INT dtrace_delete (PVOID pvDtrace)
+ULONG  API_DtraceDelete (PVOID  pvDtrace)
 {
-    PDTRACE_NODE    pdtrace;
-
-    if (pvDtrace == LW_NULL) {
+    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+    
+    if (!pdtrace) {
         _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+        return  (EINVAL);
     }
     
-    pdtrace = (PDTRACE_NODE)pvDtrace;
-    
-    __DTRACE_LOCK();
+    __KERNEL_ENTER();
     _List_Line_Del(&pdtrace->DTRACE_lineManage, &_G_plineDtraceHeader);
-    __DTRACE_UNLOCK();
-    
-    API_SemaphoreBDelete(&pdtrace->DTRACE_ulStopSem);
+    __KERNEL_EXIT();
     
     __SHEAP_FREE(pdtrace);
     
+    _DebugHandle(__LOGMESSAGE_LEVEL, "dtrace delete.\r\n");
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: dtrace_read
-** 功能描述: dtrace 读取被跟踪线程指定内存数据
-** 输　入  : pvDtrace      dtrace 节点
-**           ulAddress     地址
-**           pvBuffer      读取缓冲
-**           stNbytes      大小
-** 输　出  : ERROR or NONE
+** 函数名称: API_DtraceSetPid
+** 功能描述: 设置 dtrace 跟踪进程
+** 输　入  : pvDtrace          dtrace 节点
+**           pid               被调试进程号
+** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-INT dtrace_read (PVOID pvDtrace, addr_t ulAddress, PVOID pvBuffer, size_t  stNbytes)
+ULONG  API_DtraceSetPid (PVOID  pvDtrace, pid_t  pid)
 {
-    /*
-     *  由于 SylixOS 共享统一的地址空间, 所以, 这里直接拷贝即可
-     */
-    if (pvBuffer == LW_NULL) {
+    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+    
+    if (!pdtrace) {
         _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+        return  (EINVAL);
     }
     
-    lib_memcpy(pvBuffer, (const PVOID)ulAddress, stNbytes);
+    pdtrace->DTRACE_pid = pid;
     
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: dtrace_write
-** 功能描述: dtrace 设置被跟踪线程指定内存数据
+** 函数名称: API_DtraceGetRegs
+** 功能描述: 获取指定调试线程的寄存器上下文
 ** 输　入  : pvDtrace      dtrace 节点
-**           ulAddress     地址
-**           pvBuffer      输出缓冲
-**           stNbytes      大小
-** 输　出  : ERROR or NONE
+**           ulThread      线程句柄
+**           pregctx       寄存器表
+**           pregSp        堆栈指针
+** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-INT dtrace_write (PVOID pvDtrace, addr_t ulAddress, const PVOID pvBuffer, size_t  stNbytes)
+ULONG  API_DtraceGetRegs (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, 
+                          ARCH_REG_CTX  *pregctx, ARCH_REG_T *pregSp)
 {
-    if (pvBuffer == LW_NULL) {
+    REGISTER UINT16         usIndex;
+    REGISTER PLW_CLASS_TCB  ptcb;
+    REGISTER ARCH_REG_T     regSp;
+    
+    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+    
+    if (!pdtrace || !pregctx) {
         _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+        return  (EINVAL);
     }
     
-    lib_memcpy((PVOID)ulAddress, pvBuffer, stNbytes);
+    usIndex = _ObjectGetIndex(ulThread);
     
-    return  (ERROR_NONE);
-}
-/*********************************************************************************************************
-** 函数名称: dtrace_continue
-** 功能描述: dtrace 使被跟踪线程继续执行
-** 输　入  : pvDtrace      dtrace 节点
-** 输　出  : ERROR or NONE
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-*********************************************************************************************************/
-LW_API 
-INT dtrace_continue (PVOID pvDtrace)
-{
-    PDTRACE_NODE    pdtrace;
+    if (!_ObjectClassOK(ulThread, _OBJECT_THREAD)) {                    /*  检查 ID 类型有效性          */
+        return  (ERROR_KERNEL_HANDLE_NULL);
+    }
+    
+    if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
+        return  (ERROR_THREAD_NULL);
+    }
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (_Thread_Invalid(usIndex)) {
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+        return  (ERROR_THREAD_NULL);
+    }
+    
+    ptcb = _K_ptcbTCBIdTable[usIndex];
+    
+    *pregctx = *(ARCH_REG_CTX *)ptcb->TCB_pstkStackNow;
+    regSp    =  (ARCH_REG_T)ptcb->TCB_pstkStackNow;
+    
+#if	CPU_STK_GROWTH == 0
+    regSp -= sizeof(ARCH_REG_CTX);
+#else
+    regSp += sizeof(ARCH_REG_CTX);
+#endif
 
-    if (pvDtrace == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
-    }
-    
-    pdtrace = (PDTRACE_NODE)pvDtrace;
-    
-    API_SemaphoreBFlush(pdtrace->DTRACE_ulStopSem, LW_NULL);
+    *pregSp = regSp;
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
     
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: dtrace_continue_one
-** 功能描述: dtrace 使最早停止的线程继续执行
+** 函数名称: API_DtraceSetRegs
+** 功能描述: 设置指定调试线程的寄存器上下文
 ** 输　入  : pvDtrace      dtrace 节点
-** 输　出  : ERROR or NONE
+**           ulThread      线程句柄
+**           pregctx       寄存器表
+** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-INT dtrace_continue_one (PVOID pvDtrace)
+ULONG  API_DtraceSetRegs (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, const ARCH_REG_CTX  *pregctx)
 {
-    PDTRACE_NODE    pdtrace;
-
-    if (pvDtrace == LW_NULL) {
+    REGISTER UINT16         usIndex;
+    REGISTER PLW_CLASS_TCB  ptcb;
+    
+    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+    
+    if (!pdtrace || !pregctx) {
         _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+        return  (EINVAL);
     }
     
-    pdtrace = (PDTRACE_NODE)pvDtrace;
+    usIndex = _ObjectGetIndex(ulThread);
     
-    API_SemaphoreBPost(pdtrace->DTRACE_ulStopSem);
-    API_SemaphoreBPend(pdtrace->DTRACE_ulStopSem, LW_OPTION_NOT_WAIT);
+    if (!_ObjectClassOK(ulThread, _OBJECT_THREAD)) {                    /*  检查 ID 类型有效性          */
+        return  (ERROR_KERNEL_HANDLE_NULL);
+    }
+    
+    if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
+        return  (ERROR_THREAD_NULL);
+    }
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (_Thread_Invalid(usIndex)) {
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+        return  (ERROR_THREAD_NULL);
+    }
+    
+    ptcb = _K_ptcbTCBIdTable[usIndex];
+    
+    *(ARCH_REG_CTX *)ptcb->TCB_pstkStackNow = *pregctx;
+    
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
     
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-  一下函数一般为操作系统使用, 操作系统在异常时会调用这个函数.
-*********************************************************************************************************/
-/*********************************************************************************************************
-** 函数名称: dtrace_trap
-** 功能描述: 操作系统异常产生时, 通知 dtrace. (此函数运行于被异常中断线程的异常处理当中)
-** 输　入  : pvFrame       trap 异常线程句柄栈区指针, 体系结构相关
-**           ulAddress     trap 地址
-**           ulType        trap 类型
-**           ulThread      trap 异常线程句柄
-** 输　出  :  0 表示是断点, 
-             -1 表示不是断点.
-              1 表示断点已经恢复, 继续执行
+** 函数名称: API_DtraceGetMems
+** 功能描述: 拷贝内存
+** 输　入  : pvDtrace      dtrace 节点
+**           ulAddr        拷贝内存起始地址
+**           pvBuffer      接收缓冲
+**           stSize        拷贝的大小
+** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-INT dtrace_trap (PVOID              pvFrame,
-                 addr_t             ulAddress, 
-                 ULONG              ulType,
-                 LW_OBJECT_HANDLE   ulThread)
+ULONG  API_DtraceGetMems (PVOID  pvDtrace, addr_t  ulAddr, PVOID  pvBuffer, size_t  stSize)
 {
-    INT                 iRet = PX_ERROR;
-    PLW_LIST_LINE       plineTemp;
-    PDTRACE_NODE        pdtrace;
-    LW_OBJECT_HANDLE    ulHostThread;
-    
-    if (_G_ulDtraceLock == LW_OBJECT_HANDLE_INVALID) {
-        _G_ulDtraceLock =  API_SemaphoreMCreate("dtrace_lock", 
-                                                LW_PRIO_DEF_CEILING, 
-                                                LW_OPTION_INHERIT_PRIORITY | 
-                                                LW_OPTION_DELETE_SAFE |
-                                                LW_OPTION_OBJECT_GLOBAL, 
-                                                LW_NULL);
+    if (!pvBuffer) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
     }
-
-    __DTRACE_LOCK();
-    for (plineTemp  = _G_plineDtraceHeader; 
-         plineTemp != LW_NULL; 
-         plineTemp  = _list_line_get_next(plineTemp)) {                 /*  遍历所有控制块              */
-        
-        pdtrace = _LIST_ENTRY(plineTemp, DTRACE_NODE, DTRACE_lineManage);
-        
-        iRet = pdtrace->DTRACE_pfuncTrap(pdtrace->DTRACE_pvArg, 
-                                         pvFrame,
-                                         ulAddress, 
-                                         ulType, 
-                                         ulThread);
-        if (iRet > 0) {                                                 /*  此断点已恢复, 可以继续执行  */
-            plineTemp = LW_NULL;
-            break;
-        
-        } else if (iRet == 0) {                                         /*  断点有效, 需要暂停当前线程  */
-            ulHostThread = pdtrace->DTRACE_ulHostThread;                /*  主控线程                    */
-            break;
+    
+    lib_memcpy(pvBuffer, (const PVOID)ulAddr, stSize);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceSetMems
+** 功能描述: 写入内存
+** 输　入  : pvDtrace      dtrace 节点
+**           ulAddr        写入内存起始地址
+**           pvBuffer      写入数据
+**           stSize        写入的大小
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceSetMems (PVOID  pvDtrace, addr_t  ulAddr, const PVOID  pvBuffer, size_t  stSize)
+{
+    if (!pvBuffer) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    
+    lib_memcpy((PVOID)ulAddr, pvBuffer, stSize);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceBreakpointInsert
+** 功能描述: 插入一个断点
+** 输　入  : pvDtrace      dtrace 节点
+**           ulAddr        断点地址
+**           pulIns        返回断点地址之前的指令
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceBreakpointInsert (PVOID  pvDtrace, addr_t  ulAddr, ULONG  *pulIns)
+{
+    PLW_DTRACE    pdtrace = (PLW_DTRACE)pvDtrace;
+    
+    if (!(pdtrace->DTRACE_uiFlag & LW_DTRACE_F_KBP)) {                  /*  内核断点禁能                */
+        if ((ulAddr < (LW_CFG_VMM_VIRTUAL_START)) ||
+            (ulAddr > (LW_CFG_VMM_VIRTUAL_START + LW_CFG_VMM_VIRTUAL_SIZE))) {
+            _ErrorHandle(ERROR_KERNEL_MEMORY);
+            return  (ERROR_KERNEL_MEMORY);
         }
     }
-    __DTRACE_UNLOCK();
     
-    if (plineTemp == LW_NULL) {
-        return  (iRet);
+    archDbgBpInsert(ulAddr, pulIns);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceBreakpointRemove
+** 功能描述: 删除一个断点
+** 输　入  : pvDtrace      dtrace 节点
+**           ulAddr        断点地址
+**           ulIns         断电之前的指令
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceBreakpointRemove (PVOID  pvDtrace, addr_t  ulAddr, ULONG  ulIns)
+{
+    archDbgBpRemove(ulAddr, ulIns);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceWatchpointInsert
+** 功能描述: 创建一个数据观察点
+** 输　入  : pvDtrace      dtrace 节点
+**           ulAddr        数据地址
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceWatchpointInsert (PVOID  pvDtrace, addr_t  ulAddr)
+{
+    _ErrorHandle(ENOSYS);
+    return  (ENOSYS);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceWatchpointRemove
+** 功能描述: 删除一个数据观察点
+** 输　入  : pvDtrace      dtrace 节点
+**           ulAddr        数据地址
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceWatchpointRemove (PVOID  pvDtrace, addr_t  ulAddr)
+{
+    _ErrorHandle(ENOSYS);
+    return  (ENOSYS);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceStopThread
+** 功能描述: 停止一个线程
+** 输　入  : pvDtrace      dtrace 节点
+**           ulThread      线程句柄
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceStopThread (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread)
+{
+    return  (API_ThreadStop(ulThread));
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceContinueThread
+** 功能描述: 恢复一个已经被停止的线程
+** 输　入  : pvDtrace      dtrace 节点
+**           ulThread      线程句柄
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceContinueThread (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread)
+{
+    return  (API_ThreadContinue(ulThread));
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceStopProcess
+** 功能描述: 停止 dtrace 对应的调试进程
+** 输　入  : pvDtrace      dtrace 节点
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceStopProcess (PVOID  pvDtrace)
+{
+    PLW_DTRACE    pdtrace = (PLW_DTRACE)pvDtrace;
+    LW_LD_VPROC  *pvproc  = vprocGet(pdtrace->DTRACE_pid);
+    
+    if (pvproc) {
+        vprocThreadTraversal(pvproc, (VOIDFUNCPTR)API_ThreadStop, 0, 0, 0, 0, 0, 0);
     }
     
-    /*
-     *  发送 SIGTRAP 信号.
-     */
-    kill(ulHostThread, SIGTRAP);                                        /*  通知 GDB Server             */
-    
-    API_SemaphoreBPend(pdtrace->DTRACE_ulStopSem, 
-                       LW_OPTION_WAIT_INFINITE);                        /*  等待继续执行                */
-    
-    return  (iRet);
+    return  (ERROR_NONE);
 }
+/*********************************************************************************************************
+** 函数名称: API_DtraceContinueProcess
+** 功能描述: 恢复 dtrace 对应的调试进程
+** 输　入  : pvDtrace      dtrace 节点
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceContinueProcess (PVOID  pvDtrace)
+{
+    PLW_DTRACE    pdtrace = (PLW_DTRACE)pvDtrace;
+    LW_LD_VPROC  *pvproc  = vprocGet(pdtrace->DTRACE_pid);
+    
+    if (pvproc) {
+        vprocThreadTraversal(pvproc, (VOIDFUNCPTR)API_ThreadContinue, 0, 0, 0, 0, 0, 0);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceGetBreakInfo
+** 功能描述: 获得当前断点线程信息
+** 输　入  : pvDtrace      dtrace 节点
+**           pdtm          获取的信息
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceGetBreakInfo (PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm)
+{
+    INT         iError;
+    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+    
+    if (!pdtrace || !pdtm) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    iError = __dtraceReadMsg(pdtrace, pdtm);
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    if (iError) {
+        _ErrorHandle(ENOMSG);
+        return  (ENOMSG);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceProcessThread
+** 功能描述: 获得进程内所有线程的句柄
+** 输　入  : pvDtrace      dtrace 节点
+**           ulThread      线程句柄列表缓冲
+**           uiTableNum    列表大小
+**           puiThreadNum  实际获取的线程数目
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceProcessThread (PVOID  pvDtrace, LW_OBJECT_HANDLE ulThread[], 
+                                UINT   uiTableNum, UINT *puiThreadNum)
+{
+    PLW_DTRACE    pdtrace = (PLW_DTRACE)pvDtrace;
+    LW_LD_VPROC  *pvproc  = vprocGet(pdtrace->DTRACE_pid);
+    UINT          uiNum   = 0;
+    
+    if (!ulThread || !uiTableNum || !puiThreadNum) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    
+    if (pvproc) {
+        vprocThreadTraversal(pvproc, __dtraceThreadCb, 
+                             (PVOID)ulThread, (PVOID)uiTableNum, (PVOID)&uiNum, 
+                             0, 0, 0);
+    }
+    
+    *puiThreadNum = uiNum;
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceThreadExtraInfo
+** 功能描述: 获得线程额外信息
+** 输　入  : pvDtrace      dtrace 节点
+**           ulThread      线程句柄
+**           pcExtraInfo   额外信息缓存
+**           siSize        缓存大小
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceThreadExtraInfo (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread,
+                                  PCHAR  pcExtraInfo, size_t  stSize)
+{
+    ULONG              ulError;
+    LW_CLASS_TCB_DESC  tcbdesc;
+    
+    PCHAR              pcPendType = LW_NULL;
+    PCHAR              pcFpu      = LW_NULL;
+    size_t             stFreeByteSize = 0;
+    
+    if (!pcExtraInfo || !stSize) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    
+    ulError = API_ThreadDesc(ulThread, &tcbdesc);
+    if (ulError) {
+        return  (ulError);
+    }
+    
+    API_ThreadStackCheck(ulThread, &stFreeByteSize, LW_NULL, LW_NULL);
+    
+    if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_SEM) {                 /*  等待信号量                  */
+        pcPendType = "SEM";
+    
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_MSGQUEUE) {     /*  等待消息队列                */
+        pcPendType = "MSGQ";
+    
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_SUSPEND) {      /*  挂起                        */
+        pcPendType = "SUSP";
+    
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_EVENTSET) {     /*  等待事件组                  */
+        pcPendType = "ENTS";
+    
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_SIGNAL) {       /*  等待信号                    */
+        pcPendType = "WSIG";
+    
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_INIT) {         /*  初始化中                    */
+        pcPendType = "INIT";
+    
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_WDEATH) {       /*  僵死状态                    */
+        pcPendType = "WDEA";
+    
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_DELAY) {        /*  睡眠                        */
+        pcPendType = "SLP";
+    
+    } else {
+        pcPendType = "RDY";                                             /*  就绪态                      */
+    }
+    
+    if (tcbdesc.TCBD_ulOption & LW_OPTION_THREAD_USED_FP) {
+        pcFpu = "USE";
+    } else {
+        pcFpu = "NO";
+    }
+    
+    snprintf(pcExtraInfo, stSize, "%s,prio:%d,stat:%s,errno:%ld,wake:%ld,fpu:%s,cpu:%ld,stackfree:%zd",
+             tcbdesc.TCBD_cThreadName,
+             tcbdesc.TCBD_ucPriority,
+             pcPendType,
+             tcbdesc.TCBD_ulLastError,
+             tcbdesc.TCBD_ulWakeupLeft,
+             pcFpu,
+             tcbdesc.TCBD_ulCPUId,
+             stFreeByteSize);
+    
+    return  (ERROR_NONE);
+}
+#endif                                                                  /*  LW_CFG_GDB_EN > 0           */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

@@ -48,12 +48,19 @@
 2013.05.07  TCB 从今后独立与堆栈存在.
 2013.08.28  _TCBBuild() 不再处理就绪队列.
             修正不合理的函数命名.
+2014.05.13  加入对进程内线程链表的支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-                               主堆栈示意图 (不包括 FP 堆栈区 和 扩展栈区)
+  进程相关
+*********************************************************************************************************/
+#if LW_CFG_MODULELOADER_EN > 0
+#include "../SylixOS/loader/include/loader_vppatch.h"
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+/*********************************************************************************************************
+  主堆栈示意图 (不包括 FP 堆栈区 和 扩展栈区)
 *********************************************************************************************************/
 /*********************************************************************************************************
 1:  从高地址向低地址方向增长
@@ -283,6 +290,7 @@ VOID  _TCBBuild (UINT8                    ucPriority,
 #if LW_CFG_MODULELOADER_EN > 0                                          /*  如果为 GLOBAL 则不属于进程  */
     if (ptcbCur && !(ulOption & LW_OPTION_OBJECT_GLOBAL)) {             /*  继承进程控制块              */
         ptcb->TCB_pvVProcessContext = ptcbCur->TCB_pvVProcessContext;
+        vprocThreadAdd(ptcb->TCB_pvVProcessContext, ptcb);
     }
 #endif
 
@@ -353,6 +361,22 @@ VOID  _TCBBuild (UINT8                    ucPriority,
     __LW_THREAD_CREATE_HOOK(ulId, ulOption);
 }
 /*********************************************************************************************************
+** 函数名称: _TCBDestroy
+** 功能描述: 销毁一个TCB
+** 输　入  : ptcb              任务控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  _TCBDestroy (PLW_CLASS_TCB  ptcb)
+{
+#if LW_CFG_MODULELOADER_EN > 0
+    if (!(ptcb->TCB_ulOption & LW_OPTION_OBJECT_GLOBAL)) {
+        vprocThreadDel(ptcb->TCB_pvVProcessContext, ptcb);
+    }
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+}
+/*********************************************************************************************************
 ** 函数名称: _TCBBuildExt
 ** 功能描述: 创建一个TCB扩展模块
 ** 输　入  : ptcb              任务控制块
@@ -371,32 +395,6 @@ ULONG  _TCBBuildExt (PLW_CLASS_TCB  ptcb)
 #endif                                                                  /*  LW_CFG_THREAD_EXT_EN > 0    */
 
     return  (ERROR_NONE);
-}
-/*********************************************************************************************************
-** 函数名称: _TCBTryRun
-** 功能描述: 将创建好的 TCB 根据条件放入就续表
-** 输　入  : ptcb              任务控制块
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-VOID  _TCBTryRun (PLW_CLASS_TCB  ptcb)
-{
-             INTREG         iregInterLevel;
-    REGISTER PLW_CLASS_PCB  ppcb;
-    
-    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核同时关闭中断        */
-    
-    ppcb = _GetPcb(ptcb);
-    ppcb->PCB_usThreadCounter++;
-    
-    _LIST_RING_INIT_IN_CODE(ptcb->TCB_ringReady);
-    
-    if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  就绪                        */
-        __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入到相对优先级就绪环      */
-    }
-    
-    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核同时打开中断        */
 }
 /*********************************************************************************************************
 ** 函数名称: _TCBDestroyExt
@@ -446,6 +444,32 @@ VOID  _TCBCleanupPopExt (PLW_CLASS_TCB  ptcb)
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
 #endif                                                                  /*  LW_CFG_THREAD_EXT_EN > 0    */
+}
+/*********************************************************************************************************
+** 函数名称: _TCBTryRun
+** 功能描述: 将创建好的 TCB 根据条件放入就续表
+** 输　入  : ptcb              任务控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  _TCBTryRun (PLW_CLASS_TCB  ptcb)
+{
+             INTREG         iregInterLevel;
+    REGISTER PLW_CLASS_PCB  ppcb;
+    
+    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核同时关闭中断        */
+    
+    ppcb = _GetPcb(ptcb);
+    ppcb->PCB_usThreadCounter++;
+    
+    _LIST_RING_INIT_IN_CODE(ptcb->TCB_ringReady);
+    
+    if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  就绪                        */
+        __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入到相对优先级就绪环      */
+    }
+    
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核同时打开中断        */
 }
 /*********************************************************************************************************
   END

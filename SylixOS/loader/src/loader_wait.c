@@ -681,9 +681,10 @@ int detach (pid_t pid)
 LW_API
 int daemon (int nochdir, int noclose)
 {
-    INT iFd;
+    INT     iFd;
+    pid_t   pid = getpid();
 
-    if (getpid() <= 0) {
+    if (pid <= 0) {
         _ErrorHandle(ENOSYS);
         return  (PX_ERROR);
     }
@@ -703,6 +704,7 @@ int daemon (int nochdir, int noclose)
         close(iFd);
     }
     
+    detach(pid);                                                        /*  ´Ó¸¸½ø³ÌÍÑÀë                */
     setsid();
     
     return  (ERROR_NONE);

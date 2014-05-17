@@ -178,6 +178,7 @@ VOID  API_TShellInit (VOID)
     if (_G_bIsInstallSysCmd == LW_FALSE) {
         _G_bIsInstallSysCmd =  LW_TRUE;
         __tshellSysVarInit();                                           /*  初始化系统环境变量          */
+        __tshellUserCmdInit();                                          /*  初始化用户管理命令          */
         __tshellSysCmdInit();                                           /*  初始化系统命令              */
 #if LW_CFG_SHELL_HEAP_TRACE_EN > 0
         __tshellHeapCmdInit();                                          /*  初始化内存堆命令            */

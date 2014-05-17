@@ -22,6 +22,7 @@
 2013.05.01  修正 posix 关于返回值的规定.
 2013.06.07  加入可以设置子进程工作目录的扩展接口.
 2013.06.12  posix_spawn 与 posix_spawnp 如果创建成功返回值为 0.
+2014.05.13  加入对 sigstop 属性的操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_SPAWN
 #define  __SYLIXOS_KERNEL
@@ -357,6 +358,50 @@ int   posix_spawnattr_destroy (posix_spawnattr_t *attrp)
     
     attrp->SPA_presraw = LW_NULL;
 
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: posix_spawnattr_getstop
+** 功能描述: Get signal stop setting from ATTR
+** 输　入  : attrp         spawn attr
+**           pstop         signal stop setting
+** 输　出  : ok or not
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+int   posix_spawnattr_getstop (const posix_spawnattr_t *attrp, int *pstop)
+{
+    if (!attrp || !pstop) {
+        errno = EINVAL;
+        return  (EINVAL);
+    }
+    
+    *pstop = attrp->SPA_bStop;
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: posix_spawnattr_setstop
+** 功能描述: Set signal stop setting for ATTR
+** 输　入  : attrp         spawn attr
+**           stop          signal stop setting
+** 输　出  : ok or not
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+int   posix_spawnattr_setstop (posix_spawnattr_t *attrp, int stop)
+{
+    if (!attrp) {
+        errno = EINVAL;
+        return  (EINVAL);
+    }
+    
+    attrp->SPA_bStop = (stop) ? LW_TRUE : LW_FALSE;
+    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

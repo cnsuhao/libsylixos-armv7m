@@ -272,14 +272,16 @@ static INT  __ldRunScript (PCHAR   pcSheBangLine, INT  iArgC, PCHAR  *ppcArgV)
     
     __NEXT_WHITE(pcTemp);
     if (__IS_END(*pcTemp)) {                                            /*  没有绑定参数                */
-        return  (moduleRunEx(pcCmd, LW_LD_DEFAULT_ENTRY, iArgC, (CPCHAR *)ppcArgV, LW_NULL));
+        return  (moduleRunEx(pcCmd, LW_LD_DEFAULT_ENTRY, LW_FALSE, 
+                             iArgC, (CPCHAR *)ppcArgV, LW_NULL));
     }
     
     *pcTemp = PX_EOS;                                                   /*  命令结束                    */
     pcTemp++;
     __SKIP_WHITE(pcTemp);                                               /*  忽略空格                    */
     if (__IS_END(*pcTemp)) {                                            /*  没有绑定参数                */
-        return  (moduleRunEx(pcCmd, LW_LD_DEFAULT_ENTRY, iArgC, (CPCHAR *)ppcArgV, LW_NULL));
+        return  (moduleRunEx(pcCmd, LW_LD_DEFAULT_ENTRY, LW_FALSE, 
+                             iArgC, (CPCHAR *)ppcArgV, LW_NULL));
     }
     
     pcArg = pcTemp;                                                     /*  绑定参数起始                */
@@ -334,7 +336,7 @@ static INT  __ldRunScript (PCHAR   pcSheBangLine, INT  iArgC, PCHAR  *ppcArgV)
      *  +-------------+
      */
      
-    return  (moduleRunEx(pcCmd, LW_LD_DEFAULT_ENTRY, iArgC, (CPCHAR *)ppcArgV, LW_NULL));
+    return  (moduleRunEx(pcCmd, LW_LD_DEFAULT_ENTRY, LW_FALSE, iArgC, (CPCHAR *)ppcArgV, LW_NULL));
 }
 /*********************************************************************************************************
 ** 函数名称: __tshellExec
@@ -391,7 +393,8 @@ static INT  __tshellExec (INT  iArgC, PCHAR  *ppcArgV)
         }
     }
     
-    return  (moduleRunEx(cFilePath, LW_LD_DEFAULT_ENTRY, iArgC - 1, (CPCHAR *)&ppcArgV[1], LW_NULL));
+    return  (moduleRunEx(cFilePath, LW_LD_DEFAULT_ENTRY, LW_FALSE, 
+                         iArgC - 1, (CPCHAR *)&ppcArgV[1], LW_NULL));
 }
 /*********************************************************************************************************
 ** 函数名称: __tshellDlConfig

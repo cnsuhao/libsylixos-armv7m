@@ -71,6 +71,7 @@ INT                 vprocRun(LW_LD_VPROC  *pvproc,
                              CPCHAR        pcFile, 
                              CPCHAR        pcEntry, 
                              INT          *piRet,
+                             BOOL          bStop,
                              INT           iArgC, 
                              CPCHAR        ppcArgV[],
                              CPCHAR        ppcEnv[]);
@@ -78,6 +79,17 @@ VOID                vprocTickHook(PLW_CLASS_TCB  ptcb, PLW_CLASS_CPU  pcpu);
 PLW_IO_ENV          vprocIoEnvGet(PLW_CLASS_TCB  ptcb);
 FUNCPTR             vprocGetMain(VOID);
 pid_t               vprocFindProc(PVOID  pvAddr);
+INT                 vprocGetPath(pid_t  pid, PCHAR  pcPath, size_t stMaxLen);
+VOID                vprocThreadAdd(PVOID   pvVProc, PLW_CLASS_TCB  ptcb);
+VOID                vprocThreadDel(PVOID   pvVProc, PLW_CLASS_TCB  ptcb);
+VOID                vprocThreadTraversal(PVOID          pvVProc, 
+                                         VOIDFUNCPTR    pfunc, 
+                                         PVOID          pvArg0,
+                                         PVOID          pvArg1,
+                                         PVOID          pvArg2,
+                                         PVOID          pvArg3,
+                                         PVOID          pvArg4,
+                                         PVOID          pvArg5);
 
 /*********************************************************************************************************
   vprocess ÎÄ¼þÃèÊö·û²Ù×÷

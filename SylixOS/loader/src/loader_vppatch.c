@@ -45,6 +45,8 @@
 2013.06.11  vprocRun 在执行进程文件之前, 必须回收 FD_CLOEXEC 属性的文件.
 2013.07.18  使用新的获取 TCB 的方法, 确保 SMP 系统安全.
 2013.09.21  exec 在当前进程上下文中运行新的文件不再切换主线程.
+2014.05.13  支持进程启动后等待调试器信号后运行.
+2014.05.17  加入 GDB 调试所需的一些获取信息的函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -988,24 +990,26 @@ FUNCPTR  vprocGetMain (VOID)
 /*********************************************************************************************************
 ** 函数名称: vprocRun
 ** 功能描述: 加载并执行elf文件. (这里初始化了进程的外部补丁库, 完成后需要使用 vprocExit 退出)
-** 输　入  : pvproc        进程控制块
-**           pcFile        文件路径
-**           pcEntry       入口函数名，如果为LW_NULL，表示不需要条用初始化函数
-**           piRet         进程返回值
-**           iArgC         程序参数个数
-**           ppcArgV       程序参数数组
-**           ppcEnv        环境变量数组
+** 输　入  : pvproc           进程控制块
+**           pcFile           文件路径
+**           pcEntry          入口函数名，如果为LW_NULL，表示不需要条用初始化函数
+**           piRet            进程返回值
+**           bStop            是否等待调试器继续执行信号才能执行
+**           iArgC            程序参数个数
+**           ppcArgV          程序参数数组
+**           ppcEnv           环境变量数组
 ** 输　出  : ERROR_NONE 表示没有错误, PX_ERROR 表示错误
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT  vprocRun (LW_LD_VPROC  *pvproc, 
-               CPCHAR        pcFile, 
-               CPCHAR        pcEntry, 
-               INT          *piRet,
-               INT           iArgC, 
-               CPCHAR        ppcArgV[],
-               CPCHAR        ppcEnv[])
+INT  vprocRun (LW_LD_VPROC     *pvproc, 
+               CPCHAR           pcFile, 
+               CPCHAR           pcEntry, 
+               INT             *piRet,
+               BOOL             bStop,
+               INT              iArgC, 
+               CPCHAR           ppcArgV[],
+               CPCHAR           ppcEnv[])
 {
     LW_LD_EXEC_MODULE *pmodule  = LW_NULL;
     INT                iError   = ERROR_NONE;
@@ -1024,14 +1028,15 @@ INT  vprocRun (LW_LD_VPROC  *pvproc,
     
     vprocIoReclaim(pvproc->VP_pid, LW_TRUE);                            /*  回收进程 FD_CLOEXEC 的文件  */
 
-    pmodule = (LW_LD_EXEC_MODULE *)API_ModuleLoadEx(pcFile, LW_OPTION_LOADER_SYM_GLOBAL, LW_NULL, LW_NULL, 
-                                                    pcEntry, LW_NULL, pvproc);
+    pmodule = (LW_LD_EXEC_MODULE *)API_ModuleLoadEx(pcFile, LW_OPTION_LOADER_SYM_GLOBAL, 
+                                                    LW_NULL, LW_NULL, 
+                                                    pcEntry, LW_NULL, 
+                                                    pvproc);
     if (LW_NULL == pmodule) {
         return  (PX_ERROR);                                             /*  只需调用 vp destroy         */
     }
 
     pfunEntry = vprocGetEntry(pvproc);                                  /*  进程寻找入口                */
-    
     if (pfunEntry) {
         vprocSetFilesid(pvproc, pmodule->EMOD_pcModulePath);            /*  如果允许, 设置 save uid gid */
         
@@ -1042,6 +1047,9 @@ INT  vprocRun (LW_LD_VPROC  *pvproc,
         
         if ((vprocPatchVerCheck(pvproc) == ERROR_NONE) &&
             (vprocLibcVerCheck(pvproc) == ERROR_NONE)) {                /*  patch & libc 必须符合规定   */
+            if (bStop) {
+                API_ThreadStop(pvproc->VP_ulMainThread);                /*  等待调试器命令              */
+            }
             iError = pfunEntry(iArgC, ppcArgV, ppcEnv);                 /*  执行进程入口函数            */
         } else {
             iError = 0;
@@ -1162,6 +1170,153 @@ pid_t  vprocFindProc (PVOID  pvAddr)
     return  (pid);
 }
 /*********************************************************************************************************
+** 函数名称: API_VprocGetModPath
+** 功能描述: 获取进程主程序文件名
+** 输　入  : pid         进程id
+**           stMaxLen    pcModPath缓冲区长度
+** 输　出  : pcPath      模块路径
+**           返回值      ERROR_NONE表示成功, PX_ERROR表示失败.
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+INT  vprocGetPath (pid_t  pid, PCHAR  pcPath, size_t stMaxLen)
+{
+    LW_LD_VPROC        *pvproc;
+
+    LW_LD_LOCK();
+    pvproc = vprocGet(pid);
+    if (pvproc == LW_NULL) {
+        LW_LD_UNLOCK();
+        return  (PX_ERROR);
+    }
+
+    lib_strlcpy(pcPath, pvproc->VP_pcName, stMaxLen);
+    LW_LD_UNLOCK();
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: vprocThreadAdd
+** 功能描述: 将一个线程加入进程
+** 输　入  : pvVProc    进程控制块指针
+**           ptcb       线程控制块
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+VOID  vprocThreadAdd (PVOID   pvVProc, PLW_CLASS_TCB  ptcb)
+{
+    LW_LD_VPROC  *pvproc = (LW_LD_VPROC *)pvVProc;
+    
+    if (pvproc) {
+        LW_VP_LOCK(pvproc);
+        if (_LIST_LINE_IS_NOTLNK(&ptcb->TCB_lineProcess)) {
+            _List_Line_Add_Tail(&ptcb->TCB_lineProcess, &pvproc->VP_plineThread);
+        }
+        LW_VP_UNLOCK(pvproc);
+    }
+}
+/*********************************************************************************************************
+** 函数名称: vprocThreadAdd
+** 功能描述: 将一个线程从进程表中删除
+** 输　入  : pvVProc    进程控制块指针
+**           ptcb       线程控制块
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+VOID  vprocThreadDel (PVOID   pvVProc, PLW_CLASS_TCB  ptcb)
+{
+    LW_LD_VPROC  *pvproc = (LW_LD_VPROC *)pvVProc;
+
+    if (pvproc) {
+        LW_VP_LOCK(pvproc);
+        if (!_LIST_LINE_IS_NOTLNK(&ptcb->TCB_lineProcess)) {
+            _List_Line_Del(&ptcb->TCB_lineProcess, &pvproc->VP_plineThread);
+        }
+        LW_VP_UNLOCK(pvproc);
+    }
+}
+/*********************************************************************************************************
+** 函数名称: vprocThreadTraversal
+** 功能描述: 遍历进程内的所有线程
+** 输　入  : pvVProc    进程控制块指针
+**           ptcb       线程控制块
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+VOID  vprocThreadTraversal (PVOID          pvVProc, 
+                            VOIDFUNCPTR    pfunc, 
+                            PVOID          pvArg0,
+                            PVOID          pvArg1,
+                            PVOID          pvArg2,
+                            PVOID          pvArg3,
+                            PVOID          pvArg4,
+                            PVOID          pvArg5)
+{
+    LW_LD_VPROC    *pvproc = (LW_LD_VPROC *)pvVProc;
+    PLW_LIST_LINE   plineTemp;
+    PLW_CLASS_TCB   ptcb;
+    
+    LW_VP_LOCK(pvproc);
+    for (plineTemp  = pvproc->VP_plineThread;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {
+    
+        ptcb = _LIST_ENTRY(plineTemp, LW_CLASS_TCB, TCB_lineProcess);
+        pfunc(ptcb->TCB_ulId, pvArg0, pvArg1, pvArg2, pvArg3, pvArg4, pvArg5);
+    }
+    LW_VP_UNLOCK(pvproc);
+}
+/*********************************************************************************************************
+** 函数名称: vprocModuleFind
+** 功能描述: 查找进程模块
+** 输　入  : pid         参数个数
+**           pcModPath   模块路径
+** 输　出  : 模块结构指针
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static LW_LD_EXEC_MODULE  *vprocModuleFind (pid_t  pid, PCHAR  pcModPath)
+{
+    BOOL                bStart;
+
+    LW_LIST_RING       *pringTemp;
+    LW_LD_VPROC        *pvproc;
+    LW_LD_EXEC_MODULE  *pmodTemp;
+    PCHAR               pcFileMod;
+    PCHAR               pcFileFind;
+
+    LW_LD_LOCK();
+    pvproc = vprocGet(pid);
+    if (!pvproc) {
+        LW_LD_UNLOCK();
+        return  LW_NULL;
+    }
+
+    LW_VP_LOCK(pvproc);
+    for (pringTemp  = pvproc->VP_ringModules, bStart = LW_TRUE;
+         pringTemp && (pringTemp != pvproc->VP_ringModules || bStart);
+         pringTemp  = _list_ring_get_next(pringTemp), bStart = LW_FALSE) {
+
+        pmodTemp = _LIST_ENTRY(pringTemp, LW_LD_EXEC_MODULE, EMOD_ringModules);
+
+        _PathLastName(pmodTemp->EMOD_pcModulePath, &pcFileMod);
+        _PathLastName(pcModPath, &pcFileFind);
+
+        if (lib_strcmp(pcFileMod, pcFileFind) == 0) {
+            LW_VP_UNLOCK(pvproc);
+            LW_LD_UNLOCK();
+            return  pmodTemp;
+        }
+    }
+    LW_VP_UNLOCK(pvproc);
+    LW_LD_UNLOCK();
+
+    return  (LW_NULL);
+}
+/*********************************************************************************************************
 ** 函数名称: API_ModulePid
 ** 功能描述: 外部进程补丁使用本 API 获取当前进程 pid
 ** 输　入  : pvproc     进程控制块指针
@@ -1196,7 +1351,7 @@ pid_t API_ModulePid (PVOID   pvVProc)
 LW_API
 INT  API_ModuleRun (CPCHAR  pcFile, CPCHAR  pcEntry)
 {
-    return API_ModuleRunEx(pcFile, pcEntry, 0, LW_NULL, LW_NULL);
+    return  (API_ModuleRunEx(pcFile, pcEntry, LW_FALSE, 0, LW_NULL, LW_NULL));
 }
 /*********************************************************************************************************
 ** 函数名称: API_ModuleRunEx
@@ -1204,6 +1359,7 @@ INT  API_ModuleRun (CPCHAR  pcFile, CPCHAR  pcEntry)
              (这里初始化了进程的外部补丁库)
 ** 输　入  : pcFile        文件路径
 **           pcEntry       入口函数名，如果为LW_NULL，表示不需要条用初始化函数
+**           bStop         是否等待调试器信号才能执行
 **           iArgC         程序参数个数
 **           ppcArgV       程序参数数组
 **           ppcEnv        环境变量数组
@@ -1213,7 +1369,12 @@ INT  API_ModuleRun (CPCHAR  pcFile, CPCHAR  pcEntry)
                                            API 函数
 *********************************************************************************************************/
 LW_API
-INT  API_ModuleRunEx (CPCHAR  pcFile, CPCHAR  pcEntry, INT  iArgC, CPCHAR  ppcArgV[], CPCHAR  ppcEnv[])
+INT  API_ModuleRunEx (CPCHAR  pcFile, 
+                      CPCHAR  pcEntry, 
+                      BOOL    bStop, 
+                      INT     iArgC, 
+                      CPCHAR  ppcArgV[], 
+                      CPCHAR  ppcEnv[])
 {
     LW_LD_VPROC       *pvproc = LW_NULL;
     INT                iError;
@@ -1230,7 +1391,7 @@ INT  API_ModuleRunEx (CPCHAR  pcFile, CPCHAR  pcEntry, INT  iArgC, CPCHAR  ppcAr
     }
     
     iError = vprocRun(pvproc, pcFile, pcEntry, &iRet, 
-                      iArgC, ppcArgV, ppcEnv);                          /*  装载并运行进程              */
+                      bStop, iArgC, ppcArgV, ppcEnv);                   /*  装载并运行进程              */
     
     vprocExit(pvproc, pvproc->VP_ulMainThread, iRet);                   /*  退出进程                    */
 
@@ -1434,6 +1595,32 @@ INT  API_ModuleAddr (PVOID   pvAddr,
         pdlinfo->dli_saddr = LW_NULL;
     }
     
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_ModuleGetBase
+** 功能描述: 查找进程模块
+** 输　入  : pid         进程id
+**           pcModPath   模块路径
+**           pulAddrBase 模块基地址
+** 输　出  : ERROR CODE
+** 全局变量:
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+INT  API_ModuleGetBase (pid_t  pid, PCHAR  pcModPath, addr_t  *pulAddrBase)
+{
+    LW_LD_EXEC_MODULE  *pmodule;
+
+    pmodule = vprocModuleFind(pid, pcModPath);
+    if (LW_NULL == pmodule) {
+        _ErrorHandle(ERROR_LOADER_NO_MODULE);
+        return  (PX_ERROR);
+    }
+
+    *pulAddrBase = (addr_t)pmodule->EMOD_pvBaseAddr;
+
     return  (ERROR_NONE);
 }
 

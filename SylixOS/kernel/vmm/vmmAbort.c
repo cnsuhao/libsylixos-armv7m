@@ -34,6 +34,7 @@
 2013.09.14  支持文件之间的共享映射.
 2013.11.21  升级 _doSigEvent() 调用参数.
 2013.12.23  支持对 LW_VMM_ABORT_TYPE_EXEC 的错误处理.
+2014.05.17  断点探测不再在这里进行.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -43,7 +44,6 @@
   加入裁剪支持
 *********************************************************************************************************/
 #include "vmmSwap.h"
-#include "dtrace.h"                                                     /*  调试跟踪器                  */
 #if LW_CFG_VMM_EN > 0
 #include "phyPage.h"
 /*********************************************************************************************************
@@ -64,10 +64,7 @@ LW_LIST_LINE_HEADER       _K_plineVmmVAddrSpaceHeader = LW_NULL;
 /*********************************************************************************************************
   统计变量
 *********************************************************************************************************/
-INT64                     _K_i64VmmAbortCounter    = 0;                 /*  异常中止次数                */
-INT64                     _K_i64VmmPageFailCounter = 0;                 /*  缺页中断正常处理次数        */
-INT64                     _K_i64VmmPageLackCounter = 0;                 /*  系统缺少物理页面次数        */
-INT64                     _K_i64VmmMapErrCounter   = 0;                 /*  映射错误次数                */
+static LW_VMM_STATUS      _K_vmmStatus;
 /*********************************************************************************************************
   内部函数声明
 *********************************************************************************************************/
@@ -374,7 +371,7 @@ static INT  __vmmAbortNoPage (PLW_VMM_PAGE           pvmpagePhysical,
                                   ulAllocPageNum, 
                                   LW_VMM_FLAG_RDWR);                    /*  映射指定的虚拟地址          */
         if (ulError) {
-            _K_i64VmmMapErrCounter++;
+            _K_vmmStatus.VMMS_i64MapErrCounter++;
             printk(KERN_CRIT "kernel physical page map error.\n");      /*  系统无法映射物理页面        */
             return  (PX_ERROR);
         }
@@ -421,7 +418,7 @@ static INT  __vmmAbortSwapPage (PLW_VMM_PAGE  pvmpagePhysical,
                               ulAllocPageNum, 
                               LW_VMM_FLAG_RDWR);                        /*  映射指定的虚拟地址          */
     if (ulError) {
-        _K_i64VmmMapErrCounter++;
+        _K_vmmStatus.VMMS_i64MapErrCounter++;
         printk(KERN_CRIT "kernel physical page map error.\n");          /*  系统无法映射物理页面        */
         return  (PX_ERROR);
     }
@@ -461,7 +458,7 @@ static PLW_VMM_PAGE  __vmmAbortNewPage (ULONG  ulAllocPageNum)
                                              LW_ZONE_ATTR_NONE,
                                              &ulZoneIndex);             /*  分配物理内存(1个页面)       */
     if (pvmpagePhysical == LW_NULL) {                                   /*  如果分配失败择交换出一个页面*/
-        _K_i64VmmPageLackCounter++;
+        _K_vmmStatus.VMMS_i64PageLackCounter++;
         pvmpagePhysical = __vmmPageSwapSwitch(__PAGEFAIL_CUR_PID,
                                               ulAllocPageNum, 
                                               LW_ZONE_ATTR_NONE);       /*  进行页面交换                */
@@ -590,7 +587,7 @@ static VOID  __vmmAbortShell (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
     __VMM_LOCK();
-    _K_i64VmmAbortCounter++;
+    _K_vmmStatus.VMMS_i64AbortCounter++;
     
     if ((pvmpagefailctx->PAGEFCTX_ulAbortType != LW_VMM_ABORT_TYPE_MAP) &&
         (pvmpagefailctx->PAGEFCTX_ulAbortType != LW_VMM_ABORT_TYPE_WRITE)) {
@@ -608,7 +605,7 @@ static VOID  __vmmAbortShell (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
         goto    __abort_return;                                         /*  不会运行到这里              */
     }
     
-    _K_i64VmmPageFailCounter++;                                         /*  缺页中断次数++              */
+    _K_vmmStatus.VMMS_i64PageFailCounter++;                             /*  缺页中断次数++              */
     ptcbCur->TCB_i64PageFailCounter++;                                  /*  缺页中断次数++              */
     
     ulVirtualPageAlign = ulAbortAddr & LW_CFG_VMM_PAGE_MASK;            /*  获得访问地址页边界          */
@@ -676,7 +673,7 @@ static VOID  __vmmAbortShell (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
                               ulAllocPageNum, 
                               pvmpageVirtual->PAGE_ulFlags);            /*  映射指定的虚拟地址          */
     if (ulError) {
-        _K_i64VmmMapErrCounter++;
+        _K_vmmStatus.VMMS_i64MapErrCounter++;
         __vmmPhysicalPageFree(pvmpagePhysical);
         __VMM_UNLOCK();
 
@@ -775,41 +772,33 @@ static VOID  __vmmAbortKillSignal (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
 *********************************************************************************************************/
 static VOID  __vmmAbortAccess (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
 {
-    INT     iRet;
     ULONG   ulErrorOrig = API_GetLastError();
     
-    iRet = dtrace_trap(pvmpagefailctx->PAGEFCTX_pvStackRet,
-                       pvmpagefailctx->PAGEFCTX_ulAbortAddr,
-                       pvmpagefailctx->PAGEFCTX_ulAbortType,
-                       pvmpagefailctx->PAGEFCTX_ulSelf);                /*  询问 dtrace 信息            */
-    if (iRet < 0) {                                                     /*  不是断点                    */
-        if (pvmpagefailctx->PAGEFCTX_ulAbortType == LW_VMM_ABORT_TYPE_UNDEF) {
-            
-            printk(KERN_EMERG "thread 0x%lx undefine-instruction, address : 0x%lx.\n",
-                   pvmpagefailctx->PAGEFCTX_ulSelf, 
-                   pvmpagefailctx->PAGEFCTX_ulAbortAddr);               /*  操作异常                    */
-                   
-        } else if (pvmpagefailctx->PAGEFCTX_ulAbortType == LW_VMM_ABORT_TYPE_FPE) {
+    if (pvmpagefailctx->PAGEFCTX_ulAbortType == LW_VMM_ABORT_TYPE_UNDEF) {
+        printk(KERN_EMERG "thread 0x%lx undefine-instruction, address : 0x%lx.\n",
+               pvmpagefailctx->PAGEFCTX_ulSelf, 
+               pvmpagefailctx->PAGEFCTX_ulAbortAddr);                   /*  操作异常                    */
+               
+    } else if (pvmpagefailctx->PAGEFCTX_ulAbortType == LW_VMM_ABORT_TYPE_FPE) {
 #if LW_CFG_CPU_FPU_EN > 0 && LW_CFG_DEVICE_EN > 0
-            PLW_CLASS_TCB   ptcbCur;
-            LW_TCB_GET_CUR_SAFE(ptcbCur);
-            __ARCH_FPU_CTX_SHOW(ioGlobalStdGet(STD_ERR), ptcbCur->TCB_pvStackFP);
+        PLW_CLASS_TCB   ptcbCur;
+        LW_TCB_GET_CUR_SAFE(ptcbCur);
+        __ARCH_FPU_CTX_SHOW(ioGlobalStdGet(STD_ERR), ptcbCur->TCB_pvStackFP);
 #endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
-            printk(KERN_EMERG "thread 0x%lx float-point exception, address : 0x%lx.\n",
-                   pvmpagefailctx->PAGEFCTX_ulSelf, 
-                   pvmpagefailctx->PAGEFCTX_ulAbortAddr);               /*  操作异常                    */
-        
-        } else {
+        printk(KERN_EMERG "thread 0x%lx float-point exception, address : 0x%lx.\n",
+               pvmpagefailctx->PAGEFCTX_ulSelf, 
+               pvmpagefailctx->PAGEFCTX_ulAbortAddr);                   /*  操作异常                    */
+    
+    } else {
 #if LW_CFG_DEVICE_EN > 0
-            archTaskCtxShow(ioGlobalStdGet(STD_ERR), (PSTACK)pvmpagefailctx->PAGEFCTX_pvStackRet);
+        archTaskCtxShow(ioGlobalStdGet(STD_ERR), (PSTACK)pvmpagefailctx->PAGEFCTX_pvStackRet);
 #endif
-            printk(KERN_EMERG "thread 0x%lx abort, address : 0x%lx.\n",
-                   pvmpagefailctx->PAGEFCTX_ulSelf, 
-                   pvmpagefailctx->PAGEFCTX_ulAbortAddr);               /*  操作异常                    */
-        }
-        
-        __vmmAbortKillSignal(pvmpagefailctx);                           /*  发送异常信号                */
+        printk(KERN_EMERG "thread 0x%lx abort, address : 0x%lx.\n",
+               pvmpagefailctx->PAGEFCTX_ulSelf, 
+               pvmpagefailctx->PAGEFCTX_ulAbortAddr);                   /*  操作异常                    */
     }
+    
+    __vmmAbortKillSignal(pvmpagefailctx);                               /*  发送异常信号                */
     
     _ErrorHandle(ulErrorOrig);                                          /*  恢复之前的 errno            */
     
@@ -828,6 +817,10 @@ static VOID  __vmmAbortAccess (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : 从 1.0.0.rc20 版本后, 此函数可以脱离 VMM 运行.
+**
+**           1. 构造缺页中断线程执行陷阱, 在陷阱中完成所有的页面操作, 如果失败, 线程自我销毁.
+**           2. 注意, 陷阱执行完毕后, 系统必须能够回到刚刚访问内存并产生异常的那条指令.
+**           3. 由于产生缺页中断时, 相关线程一定是就绪的, 所以这里不用加入调度器处理.
 
                                            API 函数
 *********************************************************************************************************/
@@ -841,77 +834,67 @@ VOID  API_VmmAbortIsr (addr_t  ulAbortAddr, ULONG  ulAbortType, PLW_CLASS_TCB  p
     BYTE                    *pucStkNow;                                 /*  记录还原堆栈点              */
     
     if (ulNesting > 1) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "abort occur in ISR mode.\r\n");
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "abort occur in exception mode.\r\n");
         API_KernelReboot(LW_REBOOT_FORCE);                              /*  直接重新启动操作系统        */
         return;
     }
     
     __KERNEL_ENTER();                                                   /*  进入内核                    */
-    /*
-     *  1. 构造缺页中断线程执行陷阱, 在陷阱中完成所有的页面操作, 如果失败, 线程自我销毁.
-     *  2. 注意, 陷阱执行完毕后, 系统必须能够回到刚刚访问内存并产生异常的那条指令.
-     *  3. 由于产生缺页中断时, 相关线程一定是就绪的, 所以这里不用加入调度器处理.
-     */
     if (ulNesting == 0) {                                               /*  任务状态下调用              */
         LW_VMM_PAGE_FAIL_CTX    vmpagefailctx;
+        
         __KERNEL_EXIT();                                                /*  退出内核                    */
         vmpagefailctx.PAGEFCTX_ulSelf      = ptcb->TCB_ulId;
         vmpagefailctx.PAGEFCTX_ulAbortAddr = ulAbortAddr;
         vmpagefailctx.PAGEFCTX_ulAbortType = ulAbortType;
         vmpagefailctx.PAGEFCTX_pvStackRet  = ptcb->TCB_pstkStackNow;
+
 #if LW_CFG_VMM_EN > 0
         __vmmAbortShell(&vmpagefailctx);
 #else
         __vmmAbortAccess(&vmpagefailctx);
-#endif
-        return;
-    }
-    
-    pucStkNow = (BYTE *)ptcb->TCB_pstkStackNow;                         /*  记录还原堆栈点              */
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+    } else {                                                            /*  产生异常                    */
+        pucStkNow = (BYTE *)ptcb->TCB_pstkStackNow;                     /*  记录还原堆栈点              */
 #if	CPU_STK_GROWTH == 0
-    pucStkNow      += sizeof(STACK);                                    /*  向空栈方向移动一个堆栈空间  */
-    pvmpagefailctx  = (PLW_VMM_PAGE_FAIL_CTX)pucStkNow;                 /*  记录 PAGE_FAIL_CTX 位置     */
-    pucStkNow      += __PAGEFAILCTX_SIZE_ALIGN;                         /*  让出 PAGE_FAIL_CTX 空间     */
+        pucStkNow      += sizeof(STACK);                                /*  向空栈方向移动一个堆栈空间  */
+        pvmpagefailctx  = (PLW_VMM_PAGE_FAIL_CTX)pucStkNow;             /*  记录 PAGE_FAIL_CTX 位置     */
+        pucStkNow      += __PAGEFAILCTX_SIZE_ALIGN;                     /*  让出 PAGE_FAIL_CTX 空间     */
 #else
-    pucStkNow      -= __PAGEFAILCTX_SIZE_ALIGN;                         /*  让出 PAGE_FAIL_CTX 空间     */
-    pvmpagefailctx  = (PLW_VMM_PAGE_FAIL_CTX)pucStkNow;                 /*  记录 PAGE_FAIL_CTX 位置     */
-    pucStkNow      -= sizeof(STACK);                                    /*  向空栈方向移动一个堆栈空间  */
+        pucStkNow      -= __PAGEFAILCTX_SIZE_ALIGN;                     /*  让出 PAGE_FAIL_CTX 空间     */
+        pvmpagefailctx  = (PLW_VMM_PAGE_FAIL_CTX)pucStkNow;             /*  记录 PAGE_FAIL_CTX 位置     */
+        pucStkNow      -= sizeof(STACK);                                /*  向空栈方向移动一个堆栈空间  */
 #endif
-
-    pvmpagefailctx->PAGEFCTX_ulSelf       = ptcb->TCB_ulId;
-    pvmpagefailctx->PAGEFCTX_ulAbortAddr  = ulAbortAddr;
-    pvmpagefailctx->PAGEFCTX_ulAbortType  = ulAbortType;
-    pvmpagefailctx->PAGEFCTX_pvStackRet   = ptcb->TCB_pstkStackNow;
-    pvmpagefailctx->PAGEFCTX_iLastErrno   = (errno_t)ptcb->TCB_ulLastError;
-    pvmpagefailctx->PAGEFCTX_iKernelSpace = __KERNEL_SPACE_GET2(ptcb);
-
+        pvmpagefailctx->PAGEFCTX_ulSelf       = ptcb->TCB_ulId;
+        pvmpagefailctx->PAGEFCTX_ulAbortAddr  = ulAbortAddr;
+        pvmpagefailctx->PAGEFCTX_ulAbortType  = ulAbortType;
+        pvmpagefailctx->PAGEFCTX_pvStackRet   = ptcb->TCB_pstkStackNow;
+        pvmpagefailctx->PAGEFCTX_iLastErrno   = (errno_t)ptcb->TCB_ulLastError;
+        pvmpagefailctx->PAGEFCTX_iKernelSpace = __KERNEL_SPACE_GET2(ptcb);
+        
 #if LW_CFG_VMM_EN > 0
-    pstkFailShell = archTaskCtxCreate((PTHREAD_START_ROUTINE)__vmmAbortShell, 
-                                      (PVOID)pvmpagefailctx,
-                                      (PSTACK)pucStkNow,
-                                      0);                               /*  建立缺页处理陷阱外壳环境    */
+        pstkFailShell = archTaskCtxCreate((PTHREAD_START_ROUTINE)__vmmAbortShell, 
+                                          (PVOID)pvmpagefailctx,
+                                          (PSTACK)pucStkNow,
+                                          0);                           /*  建立缺页处理陷阱外壳环境    */
 #else
-    pstkFailShell = archTaskCtxCreate((PTHREAD_START_ROUTINE)__vmmAbortAccess, 
-                                      (PVOID)pvmpagefailctx,
-                                      (PSTACK)pucStkNow,
-                                      0);                               /*  建立访问异常陷阱外壳环境    */
+        pstkFailShell = archTaskCtxCreate((PTHREAD_START_ROUTINE)__vmmAbortAccess, 
+                                          (PVOID)pvmpagefailctx,
+                                          (PSTACK)pucStkNow,
+                                          0);                           /*  建立访问异常陷阱外壳环境    */
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
     
-    archTaskCtxSetFp(pstkFailShell, ptcb->TCB_pstkStackNow);            /*  保存 fp, 使 callstack 正常  */
-    
-    ptcb->TCB_pstkStackNow = pstkFailShell;                             /*  保存建立好的陷阱外壳堆栈    */
-    
-    _StackCheckGuard(ptcb);                                             /*  堆栈警戒检查                */
-    
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+        archTaskCtxSetFp(pstkFailShell, ptcb->TCB_pstkStackNow);        /*  保存 fp, 使 callstack 正常  */
+        ptcb->TCB_pstkStackNow = pstkFailShell;                         /*  保存建立好的陷阱外壳堆栈    */
+        _StackCheckGuard(ptcb);                                         /*  堆栈警戒检查                */
+        
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmAbortStatus
 ** 功能描述: 系统访问中止状态. 
-** 输　入  : pi64AbortCounter        内存访问中止次数(异常操作引起)
-**           pi64PageFailCounter     系统正常处理的缺页中断数量
-**           pi64PageLackCounter      系统缺少物理页面次数
-**           pi64MapErrCounter       映射错误数量
+** 输　入  : pvmms         系统状态变量
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
@@ -920,24 +903,14 @@ VOID  API_VmmAbortIsr (addr_t  ulAbortAddr, ULONG  ulAbortType, PLW_CLASS_TCB  p
 #if LW_CFG_VMM_EN > 0
 
 LW_API 
-VOID  API_VmmAbortStatus (INT64     *pi64AbortCounter,
-                          INT64     *pi64PageFailCounter,
-                          INT64     *pi64PageLackCounter,
-                          INT64     *pi64MapErrCounter)
+VOID  API_VmmAbortStatus (PLW_VMM_STATUS  pvmms)
 {
+    if (!pvmms) {
+        return;
+    }
+
     __VMM_LOCK();
-    if (pi64AbortCounter) {
-        *pi64AbortCounter = _K_i64VmmAbortCounter;
-    }
-    if (pi64PageFailCounter) {
-        *pi64PageFailCounter = _K_i64VmmPageFailCounter;
-    }
-    if (pi64PageLackCounter) {
-        *pi64PageLackCounter = _K_i64VmmPageLackCounter;
-    }
-    if (pi64MapErrCounter) {
-        *pi64MapErrCounter = _K_i64VmmMapErrCounter;
-    }
+    *pvmms = _K_vmmStatus;
     __VMM_UNLOCK();
     
     _ErrorHandle(ERROR_NONE);

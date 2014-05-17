@@ -298,7 +298,7 @@ static INT  __execShell (PVOID  pvArg)
     API_ThreadCleanupPush(__spawnArgFree, (PVOID)psarg);                /*  主线程退出时释放 pvArg      */
     
     iError = vprocRun(psarg->SA_pvproc, psarg->SA_pcPath, LW_LD_DEFAULT_ENTRY, 
-                      &iRet, psarg->SA_iArgs, 
+                      &iRet, psarg->SA_spawnattr.SPA_bStop, psarg->SA_iArgs, 
                       (CPCHAR *)psarg->SA_pcParamList,
                       (CPCHAR *)psarg->SA_pcpcEvn);                     /*  此线程将变成进程内主线程    */
                       
@@ -342,7 +342,7 @@ static INT  __processShell (PVOID  pvArg)
     API_ThreadSetName(API_ThreadIdSelf(), cName);                       /*  设置新名字                  */
     
     iError = vprocRun(psarg->SA_pvproc, psarg->SA_pcPath, LW_LD_DEFAULT_ENTRY, 
-                      &iRet, psarg->SA_iArgs, 
+                      &iRet, psarg->SA_spawnattr.SPA_bStop, psarg->SA_iArgs, 
                       (CPCHAR *)psarg->SA_pcParamList,
                       (CPCHAR *)psarg->SA_pcpcEvn);                     /*  此线程将变成进程内主线程    */
                       
@@ -364,6 +364,7 @@ static INT  __processShell (PVOID  pvArg)
 ** 输　出  : return code
 ** 全局变量:
 ** 调用模块: 
+** 注  意  : 这里新建的线程为内核线程, 待 vprocRun 时, 自动转为进程内主线程.
 *********************************************************************************************************/
 INT  __processStart (INT  mode, __PSPAWN_ARG  psarg)
 {
@@ -378,7 +379,7 @@ INT  __processStart (INT  mode, __PSPAWN_ARG  psarg)
     API_ThreadAttrBuild(&threadattr,
                         (ptcbCur->TCB_stStackSize * sizeof(STACK)),
                         ptcbCur->TCB_ucPriority,
-                        LW_OPTION_THREAD_STK_CHK,
+                        LW_OPTION_THREAD_STK_CHK | LW_OPTION_OBJECT_GLOBAL,
                         (PVOID)psarg);
                         
     if (psarg->SA_spawnattr.SPA_sFlags & POSIX_SPAWN_SETSCHEDPARAM) {   /*  设置优先级                  */

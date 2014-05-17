@@ -380,7 +380,7 @@ int getlogin_r (char *name, size_t namesize)
 {
     struct passwd *pw;
     struct passwd  pwBuf;
-           CHAR    cBuf[256];
+           CHAR    cBuf[MAX_FILENAME_LENGTH];
     
     if (namesize < LOGIN_NAME_MAX) {
         return  (ERANGE);

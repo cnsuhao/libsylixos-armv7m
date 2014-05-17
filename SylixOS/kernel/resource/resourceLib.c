@@ -511,7 +511,7 @@ INT  __resHandleMakeLocal (LW_OBJECT_HANDLE  ulHandle)
     __LW_RESH_LOCK();
     presh = __resGetHandleBuffer(ulHandle);
     if (presh) {
-        presh->RESH_ulHandle = ulHandle;
+        presh->RESH_ulHandle  = ulHandle;
         presh->RESH_pid       = pid;                                    /*  重新确定 pid                */
         presh->RESH_bIsGlobal = LW_FALSE;
         __LW_RESH_UNLOCK();

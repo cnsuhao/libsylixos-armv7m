@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-05-09: han.hui
+    shell 加入用户管理.
+    
     2014-05-08: han.hui
     ints 加入中断计数器显示.
 
@@ -500,6 +503,12 @@ HISTORY
     SylixOS 根目录中加入 CHANGELOG 文件.
     
 ++ Bugfixes:.
+
+    2014-05-13: han.hui
+    修正 dtrace 对 GDB 的支持.
+
+    2014-05-05: han.hui
+    修正对 Cortex A8 处理器 L2 cache 驱动.
 
     2014-05-05: han.hui
     修正 Bug #3.

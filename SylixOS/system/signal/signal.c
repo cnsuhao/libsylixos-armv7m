@@ -509,7 +509,7 @@ INT  kill (LW_OBJECT_HANDLE  ulId, INT  iSigNo)
     
 #if LW_CFG_SMP_EN > 0
     if (LW_NCPUS > 1) {                                                 /*  正工作在 SMP 多核模式       */
-        _ThreadContinue(ptcb);                                          /*  在内核状态下唤醒被停止线程  */
+        _ThreadContinue(ptcb, LW_FALSE);                                /*  在内核状态下唤醒被停止线程  */
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     __KERNEL_EXIT();                                                    /*  退出内核                    */
@@ -524,121 +524,33 @@ INT  kill (LW_OBJECT_HANDLE  ulId, INT  iSigNo)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: kill_n_suspend
-** 功能描述: 向指定的线程发送信号并同时等待信号, 如果是进程, 将发送给其主线程. (不激活 signalfd)
-** 输　入  : ulId                    线程 id 或者 进程号
-**           iSigNo                  信号
-**           psigsetMask             指定的信号掩码
+** 函数名称: killTrap
+** 功能描述: 向指定任务发送信号, 同时停止自己. (本程序在异常上下文中执行)
+** 输　入  : ulId                    线程 id (不允许为进程号)
 ** 输　出  : ERROR or OK
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-INT kill_suspend (LW_OBJECT_HANDLE  ulId, INT  iSigNo, const sigset_t  *psigsetMask)
+INT  killTrap (LW_OBJECT_HANDLE  ulId)
 {
-             INTREG             iregInterLevel;
-
-    REGISTER UINT16             usIndex;
-    REGISTER PLW_CLASS_TCB      ptcb;
-             PLW_CLASS_TCB      ptcbCur;
-    REGISTER PLW_CLASS_PCB      ppcb;
-             BOOL               bIsRun;
+    REGISTER PLW_CLASS_TCB  ptcbCur;
     
-             PLW_CLASS_SIGCONTEXT   psigctx;
-             sigset_t               sigsetOld;
-    
-#if LW_CFG_MODULELOADER_EN > 0
-    if (ulId < LW_CFG_MAX_THREADS) {                                    /*  进程号                      */
-        ulId = vprocMainThread((pid_t)ulId);
-    }
-#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
-    
-    usIndex = _ObjectGetIndex(ulId);
-    
-    if (!_ObjectClassOK(ulId, _OBJECT_THREAD)) {                        /*  检查 ID 类型有效性          */
-        _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);
+    if (!LW_CPU_GET_CUR_NESTING()) {                                    /*  必须在异常中                */
         return  (PX_ERROR);
     }
-    if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
-        _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);
-        return  (PX_ERROR);
-    }
-    
-    if (!__issig(iSigNo)) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
-    }
-    
-    if (LW_CPU_GET_CUR_NESTING()) {
-        _ErrorHandle(ERROR_KERNEL_IN_ISR);
-        return  (PX_ERROR);
-    }
-    
-    if (ulId == API_ThreadIdSelf()) {
-        _ErrorHandle(ENOTSUP);
-        return  (PX_ERROR);
-    }
-    
-    __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
     
-#if LW_CFG_SMP_EN > 0
-    if (LW_NCPUS > 1) {                                                 /*  正工作在 SMP 多核模式       */
-        if (API_ThreadStop(ulId)) {
-            return  (PX_ERROR);
-        }
-    }
-#endif                                                                  /*  LW_CFG_SMP_EN               */
-    
     __KERNEL_ENTER();                                                   /*  进入内核                    */
-    if (_Thread_Invalid(usIndex)) {
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
-    }
-
-    ptcb = __GET_TCB_FROM_INDEX(usIndex);
-    if (ptcb->TCB_iDeleteProcStatus) {
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_THREAD_OTHER_DELETE);
-        return  (PX_ERROR);
-    }
-    
-    _doKill(ptcb, iSigNo);                                              /*  产生信号                    */
-    
-#if LW_CFG_SMP_EN > 0
-    if (LW_NCPUS > 1) {                                                 /*  正工作在 SMP 多核模式       */
-        _ThreadContinue(ptcb);                                          /*  在内核状态下唤醒被停止线程  */
-    }
-#endif                                                                  /*  LW_CFG_SMP_EN               */
-    
-    psigctx = _signalGetCtx(ptcbCur);
-    
-    sigsetOld = psigctx->SIGCTX_sigsetSigBlockMask;                     /*  记录先前的掩码              */
-    psigctx->SIGCTX_sigsetSigBlockMask = *psigsetMask & (~__SIGNO_UNMASK);
-    
-    bIsRun = _sigPendRun(ptcbCur);
-    if (bIsRun) {
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        sigprocmask(SIG_SETMASK, &sigsetOld, LW_NULL);                  /*  设置为原先的 mask           */
-        _ErrorHandle(EINTR);
-        return  (PX_ERROR);
-    }
-    
-    iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
-    ptcbCur->TCB_usStatus |= LW_THREAD_STATUS_SIGNAL;                   /*  等待信号                    */
-    ppcb = _GetPcb(ptcbCur);
-    __DEL_FROM_READY_RING(ptcbCur, ppcb);                               /*  从就绪表中删除              */
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    
+    _ThreadStop(ptcbCur);
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    sigprocmask(SIG_SETMASK, &sigsetOld, NULL);
+    _excJobAdd((VOIDFUNCPTR)kill, (PVOID)ulId, (PVOID)SIGTRAP, 0, 0, 0, 0);
     
-    _ErrorHandle(EINTR);
-    return  (PX_ERROR);
+    _ErrorHandle(ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: raise
@@ -729,7 +641,7 @@ static INT  sigqueue_internal (LW_OBJECT_HANDLE  ulId, INT   iSigNo, PVOID  pvSi
 
 #if LW_CFG_SMP_EN > 0
     if (LW_NCPUS > 1) {                                                 /*  正工作在 SMP 多核模式       */
-        _ThreadContinue(ptcb);                                          /*  在内核状态下唤醒被停止线程  */
+        _ThreadContinue(ptcb, LW_FALSE);                                /*  在内核状态下唤醒被停止线程  */
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     __KERNEL_EXIT();                                                    /*  退出内核                    */

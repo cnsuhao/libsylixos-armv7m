@@ -121,6 +121,7 @@ SylixOS/arch/arm/common/armExc.c \
 SylixOS/arch/arm/common/armExcAsm.S \
 SylixOS/arch/arm/common/armLib.c \
 SylixOS/arch/arm/common/armLibAsm.S \
+SylixOS/arch/arm/dbg/armDbg.c \
 SylixOS/arch/arm/elf/armElf.c \
 SylixOS/arch/arm/elf/armUnwind.c \
 SylixOS/arch/arm/fpu/vfp9/armVfp9.c \
@@ -133,6 +134,7 @@ SylixOS/arch/arm/fpu/vfpv4/armVfpV4.c \
 SylixOS/arch/arm/fpu/vfpnone/armVfpNone.c \
 SylixOS/arch/arm/fpu/armFpu.c \
 SylixOS/arch/arm/mm/cache/l2/armL2.c \
+SylixOS/arch/arm/mm/cache/l2/armL2A8.c \
 SylixOS/arch/arm/mm/cache/l2/armL2x0.c \
 SylixOS/arch/arm/mm/cache/v4/armCacheV4.c \
 SylixOS/arch/arm/mm/cache/v4/armCacheV4Asm.S \
@@ -912,6 +914,7 @@ SylixOS/shell/ttinyShell/ttinyShellReadline.c \
 SylixOS/shell/ttinyShell/ttinyShellSysCmd.c \
 SylixOS/shell/ttinyShell/ttinyShellSysVar.c \
 SylixOS/shell/ttinyShell/ttinyString.c \
+SylixOS/shell/ttinyUser/ttinyUserAdmin.c \
 SylixOS/shell/ttinyUser/ttinyUserAuthen.c \
 SylixOS/shell/ttinyUser/ttinyUserCache.c \
 SylixOS/shell/ttinyVar/ttinyVar.c \

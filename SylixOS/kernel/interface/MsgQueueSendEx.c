@@ -45,7 +45,7 @@
 
 LW_API  
 ULONG  API_MsgQueueSendEx (LW_OBJECT_HANDLE  ulId,
-                           PVOID             pvMsgBuffer,
+                           const PVOID       pvMsgBuffer,
                            size_t            stMsgLen,
                            ULONG             ulOption)
 {

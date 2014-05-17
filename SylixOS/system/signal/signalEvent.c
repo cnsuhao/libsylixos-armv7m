@@ -213,7 +213,7 @@ static INT  _doSigEventInternal (LW_OBJECT_HANDLE  ulId, PSIGNAL_EVENT_ARG   psi
     
 #if LW_CFG_SMP_EN > 0
     if (LW_NCPUS > 1) {                                                 /*  正工作在 SMP 多核模式       */
-        _ThreadContinue(ptcb);                                          /*  在内核状态下唤醒被停止线程  */
+        _ThreadContinue(ptcb, LW_FALSE);                                /*  在内核状态下唤醒被停止线程  */
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     __KERNEL_EXIT();                                                    /*  退出内核                    */

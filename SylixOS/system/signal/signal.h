@@ -279,10 +279,12 @@ LW_API  INT         sigtimedwait(const sigset_t *sigset, struct siginfo *__value
 LW_API  INT         sigwaitinfo(const sigset_t *sigset, struct  siginfo  *psiginfo);
 
 /*********************************************************************************************************
-  SIGNAL EXT 
+  SIGNAL ÄÚºËº¯Êý
 *********************************************************************************************************/
 
-LW_API  INT         kill_suspend(LW_OBJECT_HANDLE  ulId, INT  iSigNo, const sigset_t  *psigsetMask);
+#ifdef __SYLIXOS_KERNEL
+LW_API  INT         killTrap(LW_OBJECT_HANDLE  ulId);
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  LW_CFG_SIGNAL_EN > 0        */
 #endif                                                                  /*  __SIGNAL_H                  */

@@ -91,6 +91,20 @@ typedef struct __lw_mmu_global_desc {
 typedef LW_MMU_GLOBAL_DESC  *PLW_MMU_GLOBAL_DESC;
 
 /*********************************************************************************************************
+  vmm 当前状态
+*********************************************************************************************************/
+
+typedef struct __lw_vmm_status {
+    INT64                    VMMS_i64AbortCounter;                      /*  异常中止次数                */
+    INT64                    VMMS_i64PageFailCounter;                   /*  缺页中断正常处理次数        */
+    INT64                    VMMS_i64PageLackCounter;                   /*  系统缺少物理页面次数        */
+    INT64                    VMMS_i64MapErrCounter;                     /*  映射错误次数                */
+    INT64                    VMMS_i64SwpCounter;                        /*  交换次数                    */
+    INT64                    VMMS_i64Reseve[8];
+} LW_VMM_STATUS;
+typedef LW_VMM_STATUS       *PLW_VMM_STATUS;
+
+/*********************************************************************************************************
   VMM 初始化, 只能放在 API_KernelStart 回调中, 
   
   当为 SMP 系统时, API_KernelPrimaryStart    对应启动回调调用 API_VmmLibPrimaryInit
@@ -169,10 +183,7 @@ LW_API ULONG        API_VmmInvalidateArea(PVOID  pvVirtualMem,
                                           PVOID  pvSubMem, 
                                           size_t stSize);               /*  释放物理内存, 保留虚拟空间  */
                                           
-LW_API VOID         API_VmmAbortStatus(INT64     *pi64AbortCounter,
-                                       INT64     *pi64PageFailCounter,
-                                       INT64     *pi64PageLackCounter,
-                                       INT64     *pi64MapErrCounter);   /*  获得访问中止统计信息        */
+LW_API VOID         API_VmmAbortStatus(PLW_VMM_STATUS  pvmms);          /*  获得访问中止统计信息        */
        
 /*********************************************************************************************************
   VMM 对于 loader 或者其他内核模块提供的共享段支持 (仅供 loader 或其他 SylixOS 内核服务自己使用)

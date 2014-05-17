@@ -157,7 +157,6 @@ MACRO_DEF(ABT_ENTRY retoff)
     MOV     LR , PC
     BX      R0
     LDR     R8 , [SP , #(15 * 4)]                                       ;/*  R8 -> LR 地址               */
-    MOV     R10, #0                                                     ;/*  R10 -> 当前 TCB             */
     CMP     R0 , #1
     BNE     1f
     
@@ -165,7 +164,6 @@ MACRO_DEF(ABT_ENTRY retoff)
     MOV     LR , PC
     BX      R0
     STR     SP , [R0]                                                   ;/*  current stack = SP          */
-    MOV     R10, R0                                                     ;/*  R10 = current tcb           */
     
     LDR     R0 , =API_InterStackBaseGet                                 ;/*  获得当前 CPU 中断堆栈栈顶   */
     MOV     LR , PC
@@ -174,8 +172,7 @@ MACRO_DEF(ABT_ENTRY retoff)
     
 1:
     MOV     R0 , R8                                                     ;/*  R8 -> LR 地址               */
-    MOV     R1 , #\retoff                                               ;/*  R9 -> $retoff               */
-    MOV     R2 , R10                                                    ;/*  R10 -> 当前 TCB             */
+    MOV     R1 , #\retoff                                               ;/*  $retoff                     */
     LDR     R5 , =archAbtHandle
     MOV     LR , PC
     BX      R5
@@ -236,10 +233,55 @@ MACRO_DEF(UND_ENTRY)
     STMFD   SP!, {R0}                                                   ;/*  R0 压栈                     */
     STMFD   SP!, {R3}                                                   ;/*  CPSR 压栈                   */
     
-    LDR     R0 , [SP, #(15 * 4)]                                        ;/*  参数为产生未定义指令中断地址*/
+    ;/*
+    ; *  if (API_InterEnter() == 1) {
+    ; *      current stack = SP;
+    ; *      SP = interrupt stack;
+    ; *  }
+    ; */
+    LDR     R0 , =API_InterEnter
+    MOV     LR , PC
+    BX      R0
+    LDR     R8 , [SP, #(15 * 4)]                                        ;/*  参数为产生未定义指令中断地址*/
+    CMP     R0 , #1
+    BNE     1f
+    
+    LDR     R0 , =API_ThreadTcbInter                                    ;/*  get current tcb             */
+    MOV     LR , PC
+    BX      R0
+    STR     SP , [R0]                                                   ;/*  current stack = SP          */
+    
+    LDR     R0 , =API_InterStackBaseGet                                 ;/*  获得当前 CPU 中断堆栈栈顶   */
+    MOV     LR , PC
+    BX      R0
+    MOV     SP , R0
+    
+1:
+    MOV     R0 , R8
     LDR     R5 , =archUndHandle
     MOV     LR , PC
     BX      R5
+    
+    ;/*
+    ; *  if (API_InterGetNesting() == 1) {
+    ; *      SP = current stack;
+    ; *  }
+    ; */
+    LDR     R0 , =API_InterGetNesting
+    MOV     LR , PC
+    BX      R0
+    CMP     R0 , #1
+    BNE     2f
+    
+    LDR     R0 , =API_ThreadTcbInter                                    ;/*  get current tcb             */
+    MOV     LR , PC
+    BX      R0
+    LDR     SP , [R0]                                                   ;/*  SP = current stack          */
+    
+2:
+    LDR     R0, =API_InterExit
+    MOV     LR, PC
+    BX      R0
     
     LDMFD   SP!, {R4}
     MSR     SPSR_cxsf, R4

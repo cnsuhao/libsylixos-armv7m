@@ -158,21 +158,15 @@ VOID  API_VmmVirtualShow (VOID)
 LW_API  
 VOID  API_VmmAbortShow (VOID)
 {
-    INT64     i64AbortCounter;
-    INT64     i64PageFailCounter;
-    INT64     i64PageLackCounter;
-    INT64     i64MapErrCounter;
+    LW_VMM_STATUS  vmms;
     
-    API_VmmAbortStatus(&i64AbortCounter,
-                       &i64PageFailCounter,
-                       &i64PageLackCounter,
-                       &i64MapErrCounter);
+    API_VmmAbortStatus(&vmms);
 
     printf("vmm abort statistics infomation show >>\n");
-    printf("vmm abort (memory access error) counter : %lld\n", i64AbortCounter);
-    printf("vmm page fail (alloc success) counter   : %lld\n", i64PageFailCounter);
-    printf("vmm alloc physical page error counter   : %lld\n", i64PageLackCounter);
-    printf("vmm page map error counter              : %lld\n", i64MapErrCounter);
+    printf("vmm abort (memory access error) counter : %lld\n", vmms.VMMS_i64AbortCounter);
+    printf("vmm page fail (alloc success) counter   : %lld\n", vmms.VMMS_i64PageFailCounter);
+    printf("vmm alloc physical page error counter   : %lld\n", vmms.VMMS_i64PageLackCounter);
+    printf("vmm page map error counter              : %lld\n", vmms.VMMS_i64MapErrCounter);
     
     printf("\n");
 }

@@ -48,12 +48,12 @@ PSTACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
     pfpctx  = (ARCH_FP_CTX  *)((PCHAR)pstkTop - sizeof(ARCH_FP_CTX));
     pregctx = (ARCH_REG_CTX *)((PCHAR)pstkTop - sizeof(ARCH_FP_CTX) - sizeof(ARCH_REG_CTX));
     
-    pfpctx->FP_uiFp = (UINT)-1;
-    pfpctx->FP_uiLr = (UINT)-1;
+    pfpctx->FP_uiFp = (ARCH_REG_T)-1;
+    pfpctx->FP_uiLr = (ARCH_REG_T)-1;
     
     pregctx->REG_uiCpsr = (ARCH_ARM_SVC32MODE | 0x40);
     
-    pregctx->REG_uiR0  = (UINT)pvArg;
+    pregctx->REG_uiR0  = (ARCH_REG_T)pvArg;
     pregctx->REG_uiR1  = 0x01010101;
     pregctx->REG_uiR2  = 0x02020202;
     pregctx->REG_uiR3  = 0x03030303;
@@ -66,8 +66,8 @@ PSTACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
     pregctx->REG_uiR10 = 0x10101010;
     pregctx->REG_uiFp  = pfpctx->FP_uiFp;
     pregctx->REG_uiIp  = 0x12121212;
-    pregctx->REG_uiLr  = (UINT)pfuncTask;
-    pregctx->REG_uiPc  = (UINT)pfuncTask;
+    pregctx->REG_uiLr  = (ARCH_REG_T)pfuncTask;
+    pregctx->REG_uiPc  = (ARCH_REG_T)pfuncTask;
     
     return  ((PSTACK)pregctx);
 }
@@ -94,7 +94,7 @@ VOID  archTaskCtxSetFp (PSTACK  pstkDest, PSTACK  pstkSrc)
     pfpctx->FP_uiFp = pregctxSrc->REG_uiFp;
     pfpctx->FP_uiLr = pregctxSrc->REG_uiLr;
     
-    pregctxDest->REG_uiFp = (UINT)&pfpctx->FP_uiLr;
+    pregctxDest->REG_uiFp = (ARCH_REG_T)&pfpctx->FP_uiLr;
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: archTaskCtxShow
@@ -213,7 +213,7 @@ VOID  archTaskCtxShow (INT  iFd, PSTACK  pstkTop)
     fdprintf(iFd, "r10 = 0x%08x  ", pstkTop[11]);
     fdprintf(iFd, "fp  = 0x%08x\n", pstkTop[12]);
     fdprintf(iFd, "ip  = 0x%08x  ", pstkTop[13]);
-    fdprintf(iFd, "sp  = 0x%08x\n", (UINT)pstkTop);
+    fdprintf(iFd, "sp  = 0x%08x\n", (ARCH_REG_T)pstkTop);
     fdprintf(iFd, "lr  = 0x%08x  ", pstkTop[14]);
     fdprintf(iFd, "pc  = 0x%08x\n", pstkTop[15]);
 }

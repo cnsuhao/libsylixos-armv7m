@@ -40,6 +40,10 @@ static L2C_DRVIER           l2cdrv;
 /*********************************************************************************************************
   L2 控制器初始化函数
 *********************************************************************************************************/
+extern VOID     armL2A8Init(L2C_DRVIER  *pl2cdrv,
+                            CACHE_MODE   uiInstruction,
+                            CACHE_MODE   uiData,
+                            CPCHAR       pcMachineName);
 extern VOID     armL2x0Init(L2C_DRVIER  *pl2cdrv,
                             CACHE_MODE   uiInstruction,
                             CACHE_MODE   uiData,
@@ -196,56 +200,75 @@ VOID armL2Init (CACHE_MODE   uiInstruction,
 
     LW_SPIN_INIT(&l2sl);
     
-    if (bspL2CBase(&(l2cdrv.L2CD_ulBase))) {                            /*  获得控制器基地址            */
-        return;
-    }
-    
-    if (bspL2CAux(&uiAuxVal, &uiAuxMask)) {
-        return;
-    }
-    
-    uiCacheId = read32_le(L2C_BASE(&l2cdrv) + L2C_CACHE_ID);            /*  获取 ID 寄存器              */
-    l2cdrv.L2CD_uiRelease = (uiCacheId & 0x1f);
-    l2cdrv.L2CD_uiType    = (uiCacheId >> 6) & 0xf;
-    
-    uiAux  = read32_le(L2C_BASE(&l2cdrv) + L2C_AUX_CTRL);
-    uiAux &= uiAuxMask;
-    uiAux |= uiAuxVal;
-    
-    
-    switch (l2cdrv.L2CD_uiType) {
-    
-    case 0x01:
-        l2cdrv.L2CD_pcName = "PL210";
-        uiWays = (uiAux >> 13) & 0xf;
-        break;
+    if (lib_strcmp(pcMachineName, ARM_MACHINE_A8) == 0) {               /*  A8 处理器 L2 CACHE          */
+        l2cdrv.L2CD_pcName    = ARM_MACHINE_A8;
+        l2cdrv.L2CD_ulBase    = 0ul;
+        l2cdrv.L2CD_uiWayMask = 0;
+        l2cdrv.L2CD_uiAux     = 0;
+        l2cdrv.L2CD_uiType    = 0;
+        l2cdrv.L2CD_uiRelease = 0;
         
-    case 0x02:
-        l2cdrv.L2CD_pcName = "PL220";
-        uiWays = (uiAux >> 13) & 0xf;
-        break;
+        _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
+        _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");
         
-    case 0x03:
-        l2cdrv.L2CD_pcName = "PL310";
-        if (uiAux & (1 << 16)) {
-            uiWays = 16;
-        } else {
-            uiWays = 8;
+        armL2A8Init(&l2cdrv, uiInstruction, uiData, pcMachineName);
+        
+    } else if ((lib_strcmp(pcMachineName, ARM_MACHINE_A5)  == 0) ||
+               (lib_strcmp(pcMachineName, ARM_MACHINE_A7)  == 0) ||
+               (lib_strcmp(pcMachineName, ARM_MACHINE_A9)  == 0) ||
+               (lib_strcmp(pcMachineName, ARM_MACHINE_A15) == 0)) {
+        if (bspL2CBase(&(l2cdrv.L2CD_ulBase))) {                        /*  获得控制器基地址            */
+            return;
         }
-        break;
+        if (bspL2CAux(&uiAuxVal, &uiAuxMask)) {
+            return;
+        }
+    
+        uiCacheId = read32_le(L2C_BASE(&l2cdrv) + L2C_CACHE_ID);        /*  获取 ID 寄存器              */
+        l2cdrv.L2CD_uiRelease = (uiCacheId & 0x1f);
+        l2cdrv.L2CD_uiType    = (uiCacheId >> 6) & 0xf;
         
-    default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unknown l2-cache type.\r\n");
-        return;
+        uiAux  = read32_le(L2C_BASE(&l2cdrv) + L2C_AUX_CTRL);
+        uiAux &= uiAuxMask;
+        uiAux |= uiAuxVal;
+        
+        switch (l2cdrv.L2CD_uiType) {
+    
+        case 0x01:
+            l2cdrv.L2CD_pcName = "PL210";
+            uiWays = (uiAux >> 13) & 0xf;
+            break;
+            
+        case 0x02:
+            l2cdrv.L2CD_pcName = "PL220";
+            uiWays = (uiAux >> 13) & 0xf;
+            break;
+            
+        case 0x03:
+            l2cdrv.L2CD_pcName = "PL310";
+            if (uiAux & (1 << 16)) {
+                uiWays = 16;
+            } else {
+                uiWays = 8;
+            }
+            break;
+            
+        default:
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "unknown l2-cache type.\r\n");
+            return;
+        }
+    
+        L2C_AUX(&l2cdrv)     = uiAux;
+        L2C_WAYMASK(&l2cdrv) = (1 << uiWays) - 1;
+        
+        _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
+        _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");
+        
+        armL2x0Init(&l2cdrv, uiInstruction, uiData, pcMachineName);
+        
+    } else {
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "unknown machine name.\r\n");
     }
-    
-    L2C_AUX(&l2cdrv)     = uiAux;
-    L2C_WAYMASK(&l2cdrv) = (1 << uiWays) - 1;
-    
-    _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");
-    
-    armL2x0Init(&l2cdrv, uiInstruction, uiData, pcMachineName);
 }
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */

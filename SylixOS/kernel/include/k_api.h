@@ -574,11 +574,11 @@ LW_API ULONG            API_MsgQueueTryReceive(LW_OBJECT_HANDLE    ulId,
                                                                         /*  无等待的获取一条消息        */
 
 LW_API ULONG            API_MsgQueueSend(LW_OBJECT_HANDLE  ulId,
-                                         PVOID             pvMsgBuffer,
+                                         const PVOID       pvMsgBuffer,
                                          size_t            stMsgLen);   /*  向队列中发送一条消息        */
 
 LW_API ULONG            API_MsgQueueSendEx(LW_OBJECT_HANDLE  ulId,
-                                           PVOID             pvMsgBuffer,
+                                           const PVOID       pvMsgBuffer,
                                            size_t            stMsgLen,
                                            ULONG             ulOption); /*  发送消息高级接口            */
 

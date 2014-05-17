@@ -1432,6 +1432,7 @@ static ssize_t  lwip_recvmsg (int  s, struct msghdr *msg, int flags)
 LW_API 
 int  socketpair (int domain, int type, int protocol, int sv[2])
 {
+    INT          iError;
     SOCKET_T    *psock[2];
     
     if (!sv) {
@@ -1458,7 +1459,11 @@ int  socketpair (int domain, int type, int protocol, int sv[2])
     psock[0] = (SOCKET_T *)iosFdValue(sv[0]);
     psock[1] = (SOCKET_T *)iosFdValue(sv[1]);
     
-    if (unix_connect2(psock[0]->SOCK_pafunix, psock[1]->SOCK_pafunix) < 0) {
+    __KERNEL_SPACE_ENTER();
+    iError = unix_connect2(psock[0]->SOCK_pafunix, psock[1]->SOCK_pafunix);
+    __KERNEL_SPACE_EXIT();
+    
+    if (iError < 0) {
         close(sv[0]);
         close(sv[1]);
         return  (PX_ERROR);
@@ -1508,11 +1513,13 @@ int  socket (int domain, int type, int protocol)
         iNonBlock = 0;
     }
 
+    __KERNEL_SPACE_ENTER();
     switch (domain) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
         pafunix = unix_socket(domain, type, protocol);
         if (pafunix == LW_NULL) {
+            __KERNEL_SPACE_EXIT();
             goto    __error_handle;
         }
         break;
@@ -1520,6 +1527,7 @@ int  socket (int domain, int type, int protocol)
     case AF_PACKET:                                                     /*  PACKET                      */
         pafpacket = packet_socket(domain, type, protocol);
         if (pafpacket == LW_NULL) {
+            __KERNEL_SPACE_EXIT();
             goto    __error_handle;
         }
         break;
@@ -1527,10 +1535,12 @@ int  socket (int domain, int type, int protocol)
     default:
         iLwipFd = lwip_socket(domain, type, protocol);
         if (iLwipFd < 0) {
+            __KERNEL_SPACE_EXIT();
             goto    __error_handle;
         }
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     iFd = open(LWIP_SYLIXOS_SOCKET_NAME, O_RDWR);
     if (iFd < 0) {
@@ -1570,7 +1580,9 @@ int  socket (int domain, int type, int protocol)
     }
     
     if (iNonBlock) {
+        __KERNEL_SPACE_ENTER();
         __socketIoctl(psock, FIONBIO, &iNonBlock);
+        __KERNEL_SPACE_EXIT();
     }
     
     MONITOR_EVT_INT4(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_SOCKET, 
@@ -1637,11 +1649,13 @@ int  accept4 (int s, struct sockaddr *addr, socklen_t *addrlen, int flags)
         iNonBlock = 0;
     }
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
         pafunix = unix_accept(psock->SOCK_pafunix, addr, addrlen);
         if (pafunix == LW_NULL) {
+            __KERNEL_SPACE_EXIT();
             goto    __error_handle;
         }
         break;
@@ -1649,6 +1663,7 @@ int  accept4 (int s, struct sockaddr *addr, socklen_t *addrlen, int flags)
     case AF_PACKET:                                                     /*  PACKET                      */
         pafpacket = packet_accept(psock->SOCK_pafpacket, addr, addrlen);
         if (pafpacket == LW_NULL) {
+            __KERNEL_SPACE_EXIT();
             goto    __error_handle;
         }
         break;
@@ -1656,10 +1671,12 @@ int  accept4 (int s, struct sockaddr *addr, socklen_t *addrlen, int flags)
     default:
         iRet = lwip_accept(psock->SOCK_iLwipFd, addr, addrlen);         /*  lwip_accept                 */
         if (iRet < 0) {
+            __KERNEL_SPACE_EXIT();
             goto    __error_handle;
         }
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     iFdNew = open(LWIP_SYLIXOS_SOCKET_NAME, O_RDWR);                    /*  new fd                      */
     if (iFdNew < 0) {
@@ -1696,7 +1713,9 @@ int  accept4 (int s, struct sockaddr *addr, socklen_t *addrlen, int flags)
     }
     
     if (iNonBlock) {
+        __KERNEL_SPACE_ENTER();
         __socketIoctl(psockNew, FIONBIO, &iNonBlock);
+        __KERNEL_SPACE_EXIT();
     }
     
     MONITOR_EVT_INT2(MONITOR_EVENT_ID_NETWORK, MONITOR_EVENT_NETWORK_ACCEPT, 
@@ -1754,6 +1773,7 @@ int  bind (int s, const struct sockaddr *name, socklen_t namelen)
     
     __SOCKET_CHECHK();
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -1768,6 +1788,7 @@ int  bind (int s, const struct sockaddr *name, socklen_t namelen)
         iRet = lwip_bind(psock->SOCK_iLwipFd, name, namelen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -1798,6 +1819,7 @@ int  shutdown (int s, int how)
     
     __SOCKET_CHECHK();
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -1812,6 +1834,7 @@ int  shutdown (int s, int how)
         iRet = lwip_shutdown(psock->SOCK_iLwipFd, how);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -1845,6 +1868,7 @@ int  connect (int s, const struct sockaddr *name, socklen_t namelen)
     
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -1859,6 +1883,7 @@ int  connect (int s, const struct sockaddr *name, socklen_t namelen)
         iRet = lwip_connect(psock->SOCK_iLwipFd, name, namelen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -1890,6 +1915,7 @@ int  getsockname (int s, struct sockaddr *name, socklen_t *namelen)
     
     __SOCKET_CHECHK();
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -1904,6 +1930,7 @@ int  getsockname (int s, struct sockaddr *name, socklen_t *namelen)
         iRet = lwip_getsockname(psock->SOCK_iLwipFd, name, namelen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -1931,6 +1958,7 @@ int  getpeername (int s, struct sockaddr *name, socklen_t *namelen)
     
     __SOCKET_CHECHK();
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -1945,6 +1973,7 @@ int  getpeername (int s, struct sockaddr *name, socklen_t *namelen)
         iRet = lwip_getpeername(psock->SOCK_iLwipFd, name, namelen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -1974,6 +2003,7 @@ int  setsockopt (int s, int level, int optname, const void *optval, socklen_t op
     
     __SOCKET_CHECHK();
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -1988,6 +2018,7 @@ int  setsockopt (int s, int level, int optname, const void *optval, socklen_t op
         iRet = lwip_setsockopt(psock->SOCK_iLwipFd, level, optname, optval, optlen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -2033,6 +2064,7 @@ int  getsockopt (int s, int level, int optname, void *optval, socklen_t *optlen)
         }
     }
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2047,6 +2079,7 @@ int  getsockopt (int s, int level, int optname, void *optval, socklen_t *optlen)
         iRet = lwip_getsockopt(psock->SOCK_iLwipFd, level, optname, optval, optlen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -2073,6 +2106,7 @@ int listen (int s, int backlog)
     
     __SOCKET_CHECHK();
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2087,6 +2121,7 @@ int listen (int s, int backlog)
         iRet = lwip_listen(psock->SOCK_iLwipFd, backlog);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (iRet < ERROR_NONE) {
         psock->SOCK_iSoErr = errno;
@@ -2121,6 +2156,7 @@ ssize_t  recv (int s, void *mem, size_t len, int flags)
     
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2135,6 +2171,7 @@ ssize_t  recv (int s, void *mem, size_t len, int flags)
         sstRet = (ssize_t)lwip_recv(psock->SOCK_iLwipFd, mem, len, flags);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
@@ -2172,6 +2209,7 @@ ssize_t  recvfrom (int s, void *mem, size_t len, int flags,
     
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2186,6 +2224,7 @@ ssize_t  recvfrom (int s, void *mem, size_t len, int flags,
         sstRet = (ssize_t)lwip_recvfrom(psock->SOCK_iLwipFd, mem, len, flags, from, fromlen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
@@ -2219,6 +2258,7 @@ ssize_t  recvmsg (int  s, struct msghdr *msg, int flags)
     
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2233,6 +2273,7 @@ ssize_t  recvmsg (int  s, struct msghdr *msg, int flags)
         sstRet = (ssize_t)lwip_recvmsg(psock->SOCK_iLwipFd, msg, flags);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
@@ -2267,6 +2308,7 @@ ssize_t  send (int s, const void *data, size_t size, int flags)
     
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2281,6 +2323,7 @@ ssize_t  send (int s, const void *data, size_t size, int flags)
         sstRet = (ssize_t)lwip_send(psock->SOCK_iLwipFd, data, size, flags);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
@@ -2316,6 +2359,7 @@ ssize_t  sendto (int s, const void *data, size_t size, int flags,
     
     __SOCKET_CHECHK();
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2330,6 +2374,7 @@ ssize_t  sendto (int s, const void *data, size_t size, int flags,
         sstRet = (ssize_t)lwip_sendto(psock->SOCK_iLwipFd, data, size, flags, to, tolen);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;
@@ -2363,6 +2408,7 @@ ssize_t  sendmsg (int  s, const struct msghdr *msg, int flags)
     
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
+    __KERNEL_SPACE_ENTER();
     switch (psock->SOCK_iFamily) {
     
     case AF_UNIX:                                                       /*  UNIX 域协议                 */
@@ -2377,6 +2423,7 @@ ssize_t  sendmsg (int  s, const struct msghdr *msg, int flags)
         sstRet = (ssize_t)lwip_sendmsg(psock->SOCK_iLwipFd, msg, flags);
         break;
     }
+    __KERNEL_SPACE_EXIT();
     
     if (sstRet <= 0) {
         psock->SOCK_iSoErr = errno;

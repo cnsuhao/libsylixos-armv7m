@@ -183,6 +183,8 @@ ULONG  __threadDelete (PLW_CLASS_TCB  ptcbDel, BOOL  bIsInSafe,
         (VOID)__KHEAP_FREE(pvFreeLowAddr);                              /*  释放内存                    */
     }
     
+    _TCBDestroy(ptcbDel);                                               /*  销毁 TCB                    */
+    
     __KERNEL_MODE_PROC(
         _Free_Tcb_Object(ptcbDel);                                      /*  释放 ID                     */
     );
@@ -330,7 +332,7 @@ ULONG  API_ThreadDelete (LW_OBJECT_HANDLE  *pulId, PVOID  pvRetVal)
         _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
-        
+    
     ptcbDel->TCB_iDeleteProcStatus = LW_TCB_DELETE_PROC_DEL;            /*  进入删除过程                */
     
     _ObjectCloseId(pulId);                                              /*  关闭 ID                     */

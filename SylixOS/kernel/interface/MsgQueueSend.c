@@ -43,7 +43,7 @@
 
 LW_API  
 ULONG  API_MsgQueueSend (LW_OBJECT_HANDLE  ulId,
-                         PVOID             pvMsgBuffer,
+                         const PVOID       pvMsgBuffer,
                          size_t            stMsgLen)
 {
              INTREG                iregInterLevel;

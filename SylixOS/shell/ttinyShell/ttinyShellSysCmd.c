@@ -193,8 +193,8 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
                     printf("%s", pskwNode[0]->SK_pcFormatString);       /*  打印格式信息                */
                     API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
                                           __LW_VT100_COLOR_GREEN);      /*  设置绿色前景                */
-                    printf("\n");
                 }
+                printf("\n");
             } else {
                 return  (-ERROR_TSHELL_EKEYWORD);
             }

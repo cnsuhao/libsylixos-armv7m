@@ -87,6 +87,7 @@ __attribute__((weak)) char              __sylixos_version[] = __SYLIXOS_VERSTR;
   系统配置与裁减头文件
 *********************************************************************************************************/
 #include "../SylixOS/config/cpu/cpu_cfg.h"                              /*  CPU 功能配置                */
+#include "../SylixOS/config/debug/debug_cfg.h"                          /*  调试器功能配置              */
 #include "../SylixOS/config/kernel/kernel_cfg.h"                        /*  系统内核配置文件            */
 #include "../SylixOS/config/system/system_cfg.h"                        /*  外围系统配置                */
 #include "../SylixOS/config/mp/mp_cfg.h"                                /*  多处理器配置文件            */

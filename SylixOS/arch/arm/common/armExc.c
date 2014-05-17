@@ -20,6 +20,7 @@
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
+#include "dtrace.h"
 #include "../mm/mmu/armMmuCommon.h"
 /*********************************************************************************************************
 ** 函数名称: archIntHandle
@@ -57,24 +58,18 @@ VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
 ** 功能描述: 系统发生 data abort 或者 prefetch_abort 异常时会调用此函数
 ** 输　入  : ulAbortAddr   出现访问异常的内存地址.
 **           ulAbortType   异常类型
-**           ptcbCur       当前线程控制块
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  archAbtHandle (UINT32  uiRetAddr, UINT32  uiArmExcType, PLW_CLASS_TCB   ptcbCur)
+VOID  archAbtHandle (UINT32  uiRetAddr, UINT32  uiArmExcType)
 {
 #define ARM_EXC_TYPE_ABT    8
 #define ARM_EXC_TYPE_PRE    4
-
-    addr_t ulAbortAddr;
-    ULONG  ulAbortType;
-
-    if (ptcbCur == LW_NULL) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "abort exception ptcbCur == NULL.\r\n");
-        API_KernelReboot(LW_REBOOT_FORCE);                              /*  直接重新启动操作系统        */
-        return;
-    }
+    
+    PLW_CLASS_TCB   ptcbCur;
+    addr_t          ulAbortAddr;
+    ULONG           ulAbortType;
     
     if (uiArmExcType == ARM_EXC_TYPE_ABT) {
         ulAbortAddr = armGetAbtAddr();
@@ -84,6 +79,8 @@ VOID  archAbtHandle (UINT32  uiRetAddr, UINT32  uiArmExcType, PLW_CLASS_TCB   pt
         ulAbortAddr = armGetPreAddr(uiRetAddr);
         ulAbortType = armGetPreType();
     }
+    
+    LW_TCB_GET_CUR(ptcbCur);
 
     API_VmmAbortIsr(ulAbortAddr, ulAbortType, ptcbCur);
 }
@@ -99,18 +96,21 @@ VOID  archUndHandle (addr_t  ulAddr)
 {
     PLW_CLASS_TCB   ptcbCur;
     
-    if (LW_CPU_GET_CUR_NESTING()) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "undefined instruction occur in ISR mode.\r\n");
-        return;
+#if LW_CFG_GDB_EN > 0
+    if (archDbgIsBp(ulAddr)) {                                          /*  断点指令探测                */
+        if (API_DtraceTrap(ulAddr) == ERROR_NONE) {                     /*  进入调试接口断点处理        */
+            return;
+        }
     }
+#endif                                                                  /*  LW_CFG_GDB_EN > 0           */
     
 #if LW_CFG_CPU_FPU_EN > 0
-    if (archFpuUndHandle() == ERROR_NONE) {                             /*  先进行 FPU 指令探测         */
+    if (archFpuUndHandle() == ERROR_NONE) {                             /*  进行 FPU 指令探测           */
         return;
     }
 #endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
 
-    LW_TCB_GET_CUR_SAFE(ptcbCur);
+    LW_TCB_GET_CUR(ptcbCur);
     
     API_VmmAbortIsr(ulAddr, LW_VMM_ABORT_TYPE_UNDEF, ptcbCur);
 }
