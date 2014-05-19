@@ -3183,7 +3183,7 @@ int yaffs_symlink(const YCHAR *oldpath, const YCHAR *newpath)
 	struct yaffs_obj *obj;
 	YCHAR *name;
 	int retVal = -1;
-	int mode = 0;		/* ignore for now */
+	int mode = 0754;		/* ignore for now */
 	int notDir = 0;
 	int loop = 0;
 

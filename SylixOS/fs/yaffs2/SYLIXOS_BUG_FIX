@@ -27,4 +27,6 @@ HISTORY
     fd->isDir = is_dir; 
     fd->v.dir = dsc; 
     so if openDenied is true, yaffsfs_PutHandle() must call yaffsfs_closedir_no_lock();
+	
+7:  yaffs_symlink() mode must 0754
     

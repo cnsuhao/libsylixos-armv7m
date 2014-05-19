@@ -504,6 +504,9 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-05-19: han.hui
+    修正 yaffs 创建符号链接权限错误.
+    
     2014-05-13: han.hui
     修正 dtrace 对 GDB 的支持.
 
