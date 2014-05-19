@@ -28,7 +28,7 @@
 
 static LW_INLINE size_t  _CalWordAlign (size_t  stByteSize)
 {
-    return  ((size_t)(stByteSize / sizeof(STACK)));
+    return  ((size_t)(stByteSize / sizeof(LW_STACK)));
 }
 
 #endif                                                                  /*  __INLWORDALIGN_H            */

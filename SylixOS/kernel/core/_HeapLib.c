@@ -550,7 +550,7 @@ PVOID  _HeapAllocate (PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurpo
     
     MONITOR_EVT_LONG4(MONITOR_EVENT_ID_REGION, MONITOR_EVENT_REGION_ALLOC,
                       pheap, __HEAP_SEGMENT_DATA_PTR(psegment), 
-                      psegment->SEGMENT_stSegmentByteSize, sizeof(STACK), pcPurpose);
+                      psegment->SEGMENT_stSegmentByteSize, sizeof(LW_STACK), pcPurpose);
     
     return  ((PVOID)__HEAP_SEGMENT_DATA_PTR(psegment));                 /*  返回分配的内存首地址        */
 }

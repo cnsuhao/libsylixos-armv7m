@@ -33,16 +33,16 @@
 ** 调用模块: 
 ** 注  意  : 堆栈从高地址向低地址增长.
 *********************************************************************************************************/
-PSTACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
-                           PVOID                  pvArg,
-                           PSTACK                 pstkTop, 
-                           ULONG                  ulOpt)
+PLW_STACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
+                              PVOID                  pvArg,
+                              PLW_STACK              pstkTop, 
+                              ULONG                  ulOpt)
 {
     ARCH_REG_CTX      *pregctx;
     ARCH_FP_CTX       *pfpctx;
     
     if ((addr_t)pstkTop & 0x7) {                                        /*  保证出栈后 CPU SP 8 字节对齐*/
-        pstkTop = (PSTACK)((addr_t)pstkTop - 4);                        /*  向低地址推进 4 字节         */
+        pstkTop = (PLW_STACK)((addr_t)pstkTop - 4);                     /*  向低地址推进 4 字节         */
     }
     
     pfpctx  = (ARCH_FP_CTX  *)((PCHAR)pstkTop - sizeof(ARCH_FP_CTX));
@@ -69,7 +69,7 @@ PSTACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
     pregctx->REG_uiLr  = (ARCH_REG_T)pfuncTask;
     pregctx->REG_uiPc  = (ARCH_REG_T)pfuncTask;
     
-    return  ((PSTACK)pregctx);
+    return  ((PLW_STACK)pregctx);
 }
 /*********************************************************************************************************
 ** 函数名称: archTaskCtxSetFp
@@ -80,7 +80,7 @@ PSTACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  archTaskCtxSetFp (PSTACK  pstkDest, PSTACK  pstkSrc)
+VOID  archTaskCtxSetFp (PLW_STACK  pstkDest, PLW_STACK  pstkSrc)
 {
     ARCH_REG_CTX      *pregctxDest = (ARCH_REG_CTX *)pstkDest;
     ARCH_REG_CTX      *pregctxSrc  = (ARCH_REG_CTX *)pstkSrc;
@@ -107,10 +107,10 @@ VOID  archTaskCtxSetFp (PSTACK  pstkDest, PSTACK  pstkSrc)
 *********************************************************************************************************/
 #if LW_CFG_DEVICE_EN > 0
 
-VOID  archTaskCtxShow (INT  iFd, PSTACK  pstkTop)
+VOID  archTaskCtxShow (INT  iFd, PLW_STACK  pstkTop)
 {
     CHAR        cCpsr[32 + 1] = "\0";
-    STACK       stkCpsr = pstkTop[0];
+    LW_STACK    stkCpsr = pstkTop[0];
     
     if (stkCpsr & 0x80000000) {
         cCpsr[0] = 'N';

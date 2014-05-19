@@ -27,8 +27,8 @@
 /*********************************************************************************************************
   中断堆栈定义
 *********************************************************************************************************/
-extern STACK    _K_stkInterruptStack[LW_CFG_MAX_PROCESSORS][LW_CFG_INT_STK_SIZE / sizeof(STACK)];
-extern PSTACK   _K_pstkInterruptBase[LW_CFG_MAX_PROCESSORS];            /*  中断处理时的堆栈基地址      */
+extern LW_STACK     _K_stkInterruptStack[LW_CFG_MAX_PROCESSORS][LW_CFG_INT_STK_SIZE / sizeof(LW_STACK)];
+extern PLW_STACK    _K_pstkInterruptBase[LW_CFG_MAX_PROCESSORS];        /*  中断处理时的堆栈基地址      */
                                                                         /*  通过 CPU_STK_GROWTH 判断    */
 /*********************************************************************************************************
 ** 函数名称: API_InterStackBaseGet
@@ -61,7 +61,7 @@ VOID  API_InterStackCheck (ULONG   ulCPUId,
                            size_t *pstUsedByteSize)
 {
     REGISTER size_t                stFree = 0;
-    REGISTER PSTACK                pstkButtom;
+    REGISTER PLW_STACK             pstkButtom;
     
     if (ulCPUId >= LW_NCPUS) {
         _ErrorHandle(ERROR_KERNEL_CPU_NULL);
@@ -69,23 +69,23 @@ VOID  API_InterStackCheck (ULONG   ulCPUId,
     }
     
 #if CPU_STK_GROWTH == 0
-    for (pstkButtom = &_K_stkInterruptStack[ulCPUId][(LW_CFG_INT_STK_SIZE / sizeof(STACK)) - 1];
-         ((*pstkButtom == _K_stkFreeFlag) && (stFree < LW_CFG_INT_STK_SIZE / sizeof(STACK)));
+    for (pstkButtom = &_K_stkInterruptStack[ulCPUId][(LW_CFG_INT_STK_SIZE / sizeof(LW_STACK)) - 1];
+         ((*pstkButtom == _K_stkFreeFlag) && (stFree < LW_CFG_INT_STK_SIZE / sizeof(LW_STACK)));
          pstkButtom--,
          stFree++);
 #else
     for (pstkButtom = &_K_stkInterruptStack[ulCPUId][0];
-         ((*pstkButtom == _K_stkFreeFlag) && (stFree < LW_CFG_INT_STK_SIZE / sizeof(STACK)));
+         ((*pstkButtom == _K_stkFreeFlag) && (stFree < LW_CFG_INT_STK_SIZE / sizeof(LW_STACK)));
          pstkButtom++,
          stFree++);
 #endif
 
     if (pstFreeByteSize) {
-        *pstFreeByteSize = stFree * sizeof(STACK);
+        *pstFreeByteSize = stFree * sizeof(LW_STACK);
     }
     
     if (pstUsedByteSize) {
-        *pstUsedByteSize = LW_CFG_INT_STK_SIZE - (stFree * sizeof(STACK));
+        *pstUsedByteSize = LW_CFG_INT_STK_SIZE - (stFree * sizeof(LW_STACK));
     }
     
     _ErrorHandle(ERROR_NONE);

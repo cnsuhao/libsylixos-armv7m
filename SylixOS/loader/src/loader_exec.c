@@ -277,6 +277,28 @@ INT  __spawnArgProc (__PSPAWN_ARG  psarg)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __spawnStopProc
+** 功能描述: 处里一个进程 stop 属性
+** 输　入  : psarg     spawn args
+**           pvpstop   stop 保存缓冲
+** 输　出  : 返回的处理结果
+** 全局变量:
+** 调用模块: 
+*********************************************************************************************************/
+static LW_LD_VPROC_STOP *__spawnStopGet (__PSPAWN_ARG  psarg, LW_LD_VPROC_STOP *pvpstop)
+{
+    posix_spawnstop_t *pstop = &psarg->SA_spawnattr.SPA_stop;
+    
+    if (!__issig(pstop->SPS_iSigNo)) {
+        return  (LW_NULL);
+    }
+    
+    pvpstop->VPS_iSigNo   = pstop->SPS_iSigNo;
+    pvpstop->VPS_ulId     = pstop->SPS_ulId;
+    
+    return  (pvpstop);
+}
+/*********************************************************************************************************
 ** 函数名称: __execShell
 ** 功能描述: exec shell (注意, __execShell 本身就是进程主线程, 不管装载成功与否都需要通过 vprocExit 退出)
 ** 输　入  : pvArg
@@ -288,6 +310,8 @@ INT  __spawnArgProc (__PSPAWN_ARG  psarg)
 static INT  __execShell (PVOID  pvArg)
 {
     __PSPAWN_ARG        psarg = (__PSPAWN_ARG)pvArg;
+    LW_LD_VPROC_STOP    vpstop;
+    LW_LD_VPROC_STOP   *pvpstop;
     INT                 iError;
     INT                 iRet = PX_ERROR;
     
@@ -297,8 +321,11 @@ static INT  __execShell (PVOID  pvArg)
     
     API_ThreadCleanupPush(__spawnArgFree, (PVOID)psarg);                /*  主线程退出时释放 pvArg      */
     
-    iError = vprocRun(psarg->SA_pvproc, psarg->SA_pcPath, LW_LD_DEFAULT_ENTRY, 
-                      &iRet, psarg->SA_spawnattr.SPA_bStop, psarg->SA_iArgs, 
+    pvpstop = __spawnStopGet(psarg, &vpstop);                           /*  获得停止属性                */
+    
+    iError = vprocRun(psarg->SA_pvproc, pvpstop,
+                      psarg->SA_pcPath, LW_LD_DEFAULT_ENTRY, 
+                      &iRet, psarg->SA_iArgs, 
                       (CPCHAR *)psarg->SA_pcParamList,
                       (CPCHAR *)psarg->SA_pcpcEvn);                     /*  此线程将变成进程内主线程    */
                       
@@ -323,10 +350,12 @@ static INT  __execShell (PVOID  pvArg)
 static INT  __processShell (PVOID  pvArg)
 {
     __PSPAWN_ARG        psarg = (__PSPAWN_ARG)pvArg;
+    LW_LD_VPROC_STOP    vpstop;
+    LW_LD_VPROC_STOP   *pvpstop;
     INT                 iError;
     INT                 iRet = PX_ERROR;
     CHAR                cName[LW_CFG_OBJECT_NAME_SIZE];
-    
+
     API_ThreadCleanupPush(__spawnArgFree, pvArg);                       /*  主线程退出时释放 pvArg      */
     
     __LW_VP_SET_CUR_PROC(psarg->SA_pvproc);                             /*  主线程记录进程控制块        */
@@ -341,8 +370,11 @@ static INT  __processShell (PVOID  pvArg)
     
     API_ThreadSetName(API_ThreadIdSelf(), cName);                       /*  设置新名字                  */
     
-    iError = vprocRun(psarg->SA_pvproc, psarg->SA_pcPath, LW_LD_DEFAULT_ENTRY, 
-                      &iRet, psarg->SA_spawnattr.SPA_bStop, psarg->SA_iArgs, 
+    pvpstop = __spawnStopGet(psarg, &vpstop);                           /*  获得停止属性                */
+    
+    iError = vprocRun(psarg->SA_pvproc, pvpstop, 
+                      psarg->SA_pcPath, LW_LD_DEFAULT_ENTRY, 
+                      &iRet, psarg->SA_iArgs, 
                       (CPCHAR *)psarg->SA_pcParamList,
                       (CPCHAR *)psarg->SA_pcpcEvn);                     /*  此线程将变成进程内主线程    */
                       
@@ -377,7 +409,7 @@ INT  __processStart (INT  mode, __PSPAWN_ARG  psarg)
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
     API_ThreadAttrBuild(&threadattr,
-                        (ptcbCur->TCB_stStackSize * sizeof(STACK)),
+                        (ptcbCur->TCB_stStackSize * sizeof(LW_STACK)),
                         ptcbCur->TCB_ucPriority,
                         LW_OPTION_THREAD_STK_CHK | LW_OPTION_OBJECT_GLOBAL,
                         (PVOID)psarg);

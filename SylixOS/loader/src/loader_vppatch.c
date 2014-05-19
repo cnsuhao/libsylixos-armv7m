@@ -991,10 +991,10 @@ FUNCPTR  vprocGetMain (VOID)
 ** 函数名称: vprocRun
 ** 功能描述: 加载并执行elf文件. (这里初始化了进程的外部补丁库, 完成后需要使用 vprocExit 退出)
 ** 输　入  : pvproc           进程控制块
+**           pvpstop          是否等待调试器继续执行信号才能执行
 **           pcFile           文件路径
 **           pcEntry          入口函数名，如果为LW_NULL，表示不需要条用初始化函数
 **           piRet            进程返回值
-**           bStop            是否等待调试器继续执行信号才能执行
 **           iArgC            程序参数个数
 **           ppcArgV          程序参数数组
 **           ppcEnv           环境变量数组
@@ -1002,18 +1002,19 @@ FUNCPTR  vprocGetMain (VOID)
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT  vprocRun (LW_LD_VPROC     *pvproc, 
-               CPCHAR           pcFile, 
-               CPCHAR           pcEntry, 
-               INT             *piRet,
-               BOOL             bStop,
-               INT              iArgC, 
-               CPCHAR           ppcArgV[],
-               CPCHAR           ppcEnv[])
+INT  vprocRun (LW_LD_VPROC      *pvproc, 
+               LW_LD_VPROC_STOP *pvpstop,
+               CPCHAR            pcFile, 
+               CPCHAR            pcEntry, 
+               INT              *piRet,
+               INT               iArgC, 
+               CPCHAR            ppcArgV[],
+               CPCHAR            ppcEnv[])
 {
     LW_LD_EXEC_MODULE *pmodule  = LW_NULL;
     INT                iError   = ERROR_NONE;
     FUNCPTR            pfunEntry;
+    union sigval       sigvalue;
 
     pvproc->VP_ulMainThread = API_ThreadIdSelf();                       /*  当前线程即为主线程          */
     
@@ -1033,6 +1034,10 @@ INT  vprocRun (LW_LD_VPROC     *pvproc,
                                                     pcEntry, LW_NULL, 
                                                     pvproc);
     if (LW_NULL == pmodule) {
+        if (pvpstop) {
+            sigvalue.sival_int = PX_ERROR;
+            sigqueue(pvpstop->VPS_ulId, pvpstop->VPS_iSigNo, sigvalue);
+        }
         return  (PX_ERROR);                                             /*  只需调用 vp destroy         */
     }
 
@@ -1047,7 +1052,9 @@ INT  vprocRun (LW_LD_VPROC     *pvproc,
         
         if ((vprocPatchVerCheck(pvproc) == ERROR_NONE) &&
             (vprocLibcVerCheck(pvproc) == ERROR_NONE)) {                /*  patch & libc 必须符合规定   */
-            if (bStop) {
+            if (pvpstop) {
+                sigvalue.sival_int = ERROR_NONE;
+                sigqueue(pvpstop->VPS_ulId, pvpstop->VPS_iSigNo, sigvalue);
                 API_ThreadStop(pvproc->VP_ulMainThread);                /*  等待调试器命令              */
             }
             iError = pfunEntry(iArgC, ppcArgV, ppcEnv);                 /*  执行进程入口函数            */
@@ -1351,7 +1358,7 @@ pid_t API_ModulePid (PVOID   pvVProc)
 LW_API
 INT  API_ModuleRun (CPCHAR  pcFile, CPCHAR  pcEntry)
 {
-    return  (API_ModuleRunEx(pcFile, pcEntry, LW_FALSE, 0, LW_NULL, LW_NULL));
+    return  (API_ModuleRunEx(pcFile, pcEntry, 0, LW_NULL, LW_NULL));
 }
 /*********************************************************************************************************
 ** 函数名称: API_ModuleRunEx
@@ -1359,7 +1366,6 @@ INT  API_ModuleRun (CPCHAR  pcFile, CPCHAR  pcEntry)
              (这里初始化了进程的外部补丁库)
 ** 输　入  : pcFile        文件路径
 **           pcEntry       入口函数名，如果为LW_NULL，表示不需要条用初始化函数
-**           bStop         是否等待调试器信号才能执行
 **           iArgC         程序参数个数
 **           ppcArgV       程序参数数组
 **           ppcEnv        环境变量数组
@@ -1369,12 +1375,11 @@ INT  API_ModuleRun (CPCHAR  pcFile, CPCHAR  pcEntry)
                                            API 函数
 *********************************************************************************************************/
 LW_API
-INT  API_ModuleRunEx (CPCHAR  pcFile, 
-                      CPCHAR  pcEntry, 
-                      BOOL    bStop, 
-                      INT     iArgC, 
-                      CPCHAR  ppcArgV[], 
-                      CPCHAR  ppcEnv[])
+INT  API_ModuleRunEx (CPCHAR             pcFile, 
+                      CPCHAR             pcEntry, 
+                      INT                iArgC, 
+                      CPCHAR             ppcArgV[], 
+                      CPCHAR             ppcEnv[])
 {
     LW_LD_VPROC       *pvproc = LW_NULL;
     INT                iError;
@@ -1390,8 +1395,8 @@ INT  API_ModuleRunEx (CPCHAR  pcFile,
         return  (PX_ERROR);
     }
     
-    iError = vprocRun(pvproc, pcFile, pcEntry, &iRet, 
-                      bStop, iArgC, ppcArgV, ppcEnv);                   /*  装载并运行进程              */
+    iError = vprocRun(pvproc, LW_NULL, pcFile, pcEntry, &iRet, 
+                      iArgC, ppcArgV, ppcEnv);                          /*  装载并运行进程              */
     
     vprocExit(pvproc, pvproc->VP_ulMainThread, iRet);                   /*  退出进程                    */
 

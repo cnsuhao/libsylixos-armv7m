@@ -33,7 +33,7 @@ extern "C" {
 #endif                                                                  /*  __cplusplus                 */
 
 struct __lw_jmp_buf_tag {
-    STACK       __saved_regs[ARCH_REG_CTX_WORD_SIZE];                   /*  REGs + SP                   */
+    LW_STACK    __saved_regs[ARCH_REG_CTX_WORD_SIZE];                   /*  REGs + SP                   */
     sigset_t    __saved_mask;
     int         __mask_was_saved;
 };

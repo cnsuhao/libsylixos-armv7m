@@ -45,7 +45,7 @@ typedef struct {
     PCHAR                   SA_pcParamList[LW_CFG_SHELL_MAX_PARAMNUM];
     PCHAR                   SA_pcpcEvn[LW_CFG_SHELL_MAX_PARAMNUM];
     LW_LIST_LINE_HEADER     SA_plineActions;
-    posix_spawnattr_t       SA_spawnattr;
+    posix_spawnattr_t       SA_spawnattr;                               /*  posix spawn attribute       */
 } __SPAWN_ARG;
 typedef __SPAWN_ARG        *__PSPAWN_ARG;
 

@@ -116,9 +116,9 @@ LW_OBJECT_HANDLE  API_MsgQueueCreate (CPCHAR             pcName,
     
     stMaxMsgByteSizeReal = stMaxMsgByteSize + sizeof(size_t);           /*  多分配 size_t 存储长度      */
     
-    stExcess = stMaxMsgByteSizeReal % sizeof(STACK);                    /*  对齐大小处理                */
+    stExcess = stMaxMsgByteSizeReal % sizeof(LW_STACK);                 /*  对齐大小处理                */
     if (stExcess) {
-        stMaxMsgByteSizeReal += (sizeof(STACK) - stExcess);
+        stMaxMsgByteSizeReal += (sizeof(LW_STACK) - stExcess);
     }
     
     stHeapAllocateByteSize = ((size_t)ulMaxMsgCounter

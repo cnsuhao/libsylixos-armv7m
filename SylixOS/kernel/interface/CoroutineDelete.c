@@ -32,13 +32,13 @@
   dummy CRCB
 *********************************************************************************************************/
 static LW_CLASS_COROUTINE   _K_pcrcbDummy;
-static STACK                _K_pstkDummyCrcb[ARCH_REG_CTX_WORD_SIZE + 5];
+static LW_STACK             _K_stkDummyCrcb[ARCH_REG_CTX_WORD_SIZE + 5];
 #if CPU_STK_GROWTH == 0
 #define INIT_DUMMY_STACK()  _K_pcrcbDummy.COROUTINE_pstkStackNow = \
                                     &_K_pstkDummyCrcb[0]
 #else
 #define INIT_DUMMY_STACK()  _K_pcrcbDummy.COROUTINE_pstkStackNow = \
-                                    &_K_pstkDummyCrcb[ARCH_REG_CTX_WORD_SIZE + 4]
+                                    &_K_stkDummyCrcb[ARCH_REG_CTX_WORD_SIZE + 4]
 #endif                                                                  /*  CPU_STK_GROWTH == 0         */
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: API_CoroutineExit

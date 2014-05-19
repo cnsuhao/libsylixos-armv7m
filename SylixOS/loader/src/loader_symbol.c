@@ -413,7 +413,7 @@ INT __moduleExportSymbol (LW_LD_EXEC_MODULE  *pmodule,
     }
     
     stNeedSize = sizeof(LW_SYMBOL) + lib_strlen(pcSymName) + 1;
-    stNeedSize = ROUND_UP(stNeedSize, sizeof(STACK));                   /*  计算对齐内存大小            */
+    stNeedSize = ROUND_UP(stNeedSize, sizeof(LW_STACK));                /*  计算对齐内存大小            */
     
     for (plineTemp  = pmodule->EMOD_plineSymbolBuffer;
          plineTemp != LW_NULL;

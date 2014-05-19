@@ -60,11 +60,11 @@ LW_OBJECT_HANDLE  API_ThreadInit (CPCHAR                   pcName,
 {
     static LW_CLASS_THREADATTR     threadattrDefault;
 
-    REGISTER PSTACK                pstkTop;
-    REGISTER PSTACK                pstkButtom;
-    REGISTER PSTACK                pstkGuard;
-    REGISTER PSTACK                pstkLowAddress;
-    REGISTER PSTACK                pstkFristFree;
+    REGISTER PLW_STACK             pstkTop;
+    REGISTER PLW_STACK             pstkButtom;
+    REGISTER PLW_STACK             pstkGuard;
+    REGISTER PLW_STACK             pstkLowAddress;
+    REGISTER PLW_STACK             pstkFristFree;
     
              size_t                stStackSize;                         /*  堆栈大小(单位：字)          */
              size_t                stGuardSize;
@@ -111,7 +111,7 @@ LW_OBJECT_HANDLE  API_ThreadInit (CPCHAR                   pcName,
 
     stGuardSize = pthreadattr->THREADATTR_stGuardSize;
 
-    if (stGuardSize < (ARCH_STK_MIN_WORD_SIZE * sizeof(STACK) * 2)) {
+    if (stGuardSize < (ARCH_STK_MIN_WORD_SIZE * sizeof(LW_STACK) * 2)) {
         stGuardSize = LW_CFG_THREAD_DEFAULT_GUARD_SIZE;
     }
 
@@ -142,7 +142,7 @@ LW_OBJECT_HANDLE  API_ThreadInit (CPCHAR                   pcName,
     }
     
     if (!pthreadattr->THREADATTR_pstkLowAddr) {                         /*  是否从内核堆中开辟堆栈      */
-        pstkLowAddress = (PSTACK)__KHEAP_ALLOC(pthreadattr->THREADATTR_stStackByteSize);
+        pstkLowAddress = (PLW_STACK)__KHEAP_ALLOC(pthreadattr->THREADATTR_stStackByteSize);
         if (!pstkLowAddress) {                                          /*  开辟失败                    */
             iErrLevel = 1;
             _DebugHandle(__ERRORMESSAGE_LEVEL, "kernel low memory.\r\n");

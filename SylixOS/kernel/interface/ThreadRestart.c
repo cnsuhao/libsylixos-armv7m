@@ -71,8 +71,8 @@ static ULONG  __threadRestart (PLW_CLASS_TCB          ptcb,
              LW_OBJECT_HANDLE      ulId;
     REGISTER PLW_CLASS_PCB         ppcb;
     
-    REGISTER PSTACK                pstkTop;
-    REGISTER PSTACK                pstkFristFree;
+    REGISTER PLW_STACK             pstkTop;
+    REGISTER PLW_STACK             pstkFristFree;
     
 #if LW_CFG_THREAD_NOTE_PAD_EN > 0
     REGISTER UINT8                 ucI;

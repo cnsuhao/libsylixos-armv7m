@@ -392,18 +392,18 @@ static  VOID  __sigCtlCreate (PLW_CLASS_TCB    ptcb,
                               sigset_t        *psigsetMask)
 {
     PLW_CLASS_SIGCTLMSG  psigctlmsg;
-    PSTACK               pstkSignalShell;                               /*  启动signalshell的堆栈点     */
+    PLW_STACK            pstkSignalShell;                               /*  启动signalshell的堆栈点     */
     
     BYTE                *pucStkNow = (BYTE *)ptcb->TCB_pstkStackNow;    /*  记录还原堆栈点              */
 
 #if	CPU_STK_GROWTH == 0
-    pucStkNow  += sizeof(STACK);                                        /*  向空栈方向移动一个堆栈空间  */
+    pucStkNow  += sizeof(LW_STACK);                                     /*  向空栈方向移动一个堆栈空间  */
     psigctlmsg  = (PLW_CLASS_SIGCTLMSG)pucStkNow;                       /*  记录 signal contrl msg 位置 */
     pucStkNow  += __SIGCTLMSG_SIZE_ALIGN;                               /*  让出 signal contrl msg 空间 */
 #else
     pucStkNow  -= __SIGCTLMSG_SIZE_ALIGN;                               /*  让出 signal contrl msg 空间 */
     psigctlmsg  = (PLW_CLASS_SIGCTLMSG)pucStkNow;                       /*  记录 signal contrl msg 位置 */
-    pucStkNow  -= sizeof(STACK);                                        /*  向空栈方向移动一个堆栈空间  */
+    pucStkNow  -= sizeof(LW_STACK);                                     /*  向空栈方向移动一个堆栈空间  */
 #endif
 
     psigctlmsg->SIGCTLMSG_iSchedRet    = iSchedRet;
@@ -415,7 +415,7 @@ static  VOID  __sigCtlCreate (PLW_CLASS_TCB    ptcb,
     
     pstkSignalShell = archTaskCtxCreate((PTHREAD_START_ROUTINE)__sigShell, 
                                         (PVOID)psigctlmsg,
-                                        (PSTACK)pucStkNow,
+                                        (PLW_STACK)pucStkNow,
                                         0);                             /*  建立信号外壳环境            */
     
     archTaskCtxSetFp(pstkSignalShell, ptcb->TCB_pstkStackNow);          /*  保存 fp, 使 callstack 正常  */

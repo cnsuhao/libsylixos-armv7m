@@ -67,14 +67,14 @@ INT                 vprocNotifyParent(LW_LD_VPROC *pvproc, INT  iSigCode);
 VOID                vprocReclaim(LW_LD_VPROC *pvproc, BOOL  bFreeVproc);
 VOID                vprocExit(LW_LD_VPROC *pvproc, LW_OBJECT_HANDLE  ulId, INT  iCode);
 VOID                vprocExitNotDestroy(LW_LD_VPROC *pvproc);
-INT                 vprocRun(LW_LD_VPROC  *pvproc, 
-                             CPCHAR        pcFile, 
-                             CPCHAR        pcEntry, 
-                             INT          *piRet,
-                             BOOL          bStop,
-                             INT           iArgC, 
-                             CPCHAR        ppcArgV[],
-                             CPCHAR        ppcEnv[]);
+INT                 vprocRun(LW_LD_VPROC      *pvproc, 
+                             LW_LD_VPROC_STOP *pvpstop,
+                             CPCHAR            pcFile, 
+                             CPCHAR            pcEntry, 
+                             INT              *piRet,
+                             INT               iArgC, 
+                             CPCHAR            ppcArgV[],
+                             CPCHAR            ppcEnv[]);
 VOID                vprocTickHook(PLW_CLASS_TCB  ptcb, PLW_CLASS_CPU  pcpu);
 PLW_IO_ENV          vprocIoEnvGet(PLW_CLASS_TCB  ptcb);
 FUNCPTR             vprocGetMain(VOID);

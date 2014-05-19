@@ -36,10 +36,10 @@
 *********************************************************************************************************/
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE == 0
 #if LW_CFG_MEMORY_KERNEL_HEAP_ADDRESS == 0
-static STACK    _K_stkKernelHeap[LW_CFG_MEMORY_KERNEL_HEAP_SIZE_BYTE / sizeof(STACK)];
+static LW_STACK _K_stkKernelHeap[LW_CFG_MEMORY_KERNEL_HEAP_SIZE_BYTE / sizeof(LW_STACK)];
 #endif
 #if LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS == 0
-static STACK    _K_stkSystemHeap[LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE / sizeof(STACK)];
+static LW_STACK _K_stkSystemHeap[LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE / sizeof(LW_STACK)];
 #endif
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_CONFIG_..*/
 /*********************************************************************************************************

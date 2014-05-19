@@ -37,8 +37,8 @@ VOID  _StackCheckInit (VOID)
     REGISTER INT        i;
     
     _K_stkFreeFlag = (UCHAR)LW_CFG_STK_EMPTY_FLAG;
-    for (i = 0; i < (sizeof(STACK) - 1); i++) {
-        _K_stkFreeFlag = (STACK)((STACK)(_K_stkFreeFlag << 8) + (UCHAR)LW_CFG_STK_EMPTY_FLAG);
+    for (i = 0; i < (sizeof(LW_STACK) - 1); i++) {
+        _K_stkFreeFlag = (LW_STACK)((LW_STACK)(_K_stkFreeFlag << 8) + (UCHAR)LW_CFG_STK_EMPTY_FLAG);
     }
 }
 /*********************************************************************************************************

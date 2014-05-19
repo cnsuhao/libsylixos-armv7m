@@ -117,7 +117,7 @@ typedef LW_CLASS_SIGCTLMSG  *PLW_CLASS_SIGCTLMSG;
   SIGNAL CONTRL MESSAGE 结构大小定义
 *********************************************************************************************************/
 
-#define __SIGCTLMSG_SIZE_ALIGN      ROUND_UP(sizeof(LW_CLASS_SIGCTLMSG), sizeof(STACK))
+#define __SIGCTLMSG_SIZE_ALIGN      ROUND_UP(sizeof(LW_CLASS_SIGCTLMSG), sizeof(LW_STACK))
         
 /*********************************************************************************************************
   UNMASK SIG

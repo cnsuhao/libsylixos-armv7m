@@ -106,9 +106,9 @@ int  pthread_create (pthread_t              *pthread,
         }
         
         if (pattr->PTHREADATTR_stStackByteSize == 0) {                  /*  继承创建者                  */
-            lwattr.THREADATTR_stStackByteSize = ptcbCur->TCB_stStackSize * sizeof(STACK);
+            lwattr.THREADATTR_stStackByteSize = ptcbCur->TCB_stStackSize * sizeof(LW_STACK);
         } else {
-            lwattr.THREADATTR_pstkLowAddr     = (PSTACK)pattr->PTHREADATTR_pvStackAddr;
+            lwattr.THREADATTR_pstkLowAddr     = (PLW_STACK)pattr->PTHREADATTR_pvStackAddr;
             lwattr.THREADATTR_stStackByteSize = pattr->PTHREADATTR_stStackByteSize;
         }
         
@@ -122,7 +122,7 @@ int  pthread_create (pthread_t              *pthread,
         lwattr.THREADATTR_ulOption = pattr->PTHREADATTR_ulOption;
     
     } else {                                                            /*  堆栈大小和优先级全部继承    */
-        lwattr.THREADATTR_stStackByteSize = ptcbCur->TCB_stStackSize * sizeof(STACK);
+        lwattr.THREADATTR_stStackByteSize = ptcbCur->TCB_stStackSize * sizeof(LW_STACK);
         lwattr.THREADATTR_ucPriority  = ptcbCur->TCB_ucPriority;
     }
     

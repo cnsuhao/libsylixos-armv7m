@@ -100,7 +100,7 @@ static PLW_VMM_PAGE  __pageCbAlloc (INT  iPageType)
         return  ((PLW_VMM_PAGE)pmonoAlloc);
     
     } else {
-        stAllocSize  = ROUND_UP(sizeof(LW_VMM_PAGE), sizeof(STACK));
+        stAllocSize  = ROUND_UP(sizeof(LW_VMM_PAGE), sizeof(LW_STACK));
         stAllocSize += (sizeof(LW_LIST_LINE_HEADER) * __VMM_PAGE_LINK_HASH_SIZE);
         return  ((PLW_VMM_PAGE)__KHEAP_ALLOC(stAllocSize));
     }
@@ -135,7 +135,7 @@ static VOID __pageCbFree (PLW_VMM_PAGE  pvmpage)
 static VOID  __pageInitLink (PLW_VMM_PAGE  pvmpage)
 {
     INT     i;
-    size_t  stOffset = ROUND_UP(sizeof(LW_VMM_PAGE), sizeof(STACK));
+    size_t  stOffset = ROUND_UP(sizeof(LW_VMM_PAGE), sizeof(LW_STACK));
     
     pvmpage->PAGE_plinePhyLink = (LW_LIST_LINE_HEADER *)((PCHAR)pvmpage + stOffset);
     

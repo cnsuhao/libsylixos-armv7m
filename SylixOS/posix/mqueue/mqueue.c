@@ -413,9 +413,9 @@ static __PX_MSG  *__mqueueCreate (const char  *name, mode_t mode, struct mq_attr
      */
     stMemBufferSize = ((size_t)pmqattr->mq_msgsize 
                     + sizeof(__PX_MSG_NODE));                           /*  一个消息节点的大小          */
-    stExcess = stMemBufferSize % sizeof(STACK);                         /*  对齐大小处理                */
+    stExcess = stMemBufferSize % sizeof(LW_STACK);                      /*  对齐大小处理                */
     if (stExcess) {
-        stMemBufferSize += (sizeof(STACK) - stExcess);
+        stMemBufferSize += (sizeof(LW_STACK) - stExcess);
     }
     pmq->PMSG_pmsgmem.PMSGM_stBytesPerMsg = stMemBufferSize;            /*  每一条消息占用的字节数      */
     

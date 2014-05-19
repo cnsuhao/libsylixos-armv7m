@@ -37,8 +37,7 @@ typedef struct {
 } LW_VMM_PAGE_FAIL_CTX;
 typedef LW_VMM_PAGE_FAIL_CTX    *PLW_VMM_PAGE_FAIL_CTX;
 
-#define __PAGEFAILCTX_SIZE_ALIGN    \
-        (((sizeof(LW_VMM_PAGE_FAIL_CTX) + (sizeof(STACK) - 1)) / sizeof(STACK)) * sizeof(STACK))
+#define __PAGEFAILCTX_SIZE_ALIGN    ROUND_UP(sizeof(LW_VMM_PAGE_FAIL_CTX), sizeof(LW_STACK))
 
 /*********************************************************************************************************
   加入裁剪支持

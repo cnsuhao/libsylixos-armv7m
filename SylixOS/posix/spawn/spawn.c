@@ -371,14 +371,14 @@ int   posix_spawnattr_destroy (posix_spawnattr_t *attrp)
                                            API º¯Êý
 *********************************************************************************************************/
 LW_API  
-int   posix_spawnattr_getstop (const posix_spawnattr_t *attrp, int *pstop)
+int   posix_spawnattr_getstop (const posix_spawnattr_t *attrp, posix_spawnstop_t *pstop)
 {
     if (!attrp || !pstop) {
         errno = EINVAL;
         return  (EINVAL);
     }
     
-    *pstop = attrp->SPA_bStop;
+    *pstop = attrp->SPA_stop;
     
     return  (ERROR_NONE);
 }
@@ -393,14 +393,16 @@ int   posix_spawnattr_getstop (const posix_spawnattr_t *attrp, int *pstop)
                                            API º¯Êý
 *********************************************************************************************************/
 LW_API  
-int   posix_spawnattr_setstop (posix_spawnattr_t *attrp, int stop)
+int   posix_spawnattr_setstop (posix_spawnattr_t *attrp, const posix_spawnstop_t *pstop)
 {
-    if (!attrp) {
+    if (!attrp || !pstop) {
         errno = EINVAL;
         return  (EINVAL);
     }
     
-    attrp->SPA_bStop = (stop) ? LW_TRUE : LW_FALSE;
+    attrp->SPA_stop                  = *pstop;
+    attrp->SPA_stop.SPS_ulReserve[0] = 0ul;
+    attrp->SPA_stop.SPS_ulReserve[1] = 0ul;
     
     return  (ERROR_NONE);
 }

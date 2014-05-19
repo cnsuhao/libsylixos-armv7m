@@ -100,7 +100,7 @@ LW_CLASS_THREADATTR  API_ThreadAttrGet (LW_OBJECT_HANDLE  ulId)
     ptcb = _K_ptcbTCBIdTable[usIndex];                                  /*  获得线程控制块              */
     
     threadattr.THREADATTR_pstkLowAddr     = ptcb->TCB_pstkStackLowAddr; /*  全部堆栈区低内存起始地址    */
-    threadattr.THREADATTR_stStackByteSize = (ptcb->TCB_stStackSize * sizeof(STACK));                        
+    threadattr.THREADATTR_stStackByteSize = (ptcb->TCB_stStackSize * sizeof(LW_STACK));                        
                                                                         /*  全部堆栈区大小(字节)        */
     threadattr.THREADATTR_ucPriority      = ptcb->TCB_ucPriority;       /*  线程优先级                  */
     threadattr.THREADATTR_ulOption        = ptcb->TCB_ulOption;         /*  任务选项                    */
@@ -190,7 +190,7 @@ ULONG   API_ThreadAttrBuild (PLW_CLASS_THREADATTR    pthreadattr,
 *********************************************************************************************************/
 LW_API  
 ULONG   API_ThreadAttrBuildEx (PLW_CLASS_THREADATTR    pthreadattr,
-                               PSTACK                  pstkStackTop, 
+                               PLW_STACK               pstkStackTop, 
                                size_t                  stStackByteSize, 
                                UINT8                   ucPriority, 
                                ULONG                   ulOption, 
@@ -278,7 +278,7 @@ ULONG   API_ThreadAttrSetGuardSize (PLW_CLASS_THREADATTR    pthreadattr,
     }
 #endif
 
-    if (stGuardSize < (ARCH_STK_MIN_WORD_SIZE * sizeof(STACK) * 2)) {
+    if (stGuardSize < (ARCH_STK_MIN_WORD_SIZE * sizeof(LW_STACK) * 2)) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "thread attribute pointer invalidate.\r\n");
         _ErrorHandle(ERROR_THREAD_STACK_NULL);
         return  (ERROR_THREAD_STACK_NULL);

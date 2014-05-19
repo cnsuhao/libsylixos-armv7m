@@ -54,8 +54,8 @@ static LW_OBJECT_HANDLE             _G_hAfPacketMutex;
 #define __AF_PACKET_UNLOCK()        API_SemaphoreMPost(_G_hAfPacketMutex)
 
 static LW_OBJECT_HANDLE             _G_hAfPacketNodes;
-#define __AF_PACKET_PKT_NODES_SIZE  (__AF_PACKET_PKT_NODES * (sizeof(AF_PACKET_N) / sizeof(STACK)))
-static STACK                        _G_stackPacketNodes[__AF_PACKET_PKT_NODES_SIZE];
+#define __AF_PACKET_PKT_NODES_SIZE  (__AF_PACKET_PKT_NODES * (sizeof(AF_PACKET_N) / sizeof(LW_STACK)))
+static LW_STACK                     _G_stackPacketNodes[__AF_PACKET_PKT_NODES_SIZE];
 /*********************************************************************************************************
   µÈ´ýÅÐ¶Ï
 *********************************************************************************************************/

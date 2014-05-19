@@ -79,11 +79,11 @@ static LW_OBJECT_HANDLE             _G_hAfUnixMutex;
 static LW_OBJECT_HANDLE             _G_hAfUnixPart256;
 static LW_OBJECT_HANDLE             _G_hAfUnixPart512;
 
-#define __AF_UNIX_PART_256_SIZE     (__AF_UNIX_PART_256 * (256 / sizeof(STACK)))
-#define __AF_UNIX_PART_512_SIZE     (__AF_UNIX_PART_512 * (512 / sizeof(STACK)))
+#define __AF_UNIX_PART_256_SIZE     (__AF_UNIX_PART_256 * (256 / sizeof(LW_STACK)))
+#define __AF_UNIX_PART_512_SIZE     (__AF_UNIX_PART_512 * (512 / sizeof(LW_STACK)))
 
-static STACK                        _G_stackUnixPart256[__AF_UNIX_PART_256_SIZE];
-static STACK                        _G_stackUnixPart512[__AF_UNIX_PART_512_SIZE];
+static LW_STACK                     _G_stackUnixPart256[__AF_UNIX_PART_256_SIZE];
+static LW_STACK                     _G_stackUnixPart512[__AF_UNIX_PART_512_SIZE];
 /*********************************************************************************************************
   ºê²Ù×÷
   
@@ -150,12 +150,12 @@ static PVOID  __unixBufAlloc (size_t  stLen)
 *********************************************************************************************************/
 static VOID  __unixBufFree (PVOID  pvMem)
 {
-    if (((PSTACK)pvMem >= &_G_stackUnixPart256[0]) && 
-        ((PSTACK)pvMem <  &_G_stackUnixPart256[__AF_UNIX_PART_256_SIZE])) {
+    if (((PLW_STACK)pvMem >= &_G_stackUnixPart256[0]) && 
+        ((PLW_STACK)pvMem <  &_G_stackUnixPart256[__AF_UNIX_PART_256_SIZE])) {
         API_PartitionPut(_G_hAfUnixPart256, pvMem);
     
-    } else if (((PSTACK)pvMem >= &_G_stackUnixPart512[0]) && 
-               ((PSTACK)pvMem <  &_G_stackUnixPart512[__AF_UNIX_PART_512_SIZE])) {
+    } else if (((PLW_STACK)pvMem >= &_G_stackUnixPart512[0]) && 
+               ((PLW_STACK)pvMem <  &_G_stackUnixPart512[__AF_UNIX_PART_512_SIZE])) {
         API_PartitionPut(_G_hAfUnixPart512, pvMem);
     
     } else {

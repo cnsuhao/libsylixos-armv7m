@@ -37,8 +37,6 @@ typedef ULONG       (*ULONGFUNCPTR)(...);                               /*  func
 typedef VOID        (*VOIDFUNCPTR)(...);                                /*  function returning void     */
 typedef PVOID       (*PVOIDFUNCPTR)(...);                               /*  function returning void *   */
 typedef BOOL        (*BOOLFUNCPTR)(...);                                /*  function returning bool     */
-typedef FP64        (*DBLFUNCPTR)(...);                                 /*  function returning double   */
-typedef FP32        (*FLTFUNCPTR)(...);                                 /*  function returning float    */
 
 #else
 
@@ -51,8 +49,6 @@ typedef ULONG       (*ULONGFUNCPTR)();                                  /*  func
 typedef VOID        (*VOIDFUNCPTR)();                                   /*  function returning void     */
 typedef PVOID       (*PVOIDFUNCPTR)();                                  /*  function returning void *   */
 typedef BOOL        (*BOOLFUNCPTR)();                                   /*  function returning bool     */
-typedef FP64        (*DBLFUNCPTR)();                                    /*  function returning double   */
-typedef FP32        (*FLTFUNCPTR)();                                    /*  function returning float    */
 
 #endif			                                                        /*  _cplusplus                  */
 

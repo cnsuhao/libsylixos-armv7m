@@ -53,7 +53,7 @@ ULONG  API_ThreadStackCheck (LW_OBJECT_HANDLE  ulId,
     REGISTER size_t                stTotal;
     REGISTER size_t                stFree = 0;
     
-    REGISTER PSTACK                pstkButtom;
+    REGISTER PLW_STACK             pstkButtom;
 	
     usIndex = _ObjectGetIndex(ulId);
     
@@ -104,11 +104,11 @@ ULONG  API_ThreadStackCheck (LW_OBJECT_HANDLE  ulId,
         __KERNEL_EXIT();                                                /*  ÍË³öÄÚºË                    */
         
         if (pstFreeByteSize) {
-            *pstFreeByteSize = stFree * sizeof(STACK);
+            *pstFreeByteSize = stFree * sizeof(LW_STACK);
         }
         
         if (pstUsedByteSize) {
-            *pstUsedByteSize = (stTotal - stFree) * sizeof(STACK);
+            *pstUsedByteSize = (stTotal - stFree) * sizeof(LW_STACK);
         }
         
         if (pstTcbByteSize) {

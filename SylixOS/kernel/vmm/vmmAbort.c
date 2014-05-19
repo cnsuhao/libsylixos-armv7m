@@ -791,7 +791,7 @@ static VOID  __vmmAbortAccess (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
     
     } else {
 #if LW_CFG_DEVICE_EN > 0
-        archTaskCtxShow(ioGlobalStdGet(STD_ERR), (PSTACK)pvmpagefailctx->PAGEFCTX_pvStackRet);
+        archTaskCtxShow(ioGlobalStdGet(STD_ERR), (PLW_STACK)pvmpagefailctx->PAGEFCTX_pvStackRet);
 #endif
         printk(KERN_EMERG "thread 0x%lx abort, address : 0x%lx.\n",
                pvmpagefailctx->PAGEFCTX_ulSelf, 
@@ -828,7 +828,7 @@ LW_API
 VOID  API_VmmAbortIsr (addr_t  ulAbortAddr, ULONG  ulAbortType, PLW_CLASS_TCB  ptcb)
 {
     PLW_VMM_PAGE_FAIL_CTX    pvmpagefailctx;
-    PSTACK                   pstkFailShell;                             /*  启动 fail shell 的堆栈点    */
+    PLW_STACK                pstkFailShell;                             /*  启动 fail shell 的堆栈点    */
     
     ULONG                    ulNesting = LW_CPU_GET_CUR_NESTING();
     BYTE                    *pucStkNow;                                 /*  记录还原堆栈点              */
@@ -857,13 +857,13 @@ VOID  API_VmmAbortIsr (addr_t  ulAbortAddr, ULONG  ulAbortType, PLW_CLASS_TCB  p
     } else {                                                            /*  产生异常                    */
         pucStkNow = (BYTE *)ptcb->TCB_pstkStackNow;                     /*  记录还原堆栈点              */
 #if	CPU_STK_GROWTH == 0
-        pucStkNow      += sizeof(STACK);                                /*  向空栈方向移动一个堆栈空间  */
+        pucStkNow      += sizeof(LW_STACK);                             /*  向空栈方向移动一个堆栈空间  */
         pvmpagefailctx  = (PLW_VMM_PAGE_FAIL_CTX)pucStkNow;             /*  记录 PAGE_FAIL_CTX 位置     */
         pucStkNow      += __PAGEFAILCTX_SIZE_ALIGN;                     /*  让出 PAGE_FAIL_CTX 空间     */
 #else
         pucStkNow      -= __PAGEFAILCTX_SIZE_ALIGN;                     /*  让出 PAGE_FAIL_CTX 空间     */
         pvmpagefailctx  = (PLW_VMM_PAGE_FAIL_CTX)pucStkNow;             /*  记录 PAGE_FAIL_CTX 位置     */
-        pucStkNow      -= sizeof(STACK);                                /*  向空栈方向移动一个堆栈空间  */
+        pucStkNow      -= sizeof(LW_STACK);                             /*  向空栈方向移动一个堆栈空间  */
 #endif
         pvmpagefailctx->PAGEFCTX_ulSelf       = ptcb->TCB_ulId;
         pvmpagefailctx->PAGEFCTX_ulAbortAddr  = ulAbortAddr;
@@ -875,12 +875,12 @@ VOID  API_VmmAbortIsr (addr_t  ulAbortAddr, ULONG  ulAbortType, PLW_CLASS_TCB  p
 #if LW_CFG_VMM_EN > 0
         pstkFailShell = archTaskCtxCreate((PTHREAD_START_ROUTINE)__vmmAbortShell, 
                                           (PVOID)pvmpagefailctx,
-                                          (PSTACK)pucStkNow,
+                                          (PLW_STACK)pucStkNow,
                                           0);                           /*  建立缺页处理陷阱外壳环境    */
 #else
         pstkFailShell = archTaskCtxCreate((PTHREAD_START_ROUTINE)__vmmAbortAccess, 
                                           (PVOID)pvmpagefailctx,
-                                          (PSTACK)pucStkNow,
+                                          (PLW_STACK)pucStkNow,
                                           0);                           /*  建立访问异常陷阱外壳环境    */
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
     

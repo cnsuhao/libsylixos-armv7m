@@ -43,7 +43,17 @@
 #define POSIX_SPAWN_SETSCHEDULER            0x20
 
 /*********************************************************************************************************
-  Data structure to contain attributes for thread creation.
+  Data structure to contain attributes for process stop option.
+*********************************************************************************************************/
+
+typedef struct {
+    INT                 SPS_iSigNo;                                     /*  信号                        */
+    LW_OBJECT_HANDLE    SPS_ulId;                                       /*  目标线程 (或进程)           */
+    ULONG               SPS_ulReserve[2];
+} posix_spawnstop_t;
+
+/*********************************************************************************************************
+  Data structure to contain attributes for process creation.
 *********************************************************************************************************/
 
 typedef struct {
@@ -55,8 +65,8 @@ typedef struct {
     INT                 SPA_iPolicy;
     PCHAR               SPA_pcWd;
     PLW_RESOURCE_RAW    SPA_presraw;                                    /*  资源管理节点                */
-    BOOL                SPA_bStop;                                      /*  进程运行前是否等待调试器信号*/
-    ULONG               SPA_ulPad[9];
+    posix_spawnstop_t   SPA_stop;                                       /*  进程运行前是否等待调试器信号*/
+    ULONG               SPA_ulPad[6];
 } posix_spawnattr_t;
 
 /*********************************************************************************************************
@@ -131,9 +141,6 @@ LW_API int   posix_spawnp(pid_t *pid, const char *file,
 LW_API int   posix_spawnattr_init(posix_spawnattr_t *attrp);
 LW_API int   posix_spawnattr_destroy(posix_spawnattr_t *attrp);
 
-LW_API int   posix_spawnattr_getstop(const posix_spawnattr_t *attrp, int *pstop);
-LW_API int   posix_spawnattr_setstop(posix_spawnattr_t *attrp, int stop);
-
 LW_API int   posix_spawnattr_getwd(const posix_spawnattr_t *attrp, char *pwd, size_t size);
 LW_API int   posix_spawnattr_setwd(posix_spawnattr_t *attrp, const char *pwd);
 
@@ -176,6 +183,15 @@ LW_API int   posix_spawn_file_actions_addclose(posix_spawn_file_actions_t *file_
                          int fd);
 LW_API int   posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *file_actions,
 					     int fd, int newfd);
+
+/*********************************************************************************************************
+  sylixos extern (debuger use only!)
+*********************************************************************************************************/
+
+#ifdef __SYLIXOS_KERNEL
+LW_API int   posix_spawnattr_getstop(const posix_spawnattr_t *attrp, posix_spawnstop_t *pstop);
+LW_API int   posix_spawnattr_setstop(posix_spawnattr_t *attrp, const posix_spawnstop_t *pstop);
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #ifdef __cplusplus
 }

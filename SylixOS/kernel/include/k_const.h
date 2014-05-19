@@ -36,17 +36,17 @@
   TCB的字节数定义，相对于字对齐的字节数
 *********************************************************************************************************/
 
-#define __SEGMENT_BLOCK_SIZE_ALIGN  ROUND_UP(sizeof(LW_CLASS_SEGMENT), sizeof(STACK))
+#define __SEGMENT_BLOCK_SIZE_ALIGN  ROUND_UP(sizeof(LW_CLASS_SEGMENT), sizeof(LW_STACK))
 
 #if LW_CFG_COROUTINE_EN > 0
-#define __CRCB_SIZE_ALIGN           ROUND_UP(sizeof(LW_CLASS_COROUTINE), sizeof(STACK))
+#define __CRCB_SIZE_ALIGN           ROUND_UP(sizeof(LW_CLASS_COROUTINE), sizeof(LW_STACK))
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */
 
 /*********************************************************************************************************
   最小堆栈的字节数
 *********************************************************************************************************/
 
-#define __STK_MINMUM_BYTE_SIZE      (ARCH_STK_MIN_WORD_SIZE * sizeof(STACK))
+#define __STK_MINMUM_BYTE_SIZE      (ARCH_STK_MIN_WORD_SIZE * sizeof(LW_STACK))
 
 /*********************************************************************************************************
   EVENT WAIT PRIORITY QUEUE

@@ -27,15 +27,7 @@
 #ifndef  __K_PTYPE_H
 #define  __K_PTYPE_H
 
-#ifndef  __PTYPE
-
-#undef   __BEOS__
-#include <stddef.h>                                                     /*  size_t                      */
-
-#ifndef __ssize_t_defined
-typedef LONG        ssize_t;
-#define __ssize_t_defined 1
-#endif
+#ifndef __PTYPE
 
 /*********************************************************************************************************
   POSIX BASIC

@@ -111,12 +111,12 @@
 ** µ÷ÓÃÄ£¿é: 
 *********************************************************************************************************/
 VOID  _TCBBuild (UINT8                    ucPriority,
-                 PSTACK                   pstkStackNow,
-                 PSTACK                   pstkStackTop,
-                 PSTACK                   pstkStackButtom,
-                 PSTACK                   pstkStackGuard,
+                 PLW_STACK                pstkStackNow,
+                 PLW_STACK                pstkStackTop,
+                 PLW_STACK                pstkStackButtom,
+                 PLW_STACK                pstkStackGuard,
                  PVOID                    pvStackExt,
-                 PSTACK                   pstkStackLowAddr,
+                 PLW_STACK                pstkStackLowAddr,
                  size_t                   stStackSize,
                  LW_OBJECT_ID             ulId,
                  ULONG                    ulOption,

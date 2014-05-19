@@ -43,31 +43,31 @@
   ARM 处理器断言
 *********************************************************************************************************/
 
-VOID    archAssert(INT  iCond, CPCHAR  pcFunc, CPCHAR  pcFile, INT  iLine);
+VOID        archAssert(INT  iCond, CPCHAR  pcFunc, CPCHAR  pcFile, INT  iLine);
 
 /*********************************************************************************************************
   ARM 处理器线程上下文相关接口
 *********************************************************************************************************/
 
-PSTACK  archTaskCtxCreate(PTHREAD_START_ROUTINE  pfuncTask,
-                          PVOID                  pvArg,
-                          PSTACK                 pstkTop, 
-                          ULONG                  ulOpt);
-VOID    archTaskCtxSetFp(PSTACK  pstkDest, PSTACK  pstkSrc);
+PLW_STACK   archTaskCtxCreate(PTHREAD_START_ROUTINE  pfuncTask,
+                              PVOID                  pvArg,
+                              PLW_STACK              pstkTop, 
+                              ULONG                  ulOpt);
+VOID        archTaskCtxSetFp(PLW_STACK  pstkDest, PLW_STACK  pstkSrc);
 
 #if LW_CFG_DEVICE_EN > 0
-VOID    archTaskCtxShow(INT  iFd, PSTACK  pstkTop);
+VOID        archTaskCtxShow(INT  iFd, PLW_STACK  pstkTop);
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
 
-VOID    archTaskCtxStart(PLW_CLASS_CPU  pcpuSw);
-VOID    archTaskCtxSwitch(PLW_CLASS_CPU  pcpuSw);
+VOID        archTaskCtxStart(PLW_CLASS_CPU  pcpuSw);
+VOID        archTaskCtxSwitch(PLW_CLASS_CPU  pcpuSw);
 
 #if LW_CFG_COROUTINE_EN > 0
-VOID    archCrtCtxSwitch(PLW_CLASS_CPU  pcpuSw);
+VOID        archCrtCtxSwitch(PLW_CLASS_CPU  pcpuSw);
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */
 
-VOID    archIntCtxLoad(PLW_CLASS_CPU  pcpuSw);
-VOID    archSigCtxLoad(PVOID  pvStack);
+VOID        archIntCtxLoad(PLW_CLASS_CPU  pcpuSw);
+VOID        archSigCtxLoad(PVOID  pvStack);
 
 /*********************************************************************************************************
   ARM 处理器调试接口

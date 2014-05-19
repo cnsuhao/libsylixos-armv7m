@@ -51,10 +51,10 @@ PVOID   API_CoroutineCreate (PCOROUTINE_START_ROUTINE pCoroutineStartAddr,
              INTREG                iregInterLevel;
              PLW_CLASS_TCB         ptcbCur;
 
-    REGISTER PSTACK                pstkTop;
-    REGISTER PSTACK                pstkButtom;
-    REGISTER PSTACK                pstkLowAddress;
-    REGISTER PSTACK                pstkFristFree;
+    REGISTER PLW_STACK             pstkTop;
+    REGISTER PLW_STACK             pstkButtom;
+    REGISTER PLW_STACK             pstkLowAddress;
+    REGISTER PLW_STACK             pstkFristFree;
     REGISTER size_t                stStackSizeWordAlign;                /*  堆栈大小(单位：字)          */
     
              PLW_CLASS_COROUTINE   pcrcbNew;
@@ -85,7 +85,7 @@ PVOID   API_CoroutineCreate (PCOROUTINE_START_ROUTINE pCoroutineStartAddr,
     }
 #endif
 
-    pstkLowAddress = (PSTACK)__KHEAP_ALLOC(stStackByteSize);            /*  分配内存                    */
+    pstkLowAddress = (PLW_STACK)__KHEAP_ALLOC(stStackByteSize);         /*  分配内存                    */
     if (!pstkLowAddress) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "kernel low memory.\r\n");
         _ErrorHandle(ERROR_KERNEL_LOW_MEMORY);
@@ -100,14 +100,14 @@ PVOID   API_CoroutineCreate (PCOROUTINE_START_ROUTINE pCoroutineStartAddr,
     pstkButtom = pstkLowAddress + stStackSizeWordAlign - 1;
     
     pcrcbNew   = (PLW_CLASS_COROUTINE)pstkTop;                          /*  寻找 CRCB 区域              */
-    pstkTop    = (PSTACK)((BYTE *)pstkTop + __CRCB_SIZE_ALIGN + sizeof(STACK));    
+    pstkTop    = (PLW_STACK)((BYTE *)pstkTop + __CRCB_SIZE_ALIGN + sizeof(LW_STACK));    
                                                                         /*  寻找主堆栈区                */
 #else
     pstkTop    = pstkLowAddress + stStackSizeWordAlign - 1;
     pstkButtom = pstkLowAddress;
     
-    pstkTop    = (PSTACK)((BYTE *)pstkTop - __CRCB_SIZE_ALIGN - sizeof(STACK));
-    pcrcbNew   = (PLW_CLASS_COROUTINE)((BYTE *)pstkTop + sizeof(STACK));
+    pstkTop    = (PLW_STACK)((BYTE *)pstkTop - __CRCB_SIZE_ALIGN - sizeof(LW_STACK));
+    pcrcbNew   = (PLW_CLASS_COROUTINE)((BYTE *)pstkTop + sizeof(LW_STACK));
 #endif                                                                  /*  CPU_STK_GROWTH == 0         */
     
     if (ptcbCur->TCB_ulOption & LW_OPTION_THREAD_STK_CLR) {

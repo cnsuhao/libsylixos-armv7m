@@ -106,7 +106,7 @@ typedef __builtin_va_list    va_list;
 
 typedef char  *va_list;
 
-#define __STACK_SIZEOF(n)    ((sizeof(n) + sizeof(STACK) - 1) & ~(sizeof(STACK) - 1))
+#define __STACK_SIZEOF(n)    ((sizeof(n) + sizeof(LW_STACK) - 1) & ~(sizeof(LW_STACK) - 1))
 
 #if LW_CFG_ARG_STACK_GROWTH == 0                                        /*  连续参数地址递增            */
 #define va_start(ap, v)      (ap = (va_list)&v + __STACK_SIZEOF(v))

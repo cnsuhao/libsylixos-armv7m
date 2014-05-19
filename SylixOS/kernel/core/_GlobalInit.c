@@ -44,8 +44,8 @@
 /*********************************************************************************************************
   中断堆栈定义
 *********************************************************************************************************/
-STACK    _K_stkInterruptStack[LW_CFG_MAX_PROCESSORS][LW_CFG_INT_STK_SIZE / sizeof(STACK)];
-PSTACK   _K_pstkInterruptBase[LW_CFG_MAX_PROCESSORS];                   /*  中断处理时的堆栈基地址      */
+LW_STACK    _K_stkInterruptStack[LW_CFG_MAX_PROCESSORS][LW_CFG_INT_STK_SIZE / sizeof(LW_STACK)];
+PLW_STACK   _K_pstkInterruptBase[LW_CFG_MAX_PROCESSORS];                /*  中断处理时的堆栈基地址      */
                                                                         /*  通过 CPU_STK_GROWTH 判断    */
 /*********************************************************************************************************
 ** 函数名称: __interStackInit
@@ -63,7 +63,7 @@ static VOID  __interStackInit (VOID)
 #if CPU_STK_GROWTH == 0
         _K_pstkInterruptBase[i] = &_K_stkInterruptStack[i][0];
 #else
-        _K_pstkInterruptBase[i] = &_K_stkInterruptStack[i][(LW_CFG_INT_STK_SIZE / sizeof(STACK)) - 1];
+        _K_pstkInterruptBase[i] = &_K_stkInterruptStack[i][(LW_CFG_INT_STK_SIZE / sizeof(LW_STACK)) - 1];
 #endif                                                                  /*  CPU_STK_GROWTH              */
         lib_memset((PVOID)_K_stkInterruptStack[i], 
                    LW_CFG_STK_EMPTY_FLAG, 

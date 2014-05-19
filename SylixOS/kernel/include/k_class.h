@@ -277,14 +277,14 @@ typedef LW_CLASS_MSGQUEUE   *PLW_CLASS_MSGQUEUE;
 #if LW_CFG_COROUTINE_EN > 0
 
 typedef struct {
-    PSTACK                COROUTINE_pstkStackNow;                       /*  线程当前堆栈指针            */
-    PSTACK                COROUTINE_pstkStackTop;                       /*  线程主堆栈栈顶              */
+    PLW_STACK             COROUTINE_pstkStackNow;                       /*  线程当前堆栈指针            */
+    PLW_STACK             COROUTINE_pstkStackTop;                       /*  线程主堆栈栈顶              */
                                                                         /*  不包括 CRCB 堆栈区          */
-    PSTACK                COROUTINE_pstkStackBottom;                    /*  线程主堆栈栈底              */
+    PLW_STACK             COROUTINE_pstkStackBottom;                    /*  线程主堆栈栈底              */
                                                                         /*  不包括 CRCB 堆栈区          */
     size_t                COROUTINE_stStackSize;                        /*  线程堆栈大小(单位：字)      */
                                                                         /*  包括 CRCB 在内的所有堆栈    */
-    PSTACK                COROUTINE_pstkStackLowAddr;                   /*  总堆栈最低地址              */
+    PLW_STACK             COROUTINE_pstkStackLowAddr;                   /*  总堆栈最低地址              */
     
     LW_LIST_RING          COROUTINE_ringRoutine;                        /*  协程中的协程列表            */
     PVOID                 COROUTINE_pvArg;                              /*  协程运行参数                */
@@ -325,7 +325,7 @@ typedef LW_CLASS_THREADVAR *PLW_CLASS_THREADVAR;
 *********************************************************************************************************/
 
 typedef struct {
-     PSTACK               THREADATTR_pstkLowAddr;                       /*  全部堆栈区低内存起始地址    */
+     PLW_STACK            THREADATTR_pstkLowAddr;                       /*  全部堆栈区低内存起始地址    */
      size_t               THREADATTR_stGuardSize;                       /*  堆栈警戒区大小              */
      size_t               THREADATTR_stStackByteSize;                   /*  全部堆栈区大小(字节)        */
      UINT8                THREADATTR_ucPriority;                        /*  线程优先级                  */
@@ -403,19 +403,19 @@ typedef LW_SHELL_CONTEXT *PLW_SHELL_CONTEXT;
 #endif
 
 typedef struct __lw_tcb {
-    PSTACK                TCB_pstkStackNow;                             /*  线程当前堆栈指针            */
+    PLW_STACK             TCB_pstkStackNow;                             /*  线程当前堆栈指针            */
     PVOID                 TCB_pvStackFP;                                /*  浮点运算器上下文指针        */
     PVOID                 TCB_pvStackExt;                               /*  扩展堆栈区                  */
     
     LW_LIST_MONO          TCB_monoResrcList;                            /*  空闲资源表                  */
     UINT16                TCB_usIndex;                                  /*  缓冲区中的下标              */
     
-    PSTACK                TCB_pstkStackTop;                             /*  线程堆栈栈顶(起始点)        */
-    PSTACK                TCB_pstkStackBottom;                          /*  线程堆栈栈底(结束点)        */
+    PLW_STACK             TCB_pstkStackTop;                             /*  线程堆栈栈顶(起始点)        */
+    PLW_STACK             TCB_pstkStackBottom;                          /*  线程堆栈栈底(结束点)        */
     size_t                TCB_stStackSize;                              /*  线程堆栈大小(单位：字)      */
-    PSTACK                TCB_pstkStackLowAddr;                         /*  总堆栈最低地址              */
+    PLW_STACK             TCB_pstkStackLowAddr;                         /*  总堆栈最低地址              */
     
-    PSTACK                TCB_pstkStackGuard;                           /*  堆栈警戒点                  */
+    PLW_STACK             TCB_pstkStackGuard;                           /*  堆栈警戒点                  */
     
 #if LW_CFG_CPU_FPU_EN > 0
     LW_FPU_CONTEXT        TCB_fpuctxContext;                            /*  FPU 上下文                  */
@@ -642,15 +642,15 @@ typedef LW_CLASS_TCB     *PLW_CLASS_TCB;
 *********************************************************************************************************/
 
 typedef struct __lw_tcb_desc {
-    PSTACK                TCBD_pstkStackNow;                            /*  线程当前堆栈指针            */
+    PLW_STACK             TCBD_pstkStackNow;                            /*  线程当前堆栈指针            */
     PVOID                 TCBD_pvStackFP;                               /*  浮点运算器上下文指针        */
     PVOID                 TCBD_pvStackExt;                              /*  扩展堆栈区                  */
     
-    PSTACK                TCBD_pstkStackTop;                            /*  线程堆栈栈顶(起始点)        */
-    PSTACK                TCBD_pstkStackBottom;                         /*  线程堆栈栈底(结束点)        */
+    PLW_STACK             TCBD_pstkStackTop;                            /*  线程堆栈栈顶(起始点)        */
+    PLW_STACK             TCBD_pstkStackBottom;                         /*  线程堆栈栈底(结束点)        */
     size_t                TCBD_stStackSize;                             /*  线程堆栈大小(单位：字)      */
-    PSTACK                TCBD_pstkStackLowAddr;                        /*  总堆栈最低地址              */
-    PSTACK                TCBD_pstkStackGuard;                          /*  警戒区指针                  */
+    PLW_STACK             TCBD_pstkStackLowAddr;                        /*  总堆栈最低地址              */
+    PLW_STACK             TCBD_pstkStackGuard;                          /*  警戒区指针                  */
     
     INT                   TCBD_iSchedRet;                               /*  调度器返回的值, signal      */
     ULONG                 TCBD_ulOption;                                /*  线程选项                    */

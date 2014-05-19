@@ -49,7 +49,7 @@ ULONG   API_CoroutineStackCheck (PVOID      pvCrcb,
     REGISTER size_t                stTotal;
     REGISTER size_t                stFree = 0;
     
-    REGISTER PSTACK                pstkButtom;
+    REGISTER PLW_STACK             pstkButtom;
 
     if (!pcrcb) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "coroutine handle invalidate.\r\n");
@@ -74,11 +74,11 @@ ULONG   API_CoroutineStackCheck (PVOID      pvCrcb,
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     
     if (pstFreeByteSize) {
-        *pstFreeByteSize = stFree * sizeof(STACK);
+        *pstFreeByteSize = stFree * sizeof(LW_STACK);
     }
     
     if (pstUsedByteSize) {
-        *pstUsedByteSize = (stTotal - stFree) * sizeof(STACK);
+        *pstUsedByteSize = (stTotal - stFree) * sizeof(LW_STACK);
     }
     
     if (pstCrcbByteSize) {

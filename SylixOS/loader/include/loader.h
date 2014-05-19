@@ -91,7 +91,6 @@ LW_API INT      API_ModuleRun(CPCHAR  pcFile, CPCHAR  pcEntry);         /*  运行
 
 LW_API INT      API_ModuleRunEx(CPCHAR  pcFile,
                                 CPCHAR  pcEntry,
-                                BOOL    bStop,
                                 INT     iArgC,
                                 CPCHAR  ppcArgV[],
                                 CPCHAR  ppcEnv[]);                      /*  带参数运行模块              */

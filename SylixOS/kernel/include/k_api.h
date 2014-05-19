@@ -131,7 +131,7 @@ LW_API ULONG            API_ThreadAttrBuild(PLW_CLASS_THREADATTR    pthreadattr,
                                                                         /*  生成一个线程属性块          */
                                             
 LW_API ULONG            API_ThreadAttrBuildEx(PLW_CLASS_THREADATTR    pthreadattr,
-                                              PSTACK                  pstkStackTop, 
+                                              PLW_STACK               pstkStackTop, 
                                               size_t                  stStackByteSize, 
                                               UINT8                   ucPriority, 
                                               ULONG                   ulOption, 
