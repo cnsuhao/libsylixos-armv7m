@@ -20,6 +20,7 @@
 
 ** BUG:
 2011.11.17  varinfo 中加入色彩位域信息.
+2014.05.20  可以设置 varinfo.
 *********************************************************************************************************/
 
 #ifndef __GMEMDEV_H
@@ -99,8 +100,13 @@ typedef struct gmem_file_operations {
     
     INT               (*GMFO_pfuncGetVarInfo)(LONG            lDev, 
                                               PLW_GM_VARINFO  pgmvi);   /*  获得 VARINFO                */
+    INT               (*GMFO_pfuncSetVarInfo)(LONG                  lDev, 
+                                              const PLW_GM_VARINFO  pgmvi);
+                                                                        /*  设置 VARINFO                */
     INT               (*GMFO_pfuncGetScrInfo)(LONG            lDev, 
                                               PLW_GM_SCRINFO  pgmsi);   /*  获得 SCRINFO                */
+    INT               (*GMFO_pfuncGetMode)(LONG     lDev, 
+                                           ULONG   *pulMode);           /*  获取显示模式                */
     INT               (*GMFO_pfuncSetMode)(LONG     lDev, 
                                            ULONG    ulMode);            /*  设置显示模式                */
                                            
@@ -162,16 +168,18 @@ typedef LW_GM_DEVICE           *PLW_GM_DEVICE;
 /*********************************************************************************************************
   标准屏幕命令 ioctl
 *********************************************************************************************************/
-
 #define LW_GM_GET_VARINFO               200                             /*  获得显示规格                */
-#define LW_GM_GET_SCRINFO               201                             /*  获得显示属性                */
-#define LW_GM_GET_FRAMEMEM              202                             /*  获得显示 framebuffer 基址   */
+#define LW_GM_SET_VARINFO               201                             /*  设置显示规格                */
+#define LW_GM_GET_SCRINFO               202                             /*  获得显示属性                */
+#define LW_GM_GET_FRAMEMEM              203                             /*  获得显示 framebuffer 基址   */
 
 /*********************************************************************************************************
   显示模式
 *********************************************************************************************************/
 #define LW_GM_MODE_PALETTE              0x80000000                      /*  调色板模式掩码              */
-#define LW_GM_SET_MODE                  203                             /*  设置显示模式                */
+
+#define LW_GM_GET_MODE                  204                             /*  获取显示模式                */
+#define LW_GM_SET_MODE                  205                             /*  设置显示模式                */
 
 /*********************************************************************************************************
   显示模式

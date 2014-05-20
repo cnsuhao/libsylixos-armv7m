@@ -98,12 +98,61 @@ static INT  __dtraceReadMsg (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg)
         return  (PX_ERROR);
     }
     
+    while (DPOOL_MSG[DPOOL_OUT].DTM_ulThread == LW_OBJECT_HANDLE_INVALID) {
+        DPOOL_OUT++;
+        if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
+            DPOOL_OUT =  0;
+        }
+    }
+    
     *pdmsg = DPOOL_MSG[DPOOL_OUT];
+    DPOOL_MSG[DPOOL_OUT].DTM_ulThread = LW_OBJECT_HANDLE_INVALID;
     DPOOL_OUT++;
     DPOOL_NUM--;
     
     if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
         DPOOL_OUT =  0;
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __dtraceReadMsgEx
+** 功能描述: 读取一个调试信息
+** 输　入  : pdtrace       dtrace 节点
+**           dmsg          调试信息
+**           ulThread      指定的线程 ID
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __dtraceReadMsgEx (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg, LW_OBJECT_HANDLE  ulThread)
+{
+    UINT    uiI = DPOOL_OUT;
+
+    if (DPOOL_NUM == 0) {
+        return  (PX_ERROR);
+    }
+    
+    while (DPOOL_MSG[uiI].DTM_ulThread != ulThread) {
+        uiI++;
+        if (uiI >= LW_CFG_MAX_THREADS) {
+            uiI =  0;
+        }
+        if (uiI == DPOOL_IN) {
+            return  (PX_ERROR);                                         /*  没有对应线程信息            */
+        }
+    }
+    
+    *pdmsg = DPOOL_MSG[uiI];
+    DPOOL_MSG[uiI].DTM_ulThread = LW_OBJECT_HANDLE_INVALID;
+    DPOOL_NUM--;
+    
+    if (DPOOL_OUT == uiI) {
+        DPOOL_OUT++;
+        if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
+            DPOOL_OUT =  0;
+        }
     }
     
     return  (ERROR_NONE);
@@ -577,13 +626,14 @@ ULONG  API_DtraceContinueProcess (PVOID  pvDtrace)
 ** 功能描述: 获得当前断点线程信息
 ** 输　入  : pvDtrace      dtrace 节点
 **           pdtm          获取的信息
+**           ulThread      指定的线程句柄
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-ULONG  API_DtraceGetBreakInfo (PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm)
+ULONG  API_DtraceGetBreakInfo (PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm, LW_OBJECT_HANDLE  ulThread)
 {
     INT         iError;
     PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
@@ -594,7 +644,11 @@ ULONG  API_DtraceGetBreakInfo (PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm)
     }
     
     __KERNEL_ENTER();                                                   /*  进入内核                    */
-    iError = __dtraceReadMsg(pdtrace, pdtm);
+    if (ulThread == LW_OBJECT_HANDLE_INVALID) {
+        iError = __dtraceReadMsg(pdtrace, pdtm);
+    } else {
+        iError = __dtraceReadMsgEx(pdtrace, pdtm, ulThread);
+    }
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
     if (iError) {

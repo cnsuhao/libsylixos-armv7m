@@ -51,7 +51,6 @@ INT   __resHandleMakeLocal(LW_OBJECT_HANDLE  ulHandle);
 *********************************************************************************************************/
 
 VOID  __resThreadDelHook(PVOID  pvVProc, LW_OBJECT_HANDLE  ulId);       /*  线程结束完毕回调            */
-INT   __resPidCanExit(pid_t  pid);                                      /*  检查进程是否可以退出        */
 INT   __resPidReclaim(pid_t  pid);                                      /*  回收指定进程的资源          */
 INT   __resPidReclaimOnlyRaw(pid_t  pid);                               /*  仅回收原始资源              */
 

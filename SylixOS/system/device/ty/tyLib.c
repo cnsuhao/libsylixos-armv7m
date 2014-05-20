@@ -50,6 +50,7 @@
 2013.10.03  ioctl() 更安全的设置缓冲区操作.
             对于一些标志, 加入 SMP 内存屏障操作.
 2014.03.03  优化代码.
+2014.05.20  tty 设备删除更加安全.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -121,8 +122,12 @@ static VOID     _TyWrtXoff(  TY_DEV_ID  ptyDev, BOOL  bXoff);           /*  设置
 /*********************************************************************************************************
   锁
 *********************************************************************************************************/
-#define TYDEV_LOCK(ptyDev)      API_SemaphoreMPend(ptyDev->TYDEV_hMutexSemM, LW_OPTION_WAIT_INFINITE)
-#define TYDEV_UNLOCK(ptyDev)    API_SemaphoreMPost(ptyDev->TYDEV_hMutexSemM)
+#define TYDEV_LOCK(ptyDev, code)    \
+        if (API_SemaphoreMPend(ptyDev->TYDEV_hMutexSemM, LW_OPTION_WAIT_INFINITE)) {    \
+            code;   \
+        }
+#define TYDEV_UNLOCK(ptyDev)        \
+        API_SemaphoreMPost(ptyDev->TYDEV_hMutexSemM)
 /*********************************************************************************************************
 ** 函数名称: _TyDevInit
 ** 功能描述: 初始化一个 TY 设备
@@ -259,7 +264,14 @@ __error_handle:
 *********************************************************************************************************/
 INT  _TyDevRemove (TY_DEV_ID  ptyDev)
 {
-    TYDEV_LOCK(ptyDev);                                                 /*  等待设备使用权              */
+    INTREG  iregInterLevel;
+
+    TYDEV_LOCK(ptyDev, return (PX_ERROR));                              /*  等待设备使用权              */
+    
+    ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bCanceled = LW_TRUE;          /*  read cancel                 */
+    ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bCanceled = LW_TRUE;          /*  write cancel                */
+    
+    LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel);         /*  锁定 spinlock 并关闭中断    */
     
     ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf  = LW_TRUE;
     ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_TRUE;
@@ -267,15 +279,15 @@ INT  _TyDevRemove (TY_DEV_ID  ptyDev)
     ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf  = LW_TRUE;
     ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_TRUE;
     
-#if LW_CFG_SMP_EN > 0
-    KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
+    LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);        /*  解锁 spinlock 并打开中断    */
     
     if (ptyDev->TYDEV_vxringidRdBuf) {
         rngDelete(ptyDev->TYDEV_vxringidRdBuf);                         /*  删除读缓冲区                */
+        ptyDev->TYDEV_vxringidRdBuf = LW_NULL;
     }
     if (ptyDev->TYDEV_vxringidWrBuf) {
         rngDelete(ptyDev->TYDEV_vxringidWrBuf);                         /*  删除写缓冲区                */
+        ptyDev->TYDEV_vxringidWrBuf = LW_NULL;
     }
     
     SEL_WAKE_UP_LIST_TERM(&ptyDev->TYDEV_selwulList);                   /*  卸载 sel 结构               */
@@ -296,7 +308,7 @@ INT  _TyDevRemove (TY_DEV_ID  ptyDev)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID     _TyFlush (TY_DEV_ID  ptyDev)
+static VOID  _TyFlush (TY_DEV_ID  ptyDev)
 {
     _TyFlushRd(ptyDev);
     _TyFlushWrt(ptyDev);
@@ -310,9 +322,9 @@ static VOID     _TyFlush (TY_DEV_ID  ptyDev)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID     _TyFlushRd (TY_DEV_ID  ptyDev)
+static VOID  _TyFlushRd (TY_DEV_ID  ptyDev)
 {
-    TYDEV_LOCK(ptyDev);                                                 /*  等待设备使用权              */
+    TYDEV_LOCK(ptyDev, return);                                         /*  等待设备使用权              */
     
     ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_TRUE;
     
@@ -346,9 +358,9 @@ static VOID     _TyFlushRd (TY_DEV_ID  ptyDev)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID     _TyFlushWrt (TY_DEV_ID  ptyDev)
+static VOID  _TyFlushWrt (TY_DEV_ID  ptyDev)
 {
-    TYDEV_LOCK(ptyDev);                                                 /*  等待设备使用权              */
+    TYDEV_LOCK(ptyDev, return);                                         /*  等待设备使用权              */
     
     ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_TRUE;
     
@@ -552,7 +564,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
         break;
         
     case FIOCANCEL:                                                     /*  暂时屏蔽 FIO 口             */
-        TYDEV_LOCK(ptyDev);                                             /*  等待设备使用权              */
+        TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bCanceled = LW_TRUE;
         API_SemaphoreBPost(ptyDev->TYDEV_hRdSyncSemB);
         ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bCanceled = LW_TRUE;
@@ -575,7 +587,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
         break;
     
     case FIORBUFSET:                                                    /*  重新设置读缓冲的大小        */
-        TYDEV_LOCK(ptyDev);                                             /*  等待设备使用权              */
+        TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_TRUE;
 #if LW_CFG_SMP_EN > 0
         KN_SMP_WMB();
@@ -597,7 +609,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
         break;
         
     case FIOWBUFSET:                                                    /*  重新设置写缓冲区            */
-        TYDEV_LOCK(ptyDev);                                             /*  等待设备使用权              */
+        TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_TRUE;
 #if LW_CFG_SMP_EN > 0
         KN_SMP_WMB();
@@ -681,7 +693,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
         break;
         
     case FIOWAITABORT:                                                  /*  停止当前等待 IO 线程        */
-        TYDEV_LOCK(ptyDev);                                             /*  等待设备使用权              */
+        TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         if (lArg & OPT_RABORT) {
             ULONG  ulBlockNum;
             API_SemaphoreBStatus(ptyDev->TYDEV_hRdSyncSemB, LW_NULL, LW_NULL, &ulBlockNum);
@@ -712,7 +724,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
     case FIOGETCC: {                                                    /*  获取特殊控制字符集          */
         PCHAR   pcCtlChars = (PCHAR)lArg;
         if (pcCtlChars) {
-            TYDEV_LOCK(ptyDev);                                         /*  等待设备使用权              */
+            TYDEV_LOCK(ptyDev, return (PX_ERROR));                      /*  等待设备使用权              */
             lib_memcpy(pcCtlChars, ptyDev->TYDEV_cCtlChars, NCCS);
             TYDEV_UNLOCK(ptyDev);                                       /*  释放设备使用权              */
         } else {
@@ -725,7 +737,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
     case FIOSETCC: {                                                    /*  设置特殊控制字符集          */
         PCHAR   pcCtlChars = (PCHAR)lArg;
         if (pcCtlChars) {
-            TYDEV_LOCK(ptyDev);                                         /*  等待设备使用权              */
+            TYDEV_LOCK(ptyDev, return (PX_ERROR));                      /*  等待设备使用权              */
             lib_memcpy(ptyDev->TYDEV_cCtlChars, pcCtlChars, NCCS);
             TYDEV_UNLOCK(ptyDev);                                       /*  释放设备使用权              */
         } else {
@@ -807,7 +819,7 @@ ssize_t  _TyWrite (TY_DEV_ID  ptyDev,
             return  (sstNbStart - stNBytes);
         }
         
-        TYDEV_LOCK(ptyDev);                                             /*  等待设备使用权              */
+        TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         
         if (ptyDev->TYDEV_iAbortFlag & OPT_WABORT) {                    /*  is abort?                   */
             TYDEV_UNLOCK(ptyDev);                                       /*  释放设备使用权              */
@@ -900,7 +912,7 @@ __re_read:
             return  (sstNTotalbytes);
         }
         
-        TYDEV_LOCK(ptyDev);                                             /*  等待设备使用权              */
+        TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         
         if (ptyDev->TYDEV_iAbortFlag & OPT_RABORT) {                    /*  is abort                    */
             TYDEV_UNLOCK(ptyDev);                                       /*  释放设备使用权              */
@@ -1036,7 +1048,7 @@ __re_read:
             return  (sstNTotalbytes);
         }
         
-        TYDEV_LOCK(ptyDev);                                             /*  等待设备使用权              */
+        TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         
         if (ptyDev->TYDEV_iAbortFlag & OPT_RABORT) {                    /*  is abort                    */
             TYDEV_UNLOCK(ptyDev);                                       /*  释放设备使用权              */

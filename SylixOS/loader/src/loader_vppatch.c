@@ -47,6 +47,7 @@
 2013.09.21  exec 在当前进程上下文中运行新的文件不再切换主线程.
 2014.05.13  支持进程启动后等待调试器信号后运行.
 2014.05.17  加入 GDB 调试所需的一些获取信息的函数.
+2014.05.20  用更加快捷的方法判断进程是否允许退出.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -689,6 +690,27 @@ VOID  vprocReclaim (LW_LD_VPROC *pvproc, BOOL  bFreeVproc)
     }
 }
 /*********************************************************************************************************
+** 函数名称: vprocCanExit
+** 功能描述: 进程是否能够退出
+** 输　入  : NONE
+** 输　出  : LW_TRUE 允许 LW_FALSE 不允许
+** 全局变量:
+** 调用模块: 
+*********************************************************************************************************/
+static BOOL vprocCanExit (VOID)
+{
+    PLW_CLASS_TCB   ptcbCur;
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);
+    
+    if (_list_line_get_next(&ptcbCur->TCB_lineProcess)) {
+        return  (LW_FALSE);
+    
+    } else {
+        return  (LW_TRUE);
+    }
+}
+/*********************************************************************************************************
 ** 函数名称: vprocAtExit
 ** 功能描述: 进程自行退出时, 会调用此函数运行 atexit 函数以及整个进程的析构函数.
 ** 输　入  : pvproc     进程控制块指针
@@ -754,8 +776,7 @@ __recheck:
 #endif                                                                  /*  LW_CFG_THREAD_EXT_EN > 0    */
     
     do {                                                                /*  等待所有的线程安全退出      */
-        INT iError = __resPidCanExit(pvproc->VP_pid);                   /*  进程是否可以退出            */
-        if (iError < ERROR_NONE) {
+        if (vprocCanExit() == LW_FALSE) {                               /*  进程是否可以退出            */
             API_SemaphoreBPend(pvproc->VP_ulWaitForExit, LW_OPTION_WAIT_INFINITE);
         } else {
             break;                                                      /*  只有这一个线程了            */
@@ -830,8 +851,7 @@ __recheck:
 #endif                                                                  /*  LW_CFG_THREAD_EXT_EN > 0    */
 
     do {                                                                /*  等待所有的线程安全退出      */
-        INT iError = __resPidCanExit(pvproc->VP_pid);                   /*  进程是否可以退出            */
-        if (iError < ERROR_NONE) {
+        if (vprocCanExit() == LW_FALSE) {                               /*  进程是否可以退出            */
             API_SemaphoreBPend(pvproc->VP_ulWaitForExit, LW_OPTION_WAIT_INFINITE);
         } else {
             break;                                                      /*  只有这一个线程了            */

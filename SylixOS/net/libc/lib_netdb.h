@@ -41,21 +41,21 @@ extern "C" {
 #define _PATH_SERVICES_DB   "/var/db/services.db"
 #endif
 
-struct    netent {
+struct netent {
     char         *n_name;                                               /* official name of net         */
     char        **n_aliases;                                            /* alias list                   */
     int           n_addrtype;                                           /* net address type             */
     uint32_t      n_net;                                                /* network #                    */
 };
 
-struct    servent {
+struct servent {
     char     *s_name;                                                   /* official service name        */
     char    **s_aliases;                                                /* alias list                   */
     int       s_port;                                                   /* port #                       */
     char     *s_proto;                                                  /* protocol to use              */
 };
 
-struct    protoent {
+struct protoent {
     char     *p_name;                                                   /* official protocol name       */
     char    **p_aliases;                                                /* alias list                   */
     int       p_proto;                                                  /* protocol #                   */
@@ -93,7 +93,7 @@ const char         *inet_ntop(int af, const void *src, char *dst, socklen_t size
   Scope delimit character
 *********************************************************************************************************/
 
-#define    SCOPE_DELIMITER    '%'
+#define SCOPE_DELIMITER '%'
 
 /*********************************************************************************************************
   Error return codes from getaddrinfo()

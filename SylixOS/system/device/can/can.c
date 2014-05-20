@@ -857,8 +857,8 @@ static ssize_t __canRead (__CAN_DEV       *pcanDev,
              ULONG        ulError;
 
     for (;;) {
-       ulError = API_SemaphoreBPend(pcanDev->CAN_ulRcvSemB,
-                                    pcanDev->CAN_ulRecvTimeOut);
+        ulError = API_SemaphoreBPend(pcanDev->CAN_ulRcvSemB,
+                                     pcanDev->CAN_ulRecvTimeOut);
         if (ulError) {
            _ErrorHandle(ERROR_IO_DEVICE_TIMEOUT);                       /*  ³¬Ê±                        */
            return   (0);

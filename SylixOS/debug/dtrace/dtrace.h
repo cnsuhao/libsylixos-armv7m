@@ -77,7 +77,7 @@ LW_API ULONG    API_DtraceStopProcess(PVOID  pvDtrace);
 LW_API ULONG    API_DtraceContinueProcess(PVOID  pvDtrace);
 LW_API ULONG    API_DtraceProcessThread(PVOID  pvDtrace, LW_OBJECT_HANDLE ulThread[], 
                                         UINT   uiTableNum, UINT *puiThreadNum);
-LW_API ULONG    API_DtraceGetBreakInfo(PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm);
+LW_API ULONG    API_DtraceGetBreakInfo(PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm, LW_OBJECT_HANDLE  ulThread);
 LW_API ULONG    API_DtraceThreadExtraInfo(PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread,
                                           PCHAR  pcExtraInfo, size_t  stSize);
 

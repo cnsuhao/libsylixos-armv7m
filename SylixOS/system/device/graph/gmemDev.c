@@ -151,10 +151,27 @@ LW_API time_t  API_RootFsTime(time_t  *time);
         iError = pgmdev->GMDEV_gmfileop->GMFO_pfuncGetVarInfo((LONG)pgmdev, (PLW_GM_VARINFO)lArg);
         break;
         
+    case LW_GM_SET_VARINFO:
+        if (pgmdev->GMDEV_gmfileop->GMFO_pfuncSetVarInfo) {
+            iError = pgmdev->GMDEV_gmfileop->GMFO_pfuncSetVarInfo((LONG)pgmdev, 
+                                                                  (const PLW_GM_VARINFO)lArg);
+        } else {
+            _ErrorHandle(ENOSYS);
+        }
+        break;
+        
     case LW_GM_GET_SCRINFO:
         iError = pgmdev->GMDEV_gmfileop->GMFO_pfuncGetScrInfo((LONG)pgmdev, (PLW_GM_SCRINFO)lArg);
         break;
-        
+
+    case LW_GM_GET_MODE:
+        if (pgmdev->GMDEV_gmfileop->GMFO_pfuncGetMode) {
+            iError = pgmdev->GMDEV_gmfileop->GMFO_pfuncGetMode((LONG)pgmdev, (ULONG *)lArg);
+        } else {
+            _ErrorHandle(ENOSYS);
+        }
+        break;
+
     case LW_GM_SET_MODE:
         if (pgmdev->GMDEV_gmfileop->GMFO_pfuncSetMode) {
             iError = pgmdev->GMDEV_gmfileop->GMFO_pfuncSetMode((LONG)pgmdev, (ULONG)lArg);

@@ -23,6 +23,7 @@
 ** BUG:
 2012.12.21  1.0.0.rc36 版以后的 SylixOS 实现了进程独立文件描述符, 这里不再使用 hook 回收文件描述符.
 2013.09.04  加入对没有 global 属性的 powerm 节点回收功能.
+2014.05.20  删除 __resPidCanExit() 函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "unistd.h"
@@ -282,35 +283,6 @@ VOID  __resThreadDelHook (PVOID  pvVProc, LW_OBJECT_HANDLE  ulId)
     if (pvVProc) {
         vprocThreadExitHook(pvVProc, ulId);
     }
-}
-/*********************************************************************************************************
-** 函数名称: __resPidCanExit
-** 功能描述: 检查一个进程是否可以退出, 
-             只要存在有除本线程或者要取代本线程的 exec 新线程以外, 还有线程存在, 则不能退出.
-** 输　入  : pid           进程号
-** 输　出  : 是否可以退出
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-INT  __resPidCanExit (pid_t  pid)
-{
-    INT                 i;
-    PLW_RESOURCE_H      presh;
-    
-    if (pid == 0) {
-        return  (ERROR_NONE);                                           /*  内核, 不执行回收操作        */
-    }
-    
-    for (i = 0; i < LW_CFG_MAX_THREADS; i++) {                          /*  处理线程                    */
-        presh = &_G_reshThreadBuffer[i];
-        if ((presh->RESH_pid == pid) && !presh->RESH_bIsGlobal) {
-            if (presh->RESH_ulHandle != API_ThreadIdSelf()) {
-                return  (PX_ERROR);                                     /*  还存在另外没有完成的线程    */
-            }
-        }
-    }
-    
-    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __resPidReclaim
