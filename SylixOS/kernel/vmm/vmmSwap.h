@@ -28,6 +28,7 @@
 
 typedef struct {
     PVOID               PAGEFCTX_pvStackRet;                            /*  跳跃返回堆栈的地址          */
+    addr_t              PAGEFCTX_ulRetAddr;                             /*  异常返回地址                */
     addr_t              PAGEFCTX_ulAbortAddr;                           /*  内存访问失效地址            */
     ULONG               PAGEFCTX_ulAbortType;                           /*  异常类型                    */
     LW_OBJECT_HANDLE    PAGEFCTX_ulSelf;                                /*  产生缺页中断的线程          */

@@ -72,9 +72,9 @@ ULONG   armGetAbtType (VOID)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-addr_t  armGetPreAddr (UINT32  uiRetLr)
+addr_t  armGetPreAddr (addr_t  ulRetLr)
 {
-    return  ((addr_t)(uiRetLr - 4));
+    return  (ulRetLr - 4);
 }
 /*********************************************************************************************************
 ** 函数名称: armGetPreType

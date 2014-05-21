@@ -29,6 +29,7 @@
 2012.08.24  发送信号函数支持进程号, 相应信号将发送到对方主线程.
 2012.12.12  sigprocmask 设置信号屏蔽时, 有些信号是不可屏蔽的.
 2013.01.15  sigaction 安装的信号屏蔽字, 要允许不可屏蔽的信号.
+2014.05.21  将 killTrap 改为 sigTrap 可以发送参数.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -524,35 +525,6 @@ INT  kill (LW_OBJECT_HANDLE  ulId, INT  iSigNo)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: killTrap
-** 功能描述: 向指定任务发送信号, 同时停止自己. (本程序在异常上下文中执行)
-** 输　入  : ulId                    线程 id (不允许为进程号)
-** 输　出  : ERROR or OK
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-*********************************************************************************************************/
-LW_API  
-INT  killTrap (LW_OBJECT_HANDLE  ulId)
-{
-    REGISTER PLW_CLASS_TCB  ptcbCur;
-    
-    if (!LW_CPU_GET_CUR_NESTING()) {                                    /*  必须在异常中                */
-        return  (PX_ERROR);
-    }
-    
-    LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
-    
-    __KERNEL_ENTER();                                                   /*  进入内核                    */
-    _ThreadStop(ptcbCur);
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
-    
-    _excJobAdd((VOIDFUNCPTR)kill, (PVOID)ulId, (PVOID)SIGTRAP, 0, 0, 0, 0);
-    
-    _ErrorHandle(ERROR_NONE);
-    return  (ERROR_NONE);
-}
-/*********************************************************************************************************
 ** 函数名称: raise
 ** 功能描述: 向自己发送信号
 ** 输　入  : iSigNo                  信号
@@ -670,6 +642,35 @@ LW_API
 INT  sigqueue (LW_OBJECT_HANDLE  ulId, INT   iSigNo, const union sigval  sigvalue)
 {
     return  (sigqueue_internal(ulId, iSigNo, sigvalue.sival_ptr));
+}
+/*********************************************************************************************************
+** 函数名称: sigTrap
+** 功能描述: 向指定任务发送信号, 同时停止自己. (本程序在异常上下文中执行)
+** 输　入  : ulId                    线程 id (不允许为进程号)
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  sigTrap (LW_OBJECT_HANDLE  ulId, const union sigval  sigvalue)
+{
+    REGISTER PLW_CLASS_TCB  ptcbCur;
+    
+    if (!LW_CPU_GET_CUR_NESTING()) {                                    /*  必须在异常中                */
+        return  (PX_ERROR);
+    }
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    _ThreadStop(ptcbCur);
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    _excJobAdd((VOIDFUNCPTR)sigqueue_internal, (PVOID)ulId, (PVOID)SIGTRAP, sigvalue.sival_ptr, 0, 0, 0);
+    
+    _ErrorHandle(ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: pause

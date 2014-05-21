@@ -24,6 +24,7 @@
   裁减配置
 *********************************************************************************************************/
 #if LW_CFG_GDB_EN > 0
+#include "dtrace.h"
 #if LW_CFG_CACHE_EN > 0
 #include "../mm/cache/armCacheCommon.h"
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
@@ -31,7 +32,7 @@
   ARM 断点使用未定义指令异常
 *********************************************************************************************************/
 #define ARM_BREAKPOINT_INS          0xE7FFDEFE
-#define ARM_THUMB_BREAKPOINT_INS    0xDEDE
+#define ARM_ABORTPOINT_INS          0xE7FFDDFE
 /*********************************************************************************************************
 ** 函数名称: archDbgBpInsert
 ** 功能描述: 插入一个断点.
@@ -45,6 +46,25 @@ VOID  archDbgBpInsert (addr_t  ulAddr, ULONG  *pulIns)
 {
     *pulIns = *(ULONG *)ulAddr;
     *(ULONG *)ulAddr = ARM_BREAKPOINT_INS;
+    
+#if LW_CFG_CACHE_EN > 0
+    armDCacheFlushMVA((PVOID)ulAddr);
+    armICacheInvalidate((PVOID)ulAddr, sizeof(ULONG));
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
+}
+/*********************************************************************************************************
+** 函数名称: archDbgAbInsert
+** 功能描述: 插入一个异常点.
+** 输　入  : ulAddr         断点地址
+**           pulIns         返回的之前的指令
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  archDbgAbInsert (addr_t  ulAddr, ULONG  *pulIns)
+{
+    *pulIns = *(ULONG *)ulAddr;
+    *(ULONG *)ulAddr = ARM_ABORTPOINT_INS;
     
 #if LW_CFG_CACHE_EN > 0
     armDCacheFlushMVA((PVOID)ulAddr);
@@ -70,19 +90,25 @@ VOID  archDbgBpRemove (addr_t  ulAddr, ULONG  ulIns)
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }
 /*********************************************************************************************************
-** 函数名称: archDbgIsBp
-** 功能描述: 判断指定位置是否是一个断点.
+** 函数名称: archDbgTrapType
+** 功能描述: 获取 trap 类型.
 ** 输　入  : ulAddr         断点地址
-** 输　出  : LW_TRUE or LW_FALSE
+** 输　出  : LW_TRAP_INVAL / LW_TRAP_BRKPT / LW_TRAP_ABORT
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-BOOL  archDbgIsBp (addr_t  ulAddr)
+UINT  archDbgTrapType (addr_t  ulAddr)
 {
-    if (*(ULONG *)ulAddr == ARM_BREAKPOINT_INS) {
-        return  (LW_TRUE);
-    } else {
-        return  (LW_FALSE);
+    switch (*(ULONG *)ulAddr) {
+    
+    case ARM_BREAKPOINT_INS:
+        return  (LW_TRAP_BRKPT);
+        
+    case ARM_ABORTPOINT_INS:
+        return  (LW_TRAP_ABORT);
+        
+    default:
+        return  (LW_TRAP_INVAL);
     }
 }
 #endif                                                                  /*  LW_CFG_GDB_EN > 0           */

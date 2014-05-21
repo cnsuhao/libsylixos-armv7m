@@ -175,7 +175,7 @@ static VOID  __dtraceThreadCb (LW_OBJECT_HANDLE  ulId, LW_OBJECT_HANDLE  ulThrea
     }
 }
 /*********************************************************************************************************
-** 函数名称: API_DtraceTrap
+** 函数名称: API_DtraceBreakTrap
 ** 功能描述: 有一个线程触发断点
 ** 输　入  : ulAddr        触发地址
 ** 输　出  : ERROR
@@ -184,7 +184,7 @@ static VOID  __dtraceThreadCb (LW_OBJECT_HANDLE  ulId, LW_OBJECT_HANDLE  ulThrea
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-INT  API_DtraceTrap (addr_t  ulAddr)
+INT  API_DtraceBreakTrap (addr_t  ulAddr)
 {
 #if LW_CFG_MODULELOADER_EN > 0
     LW_OBJECT_HANDLE    ulDbger;
@@ -193,6 +193,7 @@ INT  API_DtraceTrap (addr_t  ulAddr)
     PLW_CLASS_TCB       ptcbCur;
     PLW_DTRACE          pdtrace;
     LW_DTRACE_MSG       dtm;
+    union sigval        sigvalue;
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
@@ -202,6 +203,7 @@ INT  API_DtraceTrap (addr_t  ulAddr)
     }
     
     dtm.DTM_ulAddr   = ulAddr;
+    dtm.DTM_uiType   = archDbgTrapType(ulAddr);                         /*  获得 trap 类型              */
     dtm.DTM_ulThread = ptcbCur->TCB_ulId;
     
     __KERNEL_ENTER();                                                   /*  进入内核                    */
@@ -222,7 +224,98 @@ INT  API_DtraceTrap (addr_t  ulAddr)
     
     } else {
         _DebugHandle(__LOGMESSAGE_LEVEL, "dtrace trap.\r\n");
-        killTrap(ulDbger);                                              /*  通知调试器线程              */
+        sigvalue.sival_int = dtm.DTM_uiType;
+        sigTrap(ulDbger, sigvalue);                                     /*  通知调试器线程              */
+        return  (ERROR_NONE);
+    }
+#else
+    return  (PX_ERROR);
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceAbortTrap
+** 功能描述: 有一个线程触发非可控异常
+** 输　入  : ulAddr        触发地址
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  API_DtraceAbortTrap (addr_t  ulAddr)
+{
+#if LW_CFG_MODULELOADER_EN > 0
+    ULONG               ulIns;
+    PLW_LIST_LINE       plineTemp;
+    LW_LD_VPROC        *pvproc;
+    PLW_CLASS_TCB       ptcbCur;
+    PLW_DTRACE          pdtrace;
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);
+    
+    pvproc = __LW_VP_GET_TCB_PROC(ptcbCur);
+    if (!pvproc || (pvproc->VP_pid <= 0)) {
+        return  (PX_ERROR);
+    }
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    for (plineTemp  = _G_plineDtraceHeader;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {                 /*  查找对应的调试器            */
+        pdtrace = _LIST_ENTRY(plineTemp, LW_DTRACE, DTRACE_lineManage);
+        if (pdtrace->DTRACE_pid == pvproc->VP_pid) {
+            break;
+        }
+    }
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    if (plineTemp == LW_NULL) {                                         /*  此进程不存在调试器          */
+        return  (PX_ERROR);
+    
+    } else {
+        archDbgAbInsert(ulAddr, &ulIns);                                /*  建立一个断点                */
+        return  (ERROR_NONE);
+    }
+#else
+    return  (PX_ERROR);
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceChildSig
+** 功能描述: 被调试线程通知
+** 输　入  : pid           进程号
+**           psigevent     信号信息
+**           psiginfo      信号信息
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  API_DtraceChildSig (pid_t pid, struct sigevent *psigevent, struct siginfo *psiginfo)
+{
+#if LW_CFG_MODULELOADER_EN > 0
+    PLW_LIST_LINE       plineTemp;
+    PLW_DTRACE          pdtrace;
+    LW_OBJECT_HANDLE    ulDbger;
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    for (plineTemp  = _G_plineDtraceHeader;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {                 /*  查找对应的调试器            */
+        pdtrace = _LIST_ENTRY(plineTemp, LW_DTRACE, DTRACE_lineManage);
+        if (pdtrace->DTRACE_pid == pid) {
+            ulDbger = pdtrace->DTRACE_ulDbger;
+            break;
+        }
+    }
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    if (plineTemp == LW_NULL) {                                         /*  此进程不存在调试器          */
+        return  (PX_ERROR);
+    
+    } else {
+        _doSigEventEx(ulDbger, psigevent, psiginfo);                    /*  产生 SIGCHLD 信号           */
         return  (ERROR_NONE);
     }
 #else

@@ -48,11 +48,15 @@
 2014.05.13  支持进程启动后等待调试器信号后运行.
 2014.05.17  加入 GDB 调试所需的一些获取信息的函数.
 2014.05.20  用更加快捷的方法判断进程是否允许退出.
+2014.05.21  notify parent 将信号同时发送给调试器.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
 #include "sys/wait.h"
+#if LW_CFG_GDB_EN > 0
+#include "dtrace.h"
+#endif
 #if LW_CFG_POSIX_EN > 0
 #include "dlfcn.h"
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
@@ -609,8 +613,9 @@ LW_OBJECT_HANDLE vprocMainThread (pid_t pid)
 *********************************************************************************************************/
 INT  vprocNotifyParent (LW_LD_VPROC *pvproc, INT  iSigCode)
 {
-    siginfo_t   siginfoChld;
-    sigevent_t  sigeventChld;
+    siginfo_t           siginfoChld;
+    sigevent_t          sigeventChld;
+    LW_OBJECT_HANDLE    ulFatherMainThread = pvproc->VP_pvprocFather->VP_ulMainThread;
     
     if (!pvproc) {
         return  (PX_ERROR);
@@ -631,32 +636,34 @@ INT  vprocNotifyParent (LW_LD_VPROC *pvproc, INT  iSigCode)
         pvproc->VP_iStatus = __LW_VP_STOP;                              /*  当前进程暂停                */
     }
     
-    if (pvproc->VP_pvprocFather) {
-        LW_OBJECT_HANDLE  ulFatherMainThread = pvproc->VP_pvprocFather->VP_ulMainThread;
-        
-        siginfoChld.si_signo = SIGCHLD;
-        siginfoChld.si_code  = iSigCode;
-        siginfoChld.si_pid   = pvproc->VP_pid;
-        siginfoChld.si_uid   = getuid();
-        
-        if (iSigCode == CLD_EXITED) {
-            siginfoChld.si_status = pvproc->VP_iExitCode;
-            siginfoChld.si_utime  = pvproc->VP_clockUser;
-            siginfoChld.si_stime  = pvproc->VP_clockSystem;
-        }
+    siginfoChld.si_signo = SIGCHLD;
+    siginfoChld.si_code  = iSigCode;
+    siginfoChld.si_pid   = pvproc->VP_pid;
+    siginfoChld.si_uid   = getuid();
+    
+    if (iSigCode == CLD_EXITED) {
+        siginfoChld.si_status = pvproc->VP_iExitCode;
+        siginfoChld.si_utime  = pvproc->VP_clockUser;
+        siginfoChld.si_stime  = pvproc->VP_clockSystem;
+    }
 
-        sigeventChld.sigev_signo           = SIGCHLD;
-        sigeventChld.sigev_value.sival_int = pvproc->VP_pid;
-        sigeventChld.sigev_notify          = SIGEV_SIGNAL;
-        
+    sigeventChld.sigev_signo           = SIGCHLD;
+    sigeventChld.sigev_value.sival_int = pvproc->VP_pid;
+    sigeventChld.sigev_notify          = SIGEV_SIGNAL;
+    
+#if LW_CFG_GDB_EN > 0
+    API_DtraceChildSig(pvproc->VP_pid, &sigeventChld, &siginfoChld);    /*  发送给调试器                */
+#endif                                                                  /*  LW_CFG_GDB_EN > 0           */
+    
+    if (pvproc->VP_pvprocFather) {
         _doSigEventEx(ulFatherMainThread, &sigeventChld, &siginfoChld); /*  产生 SIGCHLD 信号           */
         LW_LD_UNLOCK();
-        
         return  (ERROR_NONE);
-    }
-    LW_LD_UNLOCK();
     
-    return  (PX_ERROR);
+    } else {
+        LW_LD_UNLOCK();
+        return  (PX_ERROR);
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: vprocReclaim
@@ -1197,7 +1204,7 @@ pid_t  vprocFindProc (PVOID  pvAddr)
     return  (pid);
 }
 /*********************************************************************************************************
-** 函数名称: API_VprocGetModPath
+** 函数名称: vprocGetPath
 ** 功能描述: 获取进程主程序文件名
 ** 输　入  : pid         进程id
 **           stMaxLen    pcModPath缓冲区长度
@@ -1648,7 +1655,57 @@ INT  API_ModuleGetBase (pid_t  pid, PCHAR  pcModPath, addr_t  *pulAddrBase)
 
     return  (ERROR_NONE);
 }
+/*********************************************************************************************************
+** 函数名称: vprocGetModsInfo
+** 功能描述: 获取进程模块重定位信息，封装成gdb可识别的 xml 格式
+** 输　入  : pid         进程id
+**           stMaxLen    pcModPath 缓冲区长度
+** 输　出  : pcBuff      输出缓冲区
+**           返回值      xml 长度
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+#if LW_CFG_GDB_EN > 0
 
+ssize_t  vprocGetModsInfo (pid_t  pid, PCHAR  pcBuff, size_t stMaxLen)
+{
+    BOOL                bStart;
+
+    LW_LIST_RING       *pringTemp;
+    LW_LD_VPROC        *pvproc;
+    LW_LD_EXEC_MODULE  *pmodTemp;
+    size_t              stXmlLen;
+
+    LW_LD_LOCK();
+    pvproc = vprocGet(pid);
+    if (pvproc == LW_NULL) {
+        LW_LD_UNLOCK();
+        return  (PX_ERROR);
+    }
+    
+    stXmlLen = bnprintf(pcBuff, stMaxLen, 0, "<library-list>");
+
+    LW_VP_LOCK(pvproc);
+    for (pringTemp  = pvproc->VP_ringModules, bStart = LW_TRUE;
+         pringTemp && (pringTemp != pvproc->VP_ringModules || bStart);
+         pringTemp  = _list_ring_get_next(pringTemp), bStart = LW_FALSE) {
+
+        pmodTemp = _LIST_ENTRY(pringTemp, LW_LD_EXEC_MODULE, EMOD_ringModules);
+
+        stXmlLen = bnprintf(pcBuff, stMaxLen, stXmlLen, 
+                            "<library name=\"%s\"><segment address=\"0x%lx\"/></library>",
+                            pmodTemp->EMOD_pcModulePath,
+                            (ULONG)pmodTemp->EMOD_pvBaseAddr);
+    }
+    LW_VP_UNLOCK(pvproc);
+    LW_LD_UNLOCK();
+
+    stXmlLen = bnprintf(pcBuff, stMaxLen, stXmlLen, "</library-list>");
+
+    return  ((ssize_t)stXmlLen);
+}
+
+#endif                                                                  /*  LW_CFG_GDB_EN > 0           */
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 /*********************************************************************************************************

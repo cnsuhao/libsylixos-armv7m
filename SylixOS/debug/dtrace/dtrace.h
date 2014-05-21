@@ -22,6 +22,8 @@
 #ifndef __DTRACE_H
 #define __DTRACE_H
 
+#include "signal.h"
+
 /*********************************************************************************************************
   裁剪支持
 *********************************************************************************************************/
@@ -42,11 +44,21 @@
 #define LW_DTRACE_F_KBP     0x01                                        /*  内核断点使能                */
 
 /*********************************************************************************************************
+  LW_DTRACE_MSG 类型
+*********************************************************************************************************/
+
+#define LW_TRAP_INVAL       0                                           /*  无效                        */
+#define LW_TRAP_BRKPT       SIGTRAP                                     /*  断点                        */
+#define LW_TRAP_ABORT       SIGSEGV                                     /*  终止                        */
+#define LW_TRAP_WATCH       SIGTRAP                                     /*  观察点 (暂不支持)           */
+
+/*********************************************************************************************************
   断点消息
 *********************************************************************************************************/
 
 typedef struct {
     addr_t              DTM_ulAddr;                                     /*  断点地址                    */
+    UINT                DTM_uiType;                                     /*  停止类型                    */
     LW_OBJECT_HANDLE    DTM_ulThread;                                   /*  执行到断点的线程            */
 } LW_DTRACE_MSG;
 typedef LW_DTRACE_MSG  *PLW_DTRACE_MSG;
@@ -86,7 +98,9 @@ LW_API ULONG    API_DtraceThreadExtraInfo(PVOID  pvDtrace, LW_OBJECT_HANDLE  ulT
 *********************************************************************************************************/
 
 #ifdef __SYLIXOS_KERNEL
-LW_API INT      API_DtraceTrap(addr_t  ulAddr);
+LW_API INT      API_DtraceBreakTrap(addr_t  ulAddr);
+LW_API INT      API_DtraceAbortTrap(addr_t  ulAddr);
+LW_API INT      API_DtraceChildSig(pid_t pid, struct sigevent *psigevent, struct siginfo *psiginfo);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  LW_CFG_GDB_EN > 0           */

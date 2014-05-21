@@ -283,7 +283,7 @@ LW_API  INT         sigwaitinfo(const sigset_t *sigset, struct  siginfo  *psigin
 *********************************************************************************************************/
 
 #ifdef __SYLIXOS_KERNEL
-LW_API  INT         killTrap(LW_OBJECT_HANDLE  ulId);
+LW_API  INT         sigTrap(LW_OBJECT_HANDLE  ulId, const union sigval  sigvalue);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  LW_CFG_SIGNAL_EN > 0        */

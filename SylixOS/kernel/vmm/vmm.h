@@ -293,8 +293,7 @@ static LW_INLINE PVOID        API_VmmIoRemapNocache(PVOID  pvPhysicalAddr,
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 
 /*********************************************************************************************************
-  API_VmmAbortIsr() 为异常处理函数, 只允许 BSP 代码使用. 
-  
+  API_VmmAbortIsr() 为异常处理函数, 只允许 ARCH 代码使用. 
   没有使能 VMM SylixOS 依然可以处理异常情况
 *********************************************************************************************************/
 
@@ -308,9 +307,10 @@ static LW_INLINE PVOID        API_VmmIoRemapNocache(PVOID  pvPhysicalAddr,
 #define LW_VMM_ABORT_TYPE_SYS               8                           /*  系统调用异常                */
 #define LW_VMM_ABORT_TYPE_UNDEF             9                           /*  未定义指令, 将产生 SIGILL   */
 
-LW_API VOID         API_VmmAbortIsr(addr_t            ulAbortAddr, 
-                                    ULONG             ulAbortType,
-                                    PLW_CLASS_TCB     ptcb);            /*  异常中断服务函数            */
+LW_API VOID         API_VmmAbortIsr(addr_t          ulRetAddr,
+                                    addr_t          ulAbortAddr, 
+                                    ULONG           ulAbortType,
+                                    PLW_CLASS_TCB   ptcb);              /*  异常中断服务函数            */
                                     
 /*********************************************************************************************************
   vmm api macro

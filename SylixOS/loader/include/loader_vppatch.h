@@ -90,6 +90,10 @@ VOID                vprocThreadTraversal(PVOID          pvVProc,
                                          PVOID          pvArg3,
                                          PVOID          pvArg4,
                                          PVOID          pvArg5);
+                                         
+#if LW_CFG_GDB_EN > 0
+ssize_t             vprocGetModsInfo(pid_t  pid, PCHAR  pcBuff, size_t stMaxLen);
+#endif                                                                  /*  LW_CFG_GDB_EN > 0           */
 
 /*********************************************************************************************************
   vprocess нд╪ЧцХйЖ╥Ш╡ывВ

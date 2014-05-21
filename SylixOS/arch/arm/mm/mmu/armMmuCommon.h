@@ -54,7 +54,7 @@ VOID    armMmuSetProcessId(pid_t  pid);
 
 addr_t  armGetAbtAddr(VOID);
 ULONG   armGetAbtType(VOID);
-addr_t  armGetPreAddr(UINT32  uiRetLr);
+addr_t  armGetPreAddr(addr_t  ulRetLr);
 ULONG   armGetPreType(VOID);
 
 #endif                                                                  /*  __ARMMMUCOMMON_H            */

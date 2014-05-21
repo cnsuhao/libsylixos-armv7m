@@ -56,13 +56,13 @@ VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
 /*********************************************************************************************************
 ** 函数名称: archAbtHandle
 ** 功能描述: 系统发生 data abort 或者 prefetch_abort 异常时会调用此函数
-** 输　入  : ulAbortAddr   出现访问异常的内存地址.
-**           ulAbortType   异常类型
+** 输　入  : ulRetAddr     异常返回地址.
+**           uiArmExcType  ARM 异常类型
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  archAbtHandle (UINT32  uiRetAddr, UINT32  uiArmExcType)
+VOID  archAbtHandle (addr_t  ulRetAddr, UINT32  uiArmExcType)
 {
 #define ARM_EXC_TYPE_ABT    8
 #define ARM_EXC_TYPE_PRE    4
@@ -76,13 +76,13 @@ VOID  archAbtHandle (UINT32  uiRetAddr, UINT32  uiArmExcType)
         ulAbortType = armGetAbtType();
     
     } else {
-        ulAbortAddr = armGetPreAddr(uiRetAddr);
+        ulAbortAddr = armGetPreAddr(ulRetAddr);
         ulAbortType = armGetPreType();
     }
     
     LW_TCB_GET_CUR(ptcbCur);
 
-    API_VmmAbortIsr(ulAbortAddr, ulAbortType, ptcbCur);
+    API_VmmAbortIsr(ulRetAddr, ulAbortAddr, ulAbortType, ptcbCur);
 }
 /*********************************************************************************************************
 ** 函数名称: archUndHandle
@@ -97,8 +97,8 @@ VOID  archUndHandle (addr_t  ulAddr)
     PLW_CLASS_TCB   ptcbCur;
     
 #if LW_CFG_GDB_EN > 0
-    if (archDbgIsBp(ulAddr)) {                                          /*  断点指令探测                */
-        if (API_DtraceTrap(ulAddr) == ERROR_NONE) {                     /*  进入调试接口断点处理        */
+    if (archDbgTrapType(ulAddr)) {                                      /*  断点指令探测                */
+        if (API_DtraceBreakTrap(ulAddr) == ERROR_NONE) {                /*  进入调试接口断点处理        */
             return;
         }
     }
@@ -112,7 +112,7 @@ VOID  archUndHandle (addr_t  ulAddr)
 
     LW_TCB_GET_CUR(ptcbCur);
     
-    API_VmmAbortIsr(ulAddr, LW_VMM_ABORT_TYPE_UNDEF, ptcbCur);
+    API_VmmAbortIsr(ulAddr, ulAddr, LW_VMM_ABORT_TYPE_UNDEF, ptcbCur);
 }
 /*********************************************************************************************************
 ** 函数名称: archSwiHandle
