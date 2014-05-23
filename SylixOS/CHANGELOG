@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-05-22: han.hui
+    SylixOS 加入 GDB 支持, 可以远程调试应用程序.
+
     2014-05-09: han.hui
     shell 加入用户管理.
     

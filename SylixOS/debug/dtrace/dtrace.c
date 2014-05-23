@@ -20,6 +20,7 @@
 
 ** BUG:
 2012.09.05  今天凌晨, 重新设计 dtrace 的等待与接口机制, 开始为 GDB server 的编写扫平一切障碍.
+2014.05.23  内存操作时, 需要首先检测内存访问权限.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -173,6 +174,33 @@ static VOID  __dtraceThreadCb (LW_OBJECT_HANDLE  ulId, LW_OBJECT_HANDLE  ulThrea
         ulThread[*uiNum] = ulId;
         (*uiNum)++;
     }
+}
+/*********************************************************************************************************
+** 函数名称: __dtraceMemVerify
+** 功能描述: 检测内存属性
+** 输　入  : pdtrace       dtrace 节点
+**           ulAddr        内存地址
+**           bWrite        是否为写, 否则为读
+** 输　出  : 是否允许操作
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static BOOL  __dtraceMemVerify (PVOID  pvDtrace, addr_t  ulAddr, BOOL  bWrite)
+{
+#if LW_CFG_VMM_EN > 0
+    ULONG  ulFlags;
+    if (API_VmmGetFlag((PVOID)ulAddr, &ulFlags)) {
+        return  (LW_FALSE);
+    }
+    if (bWrite && !(ulFlags & LW_VMM_FLAG_WRITABLE)) {
+        return  (LW_FALSE);
+    }
+    if (bWrite && !(ulFlags & LW_VMM_FLAG_ACCESS)) {
+        return  (LW_FALSE);
+    }
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+
+    return  (LW_TRUE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_DtraceBreakTrap
@@ -536,6 +564,11 @@ ULONG  API_DtraceGetMems (PVOID  pvDtrace, addr_t  ulAddr, PVOID  pvBuffer, size
         return  (EINVAL);
     }
     
+    if (__dtraceMemVerify(pvDtrace, ulAddr, LW_FALSE) == LW_FALSE) {
+        _ErrorHandle(EACCES);
+        return  (EACCES);
+    }
+    
     lib_memcpy(pvBuffer, (const PVOID)ulAddr, stSize);
     
     return  (ERROR_NONE);
@@ -558,6 +591,11 @@ ULONG  API_DtraceSetMems (PVOID  pvDtrace, addr_t  ulAddr, const PVOID  pvBuffer
     if (!pvBuffer) {
         _ErrorHandle(EINVAL);
         return  (EINVAL);
+    }
+    
+    if (__dtraceMemVerify(pvDtrace, ulAddr, LW_TRUE) == LW_FALSE) {
+        _ErrorHandle(EACCES);
+        return  (EACCES);
     }
     
     lib_memcpy((PVOID)ulAddr, pvBuffer, stSize);

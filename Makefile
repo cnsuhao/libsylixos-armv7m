@@ -122,6 +122,7 @@ SylixOS/arch/arm/common/armExcAsm.S \
 SylixOS/arch/arm/common/armLib.c \
 SylixOS/arch/arm/common/armLibAsm.S \
 SylixOS/arch/arm/dbg/armDbg.c \
+SylixOS/arch/arm/dbg/armGdb.c \
 SylixOS/arch/arm/elf/armElf.c \
 SylixOS/arch/arm/elf/armUnwind.c \
 SylixOS/arch/arm/fpu/vfp9/armVfp9.c \
@@ -160,7 +161,8 @@ SylixOS/arch/arm/mpcore/armSpinlock.c
 # debug source
 #*********************************************************************************************************
 DEBUG_SRCS = \
-SylixOS/debug/dtrace/dtrace.c
+SylixOS/debug/dtrace/dtrace.c \
+SylixOS/debug/gdb/gdbserver.c
 
 #*********************************************************************************************************
 # file system source

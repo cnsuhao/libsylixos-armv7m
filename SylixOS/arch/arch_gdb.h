@@ -10,30 +10,37 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: debug_cfg.h
+** 文   件   名: arch_gdb.h
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2014 年 05 月 13 日
+** 文件创建日期: 2014 年 05 月 22 日
 **
-** 描        述: 系统调试工具配置.
+** 描        述: SylixOS 体系构架 GDB 调试接口.
 *********************************************************************************************************/
 
-#ifndef __DEBUG_CFG_H
-#define __DEBUG_CFG_H
+#ifndef __ARCH_GDB_H
+#define __ARCH_GDB_H
 
-/*********************************************************************************************************
-*                                   调试工具选项
-* 依存关系: 1: loader
-            2: 多进程
-            3: shell
-            4: signalfd
-            5: posix
-*********************************************************************************************************/
+#include "config/cpu/cpu_cfg.h"
 
-#define LW_CFG_GDB_EN               1                                   /*  是否使能 GDB 调试器         */
+#if (defined LW_CFG_CPU_ARCH_ARM)
+#include "./arm/arm_gdb.h"
 
-#endif                                                                  /*  __DEBUG_CFG_H               */
+#elif (defined LW_CFG_CPU_ARCH_X86)
+#include "./x86/x86_gdb.h"
+
+#elif (defined LW_CFG_CPU_ARCH_MIPS)
+#include "./mips/mips_gdb.h"
+
+#elif (defined LW_CFG_CPU_ARCH_MIPS64)
+#include "./mips/mips64_gdb.h"
+
+#elif (defined LW_CFG_CPU_ARCH_PPC)
+#include "./ppc/ppc_gdb.h"
+#endif                                                                  /*  LW_CFG_CPU_ARCH_ARM         */
+
+#endif                                                                  /*  __ARCH_GDB_H                */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/
