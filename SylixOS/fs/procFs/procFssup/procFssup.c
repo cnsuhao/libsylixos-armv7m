@@ -126,7 +126,7 @@ static ssize_t  __procFssupRead (PLW_PROCFS_NODE  p_pfsn,
      
     stRealSize = API_ProcFsNodeGetRealFileSize(p_pfsn);
     if (stRealSize == 0) {                                              /*  需要生成文件                */
-        lib_strcpy(pcFileBuffer, "rootfs procfs romfs ");
+        lib_strcpy(pcFileBuffer, "rootfs procfs ramfs romfs ");
         
 #if LW_CFG_FATFS_EN > 0
         lib_strlcat(pcFileBuffer, "vfat ", __PROCFS_BUFFER_SIZE_FSSUP);

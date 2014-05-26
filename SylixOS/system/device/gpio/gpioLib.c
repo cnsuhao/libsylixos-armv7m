@@ -17,6 +17,9 @@
 ** 文件创建日期: 2013 年 11 月 29 日
 **
 ** 描        述: GPIO (通用输入/输出) 管脚操作模型.
+**
+** BUG:
+2014.05.25  加入 get flags 操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -536,6 +539,36 @@ VOID  API_GpioFreeArray (PLW_GPIO pgArray, size_t stNum)
         pgArray++;
         stNum--;
     }
+}
+/*********************************************************************************************************
+** 函数名称: API_GpioGetFlags
+** 功能描述: 设置一个 GPIO OPEN DRAIN 参数
+** 输　入  : uiGpio        请求 GPIO 号
+**           bOpenDrain    参数
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  API_GpioGetFlags (UINT uiGpio, ULONG *pulFlags)
+{
+    PLW_GPIO_DESC   pgdesc;
+
+    if (!pulFlags) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+
+    pgdesc = __gpioGetDesc(uiGpio, LW_TRUE);
+    if (!pgdesc) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    *pulFlags = pgdesc->GD_ulFlags;
+    
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_GpioOpenDrain

@@ -1378,7 +1378,6 @@ static INT elfPhdrRelocate (LW_LD_EXEC_MODULE *pmodule, ELF_DYN_DIR  *pdyndir)
      *  重定位
      */
     if (pdyndir->prelTable) {                                           /*  REL重定位结构               */
-
         for (i = 0; i < pdyndir->ulRelCount; i++) {
 
             prel = &pdyndir->prelTable[i];
@@ -1415,10 +1414,7 @@ static INT elfPhdrRelocate (LW_LD_EXEC_MODULE *pmodule, ELF_DYN_DIR  *pdyndir)
                 return  (PX_ERROR);
             }
         }
-    }
-
-    else if (pdyndir->prelaTable) {                                     /*  RELA重定位结构              */
-
+    } else if (pdyndir->prelaTable) {                                   /*  RELA重定位结构              */
         for (i = 0; i < pdyndir->ulRelaCount; i++) {
 
             prela = &pdyndir->prelaTable[i];

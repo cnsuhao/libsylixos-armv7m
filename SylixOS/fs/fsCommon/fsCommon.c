@@ -137,8 +137,15 @@ INT  __fsCheckFileName (CPCHAR  pcName)
     pcTemp = lib_rindex(pcName, PX_DIVIDER);
     if (pcTemp) {
         pcTemp++;
+        if (*pcTemp == PX_EOS) {                                        /*  文件名长度为 0              */
+            return  (PX_ERROR);
+        }
         if ((lib_strcmp(pcTemp, ".")  == 0) ||
             (lib_strcmp(pcTemp, "..") == 0)) {                          /*  . , .. 检查                 */
+            return  (PX_ERROR);
+        }
+    } else {
+        if (pcName[0] == PX_EOS) {                                      /*  文件名长度为 0              */
             return  (PX_ERROR);
         }
     }

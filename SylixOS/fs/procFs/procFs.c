@@ -209,12 +209,13 @@ static LONG  __procFsOpen (PLW_DEV_HDR     pdevhdr,
                            INT             iFlags,
                            INT             iMode)
 {
-    PLW_PROCFS_NODE  p_pfsn = LW_NULL;
+    PLW_PROCFS_NODE  p_pfsn;
     BOOL             bIsRoot;
     PCHAR            pcTail = LW_NULL;
     
-    if (__STR_IS_ROOT(pcName)) {
-        goto    __file_open_ok;                                         /*  返回 LW_NULL 表示根目录     */
+    if (pcName == LW_NULL) {                                            /*  无文件名                    */
+        _ErrorHandle(ERROR_IO_NO_DEVICE_NAME_IN_PATH);
+        return  (PX_ERROR);
     }
     
     if ((iFlags & O_CREAT) || (iFlags & O_TRUNC)) {                     /*  不能创建                    */
@@ -222,9 +223,6 @@ static LONG  __procFsOpen (PLW_DEV_HDR     pdevhdr,
         return  (PX_ERROR);
     }
     
-    /*
-     *  TODO: 以后会建立允许写操作的 proc 文件.
-     */
     if ((iFlags & O_ACCMODE) != O_RDONLY) {                             /*  不允许写 (目前)             */
         _ErrorHandle(ERROR_IO_WRITE_PROTECTED);
         return  (PX_ERROR);
@@ -234,8 +232,12 @@ static LONG  __procFsOpen (PLW_DEV_HDR     pdevhdr,
     p_pfsn = __procFsFindNode(pcName, LW_NULL, &bIsRoot, LW_NULL, &pcTail);
     if (p_pfsn == LW_NULL) {                                            /*  为找到节点                  */
         __LW_PROCFS_UNLOCK();                                           /*  解锁 procfs                 */
-        _ErrorHandle(ENOENT);
-        return  (PX_ERROR);
+        if (bIsRoot) {
+            return  ((LONG)LW_NULL);
+        } else {
+            _ErrorHandle(ENOENT);
+            return  (PX_ERROR);
+        }
     }
     if (p_pfsn->PFSN_bReqRemove) {
         __LW_PROCFS_UNLOCK();                                           /*  解锁 procfs                 */
@@ -291,7 +293,6 @@ static LONG  __procFsOpen (PLW_DEV_HDR     pdevhdr,
     
     p_pfsn->PFSN_time = lib_time(LW_NULL);                              /*  以 UTC 时间作为时间基准     */
     
-__file_open_ok:
     LW_DEV_INC_USE_COUNT(&_G_devhdrProc);                               /*  更新计数器                  */
 
     _ErrorHandle(ERROR_NONE);
@@ -339,6 +340,11 @@ static ssize_t  __procFsRead (PLW_PROCFS_NODE  p_pfsn,
 {
              ssize_t    sstNum = 0;
     REGISTER size_t     stBufferSize;                                   /*  文件缓冲区大小              */
+
+    if (!pcBuffer || !stMaxBytes) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
 
     /*
      *  这里不需要加锁, 因为文件不关闭, 节点不可能释放.
@@ -398,6 +404,11 @@ static ssize_t  __procFsPRead (PLW_PROCFS_NODE  p_pfsn,
 {
              ssize_t    sstNum = 0;
     REGISTER size_t     stBufferSize;                                   /*  文件缓冲区大小              */
+
+    if (!pcBuffer || !stMaxBytes || (oftPos < 0)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
 
     /*
      *  这里不需要加锁, 因为文件不关闭, 节点不可能释放.
@@ -745,6 +756,11 @@ static ssize_t  __procFsReadlink (PLW_DEV_HDR    pdevhdr,
 {
     PLW_PROCFS_NODE  p_pfsn;
     size_t           stLen;
+    
+    if (pcName == LW_NULL) {                                            /*  无文件名                    */
+        _ErrorHandle(ERROR_IO_NO_DEVICE_NAME_IN_PATH);
+        return  (PX_ERROR);
+    }
     
     __LW_PROCFS_LOCK();                                                 /*  锁 procfs                   */
     p_pfsn = __procFsFindNode(pcName, LW_NULL, LW_NULL, LW_NULL, LW_NULL);

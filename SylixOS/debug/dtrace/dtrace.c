@@ -554,6 +554,7 @@ ULONG  API_DtraceSetRegs (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, const ARC
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : 内存操作长度应在 PAGESIZE 内.
                                            API 函数
 *********************************************************************************************************/
 LW_API 
@@ -564,7 +565,8 @@ ULONG  API_DtraceGetMems (PVOID  pvDtrace, addr_t  ulAddr, PVOID  pvBuffer, size
         return  (EINVAL);
     }
     
-    if (__dtraceMemVerify(pvDtrace, ulAddr, LW_FALSE) == LW_FALSE) {
+    if ((__dtraceMemVerify(pvDtrace, ulAddr,              LW_FALSE) == LW_FALSE) ||
+        (__dtraceMemVerify(pvDtrace, ulAddr + stSize - 1, LW_FALSE) == LW_FALSE)) {
         _ErrorHandle(EACCES);
         return  (EACCES);
     }
@@ -583,6 +585,7 @@ ULONG  API_DtraceGetMems (PVOID  pvDtrace, addr_t  ulAddr, PVOID  pvBuffer, size
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : 内存操作长度应在 PAGESIZE 内.
                                            API 函数
 *********************************************************************************************************/
 LW_API 
@@ -593,7 +596,8 @@ ULONG  API_DtraceSetMems (PVOID  pvDtrace, addr_t  ulAddr, const PVOID  pvBuffer
         return  (EINVAL);
     }
     
-    if (__dtraceMemVerify(pvDtrace, ulAddr, LW_TRUE) == LW_FALSE) {
+    if ((__dtraceMemVerify(pvDtrace, ulAddr,              LW_TRUE) == LW_FALSE) ||
+        (__dtraceMemVerify(pvDtrace, ulAddr + stSize - 1, LW_TRUE) == LW_FALSE)) {
         _ErrorHandle(EACCES);
         return  (EACCES);
     }

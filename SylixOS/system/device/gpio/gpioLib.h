@@ -163,6 +163,7 @@ LW_API INT              API_GpioRequestOne(UINT uiGpio, ULONG ulFlags, CPCHAR pc
 LW_API VOID             API_GpioFree(UINT uiGpio);
 LW_API INT              API_GpioRequestArray(PLW_GPIO pgArray, size_t stNum);
 LW_API VOID             API_GpioFreeArray(PLW_GPIO pgArray, size_t stNum);
+LW_API INT              API_GpioGetFlags(UINT uiGpio, ULONG *pulFlags);
 LW_API VOID             API_GpioOpenDrain(UINT uiGpio, BOOL bOpenDrain);
 LW_API VOID             API_GpioOpenSource(UINT uiGpio, BOOL bOpenSource);
 LW_API INT              API_GpioSetDebounce(UINT uiGpio, UINT uiDebounce);
@@ -185,6 +186,7 @@ LW_API irqreturn_t      API_GpioSvrIrq(UINT uiGpio);
 #define gpioFree                API_GpioFree
 #define gpioRequestArray        API_GpioRequestArray
 #define gpioFreeArray           API_GpioFreeArray
+#define gpioGetFlags            API_GpioGetFlags
 #define gpioOpenDrain           API_GpioOpenDrain
 #define gpioOpenSource          API_GpioOpenSource
 #define gpioSetDebounce         API_GpioSetDebounce

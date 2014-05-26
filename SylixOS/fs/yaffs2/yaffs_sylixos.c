@@ -958,7 +958,12 @@ static INT  __yaffsSeek (PLW_FD_ENTRY  pfdentry,
 
     __YAFFS_OPLOCK();
     if (pyaffile->YAFFIL_iFileType == __YAFFS_FILE_TYPE_NODE) {
-        pfdentry->FDENTRY_oftPtr = oftOffset;
+        off_t   oftRet = yaffs_lseek(pyaffile->YAFFIL_iFd, oftOffset, SEEK_SET);
+        if (oftRet != oftOffset) {
+            iError = PX_ERROR;
+        } else {
+            pfdentry->FDENTRY_oftPtr = oftOffset;
+        }
     } else {
         ulError = EISDIR;
         iError  = PX_ERROR;
@@ -1146,23 +1151,23 @@ static INT  __yaffsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
 {
     REGISTER INT            iError  = PX_ERROR;
     
-             UCHAR          ucNewPath[PATH_MAX + 1];
-    REGISTER PCHAR          pcNewPath = (PCHAR)&ucNewPath[0];
+             CHAR           cNewPath[PATH_MAX + 1];
+    REGISTER PCHAR          pcNewPath = &cNewPath[0];
              PLW_FD_NODE    pfdnode   = (PLW_FD_NODE)pfdentry->FDENTRY_pfdnode;
              PYAFFS_FILE    pyaffile  = (PYAFFS_FILE)pfdnode->FDNODE_pvFile;
              PYAFFS_FSLIB   pyaffsNew;
 
     if (__STR_IS_ROOT(pyaffile->YAFFIL_cName)) {                        /*  检查是否为设备文件          */
         _ErrorHandle(ERROR_IOS_DRIVER_NOT_SUP);                         /*  不支持设备重命名            */
-        return (PX_ERROR);
+        return  (PX_ERROR);
     }
     if (pcNewName == LW_NULL) {
         _ErrorHandle(EFAULT);                                           /*  Bad address                 */
-        return (PX_ERROR);
+        return  (PX_ERROR);
     }
     if (__STR_IS_ROOT(pcNewName)) {
         _ErrorHandle(ENOENT);
-        return (PX_ERROR);
+        return  (PX_ERROR);
     }
     
     __YAFFS_OPLOCK();
@@ -1170,17 +1175,17 @@ static INT  __yaffsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
         (pyaffile->YAFFIL_iFileType == __YAFFS_FILE_TYPE_DIR)) {        /*  open 创建的普通文件或目录   */
         if (ioFullFileNameGet(pcNewName, 
                               (LW_DEV_HDR **)&pyaffsNew, 
-                              (PCHAR)ucNewPath) != ERROR_NONE) {        /*  获得新目录路径              */
+                              cNewPath) != ERROR_NONE) {                /*  获得新目录路径              */
             __YAFFS_OPUNLOCK();
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
         if (pyaffsNew != pyaffile->YAFFIL_pyaffs) {                     /*  必须为同一个 yaffs 设备节点 */
             __YAFFS_OPUNLOCK();
             _ErrorHandle(EXDEV);
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
         
-        if (ucNewPath[0] == PX_DIVIDER) {
+        if (cNewPath[0] == PX_DIVIDER) {
             pcNewPath++;
         }
         
@@ -1460,12 +1465,12 @@ static INT  __yaffsReadDir (PLW_FD_ENTRY  pfdentry, DIR  *dir)
         }
         
         _ErrorHandle(ERROR_NONE);
-        return (iError);
+        return  (iError);
     }
     
     if (pyaffile->YAFFIL_iFileType != __YAFFS_FILE_TYPE_DIR) {
         _ErrorHandle(ENOTDIR);                                          /*  不支持                      */
-        return (PX_ERROR);
+        return  (PX_ERROR);
     }
     
     __YAFFS_OPLOCK();
@@ -1619,9 +1624,9 @@ static INT  __yaffsIoctl (PLW_FD_ENTRY  pfdentry,
     case FIOLABELSET:
     case FIOATTRIBSET:
     case FIOSQUEEZE:
-        if (pfdentry->FDENTRY_iFlag == O_RDONLY) {
+        if ((pfdentry->FDENTRY_iFlag & O_ACCMODE) == O_RDONLY) {
             _ErrorHandle(ERROR_IO_WRITE_PROTECTED);
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
 	}
     

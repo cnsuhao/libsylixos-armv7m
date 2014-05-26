@@ -732,7 +732,7 @@ INT  ioctl (INT   iFd,
 **           iFd                           文件描述符
 **           oftOffset                     偏移量
 **           iWhence                       定位基准
-** 输　出  : ERROR
+** 输　出  : 当前文件指针
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
@@ -759,6 +759,10 @@ off_t  lseek (INT      iFd,
         /*
          *  以当前指针为指针, 直接设置指针.
          */
+        if (oftOffset < 0) {
+            _ErrorHandle(EINVAL);
+            return  (PX_ERROR);
+        }
         return  ((ioctl(iFd, FIOSEEK, (LONG)&oftOffset) == 0) ? oftOffset : (PX_ERROR));
         
     case SEEK_CUR:
@@ -774,6 +778,10 @@ off_t  lseek (INT      iFd,
          *  计算偏移量并重新设置文件指针.
          */
         oftOffset += oftWhere;
+        if (oftOffset < 0) {
+            _ErrorHandle(EINVAL);
+            return  (PX_ERROR);
+        }
         return  ((ioctl(iFd, FIOSEEK, (LONG)&oftOffset) == 0) ? oftOffset : (PX_ERROR));
     
     case SEEK_END:
@@ -793,6 +801,10 @@ off_t  lseek (INT      iFd,
         }
         
         oftOffset += (oftWhere + oftNBytes);
+        if (oftOffset < 0) {
+            _ErrorHandle(EINVAL);
+            return  (PX_ERROR);
+        }
         return  ((ioctl(iFd, FIOSEEK, (LONG)&oftOffset) == 0) ? oftOffset : (PX_ERROR));
         
 __fiofstat:
@@ -808,6 +820,10 @@ __fiofstat:
          *  计算新的指针位置并重新设置文件指针.
          */
         oftOffset += statFile.st_size;
+        if (oftOffset < 0) {
+            _ErrorHandle(EINVAL);
+            return  (PX_ERROR);
+        }
         return  ((ioctl(iFd, FIOSEEK, (LONG)&oftOffset) == 0) ? oftOffset : (PX_ERROR));
     
     default:

@@ -42,6 +42,7 @@
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
+#include "../SylixOS/fs/fsCommon/fsCommon.h"
 #include "rootFsLib.h"
 #include "rootFs.h"
 /*********************************************************************************************************
@@ -299,6 +300,13 @@ __re_find:
         
         __LW_ROOTFS_UNLOCK();                                           /*  解锁 rootfs                 */
         
+#if LW_CFG_MAX_VOLUMES > 0
+        if (__fsCheckFileName(pcName)) {
+            _ErrorHandle(EINVAL);
+            return  (PX_ERROR);
+        }
+#endif                                                                  /*  LW_CFG_MAX_VOLUMES > 0      */
+        
         if (S_ISDIR(iMode)) {
             iError = rootFsMakeDir(pcName, iMode);
         
@@ -421,7 +429,6 @@ static INT  __rootFsRemove (PLW_DEV_HDR     pdevhdr,
         return  (PX_ERROR);
         
     } else {
-        PLW_ROOTFS_NODE    prfsnFather;
         PLW_ROOTFS_NODE    prfsn;
         BOOL               bIsRoot;
         PCHAR              pcTail = LW_NULL;
@@ -429,7 +436,7 @@ static INT  __rootFsRemove (PLW_DEV_HDR     pdevhdr,
         __rootFsFixName(pcName);                                        /*  修正文件名                  */
         
         __LW_ROOTFS_LOCK();                                             /*  锁定 rootfs                 */
-        prfsn = __rootFsFindNode(pcName, &prfsnFather, &bIsRoot, LW_NULL, &pcTail);
+        prfsn = __rootFsFindNode(pcName, LW_NULL, &bIsRoot, LW_NULL, &pcTail);
                                                                         /*  查询设备                    */
         if (prfsn) {
             if (prfsn->RFSN_iNodeType == LW_ROOTFS_NODE_TYPE_DEV) {     /*  不能在这里卸载设备          */
@@ -812,6 +819,11 @@ static INT  __rootFsReadDir (LW_DEV_HDR *pdevhdr, DIR  *dir)
     if (prfsn == LW_NULL) {
         plineHeader = _G_rfsrRoot.RFSR_plineSon;
     } else {
+        if (prfsn->RFSN_iNodeType != LW_ROOTFS_NODE_TYPE_DIR) {
+            __LW_ROOTFS_UNLOCK();                                       /*  解锁 rootfs                 */
+            _ErrorHandle(ENOTDIR);
+            return  (PX_ERROR);
+        }
         plineHeader = prfsn->RFSN_plineSon;
     }
     
@@ -994,10 +1006,17 @@ static INT  __rootFsSymlink (PLW_DEV_HDR     pdevhdr,
 
 #if LW_CFG_PATH_VXWORKS == 0                                            /*  需要提供分级目录管理        */
 
-    if (pcName == LW_NULL) {
+    if ((pcName == LW_NULL) || (pcLinkDst == LW_NULL)) {
         _ErrorHandle(ERROR_IO_NO_DEVICE_NAME_IN_PATH);
         return  (PX_ERROR);
     }
+    
+#if LW_CFG_MAX_VOLUMES > 0
+    if (__fsCheckFileName(pcName)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+#endif                                                                  /*  LW_CFG_MAX_VOLUMES > 0      */
     
     __rootFsFixName(pcName);                                            /*  修正文件名                  */
     

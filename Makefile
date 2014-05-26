@@ -201,6 +201,8 @@ SylixOS/fs/procFs/procFsLib.c \
 SylixOS/fs/procFs/procBsp/procBsp.c \
 SylixOS/fs/procFs/procFssup/procFssup.c \
 SylixOS/fs/procFs/procKernel/procKernel.c \
+SylixOS/fs/ramFs/ramFs.c \
+SylixOS/fs/ramFs/ramFsLib.c \
 SylixOS/fs/romFs/romFs.c \
 SylixOS/fs/romFs/romFsLib.c \
 SylixOS/fs/rootFs/rootFs.c \

@@ -58,6 +58,8 @@ typedef struct {
     BOOL                ROMFS_bForceDelete;                             /*  是否允许强制卸载卷          */
     BOOL                ROMFS_bValid;
     
+    uid_t               ROMFS_uid;                                      /*  用户 id                     */
+    gid_t               ROMFS_gid;                                      /*  组   id                     */
     time_t              ROMFS_time;                                     /*  创建时间                    */
     
     ULONG               ROMFS_ulSectorSize;                             /*  扇区大小                    */

@@ -68,16 +68,6 @@ PLW_PROCFS_NODE  __procFsFindNode (CPCHAR            pcName,
     PLW_LIST_LINE       plineTemp;
     PLW_LIST_LINE       plineHeader;                                    /*  当前目录头                  */
     
-    if (pcName == LW_NULL) {
-        if (pbRoot) {
-            *pbRoot = LW_FALSE;                                         /*  pcName 不为根               */
-        }
-        if (pbLast) {
-            *pbLast = LW_FALSE;
-        }
-        return  (LW_NULL);
-    }
-    
     if (pp_pfsnFather == LW_NULL) {
         pp_pfsnFather = &p_pfsnTemp;                                    /*  临时变量                    */
     }
@@ -199,6 +189,7 @@ INT  API_ProcFsMakeNode (PLW_PROCFS_NODE  p_pfsnNew, CPCHAR  pcFatherName)
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
+    
     if (S_ISLNK(p_pfsnNew->PFSN_mode)) {                                /*  链接文件                    */
         if (p_pfsnNew->PFSN_pfsnmMessage.PFSNM_pvBuffer == LW_NULL) {
             _ErrorHandle(ENOMEM);

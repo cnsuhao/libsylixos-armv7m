@@ -35,8 +35,8 @@
  * Author: Adam Dunkels <adam@sics.se>
  *
  */
-#ifndef __LWIP_OPT_H__
-#define __LWIP_OPT_H__
+#ifndef LWIP_HDR_OPT_H
+#define LWIP_HDR_OPT_H
 
 /*
  * Include user defined options first. Anything not defined in these files
@@ -2687,4 +2687,4 @@
 #define IP6_DEBUG                       LWIP_DBG_OFF
 #endif
 
-#endif /* __LWIP_OPT_H__ */
+#endif /* LWIP_HDR_OPT_H */

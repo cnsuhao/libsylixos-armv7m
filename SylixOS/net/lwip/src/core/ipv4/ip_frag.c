@@ -594,11 +594,11 @@ ip_reass(struct pbuf *p)
       r = iprh->next_pbuf;
     }
 
-    /* find the previous entry in the linked list (sylixos fixed) */
+    /* find the previous entry in the linked list */
     if (ipr == reassdatagrams) {
       ipr_prev = NULL;
     } else {
-      for (ipr_prev = reassdatagrams; ipr_prev != NULL; ipr = ipr->next) {
+      for (ipr_prev = reassdatagrams; ipr_prev != NULL; ipr_prev = ipr_prev->next) {
         if (ipr_prev->next == ipr) {
           break;
         }

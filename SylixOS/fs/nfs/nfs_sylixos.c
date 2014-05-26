@@ -1961,6 +1961,7 @@ static ssize_t  __nfsRead (PLW_FD_ENTRY   pfdentry,
     
     if (pnfsfile->NFSFIL_iFileType != __NFS_FILE_TYPE_NODE) {
         __NFS_FILE_UNLOCK(pnfsfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -2043,7 +2044,7 @@ static ssize_t  __nfsPRead (PLW_FD_ENTRY   pfdentry,
 	count3      countOnce;
 	BOOL        bIsEof   = LW_FALSE;                                    /*  是否到文件尾部              */
 
-    if (!pcBuffer || !stMaxBytes) {
+    if (!pcBuffer || !stMaxBytes || (oftPos < 0)) {
         _ErrorHandle(EINVAL);
         return  (0);
     }
@@ -2055,6 +2056,7 @@ static ssize_t  __nfsPRead (PLW_FD_ENTRY   pfdentry,
     
     if (pnfsfile->NFSFIL_iFileType != __NFS_FILE_TYPE_NODE) {
         __NFS_FILE_UNLOCK(pnfsfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -2152,6 +2154,7 @@ static ssize_t  __nfsWrite (PLW_FD_ENTRY  pfdentry,
     
     if (pnfsfile->NFSFIL_iFileType != __NFS_FILE_TYPE_NODE) {
         __NFS_FILE_UNLOCK(pnfsfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -2232,7 +2235,7 @@ static ssize_t  __nfsPWrite (PLW_FD_ENTRY  pfdentry,
 	size_t      stTotal  = 0;
 	count3      countOnce;
 
-    if (!pcBuffer || !stNBytes) {
+    if (!pcBuffer || !stNBytes || (oftPos < 0)) {
         _ErrorHandle(EINVAL);
         return  (0);
     }
@@ -2250,6 +2253,7 @@ static ssize_t  __nfsPWrite (PLW_FD_ENTRY  pfdentry,
     
     if (pnfsfile->NFSFIL_iFileType != __NFS_FILE_TYPE_NODE) {
         __NFS_FILE_UNLOCK(pnfsfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -2387,6 +2391,7 @@ static INT  __nfsSeek (PLW_FD_ENTRY  pfdentry,
     }
     if (pnfsfile->NFSFIL_iFileType != __NFS_FILE_TYPE_NODE) {
         __NFS_FILE_UNLOCK(pnfsfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -2436,8 +2441,8 @@ static INT  __nfsWhere (PLW_FD_ENTRY  pfdentry, off_t  *poftPos)
 *********************************************************************************************************/
 static INT  __nfsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
 {
-             UCHAR          ucNewPath[PATH_MAX + 1];
-    REGISTER PCHAR          pcNewPath = (PCHAR)&ucNewPath[0];
+             CHAR           cNewPath[PATH_MAX + 1];
+    REGISTER PCHAR          pcNewPath = &cNewPath[0];
              NFS_FS        *pnfsfsNew;
 
              enum clnt_stat  clntstat;
@@ -2471,7 +2476,7 @@ static INT  __nfsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
         (pnfsfile->NFSFIL_iFileType == __NFS_FILE_TYPE_DIR)) {          /*  open 创建的普通文件或目录   */
         if (ioFullFileNameGet(pcNewName, 
                               (LW_DEV_HDR **)&pnfsfsNew, 
-                              (PCHAR)ucNewPath) != ERROR_NONE) {        /*  获得新目录路径              */
+                              cNewPath) != ERROR_NONE) {                /*  获得新目录路径              */
             __NFS_FILE_UNLOCK(pnfsfile);
             return (PX_ERROR);
         }
@@ -2481,7 +2486,7 @@ static INT  __nfsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
             return (PX_ERROR);
         }
         
-        if (ucNewPath[0] == PX_DIVIDER) {
+        if (cNewPath[0] == PX_DIVIDER) {
             pcNewPath++;
         }
         
@@ -2490,7 +2495,7 @@ static INT  __nfsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
             __NFS_FILE_UNLOCK(pnfsfile);
             return (PX_ERROR);
         }
-        if (__nfsGetDir(pnfsfile->NFSFIL_nfsfs, (PCHAR)ucNewPath, &handleToDir, 
+        if (__nfsGetDir(pnfsfile->NFSFIL_nfsfs, cNewPath, &handleToDir, 
                         &pcToFile, LW_NULL)) {
             xdr_free((xdrproc_t)xdr_nfs_fh3, (char *)&handleFromDir);
             __NFS_FILE_UNLOCK(pnfsfile);
@@ -2807,6 +2812,12 @@ static INT  __nfsReadDir (PLW_FD_ENTRY  pfdentry, DIR  *dir)
         return  (PX_ERROR);
     }
     
+    if (pnfsfile->NFSFIL_iFileType == __NFS_FILE_TYPE_NODE) {
+        __NFS_FILE_UNLOCK(pnfsfile);
+        _ErrorHandle(ENOTDIR);
+        return  (PX_ERROR);
+    }
+    
     pnfsid = &pnfsfile->NFSFIL_nfsid;
     
     if (dir->dir_pos == 0) {
@@ -2977,6 +2988,12 @@ static INT  __nfsTruncate (PLW_FD_ENTRY  pfdentry, off_t  oftSize)
         return  (PX_ERROR);
     }
     
+    if (pnfsfile->NFSFIL_iFileType != __NFS_FILE_TYPE_NODE) {
+        __NFS_FILE_UNLOCK(pnfsfile);
+        _ErrorHandle(EISDIR);
+        return  (PX_ERROR);
+    }
+    
     attrargs.object = pnfsfile->NFSFIL_handle;
     attrargs.new_attributes.size.set_it = LW_TRUE;
     attrargs.new_attributes.size.set_size3_u.size = oftSize;
@@ -3089,6 +3106,16 @@ static INT __nfsSymlink (PNFS_FS  pnfsfs, PCHAR  pcName, CPCHAR  pcLinkDst)
     
     SYMLINK3args    args;
     SYMLINK3res     res;
+    
+    if (!pcName || !pcLinkDst) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    if (__fsCheckFileName(pcName)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
     
     if (__NFS_VOL_LOCK(pnfsfs) != ERROR_NONE) {
         _ErrorHandle(ENXIO);                                            /*  设备出错                    */
@@ -3220,13 +3247,13 @@ static INT  __nfsIoctl (PLW_FD_ENTRY  pfdentry,
     case FIOATTRIBSET:
     case FIOSQUEEZE:
     case FIODISKFORMAT:
-        if (pfdentry->FDENTRY_iFlag == O_RDONLY) {
+        if ((pfdentry->FDENTRY_iFlag & O_ACCMODE) == O_RDONLY) {
             _ErrorHandle(ERROR_IO_WRITE_PROTECTED);
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
         if (pnfsfile->NFSFIL_nfsfs->NFSFS_iFlag == O_RDONLY) {
             _ErrorHandle(EROFS);
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
     }
     

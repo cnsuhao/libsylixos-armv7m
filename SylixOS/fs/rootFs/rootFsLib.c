@@ -82,17 +82,6 @@ PLW_ROOTFS_NODE  __rootFsFindNode (CPCHAR            pcName,
     PLW_LIST_LINE       plineTemp;
     PLW_LIST_LINE       plineHeader;                                    /*  当前目录头                  */
     
-    if (pcName == LW_NULL) {
-__param_error:
-        if (pbRoot) {
-            *pbRoot = LW_FALSE;                                         /*  pcName 不为根               */
-        }
-        if (pbLast) {
-            *pbLast = LW_FALSE;
-        }
-        return  (LW_NULL);
-    }
-    
     if (pprfsnFather == LW_NULL) {
         pprfsnFather = &prfsnTemp;                                      /*  临时变量                    */
     }
@@ -101,7 +90,13 @@ __param_error:
     if (*pcName == PX_ROOT) {                                           /*  忽略根符号                  */
         lib_strlcpy(pcTempName, (pcName + 1), PATH_MAX);
     } else {
-        goto    __param_error;
+        if (pbRoot) {
+            *pbRoot = LW_FALSE;                                         /*  pcName 不为根               */
+        }
+        if (pbLast) {
+            *pbLast = LW_FALSE;
+        }
+        return  (LW_NULL);
     }
     
     /*

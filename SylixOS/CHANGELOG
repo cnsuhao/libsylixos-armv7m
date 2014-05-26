@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-05-24: han.hui
+    SylixOS 加入 ramfs 支持.
+
     2014-05-22: han.hui
     SylixOS 加入 GDB 支持, 可以远程调试应用程序.
 
@@ -506,6 +509,10 @@ HISTORY
     SylixOS 根目录中加入 CHANGELOG 文件.
     
 ++ Bugfixes:.
+
+    2014-05-23: han.hui
+    升级 lwip.
+    修正 armv7 系统 L1 cache 与 L2 cache 配合问题.
 
     2014-05-21: han.hui
     dtrace 支持异常暂停.

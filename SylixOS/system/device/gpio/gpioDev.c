@@ -197,6 +197,7 @@ static LONG  _gpiofdOpen (PLW_GPIOFD_DEV pgpiofddev,
     PLW_GPIOFD_FILE  pgpiofdfil;
     UINT             uiGpio;
     PCHAR            pcTemp;
+    ULONG            ulGpioLibFlags;
 
     if (pcName == LW_NULL) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "device name invalidate.\r\n");
@@ -237,12 +238,37 @@ static LONG  _gpiofdOpen (PLW_GPIOFD_DEV pgpiofddev,
             return  (PX_ERROR);
         }
         
-        pgpiofdfil->GF_iFlag      = iFlags;
-        pgpiofdfil->GF_uiGpio     = uiGpio;
-        pgpiofdfil->GF_iGpioFlags = GPIO_FLAG_DIR_IN;
-        pgpiofdfil->GF_iIrq       = PX_ERROR;
+        pgpiofdfil->GF_iFlag  = iFlags;
+        pgpiofdfil->GF_uiGpio = uiGpio;
+        pgpiofdfil->GF_iIrq   = PX_ERROR;
         
-        API_GpioDirectionInput(pgpiofdfil->GF_uiGpio);
+        API_GpioGetFlags(pgpiofdfil->GF_uiGpio, &ulGpioLibFlags);
+        
+        if (ulGpioLibFlags & LW_GPIODF_IS_OUT) {
+            pgpiofdfil->GF_iGpioFlags = GPIO_FLAG_DIR_OUT;
+        } else {
+            pgpiofdfil->GF_iGpioFlags = GPIO_FLAG_DIR_IN;
+        }
+        
+        if (ulGpioLibFlags & LW_GPIODF_TRIG_FALL) {
+            pgpiofdfil->GF_iGpioFlags |= GPIO_FLAG_TRIG_FALL;
+        }
+        
+        if (ulGpioLibFlags & LW_GPIODF_TRIG_RISE) {
+            pgpiofdfil->GF_iGpioFlags |= GPIO_FLAG_TRIG_RISE;
+        }
+        
+        if (ulGpioLibFlags & LW_GPIODF_TRIG_LEVEL) {
+            pgpiofdfil->GF_iGpioFlags |= GPIO_FLAG_TRIG_LEVEL;
+        }
+        
+        if (ulGpioLibFlags & LW_GPIODF_OPEN_DRAIN) {
+            pgpiofdfil->GF_iGpioFlags |= GPIO_FLAG_OPEN_DRAIN;
+        }
+        
+        if (ulGpioLibFlags & LW_GPIODF_OPEN_SOURCE) {
+            pgpiofdfil->GF_iGpioFlags |= GPIO_FLAG_OPEN_SOURCE;
+        }
         
         lib_bzero(&pgpiofdfil->GF_selwulist, sizeof(LW_SEL_WAKEUPLIST));
         pgpiofdfil->GF_selwulist.SELWUL_hListLock = _G_hGpiofdSelMutex;
@@ -270,7 +296,6 @@ static INT  _gpiofdClose (PLW_GPIOFD_FILE  pgpiofdfil)
         }
         
         if (!GPIO_IS_ROOT(pgpiofdfil->GF_uiGpio)) {
-            API_GpioDirectionInput(pgpiofdfil->GF_uiGpio);
             API_GpioFree(pgpiofdfil->GF_uiGpio);
             
             if (pgpiofdfil->GF_iIrq >= 0) {

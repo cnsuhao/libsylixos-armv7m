@@ -25,6 +25,7 @@
 2012.09.01  加入不可强制卸载卷的保护.
 2012.12.14  __FAT_FILE_LOCK() 需要判断返回值, 这样更加安全.
 2013.01.06  romfs 使用最新 NEW_1 设备驱动类型. 这样可以支持文件锁.
+2014.05.24  文件系统加入 uid gid.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -234,6 +235,9 @@ INT  API_RomFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
         _ErrorHandle(ERROR_IO_VOLUME_ERROR);
         return  (PX_ERROR);
     }
+    
+    promfs->ROMFS_uid = getuid();
+    promfs->ROMFS_gid = getgid();
     
     lib_time(&promfs->ROMFS_time);                                      /*  获得当前时间                */
     
@@ -610,7 +614,7 @@ static ssize_t  __romFsPRead (PLW_FD_ENTRY pfdentry,
     PROM_FILE     promfile = (PROM_FILE)pfdnode->FDNODE_pvFile;
     ssize_t       sstRet;
     
-    if (!pcBuffer || !stMaxBytes) {
+    if (!pcBuffer || !stMaxBytes || (oftPos < 0)) {
         _ErrorHandle(EINVAL);
         return  (0);
     }
@@ -755,7 +759,15 @@ static INT  __romFsSeek (PLW_FD_ENTRY  pfdentry,
         _ErrorHandle(ENXIO);
         return  (PX_ERROR);
     }
+    
+    if (promfile->ROMFIL_iFileType != __ROMFS_FILE_TYPE_NODE) {
+        __ROMFS_FILE_UNLOCK(promfile);
+        _ErrorHandle(EISDIR);
+        return  (PX_ERROR);
+    }
+    
     pfdentry->FDENTRY_oftPtr = oftOffset;
+    
     __ROMFS_FILE_UNLOCK(promfile);
     
     return  (ERROR_NONE);
@@ -936,6 +948,11 @@ static INT  __romFsReadDir (PLW_FD_ENTRY  pfdentry, DIR  *dir)
 
     if (!dir) {
         _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    if (promfile->ROMFIL_iFileType == __ROMFS_FILE_TYPE_NODE) {
+        _ErrorHandle(ENOTDIR);
         return  (PX_ERROR);
     }
     

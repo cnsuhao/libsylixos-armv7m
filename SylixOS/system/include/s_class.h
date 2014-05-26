@@ -359,7 +359,8 @@ typedef struct {
     
     ULONG                      FDNODE_ulLock;                           /*  锁定, 不允许写, 不允许删除  */
     ULONG                      FDNODE_ulRef;                            /*  fd_entry 引用此 fd_node 数量*/
-    PVOID                      FDNODE_pvFile;                           /*  驱动可使用, 当前未使用      */
+    PVOID                      FDNODE_pvFile;                           /*  驱动使用此变量标示文件      */
+    PVOID                      FDNODE_pvFsExtern;                       /*  文件系统扩展使用            */
 } LW_FD_NODE;
 typedef LW_FD_NODE            *PLW_FD_NODE;
 
@@ -385,6 +386,7 @@ typedef struct {
 #define FDENTRY_pfdnode        FDENTRY_lValue
     LONG                       FDENTRY_lValue;                          /*  驱动程序内部数据            */
                                                                         /*  如果为 NEW_1 驱动则为fd_node*/
+                                                                        
     INT                        FDENTRY_iType;                           /*  文件类型 (根据驱动判断)     */
     INT                        FDENTRY_iFlag;                           /*  文件属性                    */
     INT                        FDENTRY_iAbnormity;                      /*  文件异常                    */

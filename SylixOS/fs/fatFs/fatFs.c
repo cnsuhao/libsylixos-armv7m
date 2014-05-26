@@ -731,7 +731,7 @@ static INT  __fatFsSeekFile (PFAT_FILE  pfatfile, off_t  oftPtr)
         }
         ulError = __fatFsGetError(fresError);                           /*  转换错误编号                */
     } else {
-        ulError = EBADF;
+        ulError = EISDIR;
     }
     _ErrorHandle(ulError);
     return  (PX_ERROR);
@@ -884,7 +884,7 @@ __file_open_ok:
             goto    __file_open_error;
         }
         
-        if ((iFlags & O_TRUNC) && ((iFlags & O_RDWR) == 0)) {           /*  需要截断                    */
+        if ((iFlags & O_TRUNC) && ((iFlags & O_ACCMODE) != O_RDONLY)) { /*  需要截断                    */
             if (bIsNew == LW_FALSE) {                                   /*  不允许重复打开确需清空      */
                 API_IosFdNodeDec(&pfatvol->FATVOL_plineFdNodeHeader,
                                  pfdnode);
@@ -1105,9 +1105,20 @@ static ssize_t  __fatFsRead (PLW_FD_ENTRY   pfdentry,
     FRESULT       fresError = FR_OK;
     ULONG         ulError   = ERROR_NONE;
     UINT          uiReadNum = 0;
-             
+    
+    if (!pcBuffer || !stMaxBytes) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
     if (__FAT_FILE_LOCK(pfatfile) != ERROR_NONE) {
         _ErrorHandle(ENXIO);                                            /*  设备出错                    */
+        return  (PX_ERROR);
+    }
+    
+    if (pfatfile->FATFIL_iFileType != __FAT_FILE_TYPE_NODE) {
+        __FAT_FILE_UNLOCK(pfatfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -1153,8 +1164,19 @@ static ssize_t  __fatFsPRead (PLW_FD_ENTRY  pfdentry,
     ULONG         ulError   = ERROR_NONE;
     UINT          uiReadNum = 0;
     
+    if (!pcBuffer || !stMaxBytes || (oftPos < 0)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
     if (__FAT_FILE_LOCK(pfatfile) != ERROR_NONE) {
         _ErrorHandle(ENXIO);                                            /*  设备出错                    */
+        return  (PX_ERROR);
+    }
+    
+    if (pfatfile->FATFIL_iFileType != __FAT_FILE_TYPE_NODE) {
+        __FAT_FILE_UNLOCK(pfatfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -1195,6 +1217,11 @@ static ssize_t  __fatFsWrite (PLW_FD_ENTRY  pfdentry,
     ULONG         ulError    = ERROR_NONE;
     UINT          uiWriteNum = 0;
 
+    if (!pcBuffer || !stNBytes) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+
     if (__FAT_FILE_LOCK(pfatfile) != ERROR_NONE) {
         _ErrorHandle(ENXIO);                                            /*  设备出错                    */
         return  (PX_ERROR);
@@ -1203,6 +1230,12 @@ static ssize_t  __fatFsWrite (PLW_FD_ENTRY  pfdentry,
     if (pfatfile->FATFIL_pfatvol->FATVOL_iFlag == O_RDONLY) {
         __FAT_FILE_UNLOCK(pfatfile);
         _ErrorHandle(EROFS);
+        return  (PX_ERROR);
+    }
+    
+    if (pfatfile->FATFIL_iFileType != __FAT_FILE_TYPE_NODE) {
+        __FAT_FILE_UNLOCK(pfatfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -1255,6 +1288,11 @@ static ssize_t  __fatFsPWrite (PLW_FD_ENTRY  pfdentry,
     ULONG         ulError    = ERROR_NONE;
     UINT          uiWriteNum = 0;
 
+    if (!pcBuffer || !stNBytes || (oftPos < 0)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+
     if (__FAT_FILE_LOCK(pfatfile) != ERROR_NONE) {
         _ErrorHandle(ENXIO);                                            /*  设备出错                    */
         return  (PX_ERROR);
@@ -1263,6 +1301,12 @@ static ssize_t  __fatFsPWrite (PLW_FD_ENTRY  pfdentry,
     if (pfatfile->FATFIL_pfatvol->FATVOL_iFlag == O_RDONLY) {
         __FAT_FILE_UNLOCK(pfatfile);
         _ErrorHandle(EROFS);
+        return  (PX_ERROR);
+    }
+    
+    if (pfatfile->FATFIL_iFileType != __FAT_FILE_TYPE_NODE) {
+        __FAT_FILE_UNLOCK(pfatfile);
+        _ErrorHandle(EISDIR);
         return  (PX_ERROR);
     }
     
@@ -1431,8 +1475,8 @@ static INT  __fatFsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
     REGISTER INT            iError  = ERROR_NONE;
     REGISTER ULONG          ulError = ERROR_NONE;
     
-             UCHAR          ucNewPath[PATH_MAX + 1];
-    REGISTER PCHAR          pcNewPath = (PCHAR)&ucNewPath[0];
+             CHAR           cNewPath[PATH_MAX + 1];
+    REGISTER PCHAR          pcNewPath = &cNewPath[0];
              PLW_FD_NODE    pfdnode   = (PLW_FD_NODE)pfdentry->FDENTRY_pfdnode;
              PFAT_FILE      pfatfile  = (PFAT_FILE)pfdnode->FDNODE_pvFile;
              PFAT_VOLUME    pfatvolNew;
@@ -1459,7 +1503,7 @@ static INT  __fatFsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
         (pfatfile->FATFIL_iFileType == __FAT_FILE_TYPE_DIR)) {          /*  open 创建的普通文件或目录   */
         if (ioFullFileNameGet(pcNewName, 
                               (LW_DEV_HDR **)&pfatvolNew, 
-                              (PCHAR)ucNewPath) != ERROR_NONE) {        /*  获得新目录路径              */
+                              cNewPath) != ERROR_NONE) {                /*  获得新目录路径              */
             __FAT_FILE_UNLOCK(pfatfile);
             return (PX_ERROR);
         }
@@ -1471,7 +1515,7 @@ static INT  __fatFsRename (PLW_FD_ENTRY  pfdentry, PCHAR  pcNewName)
         /*
          *  注意: FatFs 文件系统 rename 的第二个参数不能以 '/' 为起始字符
          */
-        if (ucNewPath[0] == PX_DIVIDER) {
+        if (cNewPath[0] == PX_DIVIDER) {
             pcNewPath++;
         }
         
@@ -2137,13 +2181,13 @@ static INT  __fatFsIoctl (PLW_FD_ENTRY  pfdentry,
     case FIOATTRIBSET:
     case FIOSQUEEZE:
     case FIODISKFORMAT:
-        if (pfdentry->FDENTRY_iFlag == O_RDONLY) {
+        if ((pfdentry->FDENTRY_iFlag & O_ACCMODE) == O_RDONLY) {
             _ErrorHandle(ERROR_IO_WRITE_PROTECTED);
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
         if (pfatfile->FATFIL_pfatvol->FATVOL_iFlag == O_RDONLY) {
             _ErrorHandle(EROFS);
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
 	}
 	
@@ -2154,7 +2198,7 @@ static INT  __fatFsIoctl (PLW_FD_ENTRY  pfdentry,
     case FIOCHMOD:
         if (pfatfile->FATFIL_pfatvol->FATVOL_iFlag == O_RDONLY) {
             _ErrorHandle(EROFS);
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
     }
 

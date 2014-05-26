@@ -1819,6 +1819,7 @@ VOID  __tshellFsCmdInit (VOID)
                                 "eg. mount /dev/sda1 /mnt/usb\n"
                                 "    mount -t vfat /dev/sda1 /mnt/usb\n"
                                 "    mount -t romfs /dev/rom0 /mnt/rom0\n"
+                                "    mount -t ramfs 100000 /mnt/ram\n"
                                 "    mount -t nfs -o ro 192.168.0.123:/nfstest /mnt/nfs\n"
                                 "-o \n"
                                 "ro (read-only file system)\n"

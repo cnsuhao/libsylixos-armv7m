@@ -34,6 +34,7 @@
             空间时均可以访问.
 2013.04.02  加入 sys/mount.h 支持.
 2013.06.25  logic 设备 BLKD_pvLink 不能为 NULL.
+2014.05.24  加入对 ramfs 支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -51,6 +52,7 @@
 *********************************************************************************************************/
 #define __LW_MOUNT_DEFAULT_FS       "vfat"                              /*  默认挂载文件系统格式        */
 #define __LW_MOUNT_NFS_FS           "nfs"                               /*  nfs 挂载                    */
+#define __LW_MOUNT_RAM_FS           "ramfs"                             /*  ram 挂载                    */
 /*********************************************************************************************************
   默认参数
 *********************************************************************************************************/
@@ -234,7 +236,7 @@ static VOID __mountInit (VOID)
 ** 功能描述: 挂载一个分区(内部函数)
 ** 输　入  : pcDevName         块设备名   例如: /dev/sda1
 **           pcVolName         挂载目标   例如: /mnt/usb (不能使用相对路径, 否则无法卸载)
-**           pcFileSystem      文件系统格式 "vfat" "iso9660" "ntfs" "nfs" "romfs" ... 
+**           pcFileSystem      文件系统格式 "vfat" "iso9660" "ntfs" "nfs" "romfs" "ramfs" ... 
                                NULL 表示使用默认文件系统
 **           pcOption          选项, 当前支持 ro 或者 rw
 ** 输　出  : < 0 表示失败
@@ -279,7 +281,11 @@ static INT  __mount (CPCHAR  pcDevName, CPCHAR  pcVolName, CPCHAR  pcFileSystem,
         return  (PX_ERROR);
     }
     
-    if (lib_strcmp(pcFileSystem, __LW_MOUNT_NFS_FS)) {                  /*  非 NFS 文件系统             */
+    if ((lib_strcmp(pcFileSystem, __LW_MOUNT_NFS_FS) == 0) ||
+        (lib_strcmp(pcFileSystem, __LW_MOUNT_RAM_FS) == 0)) {           /*  NFS 或者 RAM FS             */
+        iFd = -1;                                                       /*  不需要操作设备文件          */
+    
+    } else {
         iFd = open(pcDevName, iOpenFlag);                               /*  打开块设备                  */
         if (iFd < 0) {
             iOpenFlag = O_RDONLY;
@@ -292,8 +298,6 @@ static INT  __mount (CPCHAR  pcDevName, CPCHAR  pcVolName, CPCHAR  pcFileSystem,
             close(iFd);
             return  (PX_ERROR);
         }
-    } else {
-        iFd = -1;                                                       /*  不需要操作设备文件          */
     }
     
     _PathGetFull(cVolNameBuffer, MAX_FILENAME_LENGTH, pcVolName);
@@ -322,7 +326,7 @@ static INT  __mount (CPCHAR  pcDevName, CPCHAR  pcVolName, CPCHAR  pcFileSystem,
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
-    lib_strcpy(pmnDev->MN_blkd.BLKD_pcName, pcDevName);                 /*  记录设备名 (nfs rom 使用)   */
+    lib_strcpy(pmnDev->MN_blkd.BLKD_pcName, pcDevName);                 /*  记录设备名(nfs ram rom 使用)*/
     lib_strcpy(pmnDev->MN_cVolName, pcVolName);                         /*  保存卷挂载名                */
     
     pmnDev->MN_blkd.BLKD_pfuncBlkRd        = __mountDevRd;
@@ -445,7 +449,7 @@ static INT  __unmount (CPCHAR  pcVolName)
 ** 功能描述: 挂载一个分区
 ** 输　入  : pcDevName         块设备名   例如: /dev/sda1
 **           pcVolName         挂载目标   例如: /mnt/usb (不能使用相对路径, 否则无法卸载)
-**           pcFileSystem      文件系统格式 "vfat" "iso9660" "ntfs" "nfs" "romfs" ... 
+**           pcFileSystem      文件系统格式 "vfat" "iso9660" "ntfs" "nfs" "romfs" "ramfs" ... 
                                NULL 表示使用默认文件系统
 **           pcOption          选项, 当前支持 ro 或者 rw
 ** 输　出  : < 0 表示失败
@@ -469,7 +473,7 @@ INT  API_MountEx (CPCHAR  pcDevName, CPCHAR  pcVolName, CPCHAR  pcFileSystem, CP
 ** 功能描述: 挂载一个分区
 ** 输　入  : pcDevName         块设备名   例如: /dev/sda1
 **           pcVolName         挂载目标   例如: /mnt/usb (不能使用相对路径, 否则无法卸载)
-**           pcFileSystem      文件系统格式 "vfat" "iso9660" "ntfs" "nfs" "romfs".. 
+**           pcFileSystem      文件系统格式 "vfat" "iso9660" "ntfs" "nfs" "romfs" "ramfs" .. 
                                NULL 表示使用默认文件系统
 ** 输　出  : < 0 表示失败
 ** 全局变量: 

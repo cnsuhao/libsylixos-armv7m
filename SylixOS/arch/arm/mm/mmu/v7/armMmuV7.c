@@ -17,6 +17,9 @@
 ** 文件创建日期: 2013 年 12 月 09 日
 **
 ** 描        述: ARMv7 体系构架 MMU 驱动.
+**
+** BUG:
+2014.05.24  ARMv7 带有 L2 CACHE 所以一级 CACHE 需要为写穿模式.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -64,12 +67,13 @@
 *********************************************************************************************************/
 static LW_OBJECT_HANDLE     _G_hPGDPartition;                           /*  系统目前仅使用一个 PGD      */
 static LW_OBJECT_HANDLE     _G_hPTEPartition;                           /*  PTE 缓冲区                  */
+static UINT                 _G_uiVMSAShareBit;                          /*  共享位值                    */
 /*********************************************************************************************************
   全局定义
 *********************************************************************************************************/
 #define VMSA_NS             0ul                                         /*  非安全位值                  */
 #define VMSA_nG             0ul                                         /*  非全局位值                  */
-#define VMSA_S              1ul                                         /*  共享位值                    */
+#define VMSA_S              _G_uiVMSAShareBit                           /*  共享位值                    */
 /*********************************************************************************************************
   汇编函数
 *********************************************************************************************************/
@@ -109,35 +113,40 @@ static INT  armMmuFlags2Attr (ULONG   ulFlag,
     }
 
     if (ulFlag & LW_VMM_FLAG_WRITABLE) {                                /*  是否可写                    */
-        *pucAP2 = 0;                                                    /*  可写                        */
-        *pucAP  = 3;
+        *pucAP2 = 0x0;                                                  /*  可写                        */
+        *pucAP  = 0x3;
     } else {
-        *pucAP2 = 1;                                                    /*  只读                        */
-        *pucAP  = 3;
+        *pucAP2 = 0x1;                                                  /*  只读                        */
+        *pucAP  = 0x3;
     }
 
-    if (ulFlag & LW_VMM_FLAG_CACHEABLE &&
-        ulFlag & LW_VMM_FLAG_BUFFERABLE) {                              /*  CACHE 与 BUFFER 控制        */
-        *pucTEX = 0x1;                                                  /*  回写, 写分配                */
-        *pucCB  = 0x3;
+    if ((ulFlag & LW_VMM_FLAG_CACHEABLE) &&
+        (ulFlag & LW_VMM_FLAG_BUFFERABLE)) {                            /*  CACHE 与 BUFFER 控制        */
+        *pucTEX = 0x4 + 0x1;                                            /*  Outer: 回写, 写分配         */
+        *pucCB  = 0x2;                                                  /*  Inner: 写穿透, 不具备写分配 */
 
     } else if (ulFlag & LW_VMM_FLAG_CACHEABLE) {
-        *pucTEX = 0x0;                                                  /*  回写, 不具备写分配          */
-        *pucCB  = 0x3;
+        *pucTEX = 0x4 + 0x3;                                            /*  Outer: 回写, 不具备写分配   */
+        *pucCB  = 0x2;                                                  /*  Inner: 写穿透, 不具备写分配 */
 
     } else if (ulFlag & LW_VMM_FLAG_BUFFERABLE) {
-        *pucTEX = 0x0;                                                  /*  写穿透, 不具备写分配        */
-        *pucCB  = 0x2;
+        *pucTEX = 0x4 + 0x2;                                            /*  Outer: 写穿透, 不具备写分配 */
+        *pucCB  = 0x2;                                                  /*  Inner: 写穿透, 不具备写分配 */
 
     } else {
-        *pucTEX = 0x0;                                                  /*  设备内存                    */
-        *pucCB  = 0x0;
+        if (VMSA_S) {
+            *pucTEX = 0x0;                                              /*  可共享设备内存              */
+            *pucCB  = 0x1;
+        } else {
+            *pucTEX = 0x2;                                              /*  非可共享设备内存            */
+            *pucCB  = 0x0;
+        }
     }
 
     if (ulFlag & LW_VMM_FLAG_EXECABLE) {
-        *pucXN = 0;
+        *pucXN = 0x0;
     } else {
-        *pucXN = 1;
+        *pucXN = 0x1;
     }
 
     return  (ERROR_NONE);
@@ -178,21 +187,25 @@ static INT  armMmuAttr2Flags (UINT8  ucAP,
         *pulFlag |= LW_VMM_FLAG_WRITABLE;
     }
     
-    switch (ucCB) {
+    switch (ucTEX) {
     
-    case 0x3:
-        *pulFlag |= LW_VMM_FLAG_CACHEABLE;
-        if (ucTEX) {
-            *pulFlag |= LW_VMM_FLAG_BUFFERABLE;
-        }
+    case (0x4 + 0x01):
+        *pulFlag |= LW_VMM_FLAG_CACHEABLE | LW_VMM_FLAG_BUFFERABLE;
+        break;
+    
+    case (0x4 + 0x02):
+        *pulFlag |= LW_VMM_FLAG_BUFFERABLE;
         break;
 
-    case 0x2:
-        *pulFlag |= LW_VMM_FLAG_BUFFERABLE;
+    case (0x4 + 0x03):
+        *pulFlag |= LW_VMM_FLAG_CACHEABLE;
+        break;
+
+    default:
         break;
     }
     
-    if (ucXN == 0) {
+    if (ucXN == 0x0) {
         *pulFlag |= LW_VMM_FLAG_EXECABLE;
     }
 
@@ -225,8 +238,8 @@ static LW_PGD_TRANSENTRY  armMmuBuildPgdesc (UINT32  uiBaseAddr,
     
     case COARSE_TBASE:                                                  /*  粗粒度二级页表描述符        */
         uiDescriptor = (uiBaseAddr & 0xFFFFFC00)
-                     | (ucDomain << 5)
-                     | (VMSA_NS  << 3)
+                     | (ucDomain <<  5)
+                     | (VMSA_NS  <<  3)
                      | ucType;
         break;
         
@@ -238,9 +251,9 @@ static LW_PGD_TRANSENTRY  armMmuBuildPgdesc (UINT32  uiBaseAddr,
                      | (ucAP2    << 15)
                      | (ucTEX    << 12)
                      | (ucAP     << 10)
-                     | (ucDomain << 5)
-                     | (ucXN     << 4)
-                     | (ucCB     << 2)
+                     | (ucDomain <<  5)
+                     | (ucXN     <<  4)
+                     | (ucCB     <<  2)
                      | ucType;
         break;
         
@@ -280,11 +293,11 @@ static LW_PTE_TRANSENTRY  armMmuBuildPtentry (UINT32  uiBaseAddr,
         uiDescriptor = (uiBaseAddr & 0xFFFFF000)
                      | (VMSA_nG  << 11)
                      | (VMSA_S   << 10)
-                     | (ucAP2    << 9)
-                     | (ucTEX    << 6)
-                     | (ucAP     << 4)
-                     | (ucCB     << 2)
-                     | (ucXN     << 0)
+                     | (ucAP2    <<  9)
+                     | (ucTEX    <<  6)
+                     | (ucAP     <<  4)
+                     | (ucCB     <<  2)
+                     | (ucXN     <<  0)
                      | ucType;
         break;
 
@@ -784,6 +797,8 @@ static VOID  armMmuMakeTrans (PLW_MMU_CONTEXT     pmmuctx,
 static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
 {
     if (LW_NCPUS > 1) {
+        _G_uiVMSAShareBit = 1;                                          /*  多核设置为可共享            */
+
         /*
          *  Set location of level 1 page table
          * ------------------------------------
@@ -791,7 +806,7 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
          *  13:7  - 0x0
          *  6     - IRGN[0]     0x0 (Normal memory, Inner Non-cacheable)
          *  5     - NOS         0x0 (Outer Shareable)
-         *  4:3   - RGN         0x0 (Normal memory, Outer Non-cacheable)
+         *  4:3   - RGN         0x1 (Normal memory, Outer Write-Back Write-Allocate Cacheable)
          *  2     - IMP         0x0
          *  1     - S           0x1 (Shareable)
          *  0     - IRGN[1]     0x0 (Normal memory, Inner Non-cacheable)
@@ -799,27 +814,30 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
         armMmuSetTTBase((LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry |
                         (0 << 6) |
                         (0 << 5) |
-                        (0 << 3) |
+                        (1 << 3) |
                         (0 << 2) |
                         (1 << 1) |
                         (0 << 0)));
     } else {
+        _G_uiVMSAShareBit = 0;                                          /*  单核设置为非可共享，否则运行*/
+                                                                        /*  速度会非常慢                */
+
         /*
          *  Set location of level 1 page table
          * ------------------------------------
          *  31:14 - Base addr
          *  13:7  - 0x0
-         *  5     - NOS         0x0 (Outer Shareable)
-         *  4:3   - RGN         0x0 (Normal memory, Outer Non-cacheable)
+         *  5     - NOS         0x1 (Outer NonShareable)
+         *  4:3   - RGN         0x1 (Normal memory, Outer Write-Back Write-Allocate Cacheable)
          *  2     - IMP         0x0
-         *  1     - S           0x1 (Shareable)
+         *  1     - S           0x0 (NonShareable)
          *  0     - C           0x0 (Inner Non-cacheable)
          */
         armMmuSetTTBase((LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry |
-                        (0 << 5) |
-                        (0 << 3) |
+                        (1 << 5) |
+                        (1 << 3) |
                         (0 << 2) |
-                        (1 << 1) |
+                        (0 << 1) |
                         (0 << 0)));
     }
 }

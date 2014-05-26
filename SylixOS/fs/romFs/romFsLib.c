@@ -497,8 +497,8 @@ INT  __rfs_getfile (PROM_VOLUME  promfs, UINT32  uiAddr, PROMFS_DIRENT promdnt)
     promdnt->ROMFSDNT_stat.st_ino     = (ino_t)promdnt->ROMFSDNT_uiMe;
     promdnt->ROMFSDNT_stat.st_mode   |= S_IRUSR | S_IRGRP | S_IROTH;
     promdnt->ROMFSDNT_stat.st_nlink   = 1;
-    promdnt->ROMFSDNT_stat.st_uid     = 0;
-    promdnt->ROMFSDNT_stat.st_gid     = 0;
+    promdnt->ROMFSDNT_stat.st_uid     = promfs->ROMFS_uid;
+    promdnt->ROMFSDNT_stat.st_gid     = promfs->ROMFS_gid;
     promdnt->ROMFSDNT_stat.st_rdev    = 1;
     promdnt->ROMFSDNT_stat.st_size    = (off_t)uiSize;
     promdnt->ROMFSDNT_stat.st_blksize = uiSize;
