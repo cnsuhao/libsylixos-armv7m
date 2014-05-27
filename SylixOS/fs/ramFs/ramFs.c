@@ -201,7 +201,7 @@ INT  API_RamFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     pramfs->RAMFS_ulCurBlk = 0ul;
     
     if (stMax == 0) {
-        pramfs->RAMFS_ulMaxBlk = __ARCH_ULONG_MAX;
+        pramfs->RAMFS_ulMaxBlk = (__ARCH_ULONG_MAX / __RAM_BSIZE);
     } else {
         pramfs->RAMFS_ulMaxBlk = (ULONG)(stMax / __RAM_BSIZE);
     }

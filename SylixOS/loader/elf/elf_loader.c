@@ -1136,6 +1136,7 @@ static INT dynPhdrParse (LW_LD_EXEC_MODULE *pmodule,
 
                 case DT_INIT_ARRAYSZ:
                     pdyndir->ulInitArrSize  = pdyn->d_un.d_val;
+                    break;
 
                 case DT_FINI_ARRAY:
                     pdyndir->paddrFiniArray = (Elf_Addr *)LW_LD_V2PADDR(addrMin,

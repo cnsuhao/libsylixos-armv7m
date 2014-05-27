@@ -1140,6 +1140,85 @@ static INT gdbHcmdHandle (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: gdbContHandle
+** 功能描述: 响应gdb vCont命令
+** 输　入  : pparam        gdb全局参数
+**           cInBuff       rsp包，含开始执行的地址
+** 输　出  : cOutBuff      rsp包，表示操作执行结果
+**           返回值        ERROR_NONE 表示没有错误, PX_ERROR 表示错误，1表示跳出循环
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT gdbContHandle (LW_GDB_PARAM     *pparam,
+                          PLW_DTRACE_MSG    pdmsg,
+                          PCHAR             pcInBuff,
+                          PCHAR             pcOutBuff)
+{
+    CHAR        chOp     = '\0';
+    ULONG       ulTid    = 0;
+    INT         iSigNo;
+    GDB_REG_SET regset;
+
+    chOp = pcInBuff[0];
+    if ('S' == chOp || 'C' == chOp) {
+        sscanf(pcInBuff + 1, "%02x:%lx", &iSigNo, &ulTid);
+
+    } else if ('s' == chOp || 'c' == chOp) {
+        sscanf(pcInBuff + 1, ":%lx", &ulTid);
+
+    } else {
+        gdbReplyError(pcOutBuff, 1);
+
+        return  (ERROR_NONE);
+    }
+
+    pparam->GDB_lOpCThreadId = ulTid;
+
+    if ('S' == chOp || 's' == chOp) {
+        if (ulTid == 0 || ulTid == -1) {
+            gdbReplyError(pcOutBuff, 2);
+
+            return  (ERROR_NONE);
+        }
+
+        archGdbRegsGet(pparam->GDB_pvDtrace, ulTid, &regset);
+        pparam->GDB_bpStep.BP_addr = archGdbGetNextPc(&regset);
+        API_DtraceBreakpointInsert(pparam->GDB_pvDtrace,
+                                   pparam->GDB_bpStep.BP_addr,
+                                   &pparam->GDB_bpStep.BP_ulInstOrg);
+    }
+
+    return  (1);
+}
+/*********************************************************************************************************
+** 函数名称: gdbHcmdHandle
+** 功能描述: 响应gdb v命令
+** 输　入  : pparam        gdb全局参数
+**           cInBuff       rsp包，含开始执行的地址
+** 输　出  : cOutBuff      rsp包，表示操作执行结果
+**           返回值        ERROR_NONE 表示没有错误, PX_ERROR 表示错误, 1表示
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT gdbVcmdHandle (LW_GDB_PARAM     *pparam,
+                          PLW_DTRACE_MSG    pdmsg,
+                          PCHAR             pcInBuff,
+                          PCHAR             pcOutBuff)
+{
+
+    if (lib_strstr(pcInBuff, "Cont?") == pcInBuff) {
+        lib_strncpy(pcOutBuff, "vCont;c;C;s;S", GDB_RSP_MAX_LEN);  //in linux is vCont;c;C;s;S;t;r
+
+    } else if (lib_strstr(pcInBuff, "Cont;") == pcInBuff) {
+        return gdbContHandle(pparam,
+                             pdmsg,
+                             pcInBuff + lib_strlen("Cont;"),
+                             pcOutBuff);
+    }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: gdbCheckThread
 ** 功能描述: 响应gdb H命令
 ** 输　入  : pparam        gdb全局参数
@@ -1278,7 +1357,15 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
         case 'Z':
             gdbInsertBP(pparam, cInBuff + 1, cOutBuff);
             break;
-        
+
+        case 'v':
+            if (gdbVcmdHandle(pparam, pdmsg, cInBuff + 1, cOutBuff) > 0) {
+                LW_GDB_SAFEFREE(cInBuff);
+                LW_GDB_SAFEFREE(cOutBuff);
+                return  (ERROR_NONE);
+            }
+            break;
+
         default:
             cOutBuff[0] = 0;
             break;
@@ -1580,6 +1667,9 @@ static INT gdbMain (INT argc, CHAR **argv)
             sscanf(argv[iArgPos] + i + 1, "%hu", &usPort);
             if (lib_strcmp(argv[iArgPos], "localhost") != 0) {
                 ui32Ip = inet_addr(argv[iArgPos]);
+                if (IPADDR_NONE == ui32Ip) {
+                    ui32Ip = INADDR_ANY;
+                }
             } else {
                 ui32Ip = INADDR_ANY;
             }
@@ -1637,9 +1727,6 @@ static INT gdbMain (INT argc, CHAR **argv)
             _ErrorHandle(ERROR_GDB_ATTACH_PROG);
             return  (PX_ERROR);
         }
-
-        vprocGetPath(iPid, param.GDB_cProgPath, MAX_FILENAME_LENGTH);
-    
     } else {                                                            /* 启动程序并attach             */
         posix_spawnattr_init(&spawnattr);
         spawnstop.SPS_iSigNo    = SIGUSR1;
@@ -1666,14 +1753,14 @@ static INT gdbMain (INT argc, CHAR **argv)
             return  (PX_ERROR);
         }
 
-        lib_strncpy(param.GDB_cProgPath, argv[iArgPos], MAX_FILENAME_LENGTH - 1);
-
         if (gdbWaitSpawmSig(spawnstop.SPS_iSigNo) == PX_ERROR) {        /* 等待加载就绪信号             */
             gdbRelease(&param);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Load program failed.\r\n");
             return  (PX_ERROR);
         }
     }
+    
+    vprocGetPath(param.GDB_iPid, param.GDB_cProgPath, MAX_FILENAME_LENGTH);
 
     if (param.GDB_byCommType == COMM_TYPE_TCP) {
         param.GDB_iCommFd = gdbTcpSockInit(ui32Ip, usPort);             /* 初始化socket，获取连接句柄   */
@@ -1705,7 +1792,7 @@ static INT gdbMain (INT argc, CHAR **argv)
 LW_API 
 VOID  API_GdbInit (VOID)
 {
-    API_TShellKeywordAddEx("debug", gdbMain, LW_OPTION_KEYWORD_ASYNCBG);
+    API_TShellKeywordAddEx("debug", gdbMain, LW_OPTION_KEYWORD_SYNCBG);
     API_TShellFormatAdd("debug", "  [program file] [argments...]");
     API_TShellHelpAdd("debug",   "GDB Server\n");
 }

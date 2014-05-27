@@ -121,7 +121,7 @@ static LW_INLINE VOID write64 (UINT64  u64Data, addr_t  ulAddr)
 #define write64_be(v, a)    write64(htobe64(v), a)
 
 /*********************************************************************************************************
-  ARM 处理器 I/O 内存连续读
+  ARM 处理器 I/O 内存连续读 (数据来自单个地址)
 *********************************************************************************************************/
 
 static LW_INLINE VOID reads8 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount)
@@ -129,7 +129,7 @@ static LW_INLINE VOID reads8 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount)
     REGISTER UINT8  *pucBuffer = (UINT8 *)pvBuffer;
 
     while (stCount > 0) {
-        *pucBuffer++ = *(volatile UINT8 *)ulAddr++;
+        *pucBuffer++ = *(volatile UINT8 *)ulAddr;
         stCount--;
         KN_IO_RMB();
     }
@@ -140,7 +140,7 @@ static LW_INLINE VOID reads16 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount)
     REGISTER UINT16  *pusBuffer = (UINT16 *)pvBuffer;
 
     while (stCount > 0) {
-        *pusBuffer++ = *(volatile UINT16 *)ulAddr++;
+        *pusBuffer++ = *(volatile UINT16 *)ulAddr;
         stCount--;
         KN_IO_RMB();
     }
@@ -151,7 +151,7 @@ static LW_INLINE VOID reads32 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount)
     REGISTER UINT32  *puiBuffer = (UINT32 *)pvBuffer;
 
     while (stCount > 0) {
-        *puiBuffer++ = *(volatile UINT32 *)ulAddr++;
+        *puiBuffer++ = *(volatile UINT32 *)ulAddr;
         stCount--;
         KN_IO_RMB();
     }
@@ -162,14 +162,14 @@ static LW_INLINE VOID reads64 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount)
     REGISTER UINT64  *pu64Buffer = (UINT64 *)pvBuffer;
 
     while (stCount > 0) {
-        *pu64Buffer++ = *(volatile UINT64 *)ulAddr++;
+        *pu64Buffer++ = *(volatile UINT64 *)ulAddr;
         stCount--;
         KN_IO_RMB();
     }
 }
 
 /*********************************************************************************************************
-  ARM 处理器 I/O 内存连续写
+  ARM 处理器 I/O 内存连续写 (数据写入单个地址)
 *********************************************************************************************************/
 
 static LW_INLINE VOID writes8 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount)
@@ -178,7 +178,7 @@ static LW_INLINE VOID writes8 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount)
 
     while (stCount > 0) {
         KN_IO_WMB();
-        *(volatile UINT8 *)ulAddr++ = *pucBuffer++;
+        *(volatile UINT8 *)ulAddr = *pucBuffer++;
         stCount--;
     }
 }
@@ -189,7 +189,7 @@ static LW_INLINE VOID writes16 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount
 
     while (stCount > 0) {
         KN_IO_WMB();
-        *(volatile UINT16 *)ulAddr++ = *pusBuffer++;
+        *(volatile UINT16 *)ulAddr = *pusBuffer++;
         stCount--;
     }
 }
@@ -200,7 +200,7 @@ static LW_INLINE VOID writes32 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount
 
     while (stCount > 0) {
         KN_IO_WMB();
-        *(volatile UINT32 *)ulAddr++ = *puiBuffer++;
+        *(volatile UINT32 *)ulAddr = *puiBuffer++;
         stCount--;
     }
 }
@@ -211,7 +211,7 @@ static LW_INLINE VOID writes64 (addr_t  ulAddr, PVOID  pvBuffer, size_t  stCount
 
     while (stCount > 0) {
         KN_IO_WMB();
-        *(volatile UINT64 *)ulAddr++ = *pu64Buffer++;
+        *(volatile UINT64 *)ulAddr = *pu64Buffer++;
         stCount--;
     }
 }

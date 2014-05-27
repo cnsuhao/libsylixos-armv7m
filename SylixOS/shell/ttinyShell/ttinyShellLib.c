@@ -943,6 +943,12 @@ PVOID   __tshellThread (PVOID  pcArg)
         exit(-1);
     }
     
+    iRetValue = ioctl(iTtyFd, FIOWBUFSET, LW_CFG_SHELL_MAX_COMMANDLEN); /*  设置发送缓冲                */
+    if (iRetValue < 0) {
+        perror("shell can not change set write buffer size");
+        exit(-1);
+    }
+    
     pfuncRunCallback = __TTINY_SHELL_GET_CALLBACK(ptcbCur);
     if (pfuncRunCallback) {
         iRetValue = pfuncRunCallback(iTtyFd);                           /*  调用启动回调函数            */

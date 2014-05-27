@@ -21,6 +21,7 @@
 ** BUG:
 2009.04.04  加入使用量比例信息.
 2009.11.13  更新显示格式. 与 vmm 相仿.
+2014.05.27  修复 heap 内存超过 40MB 显示比例关系溢出问题.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -72,7 +73,7 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
                                                     stUsedByteSize,
                                                     stMaxUsedByteSize,
                                                     ulSegmentCounter,
-                                                    ((stUsedByteSize * 100) / stByteSize));
+                                                    (stUsedByteSize / (stByteSize / 100)));
         API_KernelHeapInfo(LW_OPTION_HEAP_SYSTEM, 
                            &stByteSize,
                            &ulSegmentCounter,
@@ -84,7 +85,7 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
                                                      stUsedByteSize,
                                                      stMaxUsedByteSize,
                                                      ulSegmentCounter,
-                                                     ((stUsedByteSize * 100) / stByteSize));
+                                                     (stUsedByteSize / (stByteSize / 100)));
     } else {
         if (API_RegionGetName(ulId, cRegionName)) {
             return;
@@ -102,7 +103,7 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
                                                      stUsedByteSize,
                                                      stMaxUsedByteSize,
                                                      ulSegmentCounter,
-                                                     ((stUsedByteSize * 100) / stByteSize));
+                                                     (stUsedByteSize / (stByteSize / 100)));
     }
     
     printf("\n");

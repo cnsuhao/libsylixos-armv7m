@@ -1205,7 +1205,7 @@ pid_t  vprocFindProc (PVOID  pvAddr)
 }
 /*********************************************************************************************************
 ** 函数名称: vprocGetPath
-** 功能描述: 获取进程主程序文件名
+** 功能描述: 获取进程主程序文件路径
 ** 输　入  : pid         进程id
 **           stMaxLen    pcModPath缓冲区长度
 ** 输　出  : pcPath      模块路径
@@ -1216,6 +1216,8 @@ pid_t  vprocFindProc (PVOID  pvAddr)
 INT  vprocGetPath (pid_t  pid, PCHAR  pcPath, size_t stMaxLen)
 {
     LW_LD_VPROC        *pvproc;
+    LW_LIST_RING       *pringTemp;
+    LW_LD_EXEC_MODULE  *pmodTemp;
 
     LW_LD_LOCK();
     pvproc = vprocGet(pid);
@@ -1224,7 +1226,12 @@ INT  vprocGetPath (pid_t  pid, PCHAR  pcPath, size_t stMaxLen)
         return  (PX_ERROR);
     }
 
-    lib_strlcpy(pcPath, pvproc->VP_pcName, stMaxLen);
+    pringTemp  = pvproc->VP_ringModules;
+    pmodTemp   = _LIST_ENTRY(pringTemp,
+                             LW_LD_EXEC_MODULE,
+                             EMOD_ringModules);                         /* 取第一个模块的路径           */
+    lib_strlcpy(pcPath, pmodTemp->EMOD_pcModulePath, stMaxLen);
+
     LW_LD_UNLOCK();
 
     return  (ERROR_NONE);

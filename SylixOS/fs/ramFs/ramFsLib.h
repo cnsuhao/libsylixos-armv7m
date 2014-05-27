@@ -37,10 +37,10 @@
   一个内存分片大小
 *********************************************************************************************************/
 
-#define __RAM_BSIZE_SHIFT               11                              /*  (1 << 11) = 2048            */
-#define __RAM_BSIZE                     (1 << __RAM_BSIZE_SHIFT)        /*  2048 bytes                  */
+#define __RAM_BSIZE_SHIFT               LW_CFG_RAMFS_BSIZE_SHIFT
+#define __RAM_BSIZE                     (1 << __RAM_BSIZE_SHIFT)
 #define __RAM_BSIZE_MASK                ((1 << __RAM_BSIZE_SHIFT) - 1)
-#define __RAM_BDATASIZE                 (__RAM_BSIZE - (sizeof(void *) * 2))
+#define __RAM_BDATASIZE                 (__RAM_BSIZE - (sizeof(PVOID) * 2))
 
 /*********************************************************************************************************
   文件缓存内存管理

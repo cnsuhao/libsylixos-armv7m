@@ -808,7 +808,6 @@ ssize_t  _TyWrite (TY_DEV_ID  ptyDev,
     ptyDev->TYDEV_iAbortFlag &= ~OPT_WABORT;                            /*  清除 abort                  */
     
     while (stNBytes > 0) {
-        
         if (LW_CPU_GET_CUR_NESTING()) {                                 /*  中断调用                    */
             ulError = API_SemaphoreBTryPend(ptyDev->TYDEV_hWrtSyncSemB);
         } else {                                                        /*  普通调用                    */
@@ -969,8 +968,7 @@ __re_read:
             LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
                                                                         /*  解锁 spinlock 打开中断      */
             _TyRdXoff(ptyDev, LW_FALSE);                                /*  启动对方发送                */
-            LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel);   
-                                                                        /*  锁定 spinlock 并关闭中断    */
+            LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel); /*  锁定 spinlock 并关闭中断    */
         }
     }
     
@@ -1036,7 +1034,6 @@ __re_read:
     ptyDev->TYDEV_iAbortFlag &= ~OPT_RABORT;                            /*  清除 abort                  */
     
     for (;;) {
-    
         if (LW_CPU_GET_CUR_NESTING() || 
             (__TTY_CC(ptyDev, VMIN) == 0)) {                            /*  中断调用或无需等待          */
             ulError = API_SemaphoreBTryPend(ptyDev->TYDEV_hRdSyncSemB);
@@ -1173,7 +1170,6 @@ INT  _TyITx (TY_DEV_ID  ptyDev, PCHAR  pcChar)
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
         
     } else {
-        
         if (__RNG_ELEM_GET(ringId, pcChar, iNTemp) == 0) {              /*  从缓冲区取出数据            */
             ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bBusy = LW_FALSE;     /*  没有剩余数据等待发送        */
             LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
@@ -1260,16 +1256,13 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
         if (_G_pfuncTyAbortFunc) {
             _G_pfuncTyAbortFunc();
         }
-    
     } else if ((cInchar == __TTY_CC(ptyDev, VQUIT)) && 
                (iOpt & OPT_MON_TRAP)) {                                 /*  需要处理 CONTORL+X 命令     */
-
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
         API_KernelReboot(LW_REBOOT_WARM);                               /*  重新启动操作系统            */
     
     } else if (((cInchar == __TTY_CC(ptyDev, VSTOP)) || (cInchar == __TTY_CC(ptyDev, VSTART))) && 
                (iOpt & OPT_TANDEM)) {                                   /*  需要处理流控制              */
-        
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
         
         if (cInchar == __TTY_CC(ptyDev, VSTOP)) {
@@ -1277,9 +1270,7 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
         } else {
             _TyWrtXoff(ptyDev, LW_FALSE);
         }
-    
     } else {
-    
         if ((iOpt & OPT_CRMOD) && (iOpt & OPT_LINE)) {
             if (cInchar == PX_EOS) {                                    /*  此模式下对 0x00 字符不响应  */
                 LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
@@ -1366,7 +1357,6 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
         bReleaseTaskLevel = LW_FALSE;                                   /*  开始对输入缓冲区操作        */
         
         if (!(iOpt & OPT_LINE)) {                                       /*  不是行模式                  */
-            
             if (RNG_ELEM_PUT(ringId, cInchar, iNTemp) == 0) {           /*  写入输入队列                */
                 iStatus = PX_ERROR;
             }
@@ -1375,7 +1365,6 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
             }
             
         } else {                                                        /*  属于行模式                  */
-            
             iFreeBytes = rngFreeBytes(ringId);                          /*  获得空闲字节的个数          */
             
             if (__TTY_BACKSPACE(ptyDev, cInchar)) {                     /*  退格键                      */
@@ -1419,7 +1408,6 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
         }
         
         if (iOpt & OPT_TANDEM) {                                        /*  流控制模式                  */
-            
             iFreeBytes = rngFreeBytes(ringId);
             if (ptyDev->TYDEV_iOpt & OPT_LINE) {
                 iFreeBytes -= ptyDev->TYDEV_ucInNBytes + 1;
