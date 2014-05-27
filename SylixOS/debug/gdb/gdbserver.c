@@ -825,6 +825,13 @@ static INT gdbGoTo (LW_GDB_PARAM    *pparam,
                                    &pparam->GDB_bpStep.BP_ulInstOrg);
     }
 
+    if (pparam->GDB_lOpCThreadId <= 0) {
+        API_DtraceContinueProcess(pparam->GDB_pvDtrace);
+    } else {
+        API_DtraceContinueThread(pparam->GDB_pvDtrace,
+                                 pparam->GDB_lOpCThreadId);             /* 当前线程停止计数减一         */
+    }
+
     gdbReplyOk(pcOutBuff);
 
     return  (ERROR_NONE);
@@ -1166,6 +1173,19 @@ static INT gdbContHandle (LW_GDB_PARAM     *pparam,
     } else if ('s' == chOp || 'c' == chOp) {
         sscanf(pcInBuff + 1, ":%lx", &ulTid);
 
+    } else if ('t' == chOp) {
+        sscanf(pcInBuff + 1, ":%lx", &ulTid);
+
+        if (ulTid <= 0) {
+            API_DtraceStopProcess(pparam->GDB_pvDtrace);
+        } else {
+            API_DtraceStopThread(pparam->GDB_pvDtrace,
+                                pparam->GDB_lOpCThreadId);
+        }
+
+        gdbReplyOk(pcOutBuff);
+
+        return  (ERROR_NONE);
     } else {
         gdbReplyError(pcOutBuff, 1);
 
@@ -1186,6 +1206,13 @@ static INT gdbContHandle (LW_GDB_PARAM     *pparam,
         API_DtraceBreakpointInsert(pparam->GDB_pvDtrace,
                                    pparam->GDB_bpStep.BP_addr,
                                    &pparam->GDB_bpStep.BP_ulInstOrg);
+    }
+
+    if (pparam->GDB_lOpCThreadId <= 0) {
+        API_DtraceContinueProcess(pparam->GDB_pvDtrace);
+    } else {
+        API_DtraceContinueThread(pparam->GDB_pvDtrace,
+                                 pparam->GDB_lOpCThreadId);             /* 当前线程停止计数减一         */
     }
 
     return  (1);
@@ -1260,6 +1287,8 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
     INT      iRet;
     CHAR    *cInBuff  = NULL;
     CHAR    *cOutBuff = NULL;
+
+    pparam->GDB_lOpGThreadId = 0;                                       /* 每次进去循环前复位Hg的值     */
 
     cInBuff  = (CHAR *)LW_GDB_SAFEMALLOC(GDB_RSP_MAX_LEN);
     cOutBuff = (CHAR *)LW_GDB_SAFEMALLOC(GDB_RSP_MAX_LEN);
@@ -1530,13 +1559,6 @@ static INT gdbEventLoop (LW_GDB_PARAM *pparam)
             if (gdbRspPkgHandle(pparam, &dmsg, TRUE) == PX_ERROR) {     /* 小于0表示客户端关闭连接      */
                 return  (ERROR_NONE);
             }
-
-            if (pparam->GDB_lOpCThreadId <= 0) {
-                API_DtraceContinueProcess(pparam->GDB_pvDtrace);
-            } else {
-                API_DtraceContinueThread(pparam->GDB_pvDtrace,
-                                         pparam->GDB_lOpCThreadId);     /* 当前线程停止计数减一         */
-            }
         }
 
         if ((fdsi.ssi_signo == SIGCHLD) &&
@@ -1558,24 +1580,17 @@ static INT gdbEventLoop (LW_GDB_PARAM *pparam)
                                            pparam->GDB_bpStep.BP_ulInstOrg);
             }
 
-            if (pparam->GDB_lOpCThreadId <= 0) {
+            if (pparam->GDB_lOpCThreadId <= 0 &&
+                0 == pparam->GDB_bNonStop) {
                 API_DtraceStopProcess(pparam->GDB_pvDtrace);            /* 停止进程                     */
                 API_DtraceContinueThread(pparam->GDB_pvDtrace,
                                          dmsg.DTM_ulThread);            /* 当前线程停止计数减一         */
             }
 
             if (gdbRspPkgHandle(pparam, &dmsg, TRUE) == PX_ERROR) {     /* 小于0表示客户端关闭连接      */
+                API_DtraceContinueProcess(pparam->GDB_pvDtrace);
                 return  (ERROR_NONE);
             }
-
-            if (pparam->GDB_lOpCThreadId <= 0) {
-                API_DtraceContinueProcess(pparam->GDB_pvDtrace);
-            } else {
-                API_DtraceContinueThread(pparam->GDB_pvDtrace,
-                                         pparam->GDB_lOpCThreadId);     /* 当前线程停止计数减一         */
-            }
-
-            pparam->GDB_lOpGThreadId = 0;
         }
     }
 
@@ -1793,8 +1808,11 @@ LW_API
 VOID  API_GdbInit (VOID)
 {
     API_TShellKeywordAddEx("debug", gdbMain, LW_OPTION_KEYWORD_SYNCBG);
-    API_TShellFormatAdd("debug", "  [program file] [argments...]");
-    API_TShellHelpAdd("debug",   "GDB Server\n");
+    API_TShellFormatAdd("debug", " [connect options] [program] [argments...]");
+    API_TShellHelpAdd("debug",   "GDB Server\n"
+                                 "eg. debug localhost:1234 helloworld\n"
+                                 "    debug /dev/ttyS1 helloworld\n"
+                                 "    debug --attach localhost:1234 1\n");
 }
 #endif                                                                  /*  LW_CFG_GDB_EN > 0           */
 /*********************************************************************************************************
