@@ -83,8 +83,8 @@ static const CHAR               _G_cModuleInfoHdr[] = "\n\
             NAME                HANDLE   TYPE  GLB   BASE     SIZE    SYMCNT\n\
 ------------------------------ -------- ------ --- -------- -------- --------\n";
 static const CHAR               _G_cVProcInfoHdr[] = "\n\
-      NAME             FATHER        PID   GRP   MEMORY    UID     GID    USER\n\
------------------ ----------------- ----- ----- -------- ------- ------- ------\n";
+      NAME             FATHER        PID   GRP    MEMORY    UID   GID   USER\n\
+----------------- ----------------- ----- ----- ---------- ----- ----- ------\n";
 #endif                                                                  /*  LW_CFG_SHELL_EN > 0         */
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: __ldPathIsFile
@@ -790,7 +790,7 @@ static INT  __tshellVProcShow (INT  iArgC, PCHAR  *ppcArgV)
             pcUser = "<unknown>";
         }
         
-        printf("%-17s %-17s %5d %5d %8zu %7d %7d %s\n", 
+        printf("%-17s %-17s %5d %5d %10zu %5d %5d %s\n", 
                pcProcessName, pcFatherName, pvproc->VP_pid, pvproc->VP_pidGroup, 
                stTotalMem, uid, gid, pcUser);
         

@@ -789,6 +789,7 @@ SylixOS/net/lwip/src/core/snmp/msg_in.c \
 SylixOS/net/lwip/src/core/snmp/msg_out.c \
 SylixOS/net/lwip/src/netif/etharp.c \
 SylixOS/net/lwip/src/netif/ethernetif.c \
+SylixOS/net/lwip/src/netif/ifqueue.c \
 SylixOS/net/lwip/src/netif/slipif.c \
 SylixOS/net/lwip/src/netif/aodv/aodv_hello.c \
 SylixOS/net/lwip/src/netif/aodv/aodv_if.c \
@@ -1219,6 +1220,12 @@ COMPILE.c       = $(CC)  $(CFLAGS) -c
 COMPILE.cxx     = $(CXX) $(CXXFLAGS) -c
 
 #*********************************************************************************************************
+# compile -fPIC
+#*********************************************************************************************************
+COMPILE_PIC.c   = $(COMPILE.c) -fPIC
+COMPILE_PIC.cxx = $(COMPILE.cxx) -fPIC
+
+#*********************************************************************************************************
 # target
 #*********************************************************************************************************
 ifeq ($(BUILD_PROCESS_SUP_LIB), 1)
@@ -1318,6 +1325,37 @@ $(TARGET): $(OBJS)
 #*********************************************************************************************************
 $(DSOH_TARGET): $(OBJS_DSOH)
 		$(AR) $(ARFLAGS) $(DSOH_TARGET) $(OBJS_DSOH)
+
+#*********************************************************************************************************
+# compile PIC code
+#*********************************************************************************************************
+$(OBJPATH)/SylixOS/vpmpdm/vpmpdm_backtrace.o: ./SylixOS/vpmpdm/vpmpdm_backtrace.c
+		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
+		$(COMPILE_PIC.c) $< -o $@
+
+$(OBJPATH)/SylixOS/vpmpdm/vpmpdm_lm.o: ./SylixOS/vpmpdm/vpmpdm_lm.c
+		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
+		$(COMPILE_PIC.c) $< -o $@
+
+$(OBJPATH)/SylixOS/vpmpdm/vpmpdm_start.o: ./SylixOS/vpmpdm/vpmpdm_start.c
+		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
+		$(COMPILE_PIC.c) $< -o $@
+
+$(OBJPATH)/SylixOS/vpmpdm/vpmpdm_stdio.o: ./SylixOS/vpmpdm/vpmpdm_stdio.c
+		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
+		$(COMPILE_PIC.c) $< -o $@
+
+$(OBJPATH)/SylixOS/vpmpdm/vpmpdm_timer.o: ./SylixOS/vpmpdm/vpmpdm_timer.c
+		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
+		$(COMPILE_PIC.c) $< -o $@
+
+$(OBJPATH)/SylixOS/vpmpdm/vpmpdm.o: ./SylixOS/vpmpdm/vpmpdm.c
+		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
+		$(COMPILE_PIC.c) $< -o $@
+
+$(OBJPATH)/SylixOS/vpmpdm/vpmpdm_cpp.o: ./SylixOS/vpmpdm/vpmpdm_cpp.cpp
+		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
+		$(COMPILE_PIC.cxx) $< -o $@
 
 #*********************************************************************************************************
 # link libvpmpdm.a object files

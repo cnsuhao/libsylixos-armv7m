@@ -35,8 +35,8 @@
   全局变量
 *********************************************************************************************************/
 static const CHAR   _G_cHeapInfoHdr[] = "\n\
-     HEAP        TOTAL    USED   MAX USED SEGMENT USED\n\
--------------- -------- -------- -------- ------- ----\n";
+     HEAP         TOTAL      USED     MAX USED  SEGMENT USED\n\
+-------------- ---------- ---------- ---------- ------- ----\n";
 /*********************************************************************************************************
 ** 函数名称: API_RegionShow
 ** 功能描述: 显示指定的内存池信息
@@ -68,24 +68,24 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
                            &stUsedByteSize,
                            LW_NULL,
                            &stMaxUsedByteSize);
-        printf("%-14s %8zd %8zd %8zd %7ld %3zd%%\n", "kernel",
-                                                    stByteSize,
-                                                    stUsedByteSize,
-                                                    stMaxUsedByteSize,
-                                                    ulSegmentCounter,
-                                                    (stUsedByteSize / (stByteSize / 100)));
+        printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", "kernel",
+                                                        stByteSize,
+                                                        stUsedByteSize,
+                                                        stMaxUsedByteSize,
+                                                        ulSegmentCounter,
+                                                        (stUsedByteSize / (stByteSize / 100)));
         API_KernelHeapInfo(LW_OPTION_HEAP_SYSTEM, 
                            &stByteSize,
                            &ulSegmentCounter,
                            &stUsedByteSize,
                            LW_NULL,
                            &stMaxUsedByteSize);
-        printf("%-14s %8zd %8zd %8zd %7ld %3zd%%\n", "system",
-                                                     stByteSize,
-                                                     stUsedByteSize,
-                                                     stMaxUsedByteSize,
-                                                     ulSegmentCounter,
-                                                     (stUsedByteSize / (stByteSize / 100)));
+        printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", "system",
+                                                        stByteSize,
+                                                        stUsedByteSize,
+                                                        stMaxUsedByteSize,
+                                                        ulSegmentCounter,
+                                                        (stUsedByteSize / (stByteSize / 100)));
     } else {
         if (API_RegionGetName(ulId, cRegionName)) {
             return;
@@ -98,12 +98,12 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
                              &stMaxUsedByteSize)) {
             return;
         }
-        printf("%-14s %8zd %8zd %8zd %7ld %3zd%%\n", cRegionName,
-                                                     stByteSize,
-                                                     stUsedByteSize,
-                                                     stMaxUsedByteSize,
-                                                     ulSegmentCounter,
-                                                     (stUsedByteSize / (stByteSize / 100)));
+        printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", cRegionName,
+                                                        stByteSize,
+                                                        stUsedByteSize,
+                                                        stMaxUsedByteSize,
+                                                        ulSegmentCounter,
+                                                        (stUsedByteSize / (stByteSize / 100)));
     }
     
     printf("\n");
