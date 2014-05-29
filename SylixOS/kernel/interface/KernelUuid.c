@@ -80,7 +80,6 @@ INT  uuidgen (uuid_t *uuidArray, INT  iCnt)
         uuidArray++;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

@@ -146,7 +146,6 @@ INT  API_I2cAdapterCreate (CPCHAR           pcName,
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -192,7 +191,6 @@ INT  API_I2cAdapterDelete (CPCHAR  pcName)
     API_SemaphoreBDelete(&pi2cadapter->I2CADAPTER_hBusLock);            /*  删除总线锁信号量            */
     __SHEAP_FREE(pi2cadapter);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -212,8 +210,8 @@ PLW_I2C_ADAPTER  API_I2cAdapterGet (CPCHAR  pcName)
     if (pi2cadapter == LW_NULL) {
         _ErrorHandle(ERROR_KERNEL_OBJECT_NULL);                         /*  未找到适配器                */
         return  (LW_NULL);
+    
     } else {
-        _ErrorHandle(ERROR_NONE);
         return  (pi2cadapter);
     }
 }
@@ -269,7 +267,6 @@ PLW_I2C_DEVICE  API_I2cDeviceCreate (CPCHAR  pcAdapterName,
     
     LW_BUS_INC_DEV_COUNT(&pi2cadapter->I2CADAPTER_pbusadapter);         /*  总线设备++                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (pi2cdevice);
 }
 /*********************************************************************************************************
@@ -311,7 +308,6 @@ INT  API_I2cDeviceDelete (PLW_I2C_DEVICE   pi2cdevice)
     
     __SHEAP_FREE(pi2cdevice);                                           /*  释放内存                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

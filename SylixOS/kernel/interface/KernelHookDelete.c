@@ -38,10 +38,8 @@
 LW_API  
 ULONG  API_KernelHookDelete (ULONG  ulOpt)
 {
-             INTREG                iregInterLevel;
-    
-    _ErrorHandle(ERROR_NONE);
-    
+    INTREG  iregInterLevel;
+        
     iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核同时关闭中断        */
     
     switch (ulOpt) {

@@ -371,7 +371,6 @@ INT  sigprocmask (INT              iCmd,
         sigsetBlock &= ~__SIGNO_UNMASK;                                 /*  有些信号是不可屏蔽的        */
         psigctx->SIGCTX_sigsetSigBlockMask |= sigsetBlock;
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     case SIG_UNBLOCK:                                                   /*  删除阻塞                    */
@@ -392,7 +391,7 @@ INT  sigprocmask (INT              iCmd,
     _sigPendRun(ptcbCur);                                               /*  可能有先前被阻塞信号需要运行*/
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -480,7 +479,6 @@ INT  kill (LW_OBJECT_HANDLE  ulId, INT  iSigNo)
     
     if (LW_CPU_GET_CUR_NESTING() || (ulId == API_ThreadIdSelf())) {
         _excJobAdd((VOIDFUNCPTR)kill, (PVOID)ulId, (PVOID)iSigNo, 0, 0, 0, 0);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 
@@ -521,7 +519,6 @@ INT  kill (LW_OBJECT_HANDLE  ulId, INT  iSigNo)
     }
 #endif                                                                  /*  LW_CFG_SIGNALFD_EN > 0      */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -581,7 +578,6 @@ static INT  sigqueue_internal (LW_OBJECT_HANDLE  ulId, INT   iSigNo, PVOID  pvSi
     if (LW_CPU_GET_CUR_NESTING() || (ulId == API_ThreadIdSelf())) {
         _excJobAdd((VOIDFUNCPTR)sigqueue_internal, (PVOID)ulId, (PVOID)iSigNo, (PVOID)pvSigValue, 
                    0, 0, 0);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -624,7 +620,6 @@ static INT  sigqueue_internal (LW_OBJECT_HANDLE  ulId, INT   iSigNo, PVOID  pvSi
     }
 #endif                                                                  /*  LW_CFG_SIGNALFD_EN > 0      */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -669,7 +664,6 @@ INT  sigTrap (LW_OBJECT_HANDLE  ulId, const union sigval  sigvalue)
     
     _excJobAdd((VOIDFUNCPTR)sigqueue_internal, (PVOID)ulId, (PVOID)SIGTRAP, sigvalue.sival_ptr, 0, 0, 0);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -809,7 +803,6 @@ INT  sigwait (const sigset_t  *psigset, INT  *piSig)
         if (piSig) {
             *piSig = iSigNo;
         }
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -833,7 +826,6 @@ INT  sigwait (const sigset_t  *psigset, INT  *piSig)
         *piSig = sigwt.SIGWT_siginfo.si_signo;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -879,7 +871,6 @@ INT  sigwaitinfo (const sigset_t *psigset, struct  siginfo  *psiginfo)
         if (psiginfo) {
             *psiginfo = siginfo;
         }
-        _ErrorHandle(ERROR_NONE);
         return  (siginfo.si_signo);
     }
     
@@ -903,7 +894,6 @@ INT  sigwaitinfo (const sigset_t *psigset, struct  siginfo  *psiginfo)
         *psiginfo = sigwt.SIGWT_siginfo;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (sigwt.SIGWT_siginfo.si_signo);
 }
 /*********************************************************************************************************
@@ -958,7 +948,6 @@ INT  sigtimedwait (const sigset_t *psigset, struct  siginfo  *psiginfo, const st
         if (psiginfo) {
             *psiginfo = siginfo;
         }
-        _ErrorHandle(ERROR_NONE);
         return  (siginfo.si_signo);
     }
     
@@ -1005,7 +994,6 @@ INT  sigtimedwait (const sigset_t *psigset, struct  siginfo  *psiginfo, const st
         *psiginfo = sigwt.SIGWT_siginfo;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (sigwt.SIGWT_siginfo.si_signo);
 }
 #endif                                                                  /*  LW_CFG_SIGNAL_EN > 0        */

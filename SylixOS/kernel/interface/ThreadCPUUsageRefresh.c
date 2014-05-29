@@ -73,7 +73,6 @@ ULONG  API_ThreadCPUUsageRefresh (VOID)
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     __LW_TICK_CPUUSAGE_ENABLE();                                        /*  重新打开测量                */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

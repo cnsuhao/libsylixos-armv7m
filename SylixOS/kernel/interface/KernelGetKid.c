@@ -38,7 +38,6 @@ extern  LW_OBJECT_ID  _S_ulThreadSignalId;
 LW_API  
 LW_OBJECT_HANDLE  API_KernelGetExc (VOID)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (_S_ulThreadSignalId);
 }
 
@@ -55,7 +54,6 @@ LW_OBJECT_HANDLE  API_KernelGetExc (VOID)
 LW_API  
 LW_OBJECT_HANDLE  API_KernelGetIdle (VOID)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (_K_ulIdleId[0]);
 }
 /*********************************************************************************************************
@@ -72,7 +70,6 @@ LW_OBJECT_HANDLE  API_KernelGetIdle (VOID)
 LW_API  
 LW_OBJECT_HANDLE  API_KernelGetItimer (VOID)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (_K_ulThreadItimerId);
 }
 

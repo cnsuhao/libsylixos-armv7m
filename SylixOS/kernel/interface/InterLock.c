@@ -38,9 +38,7 @@ ULONG  API_InterLock (INTREG  *piregInterLevel)
         return  (ERROR_INTER_LEVEL_NULL);
     }
 #endif
-    
-    _ErrorHandle(ERROR_NONE);
-    
+        
     *piregInterLevel = KN_INT_DISABLE();
     
     return  (ERROR_NONE);
@@ -59,7 +57,6 @@ ULONG  API_InterUnlock (INTREG  iregInterLevel)
 {
     KN_INT_ENABLE(iregInterLevel);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

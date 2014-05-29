@@ -109,7 +109,6 @@ ULONG  API_ThreadStartEx (LW_OBJECT_HANDLE  ulId, BOOL  bJoin, PVOID  *ppvRetVal
             }
             
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);                                   /*  可能够产生一次调度          */
             return  (ERROR_NONE);
 
         } else {

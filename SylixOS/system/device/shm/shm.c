@@ -486,7 +486,6 @@ static LONG  __shmOpen (LW_DEV_HDR     *pdevhdr,
     
     if (__STR_IS_ROOT(pcName)) {
         LW_DEV_INC_USE_COUNT(&_G_devhdrShm);                            /*  更新计数器                  */
-        _ErrorHandle(ERROR_NONE);
         return  ((LONG)LW_NULL);
     }
     
@@ -559,7 +558,6 @@ static LONG  __shmOpen (LW_DEV_HDR     *pdevhdr,
     
     LW_DEV_INC_USE_COUNT(&_G_devhdrShm);                                /*  更新计数器                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  ((LONG)pshmn);
 }
 /*********************************************************************************************************
@@ -649,7 +647,6 @@ static INT  __shmClose (PLW_SHM_NODE    pshmn)
     
     LW_DEV_DEC_USE_COUNT(&_G_devhdrShm);                                /*  更新计数器                  */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -775,7 +772,6 @@ static INT  __shmStatGet (PLW_SHM_NODE  pshmn, struct stat *pstat)
         pstat->st_ctime   = _G_shmrRoot.SHMR_time;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -824,7 +820,6 @@ static INT  __shmLStatGet (LW_DEV_HDR *pdevhdr, PCHAR  pcName, struct stat *psta
         
         __LW_SHM_UNLOCK();                                              /*  解锁共享内存设备            */
         
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     } else {
@@ -862,7 +857,6 @@ static INT  __shmStatfsGet (PLW_SHM_NODE  pshmn, struct statfs *pstatfs)
         pstatfs->f_namelen = PATH_MAX;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -911,7 +905,6 @@ static INT  __shmReadDir (PLW_SHM_NODE  pshmn, DIR  *dir)
                     
         dir->dir_dirent.d_type = IFTODT(pshmnTemp->SHMN_mode);
         dir->dir_dirent.d_shortname[0] = PX_EOS;
-        _ErrorHandle(ERROR_NONE);
     }
     __LW_SHM_UNLOCK();                                                  /*  解锁共享内存设备            */
     
@@ -942,7 +935,6 @@ static INT  __shmTruncate (PLW_SHM_NODE  pshmn, off_t  oftSize)
     }
     if (pshmn->SHMN_oftSize == oftSize) {
         __LW_SHM_UNLOCK();                                              /*  解锁共享内存设备            */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     if (pshmn->SHMN_pvPhyMem) {                                         /*  正在映射工作中, 不能改变大小*/
@@ -953,7 +945,6 @@ static INT  __shmTruncate (PLW_SHM_NODE  pshmn, off_t  oftSize)
     pshmn->SHMN_oftSize = oftSize;                                      /*  记录新的文件大小            */
     __LW_SHM_UNLOCK();                                                  /*  解锁共享内存设备            */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -1066,7 +1057,6 @@ static off_t  __shmLseek (PLW_SHM_NODE  pshmn,
                           off_t         oftOffset, 
                           INT           iWhence)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -1251,7 +1241,6 @@ INT  API_ShmDevCreate (VOID)
     static BOOL     bIsInit = LW_FALSE;
     
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 
@@ -1269,7 +1258,6 @@ INT  API_ShmDevCreate (VOID)
     
     lib_time(&_G_shmrRoot.SHMR_time);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_DEVICE_EN            */

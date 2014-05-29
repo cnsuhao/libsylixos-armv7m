@@ -38,6 +38,7 @@
 2013.03.17  加入 API_MsgQueueReceiveEx 可以设置接收选项.
 2013.05.05  判断调度器返回值, 决定是重启调用还是退出.
 2013.07.18  使用新的获取 TCB 的方法, 确保 SMP 系统安全.
+2014.05.29  修复超时后瞬间被激活时对消息的判断错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -145,7 +146,6 @@ __wait_again:
         
         LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);                                       /*  退出                        */
         return  (ERROR_NONE);
     }
     
@@ -209,7 +209,6 @@ __wait_again:
             LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, 
                                  iregInterLevel);                       /*  打开中断, 同时打开 spinlock */
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         }
         
@@ -225,7 +224,6 @@ __wait_again:
         
     } else {
         if (ptcbCur->TCB_ucIsEventDelete == LW_EVENT_EXIST) {           /*  事件是否存在                */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         } else {
             _ErrorHandle(ERROR_MSGQUEUE_WAS_DELETED);                   /*  已经被删除                  */
@@ -341,7 +339,6 @@ __wait_again:
         
         LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);                                       /*  退出                        */
         return  (ERROR_NONE);
     }
     
@@ -402,8 +399,12 @@ __wait_again:
             LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, 
                                  iregInterLevel);                       /*  打开中断, 同时打开 spinlock */
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
-            return  (ERROR_NONE);
+            if ((*pstMsgLen == 0) && (ptcbCur->TCB_stMaxByteSize == 0)) {
+                _ErrorHandle(E2BIG);                                    /*  退出                        */
+                return  (E2BIG);
+            } else {
+                return  (ERROR_NONE);
+            }
         }
         
         if (pevent->EVENT_ulOption & LW_OPTION_WAIT_PRIORITY) {
@@ -422,7 +423,6 @@ __wait_again:
                 _ErrorHandle(E2BIG);                                    /*  退出                        */
                 return  (E2BIG);
             } else {
-                _ErrorHandle(ERROR_NONE);                               /*  正常                        */
                 return  (ERROR_NONE);
             }
         } else {

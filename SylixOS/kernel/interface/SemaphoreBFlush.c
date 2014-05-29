@@ -107,7 +107,6 @@ ULONG  API_SemaphoreBFlush (LW_OBJECT_HANDLE  ulId, ULONG  *pulThreadUnblockNum)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_SEMB, MONITOR_EVENT_SEM_FLUSH, ulId, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_SEMB_EN > 0)        */

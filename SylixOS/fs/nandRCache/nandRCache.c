@@ -165,7 +165,6 @@ ULONG  API_NandRCacheCreate (PVOID              pvNandRCacheMem,
     }
     *ppnrcache = pnrcache;                                              /*  ±£´æ¿ØÖÆ¿é                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
     
 __error_handle:
@@ -200,7 +199,6 @@ ULONG  API_NandRCacheDelete (PLW_NRCACHE_CB    pnrcache)
     __SHEAP_FREE(pnrcache->NRCACHE_pplineHash);
     __SHEAP_FREE(pnrcache);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

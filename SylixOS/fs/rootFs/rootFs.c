@@ -150,7 +150,6 @@ INT  API_RootFsDevCreate (VOID)
     static BOOL     bIsInit = LW_FALSE;
     
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -170,7 +169,6 @@ INT  API_RootFsDevCreate (VOID)
     _G_rfsrRoot.RFSR_ulFiles   = 0;
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -486,7 +484,6 @@ static INT  __rootFsRemove (PLW_DEV_HDR     pdevhdr,
     }
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -514,7 +511,6 @@ static INT  __rootFsClose (LW_DEV_HDR     *pdevhdr)
 
     LW_DEV_DEC_USE_COUNT(&_G_devhdrRoot);                               /*  更新计数器                  */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -634,7 +630,6 @@ static INT  __rootFsStatGet (LW_DEV_HDR *pdevhdr, struct stat *pstat)
     pstat->st_ctime   = API_RootFsTime(LW_NULL);
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -722,7 +717,6 @@ static INT  __rootFsLStatGet (LW_DEV_HDR *pdevhdr, PCHAR  pcName, struct stat *p
     pstat->st_ctime   = API_RootFsTime(LW_NULL);
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -789,9 +783,8 @@ static INT  __rootFsStatfsGet (LW_DEV_HDR *pdevhdr, struct statfs *pstatfs)
         pstatfs->f_flag    = 0;
         pstatfs->f_namelen = PATH_MAX;
     }
-    
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -871,7 +864,6 @@ static INT  __rootFsReadDir (LW_DEV_HDR *pdevhdr, DIR  *dir)
             dir->dir_dirent.d_type = IFTODT(prfsnTemp->RFSN_mode);      /*  rootfs 节点 type            */
         }
         dir->dir_dirent.d_shortname[0] = PX_EOS;
-        _ErrorHandle(ERROR_NONE);
     }
     __LW_ROOTFS_UNLOCK();                                               /*  解锁 rootfs                 */
     
@@ -905,7 +897,6 @@ static INT  __rootFsReadDir (LW_DEV_HDR *pdevhdr, DIR  *dir)
                     sizeof(dir->dir_dirent.d_name));                    /*  拷贝文件名                  */
         dir->dir_dirent.d_type = pdevhdrTemp->DEVHDR_ucType;
         dir->dir_dirent.d_shortname[0] = PX_EOS;
-        _ErrorHandle(ERROR_NONE);
     }
 __scan_over:
     _IosUnlock();
@@ -936,7 +927,6 @@ static INT  __rootFsChmod (LW_DEV_HDR *pdevhdr, INT  iMode)
     
     prfsn->RFSN_mode = iMode | (prfsn->RFSN_mode & S_IFMT);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
     
 #else

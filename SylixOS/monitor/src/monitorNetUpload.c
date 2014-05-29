@@ -156,7 +156,6 @@ ULONG  API_MonitorNetUploadDelete (PVOID  pvMonitorUpload)
     
     close(iSock);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_MONITOR_EN > 0       */

@@ -105,7 +105,6 @@ ULONG  API_ThreadGetCPUUsage (LW_OBJECT_HANDLE  ulId,
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -140,7 +139,6 @@ INT  API_ThreadGetCPUUsageAll (LW_OBJECT_HANDLE  ulId[],
     REGISTER UINT    uiThreadUsageKernel;
     
     if (iSize == 0) {
-        _ErrorHandle(ERROR_NONE);
         return  (iIndex);
     }
     
@@ -190,7 +188,6 @@ INT  API_ThreadGetCPUUsageAll (LW_OBJECT_HANDLE  ulId[],
     __LW_TICK_CPUUSAGE_ENABLE();                                        /*  重新打开测量                */
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (iIndex);
 }
 #endif                                                                  /*  LW_CFG_THREAD_CPU_USAGE...  */

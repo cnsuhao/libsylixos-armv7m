@@ -95,8 +95,6 @@ ULONG  API_TimerDelete (LW_OBJECT_HANDLE  *pulId)
         
         _Free_Timer_Object(ptmr);
         __KERNEL_EXIT();                                                /*  ÍË³öÄÚºË                    */
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -121,7 +119,6 @@ ULONG  API_TimerDelete (LW_OBJECT_HANDLE  *pulId)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_TIMER, MONITOR_EVENT_TIMER_DELETE, ulId, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  ((LW_CFG_HTIMER_EN > 0)     */

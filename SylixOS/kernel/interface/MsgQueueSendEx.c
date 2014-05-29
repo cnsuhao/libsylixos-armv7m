@@ -153,8 +153,6 @@ __re_send:
             if (bSendOk == LW_FALSE) {
                 goto    __re_send;                                      /*  重新发送                    */
             }
-            
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         
         } else {                                                        /*  没有线程等待                */
@@ -164,7 +162,6 @@ __re_send:
                                                                         /*  保存消息                    */
                 LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);  
                                                                         /*  打开中断, 同时打开 spinlock */
-                _ErrorHandle(ERROR_NONE);                               /*  正常                        */
                 return  (ERROR_NONE);
             
             } else {                                                    /*  已经满了                    */
@@ -221,8 +218,6 @@ __re_send:
         LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
         
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     default:

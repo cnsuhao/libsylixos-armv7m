@@ -107,7 +107,6 @@ ULONG  API_ThreadJoin (LW_OBJECT_HANDLE  ulId, PVOID  *ppvRetValAddr)
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

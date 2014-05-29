@@ -58,7 +58,6 @@ INT   API_IoSetDrvLicense (INT  iDrvNum, PCHAR  pcLicense)
     
     pdrvlic->DRVLIC_pcLicense = pcLicense;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -126,7 +125,6 @@ INT   API_IoSetDrvAuthor (INT  iDrvNum, PCHAR  pcAuthor)
     
     pdrvlic->DRVLIC_pcAuthor = pcAuthor;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -194,7 +192,6 @@ INT   API_IoSetDrvDescription (INT  iDrvNum, PCHAR  pcDescription)
     
     pdrvlic->DRVLIC_pcDescription = pcDescription;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

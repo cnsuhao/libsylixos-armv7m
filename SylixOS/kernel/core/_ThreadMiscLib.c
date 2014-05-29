@@ -222,7 +222,6 @@ ULONG  _ThreadMakeGlobal (LW_HANDLE  ulId)
     (VOID)bVpDel;
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -275,7 +274,6 @@ ULONG  _ThreadMakeLocal (LW_HANDLE  ulId)
     (VOID)bVpAdd;
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

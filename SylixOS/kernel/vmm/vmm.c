@@ -121,7 +121,6 @@ ULONG  API_VmmLibPrimaryInit (LW_VMM_ZONE_DESC       vmzone[],
            ULONG    ulPageNum = 0;
     
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 
@@ -188,7 +187,7 @@ ULONG  API_VmmLibPrimaryInit (LW_VMM_ZONE_DESC       vmzone[],
     }
     
     bIsInit = LW_TRUE;
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);                                               /*  初始化底层 MMU              */
 }
 /*********************************************************************************************************
@@ -303,7 +302,6 @@ PVOID  API_VmmPhyAllocAlign (size_t  stSize, size_t  stAlign, UINT  uiAttr)
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_PHY_ALLOC,
                       pvmpage->PAGE_ulPageAddr, stSize, stAlign, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pvmpage->PAGE_ulPageAddr);                          /*  直接返回物理内存地址        */
 }
 /*********************************************************************************************************
@@ -350,8 +348,6 @@ VOID  API_VmmPhyFree (PVOID  pvPhyMem)
 
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_PHY_FREE,
                       pvPhyMem, LW_NULL);
-
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmDmaAlloc
@@ -411,7 +407,6 @@ PVOID  API_VmmDmaAlloc (size_t  stSize)
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_DMA_ALLOC,
                       pvmpage->PAGE_ulPageAddr, stSize, LW_CFG_VMM_PAGE_SIZE, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pvmpage->PAGE_ulPageAddr);                          /*  直接返回物理内存地址        */
 }
 /*********************************************************************************************************
@@ -483,7 +478,6 @@ PVOID  API_VmmDmaAllocAlign (size_t  stSize, size_t  stAlign)
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_DMA_ALLOC,
                       pvmpage->PAGE_ulPageAddr, stSize, stAlign, LW_NULL);
                       
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pvmpage->PAGE_ulPageAddr);                          /*  直接返回物理内存地址        */
 }
 /*********************************************************************************************************
@@ -540,8 +534,6 @@ VOID  API_VmmDmaFree (PVOID  pvDmaMem)
 
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_DMA_FREE,
                       pvDmaMem, LW_NULL);
-
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmIoRemap
@@ -600,7 +592,6 @@ PVOID  API_VmmIoRemap (PVOID  pvPhysicalAddr,
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_IOREMAP,
                       pvmpageVirtual->PAGE_ulPageAddr, pvPhysicalAddr, stSize, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pvmpageVirtual->PAGE_ulPageAddr);
 }
 /*********************************************************************************************************
@@ -649,8 +640,6 @@ VOID  API_VmmIoUnmap (PVOID  pvVirtualAddr)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_IOUNMAP,
                       pvVirtualAddr, LW_NULL);
-    
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmIoRemapNocache
@@ -876,7 +865,6 @@ ULONG  API_VmmZoneStatus (ULONG     ulZoneIndex,
     }
     __VMM_UNLOCK();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -909,7 +897,6 @@ ULONG  API_VmmVirtualStatus (addr_t   *pulVirtualAddr,
     }
     __VMM_UNLOCK();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

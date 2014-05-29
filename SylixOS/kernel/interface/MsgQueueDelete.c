@@ -138,7 +138,6 @@ ULONG  API_MsgQueueDelete (LW_OBJECT_HANDLE  *pulId)
     _DebugHandle(__LOGMESSAGE_LEVEL, pevent->EVENT_cEventName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

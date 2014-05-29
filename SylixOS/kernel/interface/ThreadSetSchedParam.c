@@ -85,7 +85,6 @@ ULONG  API_ThreadSetSchedParam (LW_OBJECT_HANDLE  ulId,
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SCHED,
                       ulId, ucPolicy, ucActivatedMode, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

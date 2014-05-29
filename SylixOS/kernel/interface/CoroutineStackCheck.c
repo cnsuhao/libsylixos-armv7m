@@ -85,7 +85,6 @@ ULONG   API_CoroutineStackCheck (PVOID      pvCrcb,
         *pstCrcbByteSize = sizeof(LW_CLASS_COROUTINE);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */

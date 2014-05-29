@@ -173,8 +173,8 @@ INT  API_INetHostTableGetItem (CPCHAR  pcHost, struct in_addr  *pinaddr)
     
     if (uiAddr == INADDR_NONE) {
         return  (PX_ERROR);
+    
     } else {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }
@@ -237,8 +237,8 @@ INT  API_INetHostTableAddItem (CPCHAR  pcHost, struct in_addr  inaddr)
     if (bIsExist) {
         _ErrorHandle(EADDRINUSE);                                       /*  地址已经在使用了            */
         return  (PX_ERROR);
+    
     } else {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }
@@ -280,7 +280,6 @@ INT  API_INetHostTableDelItem (CPCHAR  pcHost)
     }
     API_SemaphoreBPost(_G_ulHostTableLock);                             /*  退出临界区                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

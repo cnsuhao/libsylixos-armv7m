@@ -111,7 +111,6 @@ LW_OBJECT_HANDLE  API_PortCreate (PCHAR          pcName,
     
     __LW_OBJECT_CREATE_HOOK(ulIdTemp, LW_OPTION_OBJECT_GLOBAL);         /*  默认为全局                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulIdTemp);
 }
 /*********************************************************************************************************
@@ -161,7 +160,6 @@ ULONG  API_PortDelete (LW_OBJECT_HANDLE   *pulId)
     
     __LW_OBJECT_DELETE_HOOK(ulId);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -211,16 +209,13 @@ ULONG  API_PortExToIn (LW_OBJECT_HANDLE   ulId,
     ulEnding = _Addresses_Subtract(pvExternal, pdpma->DPMA_pvExternalBase);
     
     if (ulEnding > pdpma->DPMA_stByteLength) {                          /*  出界了                      */
-        
         *ppvInternal = pvExternal;
         _ErrorHandle(ERROR_DPMA_OVERFLOW);
         return  (ERROR_DPMA_OVERFLOW);
         
     } else {                                                            /*  正常                        */
-        
         *ppvInternal = _Addresses_Add_Offset(pdpma->DPMA_pvInternalBase,
                                              ulEnding);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }
@@ -278,7 +273,6 @@ ULONG  API_PortInToEx (LW_OBJECT_HANDLE   ulId,
     } else {
         *ppvExternal = _Addresses_Add_Offset(pdpma->DPMA_pvExternalBase,
                                              stEnding);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }
@@ -316,7 +310,6 @@ ULONG  API_PortGetName (LW_OBJECT_HANDLE  ulId, PCHAR  pcName)
     
     lib_strcpy(pcName, pdpma->DPMA_cDpmaName);                          /*  拷贝名字                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_MPI_EN               */

@@ -79,9 +79,6 @@ PVOID  API_PartitionGet (LW_OBJECT_HANDLE  ulId)
     
     if (!pvRet) {
         _ErrorHandle(ERROR_PARTITION_NULL);
-    
-    } else {
-        _ErrorHandle(ERROR_NONE);
     }
     
     return  (pvRet);

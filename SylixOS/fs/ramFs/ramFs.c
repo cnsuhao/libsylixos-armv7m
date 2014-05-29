@@ -219,7 +219,6 @@ INT  API_RamFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" mount ok.\r\n");
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -451,7 +450,6 @@ static INT  __ramFsRemove (PRAM_VOLUME   pramfs,
     } else if (bRoot) {                                                 /*  删除 ramfs 文件系统         */
         if (pramfs->RAMFS_bValid == LW_FALSE) {
             __RAMFS_VOL_UNLOCK(pramfs);
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);                                       /*  正在被其他任务卸载          */
         }
         
@@ -485,7 +483,6 @@ __re_umount_vol:
         
         _DebugHandle(__LOGMESSAGE_LEVEL, "romfs unmount ok.\r\n");
         
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     } else {
@@ -1145,6 +1142,11 @@ static INT  __ramFsTruncate (PLW_FD_ENTRY  pfdentry, off_t  oftSize)
         return  (PX_ERROR);
     }
     
+    if (oftSize > (size_t)~0) {
+        _ErrorHandle(ENOSPC);
+        return  (PX_ERROR);
+    }
+    
     if (__RAMFS_VOL_LOCK(pramfs) != ERROR_NONE) {
         _ErrorHandle(ENXIO);
         return  (PX_ERROR);
@@ -1156,13 +1158,14 @@ static INT  __ramFsTruncate (PLW_FD_ENTRY  pfdentry, off_t  oftSize)
         return  (PX_ERROR);
     }
     
-    if (oftSize > (size_t)~0) {
-        stTru = (size_t)~0;
-    } else {
-        stTru = (size_t)oftSize;
-    }
+    stTru = (size_t)oftSize;
     
-    __ram_truncate(pramn, stTru);
+    if (stTru > pramn->RAMN_stSize) {
+        __ram_increase(pramn, stTru);
+        
+    } else if (stTru < pramn->RAMN_stSize) {
+        __ram_truncate(pramn, stTru);
+    }
     
     __RAMFS_VOL_UNLOCK(pramfs);
     

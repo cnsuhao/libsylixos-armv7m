@@ -80,7 +80,6 @@ ULONG  API_MsgQueueClear (LW_OBJECT_HANDLE  ulId)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_MSGQ, MONITOR_EVENT_MSGQ_CLEAR, ulId, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

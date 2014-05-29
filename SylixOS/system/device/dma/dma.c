@@ -142,7 +142,6 @@ INT    API_DmaDrvInstall (UINT              uiChannel,
     }
     __DMA_CHANNEL_RESET(uiChannel);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -165,7 +164,6 @@ INT     API_DmaReset (UINT  uiChannel)
     
     __DMA_CHANNEL_RESET(uiChannel);
     
-    _ErrorHandle(ERROR_NONE); 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -198,7 +196,6 @@ INT     API_DmaJobNodeNum (UINT   uiChannel, INT  *piNodeNum)
         LW_SPIN_UNLOCK_QUICK(&_G_slDmaManage, iregInterLevel);          /*  打开中断同时解锁 spinlock   */
     }
     
-    _ErrorHandle(ERROR_NONE); 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -231,7 +228,6 @@ INT     API_DmaMaxNodeNumGet (UINT   uiChannel, INT  *piMaxNodeNum)
         LW_SPIN_UNLOCK_QUICK(&_G_slDmaManage, iregInterLevel);          /*  打开中断同时解锁 spinlock   */
     }
     
-    _ErrorHandle(ERROR_NONE); 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -266,7 +262,6 @@ INT     API_DmaMaxNodeNumSet (UINT   uiChannel, INT  iMaxNodeNum)
     pdmacChannel->DMAC_iMaxNode = iMaxNodeNum;
     LW_SPIN_UNLOCK_QUICK(&_G_slDmaManage, iregInterLevel);              /*  打开中断同时解锁 spinlock   */
     
-    _ErrorHandle(ERROR_NONE); 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -378,7 +373,6 @@ INT     API_DmaJobAdd (UINT                 uiChannel,
     
     __UNSAFE();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -456,7 +450,6 @@ INT     API_DmaFlush (UINT   uiChannel)
     
     API_ThreadUnsafe();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

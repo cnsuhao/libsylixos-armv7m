@@ -91,8 +91,6 @@ ULONG  API_ThreadResume (LW_OBJECT_HANDLE    ulId)
     } else {
         KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -106,15 +104,11 @@ ULONG  API_ThreadResume (LW_OBJECT_HANDLE    ulId)
         
         KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
         __KERNEL_EXIT();                                                /*  退出内核 (可能调度)         */
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     } else {                                                            /*  有嵌套                      */
         KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }

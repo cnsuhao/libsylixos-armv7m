@@ -81,7 +81,6 @@ PVOID  API_PartitionPut (LW_OBJECT_HANDLE  ulId, PVOID  pvBlock)
     
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_PART, MONITOR_EVENT_PART_PUT, ulId, pvBlock, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (LW_NULL);
 }
 #endif                                                                  /*  (LW_CFG_PARTITION_EN > 0)   */

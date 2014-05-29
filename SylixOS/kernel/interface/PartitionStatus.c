@@ -89,7 +89,6 @@ ULONG  API_PartitionStatus (LW_OBJECT_HANDLE    ulId,
     
     LW_SPIN_UNLOCK_QUICK(&p_part->PARTITION_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_PARTITION_EN > 0)   */

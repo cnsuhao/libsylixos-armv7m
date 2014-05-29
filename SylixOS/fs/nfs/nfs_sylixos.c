@@ -629,7 +629,6 @@ INT  API_NfsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" mount ok.\r\n");
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 
 __error_handle:
@@ -1764,7 +1763,6 @@ static INT  __nfsRemove (PNFS_FS         pnfsfs,
         
         if (pnfsfs->NFSFS_bValid == LW_FALSE) {
             __NFS_VOL_UNLOCK(pnfsfs);
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);                                       /*  正在被其他任务卸载          */
         }
         
@@ -1829,7 +1827,6 @@ __re_umount_vol:
 
         _DebugHandle(__LOGMESSAGE_LEVEL, "nfs unmount ok.\r\n");
         
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {

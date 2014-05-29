@@ -128,7 +128,6 @@ INT  API_RtcDevCreate (PLW_RTC_FUNCS    prtcfuncs)
         prtcfuncs->RTC_pfuncInit();                                     /*  ³õÊ¼»¯Ó²¼þ RTC              */
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

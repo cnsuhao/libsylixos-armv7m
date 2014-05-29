@@ -193,7 +193,6 @@ static ULONG  __threadRestart (PLW_CLASS_TCB          ptcb,
     _DebugHandle(__LOGMESSAGE_LEVEL, ptcb->TCB_cThreadName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been restart.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

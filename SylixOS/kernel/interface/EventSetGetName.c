@@ -86,7 +86,6 @@ ULONG  API_EventSetGetName (LW_OBJECT_HANDLE  ulId, PCHAR  pcName)
     
     __KERNEL_EXIT();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

@@ -1190,7 +1190,6 @@ INT  _FdLockfIoctl (PLW_FD_ENTRY   pfdentry, INT  iCmd, struct flock *pfl)
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -1253,7 +1252,6 @@ INT  _FdLockfProc (PLW_FD_ENTRY   pfdentry, INT  iType, pid_t  pid)
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -1268,7 +1266,6 @@ INT  _FdLockfClearFdNode (PLW_FD_NODE  pfdnode)
 {
     __fdLockAbortAdvLocks(pfdnode);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

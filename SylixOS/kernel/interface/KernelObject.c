@@ -47,7 +47,6 @@ UINT8  API_ObjectGetClass (LW_OBJECT_HANDLE  ulId)
     
     ucClass = (UINT8)_ObjectGetClass(ulId);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ucClass);
 }
 /*********************************************************************************************************
@@ -91,7 +90,6 @@ ULONG  API_ObjectGetNode (LW_OBJECT_HANDLE  ulId)
 
     ulNode = _ObjectGetNode(ulId);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulNode);
 }
 /*********************************************************************************************************
@@ -117,7 +115,6 @@ ULONG  API_ObjectGetIndex (LW_OBJECT_HANDLE  ulId)
 
     ulIndex = _ObjectGetIndex(ulId);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulIndex);
 }
 /*********************************************************************************************************

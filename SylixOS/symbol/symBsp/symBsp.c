@@ -52,6 +52,12 @@ static LW_SYMBOL    _G_symBsp[] = {
     {   {LW_NULL, LW_NULL}, "ndelay", (caddr_t)bspDelayNs,
     	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
     },
+    {   {LW_NULL, LW_NULL}, "bspDelayUs", (caddr_t)bspDelayUs,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspDelayNs", (caddr_t)bspDelayNs,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
 };
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: __symbolAddBsp

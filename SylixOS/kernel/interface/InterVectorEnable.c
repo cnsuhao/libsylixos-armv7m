@@ -44,7 +44,6 @@ ULONG  API_InterVectorEnable (ULONG  ulVector)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_INT, MONITOR_EVENT_INT_VECT_EN, ulVector, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -68,7 +67,6 @@ ULONG  API_InterVectorDisable (ULONG  ulVector)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_INT, MONITOR_EVENT_INT_VECT_DIS, ulVector, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -96,7 +94,6 @@ ULONG  API_InterVectorIsEnable (ULONG  ulVector, BOOL  *pbIsEnable)
 
     *pbIsEnable = __ARCH_INT_VECTOR_ISENABLE(ulVector);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

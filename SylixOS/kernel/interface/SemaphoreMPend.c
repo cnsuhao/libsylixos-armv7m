@@ -41,6 +41,7 @@
 2013.05.05  判断调度器返回值, 决定是重启调用还是退出.
 2013.07.18  使用新的获取 TCB 的方法, 确保 SMP 系统安全.
 2013.12.11  系统没有启动时 pend 操作不工作.
+2014.05.29  修复超时后瞬间激活时没有设置任务安全属性错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -120,7 +121,6 @@ __wait_again:
     pevent = &_K_eventBuffer[usIndex];
     
     if (!LW_SYS_STATUS_IS_RUNNING()) {                                  /*  系统还没有启动              */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -144,7 +144,6 @@ __wait_again:
         if (pevent->EVENT_ulOption & LW_OPTION_DELETE_SAFE) {           /*  安全模式设定                */
             _ThreadSafeInternal();
         }
-        _ErrorHandle(ERROR_NONE);                                       /*  退出                        */
         return  (ERROR_NONE);
     }
     
@@ -160,7 +159,6 @@ __wait_again:
             pevent->EVENT_pvPtr = (PVOID)((ULONG)pevent->EVENT_pvPtr + 1);
             LW_SPIN_UNLOCK(&pevent->EVENT_slLock);                      /*  打开 spinlock               */
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);                                   /*  退出                        */
             return  (ERROR_NONE);
         }
     }
@@ -234,7 +232,9 @@ __wait_again:
         if (ptcbCur->TCB_ucWaitTimeOut == LW_WAIT_TIME_CLEAR) {         /*  是否在上面瞬间被激活        */
             LW_SPIN_UNLOCK(&pevent->EVENT_slLock);                      /*  打开 spinlock               */
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
+            if (pevent->EVENT_ulOption & LW_OPTION_DELETE_SAFE) {       /*  安全模式设定                */
+                _ThreadSafeInternal();
+            }
             return  (ERROR_NONE);
         }
         
@@ -253,7 +253,6 @@ __wait_again:
             if (pevent->EVENT_ulOption & LW_OPTION_DELETE_SAFE) {       /*  安全模式设定                */
                 _ThreadSafeInternal();
             }
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         } else {
             _ErrorHandle(ERROR_EVENT_WAS_DELETED);                      /*  已经被删除                  */

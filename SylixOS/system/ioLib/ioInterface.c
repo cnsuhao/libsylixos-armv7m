@@ -401,7 +401,6 @@ INT  unlink (CPCHAR       pcName)
             return  (PX_ERROR);
         
         } else if (iRet == ERROR_NONE) {                                /*  删除操作延迟自动执行        */
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         }
         
@@ -1572,12 +1571,10 @@ INT  API_IoTaskStdGet (LW_OBJECT_HANDLE  ulId,
         
         if (STD_VALID(iTaskFd)) {
             __KERNEL_EXIT_IRQ(iregInterLevel);
-            _ErrorHandle(ERROR_NONE);
             return  (_G_iIoStdFd[iTaskFd]);
         
         } else {
             __KERNEL_EXIT_IRQ(iregInterLevel);
-            _ErrorHandle(ERROR_NONE);
             return  (iTaskFd);
         }
     }
@@ -1635,7 +1632,6 @@ PCHAR   ttyname (INT  iFd)
     
     pfdentry = _IosFileGet(iFd, LW_FALSE);
     
-    _ErrorHandle(ERROR_NONE);
     return  (pfdentry->FDENTRY_pdevhdrHdr->DEVHDR_pcName);              /*  使用设备名                  */
 }
 /*********************************************************************************************************
@@ -1677,7 +1673,6 @@ PCHAR  ttyname_r (INT  iFd, PCHAR  pcBuffer, size_t  stLen)
     lib_strlcpy(pcBuffer, pfdentry->FDENTRY_pdevhdrHdr->DEVHDR_pcName, (INT)stLen);
     _IosUnlock();                                                       /*  退出 IO 临界区              */
     
-    _ErrorHandle(ERROR_NONE);
     return  (pcBuffer);
 }
 /*********************************************************************************************************
@@ -1719,7 +1714,6 @@ INT  dup2kernel (INT  iFd)
     
     MONITOR_EVT_INT3(MONITOR_EVENT_ID_IO, MONITOR_EVENT_IO_DUP, iFd, iFdNew, 1, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (iFdNew);
 }
 /*********************************************************************************************************
@@ -1760,7 +1754,6 @@ INT  dupminfd (INT  iFd, INT  iMinFd)
     
     MONITOR_EVT_INT3(MONITOR_EVENT_ID_IO, MONITOR_EVENT_IO_DUP, iFd, iFdNew, 0, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (iFdNew);
 }
 /*********************************************************************************************************
@@ -1844,7 +1837,6 @@ __re_check:                                                             /*  重新
     
     MONITOR_EVT_INT3(MONITOR_EVENT_ID_IO, MONITOR_EVENT_IO_DUP, iFd1, iFd2, 0, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (iFd2);
 }
 /*********************************************************************************************************

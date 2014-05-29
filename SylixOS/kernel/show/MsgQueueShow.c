@@ -71,18 +71,15 @@ VOID   API_MsgQueueShow (LW_OBJECT_HANDLE  ulId)
                ? "PRIORITY" : "FIFO";
     
     printf("MsgQueue show >>\n\n");                                     /*  打印基本信息                */
-    printf("%-20s: %-10s\n",   "MsgQueue Name",         cMsgQueueName);
+    printf("%-20s: %-10s\n",    "MsgQueue Name",        cMsgQueueName);
     printf("%-20s: 0x%-10lx\n", "MsgQueue Id",          ulId);
     printf("%-20s: %-10ld\n",   "MsgQueue Max Msgs",    ulMaxMsgNum);
     printf("%-20s: %-10ld\n",   "MsgQueue N Msgs",      ulCounter);
     printf("%-20s: %-10zd\n",   "MsgQueue Max Msg Len", stMaxMsgLen);
-    printf("%-20s: %-10s\n",   "Thread Queuing",        pcWaitType);
+    printf("%-20s: %-10s\n",    "Thread Queuing",       pcWaitType);
     printf("%-20s: %-10ld\n",   "Pended Threads",       ulThreadBlockNum);
     
     printf("\n");
-    
-    _ErrorHandle(ERROR_NONE);
-    return;
 }
 #endif                                                                  /*  LW_CFG_FIO_LIB_EN > 0       */
                                                                         /*  LW_CFG_MSGQUEUE_EN > 0      */

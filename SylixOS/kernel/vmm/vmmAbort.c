@@ -913,8 +913,6 @@ VOID  API_VmmAbortStatus (PLW_VMM_STATUS  pvmms)
     __VMM_LOCK();
     *pvmms = _K_vmmStatus;
     __VMM_UNLOCK();
-    
-    _ErrorHandle(ERROR_NONE);
 }
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */

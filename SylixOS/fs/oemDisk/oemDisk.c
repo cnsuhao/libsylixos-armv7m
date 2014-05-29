@@ -276,7 +276,6 @@ __mount_over:                                                           /*  所有
     }
     lib_strcpy(poemd->OEMDISK_cVolName, pcVolName);                     /*  拷贝名字                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (poemd);
     
 __error_handle:
@@ -458,7 +457,6 @@ __mount_over:                                                           /*  所有
     }
     lib_strcpy(poemd->OEMDISK_cVolName, pcVolName);                     /*  拷贝名字                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (poemd);
     
 __error_handle:
@@ -546,7 +544,6 @@ INT  API_OemDiskUnmountEx (PLW_OEMDISK_CB  poemd, BOOL  bForce)
         pblkdDisk->BLKD_pfuncBlkIoctl(pblkdDisk, LW_BLKD_CTRL_POWER, LW_BLKD_POWER_OFF);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

@@ -91,7 +91,6 @@ PVOID  API_MonitorTraceCreate (MONITOR_FILTER_ROUTINE       pfuncFilter,
         LW_SPIN_UNLOCK_QUICK(&_G_slMonitor, iregInterLevel);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pmt);
 }
 /*********************************************************************************************************
@@ -122,7 +121,6 @@ ULONG  API_MonitorTraceDelete (PVOID  pvMonitor)
     
     __KHEAP_FREE(pmt);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -152,7 +150,6 @@ ULONG  API_MonitorTraceEnable (PVOID  pvMonitor)
     }
     LW_SPIN_UNLOCK_QUICK(&_G_slMonitor, iregInterLevel);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -185,7 +182,6 @@ ULONG  API_MonitorTraceDisable (PVOID  pvMonitor)
     }
     LW_SPIN_UNLOCK_QUICK(&_G_slMonitor, iregInterLevel);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

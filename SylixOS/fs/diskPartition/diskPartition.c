@@ -479,7 +479,6 @@ INT  API_DiskPartitionGet (PLW_DISKPART_TABLE  pdptDisk, UINT  uiPart, PLW_BLK_D
                &pdptDisk->DPT_dpoLogic[uiPart].DPO_blkdLogic, 
                sizeof(LW_DISKPART_OPERAT));                             /*  拷贝控制块信息              */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);                                               /*  返回分区逻辑设备            */
 }
 /*********************************************************************************************************
@@ -505,7 +504,6 @@ INT  API_DiskPartitionFree (PLW_BLK_DEV  pblkdLogic)
     }
     __SHEAP_FREE(pblkdLogic);                                           /*  释放内存                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

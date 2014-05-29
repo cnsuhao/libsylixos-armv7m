@@ -75,7 +75,6 @@ ULONG  API_SemaphoreBClear (LW_OBJECT_HANDLE  ulId)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_SEMB, MONITOR_EVENT_SEM_CLEAR, ulId, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

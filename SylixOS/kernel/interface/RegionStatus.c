@@ -95,7 +95,7 @@ ULONG  API_RegionStatus (LW_OBJECT_HANDLE    ulId,
     }
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
-    _ErrorHandle(ERROR_NONE);
+    
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_REGION_EN > 0)      */

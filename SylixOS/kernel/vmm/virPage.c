@@ -49,7 +49,6 @@ ULONG  __vmmVirtualCreate (addr_t  ulAddr, size_t  stSize)
         return  (ulError);
     
     } else {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }

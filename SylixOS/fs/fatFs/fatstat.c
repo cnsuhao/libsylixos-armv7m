@@ -195,7 +195,6 @@ INT   __fsInfoToStatfs (FATFS         *fatfs,
     pstatfs->f_flag    = ST_NOSUID;
     pstatfs->f_namelen = _MAX_LFN;                                      /*  最长的文件名                */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_MAX_VOLUMES          */

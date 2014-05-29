@@ -127,7 +127,6 @@ ULONG    API_InterEnter (VOID)
     }
 #endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
 
-    _ErrorHandle(ERROR_NONE);
     return  (pcpu->CPU_ulInterNesting);
 }
 /*********************************************************************************************************
@@ -149,9 +148,7 @@ VOID    API_InterExit (VOID)
         _ErrorHandle(ERROR_KERNEL_NOT_RUNNING);
         return;
     }
-    
-    _ErrorHandle(ERROR_NONE);
-    
+        
     iregInterLevel = KN_INT_DISABLE();                                  /*  πÿ±’÷–∂œ                    */
     
     pcpu = LW_CPU_GET_CUR();

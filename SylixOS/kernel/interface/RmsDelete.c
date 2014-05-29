@@ -108,7 +108,6 @@ ULONG  API_RmsDeleteEx (LW_OBJECT_HANDLE   *pulId, BOOL  bForce)
     
     __LW_OBJECT_DELETE_HOOK(ulId);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

@@ -115,7 +115,6 @@ ULONG  API_EventSetDelete (LW_OBJECT_HANDLE  *pulId)
     _DebugHandle(__LOGMESSAGE_LEVEL, pes->EVENTSET_cEventSetName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_EVENTSET_EN > 0)    */

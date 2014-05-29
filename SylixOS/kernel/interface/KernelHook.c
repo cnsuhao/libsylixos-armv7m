@@ -48,9 +48,7 @@ ULONG  API_KernelHookGet (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         return  (ERROR_KERNEL_HOOK_NULL);
     }
 #endif
-    
-    _ErrorHandle(ERROR_NONE);
-    
+        
     iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核同时关闭中断        */
     
     switch (ulOpt) {
@@ -165,8 +163,6 @@ ULONG  API_KernelHookSet (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         return  (ERROR_KERNEL_HOOK_NULL);
     }
 #endif
-
-    _ErrorHandle(ERROR_NONE);
     
     iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核同时关闭中断        */
     

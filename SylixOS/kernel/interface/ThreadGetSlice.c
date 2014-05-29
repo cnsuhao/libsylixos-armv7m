@@ -77,7 +77,6 @@ ULONG  API_ThreadGetSliceEx (LW_OBJECT_HANDLE  ulId, UINT16  *pusSliceTemp, UINT
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

@@ -84,7 +84,6 @@ ULONG  API_RegionGetName (LW_OBJECT_HANDLE  ulId, PCHAR  pcName)
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_REGION_EN > 0)      */

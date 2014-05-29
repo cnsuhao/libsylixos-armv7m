@@ -31,9 +31,7 @@
 *********************************************************************************************************/
 LW_API  
 BOOL  API_KernelIsRunning (VOID)
-{
-    _ErrorHandle(ERROR_NONE);
-    
+{    
     if (LW_SYS_STATUS_IS_RUNNING()) {
         return  (LW_TRUE);
     

@@ -738,7 +738,6 @@ static VOID  __tshellCharTab (INT  iFd, __PSHELL_INPUT_CTX  psicContext)
     }
     
     if (*pcCmd == '#') {                                                /*  ×¢ÊÍÐÐÖ±½ÓºöÂÔ              */
-        _ErrorHandle(ERROR_NONE);
         return;
     }
     

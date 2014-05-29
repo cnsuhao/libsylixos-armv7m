@@ -1018,7 +1018,6 @@ INT  API_CanDevCreate (PCHAR     pcName,
         return  (PX_ERROR);
     
     } else {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }
@@ -1079,7 +1078,6 @@ INT  API_CanDevRemove (PCHAR     pcName, BOOL  bForce)
 
     __SHEAP_FREE((PVOID)pDevHdr);
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0)      */

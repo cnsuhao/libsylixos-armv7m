@@ -70,7 +70,6 @@ ULONG  API_ThreadFeedWatchDog (ULONG  ulWatchDogTicks)
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_FEEDWD, 
                       ptcbCur->TCB_ulId, ulWatchDogTicks, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

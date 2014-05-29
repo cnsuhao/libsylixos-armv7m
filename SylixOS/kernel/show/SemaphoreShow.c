@@ -172,9 +172,6 @@ VOID    API_SemaphoreShow (LW_OBJECT_HANDLE  ulId)
     }
     
     printf("\n");
-    
-    _ErrorHandle(ERROR_NONE);
-    return;
 }
 #endif                                                                  /*  ((LW_CFG_SEMB_EN > 0) ||    */
                                                                         /*   (LW_CFG_SEMC_EN > 0) ||    */

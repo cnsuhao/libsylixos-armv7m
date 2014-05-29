@@ -99,7 +99,6 @@ __wait_again:
     }
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -171,7 +170,6 @@ ULONG  API_ThreadIpcWakeup (LW_OBJECT_HANDLE  ulId)
     KN_INT_ENABLE(iregInterLevel);
     __KERNEL_EXIT();                                                    /*  退出内核 (可能会调度)       */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

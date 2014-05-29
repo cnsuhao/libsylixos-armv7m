@@ -131,7 +131,6 @@ INT  _hotplugDevCreate (VOID)
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

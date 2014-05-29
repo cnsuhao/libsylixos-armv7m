@@ -237,7 +237,6 @@ INT  API_PtyDevCreate (PCHAR   pcName,
     p_ptydev->PTYDEV_ptyddev.PTYDDEV_timeCreate = 
         p_ptydev->PTYDEV_ptyhdev.PTYHDEV_tydevTyDev.TYDEV_timeCreate;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -312,7 +311,6 @@ INT  API_PtyDevRemove (PCHAR   pcName)
                                                                         /*  这些操作必须在文件异常之后  */
     __SHEAP_FREE(p_ptydev);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0) &&   */

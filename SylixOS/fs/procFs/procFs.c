@@ -168,7 +168,6 @@ INT  API_ProcFsDevCreate (VOID)
     static BOOL     bIsInit = LW_FALSE;
     
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -190,7 +189,6 @@ INT  API_ProcFsDevCreate (VOID)
 
     lib_time(&_G_timeProcFs);                                           /*  以 UTC 作为时间基准         */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -295,7 +293,6 @@ static LONG  __procFsOpen (PLW_DEV_HDR     pdevhdr,
     
     LW_DEV_INC_USE_COUNT(&_G_devhdrProc);                               /*  更新计数器                  */
 
-    _ErrorHandle(ERROR_NONE);
     return  ((LONG)p_pfsn);
 }
 /*********************************************************************************************************
@@ -321,7 +318,6 @@ static INT  __procFsClose (PLW_PROCFS_NODE  p_pfsn)
     }
     LW_DEV_DEC_USE_COUNT(&_G_devhdrProc);                               /*  更新计数器                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -524,7 +520,6 @@ static INT  __procFsStatGet (PLW_PROCFS_NODE  p_pfsn, struct stat *pstat)
         pstat->st_ctime   = p_pfsn->PFSN_time;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -585,7 +580,6 @@ static INT  __procFsLStatGet (PLW_DEV_HDR pdevhdr, PCHAR  pcName, struct stat *p
         
         __LW_PROCFS_UNLOCK();                                           /*  解锁 procfs                 */
         
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {
@@ -623,7 +617,6 @@ static INT  __procFsStatfsGet (PLW_PROCFS_NODE  p_pfsn, struct statfs *pstatfs)
         pstatfs->f_namelen = PATH_MAX;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -674,7 +667,6 @@ static INT  __procFsReadDir (PLW_PROCFS_NODE  p_pfsn, DIR  *dir)
                     sizeof(dir->dir_dirent.d_name));                    /*  拷贝文件名                  */
         dir->dir_dirent.d_shortname[0] = PX_EOS;
         dir->dir_dirent.d_type = IFTODT(p_pfsnTemp->PFSN_mode);         /*  转换为 d_type               */
-        _ErrorHandle(ERROR_NONE);
     }
     __LW_PROCFS_UNLOCK();                                               /*  解锁 procfs                 */
 

@@ -100,7 +100,6 @@ ULONG  API_SemaphoreMStatusEx (LW_OBJECT_HANDLE   ulId,
     LW_SPIN_UNLOCK(&pevent->EVENT_slLock);                              /*  打开 spinlock               */
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

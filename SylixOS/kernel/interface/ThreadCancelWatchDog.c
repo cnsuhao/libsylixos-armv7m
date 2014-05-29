@@ -58,9 +58,6 @@ VOID  API_ThreadCancelWatchDog (VOID)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_CANCELWD, 
                       ptcbCur->TCB_ulId, LW_NULL);
-    
-    _ErrorHandle(ERROR_NONE);
-    return;
 }
 
 #endif                                                                  /*  LW_CFG_SOFTWARE_WATCHDOG_EN */

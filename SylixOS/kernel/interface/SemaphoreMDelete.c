@@ -159,7 +159,6 @@ ULONG  API_SemaphoreMDelete (LW_OBJECT_HANDLE  *pulId)
         }
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

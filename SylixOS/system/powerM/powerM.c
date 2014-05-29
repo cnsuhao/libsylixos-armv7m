@@ -112,7 +112,6 @@ LW_OBJECT_HANDLE  API_PowerMCreate (PCHAR            pcName,
     _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulIdTemp);
 }
 /*********************************************************************************************************
@@ -188,7 +187,6 @@ ULONG  API_PowerMDelete (LW_OBJECT_HANDLE   *pulId)
     
     __LW_OBJECT_DELETE_HOOK(ulId);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -273,7 +271,6 @@ ULONG  API_PowerMStart (LW_OBJECT_HANDLE    ulId,
 
     __POWERM_UNLOCK();                                                  /*  解锁                        */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -333,7 +330,6 @@ ULONG  API_PowerMCancel (LW_OBJECT_HANDLE    ulId)
     
     __POWERM_UNLOCK();                                                  /*  解锁                        */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -397,7 +393,6 @@ ULONG  API_PowerMConnect (LW_OBJECT_HANDLE    ulId,
     
     __POWERM_UNLOCK();                                                  /*  解锁                        */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -424,7 +419,6 @@ ULONG  API_PowerMSignal (LW_OBJECT_HANDLE    ulId)
         if (iError) {
             return  (ERROR_EXCE_LOST);
         } else {
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         }
     }
@@ -465,7 +459,6 @@ ULONG  API_PowerMSignal (LW_OBJECT_HANDLE    ulId)
     
     __POWERM_UNLOCK();                                                  /*  解锁                        */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -501,7 +494,6 @@ ULONG   API_PowerMSignalFast (LW_OBJECT_HANDLE    ulId)
     
     __POWERM_UNLOCK();                                                  /*  解锁                        */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -578,7 +570,6 @@ ULONG  API_PowerMStatus (LW_OBJECT_HANDLE    ulId,
     
     __POWERM_UNLOCK();                                                  /*  解锁                        */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_POWERM_EN            */

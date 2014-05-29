@@ -113,7 +113,6 @@ ULONG  API_PartitionDeleteEx (LW_OBJECT_HANDLE   *pulId, BOOL  bForce)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_PART, MONITOR_EVENT_REGION_DELETE, ulId, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

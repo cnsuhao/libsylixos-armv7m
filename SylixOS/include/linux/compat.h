@@ -25,6 +25,10 @@
 #define __exit
 #endif
 
+#ifndef __initdata
+#define __initdata
+#endif
+
 /*
  * I/O memory
  */

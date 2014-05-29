@@ -1173,7 +1173,6 @@ INT  API_INetTftpServerPath (CPCHAR  pcPath)
         __SHEAP_FREE(pcTemp);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

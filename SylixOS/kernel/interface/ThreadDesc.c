@@ -49,7 +49,6 @@ ULONG  API_ThreadDesc (LW_OBJECT_HANDLE  ulId, PLW_CLASS_TCB_DESC  ptcbdesc)
 #endif
 
     if (!ptcbdesc) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 
@@ -166,7 +165,6 @@ ULONG  API_ThreadDesc (LW_OBJECT_HANDLE  ulId, PLW_CLASS_TCB_DESC  ptcbdesc)
     
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  ÍË³öÄÚºË                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

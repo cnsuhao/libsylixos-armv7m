@@ -108,7 +108,6 @@ INT  API_RandDevCreate (VOID)
     
     __randInit();                                                       /*  ³õÊ¼»¯ rand Çý¶¯            */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_DEVICE_EN            */

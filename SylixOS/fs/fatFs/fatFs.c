@@ -431,7 +431,6 @@ INT  API_FatFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" mount ok.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
     
     /* 
@@ -941,13 +940,12 @@ static INT  __fatFsRemove (PFAT_VOLUME     pfatvol,
         if (__STR_IS_ROOT(pcName)) {                                    /*  根目录或者设备文件          */
             ulError = __FAT_VOL_LOCK(pfatvol);
             if (ulError) {
-                _ErrorHandle(ERROR_NONE);
-                return  (ERROR_NONE);                                   /*  正在被其他任务卸载          */
+                _ErrorHandle(ENXIO);
+                return  (PX_ERROR);                                     /*  正在被其他任务卸载          */
             }
             
             if (pfatvol->FATVAL_bValid == LW_FALSE) {
                 __FAT_VOL_UNLOCK(pfatvol);
-                _ErrorHandle(ERROR_NONE);
                 return  (ERROR_NONE);                                   /*  正在被其他任务卸载          */
             }
             
@@ -1009,7 +1007,6 @@ __re_umount_vol:
             
             _DebugHandle(__LOGMESSAGE_LEVEL, "disk unmount ok.\r\n");
             
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         
         } else {                                                        /*  删除文件或目录              */
@@ -1382,7 +1379,6 @@ static INT  __fatFsClusterSizeCal (PFAT_FILE   pfatfile, ULONG  *pulClusterSize)
         *pulClusterSize = 1 * __FAT_CLUSTER_CAL_BASE(ulSecSize);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

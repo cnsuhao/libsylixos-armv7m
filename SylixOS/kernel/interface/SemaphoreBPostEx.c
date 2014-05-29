@@ -96,8 +96,6 @@ ULONG  API_SemaphoreBPostEx (LW_OBJECT_HANDLE  ulId, PVOID  pvMsgPtr)
                           ulId, ptcb->TCB_ulId, LW_NULL);
         
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        
-        _ErrorHandle(ERROR_NONE);                                       /*  正常                        */
         return  (ERROR_NONE);
     
     } else {                                                            /*  没有线程等待                */
@@ -107,7 +105,6 @@ ULONG  API_SemaphoreBPostEx (LW_OBJECT_HANDLE  ulId, PVOID  pvMsgPtr)
             
             LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);  
                                                                         /*  打开中断, 同时打开 spinlock */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         } else {                                                        /*  已经满了                    */
             LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);  

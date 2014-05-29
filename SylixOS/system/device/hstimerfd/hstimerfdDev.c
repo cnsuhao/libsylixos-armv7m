@@ -114,7 +114,6 @@ INT  API_HstimerfdDevCreate (VOID)
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

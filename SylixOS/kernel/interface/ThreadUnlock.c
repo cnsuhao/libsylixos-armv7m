@@ -72,7 +72,6 @@ INT  API_ThreadUnlock (VOID)
         _ThreadSched(ptcbCur);                                          /*  ³¢ÊÔµ÷¶È                    */
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

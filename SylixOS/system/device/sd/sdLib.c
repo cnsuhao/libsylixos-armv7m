@@ -190,8 +190,6 @@ INT API_SdAdapterDelete (CPCHAR pcName)
     API_SemaphoreBDelete(&psdadapter->SDADAPTER_hBusLock);              /*  删除总线锁信号量            */
     __SHEAP_FREE(psdadapter);
 
-    _ErrorHandle(ERROR_NONE);
-
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -213,7 +211,7 @@ PLW_SD_ADAPTER   API_SdAdapterGet (CPCHAR pcName)
        _ErrorHandle(ERROR_KERNEL_OBJECT_NULL);                          /*  未找到                      */
        return  (LW_NULL);
     }
-    _ErrorHandle(ERROR_NONE);
+
     return  (psdadapter);
 }
 /*********************************************************************************************************
@@ -262,8 +260,6 @@ PLW_SD_DEVICE  API_SdDeviceCreate (CPCHAR pcAdapterName, CPCHAR pcDeviceName)
 
     LW_BUS_INC_DEV_COUNT(&psdadapter->SDADAPTER_busadapter);
 
-    _ErrorHandle(ERROR_NONE);
-
     return  (psddevice);
 }
 /*********************************************************************************************************
@@ -304,8 +300,6 @@ INT  API_SdDeviceDelete (PLW_SD_DEVICE   psddevice)
     LW_BUS_DEC_DEV_COUNT(&psdadapter->SDADAPTER_busadapter);            /*  总线设备--                  */
 
     __SHEAP_FREE(psddevice);                                            /*  释放内存                    */
-
-    _ErrorHandle(ERROR_NONE);
 
     return  (ERROR_NONE);
 }

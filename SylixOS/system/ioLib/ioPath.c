@@ -197,20 +197,17 @@ ULONG  _PathCat (CPCHAR  pcDirName,
     
     if ((pcFileName == LW_NULL) || (pcFileName[0] == PX_EOS)) {
 	    lib_strcpy(pcResult, pcDirName);
-	    _ErrorHandle(ERROR_NONE);
 	    return  (ERROR_NONE);
 	}
 	
 	if ((pcDirName == LW_NULL) || (pcDirName[0] == PX_EOS)) {
 	    lib_strcpy(pcResult, pcFileName);
-	    _ErrorHandle(ERROR_NONE);
 	    return  (ERROR_NONE);
 	}
 	
 	iosDevFind(pcFileName, &pcTail);
 	if (pcTail != pcFileName) {                                         /*  pcFileName 为设备名         */
 	    lib_strcpy(pcResult, pcFileName);                               /*  直接返回设备名              */
-	    _ErrorHandle(ERROR_NONE);
 	    return  (ERROR_NONE);
 	}
 	
@@ -246,7 +243,6 @@ ULONG  _PathCat (CPCHAR  pcDirName,
 	 */
 	_Strcatlim(pcResult, pcFileName, PATH_MAX);
 	
-	_ErrorHandle(ERROR_NONE);
 	return  (ERROR_NONE);
 }
 /*********************************************************************************************************

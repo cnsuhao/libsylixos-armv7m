@@ -83,7 +83,6 @@ ULONG   API_CoroutineExit (VOID)
 #if LW_CFG_THREAD_DEL_EN > 0
         API_ThreadExit(LW_NULL);
 #endif                                                                  /*  LW_CFG_THREAD_DEL_EN > 0    */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -115,7 +114,6 @@ ULONG   API_CoroutineExit (VOID)
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);                                               /*  理论上是无法运行到这里的    */
 }
 /*********************************************************************************************************
@@ -174,7 +172,6 @@ ULONG   API_CoroutineDelete (PVOID  pvCrcb)
         __KHEAP_FREE(pcrcbDel->COROUTINE_pstkStackLowAddr);             /*  释放内存                    */
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */

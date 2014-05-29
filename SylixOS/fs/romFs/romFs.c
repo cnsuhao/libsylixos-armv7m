@@ -253,7 +253,6 @@ INT  API_RomFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" mount ok.\r\n");
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -443,7 +442,6 @@ static INT  __romFsRemove (PROM_VOLUME   promfs,
         
         if (promfs->ROMFS_bValid == LW_FALSE) {
             __ROMFS_VOL_UNLOCK(promfs);
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);                                       /*  正在被其他任务卸载          */
         }
 
@@ -477,7 +475,6 @@ __re_umount_vol:
 
         _DebugHandle(__LOGMESSAGE_LEVEL, "romfs unmount ok.\r\n");
         
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {

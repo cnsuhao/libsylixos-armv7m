@@ -197,7 +197,6 @@ ULONG  __threadDelete (PLW_CLASS_TCB  ptcbDel, BOOL  bIsInSafe,
     (VOID)pvVProc;
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN      */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -329,7 +328,7 @@ ULONG  API_ThreadDelete (LW_OBJECT_HANDLE  *pulId, PVOID  pvRetVal)
         KN_INT_ENABLE(iregInterLevel);
         
         __KERNEL_EXIT();                                                /*  ÍË³öÄÚºË                    */
-        _ErrorHandle(ERROR_NONE);
+
         return  (ERROR_NONE);
     }
     

@@ -111,7 +111,6 @@ ULONG  API_RmsPeriod (LW_OBJECT_HANDLE  ulId, ULONG  ulPeriod)
     case LW_RMS_INACTIVE:
         _RmsActive(prms);                                               /*  启动 RMS                    */
         __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     case LW_RMS_ACTIVE:                                                 /*  已将初始化完成              */
@@ -124,7 +123,6 @@ ULONG  API_RmsPeriod (LW_OBJECT_HANDLE  ulId, ULONG  ulPeriod)
         
         if (!ulWaitTime) {                                              /*  时间刚刚好？                */
             __KERNEL_EXIT_IRQ(iregInterLevel);                          /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         }
         

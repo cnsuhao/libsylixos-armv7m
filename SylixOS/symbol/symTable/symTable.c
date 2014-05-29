@@ -259,7 +259,6 @@ INT  API_SymbolAddStatic (PLW_SYMBOL  psymbol, INT  iNum)
     }
     __LW_SYMBOL_UNLOCK();                                               /*  解锁符号表                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -311,7 +310,6 @@ INT  API_SymbolAdd (CPCHAR  pcName, caddr_t  pcAddr, INT  iFlag)
     _G_stSymbolNameTotalLen += lib_strlen(psymbol->SYM_pcName);
     __LW_SYMBOL_UNLOCK();                                               /*  解锁符号表                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -357,7 +355,6 @@ INT  API_SymbolDelete (CPCHAR  pcName, INT  iFlag)
         __SHEAP_FREE(psymbol);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -398,8 +395,6 @@ PVOID  API_SymbolFind (CPCHAR  pcName, INT  iFlag)
     
     if (pvAddr == LW_NULL) {
         _ErrorHandle(ENOENT);
-    } else {
-        _ErrorHandle(ERROR_NONE);
     }
     
     return  (pvAddr);

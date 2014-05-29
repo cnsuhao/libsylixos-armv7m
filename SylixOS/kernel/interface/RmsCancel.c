@@ -94,7 +94,6 @@ ULONG  API_RmsCancel (LW_OBJECT_HANDLE  ulId)
     
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  ÍË³öÄÚºË                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_RMS_EN > 0)         */

@@ -92,7 +92,7 @@ ULONG  API_ThreadVarAdd (LW_OBJECT_HANDLE  ulId, ULONG  *pulAddr)
     _List_Line_Add_Ahead(&pthreadvar->PRIVATEVAR_lineVarList, &ptcb->TCB_plinePrivateVars);
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 

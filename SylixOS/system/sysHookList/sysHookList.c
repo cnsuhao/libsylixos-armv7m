@@ -92,9 +92,7 @@ ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
     
     pline = &pfuncnode->FUNCNODE_lineManage;                            /*  管理线链表指针              */
     pfuncnode->FUNCNODE_hookfuncPtr = hookfuncPtr;
-    
-    _ErrorHandle(ERROR_NONE);
-    
+        
     switch (ulOpt) {
     
     case LW_OPTION_THREAD_CREATE_HOOK:                                  /*  线程建立钩子                */
@@ -335,8 +333,6 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         return  (ERROR_KERNEL_HOOK_NULL);
     }
 #endif
-
-    _ErrorHandle(ERROR_NONE);
     
     switch (ulOpt) {
     

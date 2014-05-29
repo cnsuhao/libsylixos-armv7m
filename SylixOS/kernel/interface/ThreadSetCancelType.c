@@ -79,7 +79,6 @@ INT  API_ThreadSetCancelType (INT  iNewType, INT  *piOldType)
     ptcbCur->TCB_iCancelType = iNewType;
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核同时打开中断        */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_THREAD_CANCEL_EN > 0 */

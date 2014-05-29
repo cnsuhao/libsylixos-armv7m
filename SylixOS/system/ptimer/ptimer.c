@@ -97,7 +97,6 @@ UINT  sleep (UINT    uiSeconds)
     
 __wait_again:
     if (!ulTick) {                                                      /*  不进行延迟                  */
-        _ErrorHandle(ERROR_NONE);
         return  (0);
     }
     
@@ -131,7 +130,6 @@ __wait_again:
         goto    __wait_again;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (0);
 }
 /*********************************************************************************************************
@@ -178,7 +176,6 @@ INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
     
 __wait_again:
     if (!ulTick) {                                                      /*  不进行延迟                  */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -480,7 +477,7 @@ INT  timer_getoverrun (timer_t  timer)
     }
     
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (iOverrun);
 }
 /*********************************************************************************************************
@@ -530,7 +527,7 @@ INT  timer_getoverrun_64 (timer_t  timer, UINT64  *pu64Overruns, BOOL  bClear)
     }
     
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 
@@ -685,7 +682,7 @@ INT  timer_setfile (timer_t  timer, PVOID  pvFile)
     ptmr->TIMER_pvTimerfd = pvFile;
     
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 

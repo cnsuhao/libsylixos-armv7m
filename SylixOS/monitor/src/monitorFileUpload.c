@@ -100,7 +100,6 @@ ULONG  API_MonitorFileUploadDelete (PVOID  pvMonitorUpload)
     
     close(iFd);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

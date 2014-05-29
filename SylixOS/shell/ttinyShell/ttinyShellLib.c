@@ -315,7 +315,6 @@ INT  __tshellExec (CPCHAR  pcCommandExec, VOIDFUNCPTR  pfuncHook)
     }
     
     if (*pcCmd == '#') {                                                /*  注释行直接忽略              */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -1112,7 +1111,6 @@ ULONG  __tshellKeywordAdd (CPCHAR  pcKeyword, size_t  stStrLen,
     
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -1156,7 +1154,6 @@ ULONG  __tshellKeywordFind (CPCHAR  pcKeyword, __PTSHELL_KEYWORD   *ppskwNode)
 
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -1200,7 +1197,6 @@ ULONG  __tshellKeywordList (__PTSHELL_KEYWORD   pskwNodeStart,
     }
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (i);
 }
 #endif                                                                  /*  LW_CFG_SHELL_EN > 0         */

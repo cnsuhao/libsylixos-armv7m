@@ -119,7 +119,6 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
                                        iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         } else {
             __EVENTSET_NOT_READY();
@@ -142,7 +141,6 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
                                        iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         } else {
             __EVENTSET_NOT_READY();
@@ -165,7 +163,6 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
                                        iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         } else {
             __EVENTSET_NOT_READY();
@@ -188,7 +185,6 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
                                        iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         } else {
             __EVENTSET_NOT_READY();

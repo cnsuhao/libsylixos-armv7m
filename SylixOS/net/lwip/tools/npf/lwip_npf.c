@@ -828,7 +828,6 @@ __rule_find:
 
     __SHEAP_FREE(pvRule);                                               /*  释放内存                    */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -869,7 +868,6 @@ INT  API_INetNpfAttach (CPCHAR  pcNetifName)
     pnpfni->NPFNI_uiAttachCounter++;
     __NPF_UNLOCK();                                                     /*  解锁 NPF 表                 */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -928,7 +926,6 @@ INT  API_INetNpfDetach (CPCHAR  pcNetifName)
     }
     __NPF_UNLOCK();                                                     /*  解锁 NPF 表                 */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -946,7 +943,6 @@ INT  API_INetNpfInit (VOID)
     static BOOL bIsInit = LW_FALSE;
 
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 
@@ -1004,7 +1000,6 @@ INT  API_INetNpfInit (VOID)
 LW_API
 ULONG  API_INetNpfDropGet (VOID)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (__NPF_PACKET_DROP_GET());
 }
 /*********************************************************************************************************
@@ -1019,7 +1014,6 @@ ULONG  API_INetNpfDropGet (VOID)
 LW_API
 ULONG  API_INetNpfAllowGet (VOID)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (__NPF_PACKET_ALLOW_GET());
 }
 /*********************************************************************************************************
@@ -1053,7 +1047,6 @@ INT  API_INetNpfShow (INT  iFd)
     
     close(iFilterFd);
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

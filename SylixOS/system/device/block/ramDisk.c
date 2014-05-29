@@ -124,7 +124,6 @@ ULONG  API_RamDiskCreate (PVOID  pvDiskAddr, UINT64  ullDiskSize, PLW_BLK_DEV  *
     }
 #endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
                                                                         /*  LW_CFG_LOGMESSAGE_EN > 0    */
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -151,8 +150,8 @@ INT  API_RamDiskDelete (PLW_BLK_DEV  pblkdRam)
 {
     if (pblkdRam) {
         __SHEAP_FREE(pblkdRam);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
+    
     } else {
         _ErrorHandle(ERROR_IOS_DEVICE_NOT_FOUND);
         return  (PX_ERROR);

@@ -171,7 +171,6 @@ DIR  *opendir (CPCHAR   pcPathName)
                                                                         /*  加入原始资源表              */
     __resAddRawHook(&pdir->dir_resraw, (VOIDFUNCPTR)freedir, pdir, 0, 0, 0, 0, 0);
     
-    _ErrorHandle(ERROR_NONE);
     return  (pdir);
 }
 /*********************************************************************************************************
@@ -205,7 +204,6 @@ INT  closedir (DIR  *pdir)
     
     __SHEAP_FREE(pdir);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -326,7 +324,6 @@ INT  rewinddir (DIR   *pdir)
     pdir->dir_pos = 0;                                                  /*  退回到原点                  */
     API_SemaphoreBPost(pdir->dir_lock);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

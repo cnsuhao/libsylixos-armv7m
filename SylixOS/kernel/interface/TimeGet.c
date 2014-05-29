@@ -40,7 +40,6 @@
 LW_API  
 ULONG  API_TimeGetFrequency (VOID)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (LW_CFG_TICKS_PER_SEC);
 }
 /*********************************************************************************************************
@@ -59,7 +58,6 @@ ULONG  API_TimeGet (VOID)
     
     __KERNEL_TIME_GET(ulTime, ULONG);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulTime);
 }
 /*********************************************************************************************************
@@ -78,7 +76,6 @@ INT64  API_TimeGet64 (VOID)
     
     __KERNEL_TIME_GET(i64Time, INT64);
     
-    _ErrorHandle(ERROR_NONE);
     return  (i64Time);
 }
 /*********************************************************************************************************

@@ -151,7 +151,6 @@ ULONG  __tshellVarAdd (CPCHAR       pcVarName, CPCHAR       pcVarValue, size_t  
     
     __TSHELL_RUN_HOOK(pcVarName);                                       /*  调用改写回调                */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -195,7 +194,6 @@ ULONG  __tshellVarDelete (__PTSHELL_VAR  pskvNode)
     __SHEAP_FREE(pskvNode->SV_pcVarName);
     __SHEAP_FREE(pskvNode);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -256,7 +254,6 @@ ULONG  __tshellVarDeleteByName (CPCHAR  pcVarName)
     __SHEAP_FREE(pskvNode->SV_pcVarName);
     __SHEAP_FREE(pskvNode);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -300,7 +297,6 @@ ULONG  __tshellVarFind (char  *pcVarName, __PTSHELL_VAR   *ppskvNode)
     
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -344,7 +340,6 @@ ULONG  __tshellVarList (__PTSHELL_VAR   pskvNodeStart,
     }
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  ((ULONG)i);
 }
 /*********************************************************************************************************
@@ -368,7 +363,6 @@ INT  __tshellVarNum (VOID)
     }
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (iNum);
 }
 /*********************************************************************************************************
@@ -471,7 +465,6 @@ INT  __tshellVarSave (CPCHAR  pcFileName)
     
     fclose(pfile);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -548,7 +541,6 @@ INT  __tshellVarGetRt (CPCHAR       pcVarName,
     
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
 
-    _ErrorHandle(ERROR_NONE);
     return  ((INT)lib_strlen(pcVarValue));
 }
 /*********************************************************************************************************
@@ -596,7 +588,6 @@ ULONG  __tshellVarGet (CPCHAR  pcVarName, PCHAR  *ppcVarValue)
     }
     __TTINY_SHELL_UNLOCK();                                             /*  释放资源                    */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -665,7 +656,6 @@ ULONG  __tshellVarSet (CPCHAR       pcVarName, CPCHAR       pcVarValue, INT  iIs
 
     __TSHELL_RUN_HOOK(pcVarName);                                       /*  调用改写回调                */
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

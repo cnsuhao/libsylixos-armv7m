@@ -56,7 +56,6 @@ ULONG  API_InterVectorSetFlag (ULONG  ulVector, ULONG  ulFlag)
     
     LW_SPIN_UNLOCK_QUICK(&pidesc->IDESC_slLock, iregInterLevel);        /*  打开中断, 同时打开 spinlock */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -93,7 +92,6 @@ ULONG  API_InterVectorGetFlag (ULONG  ulVector, ULONG  *pulFlag)
     
     LW_SPIN_UNLOCK_QUICK(&pidesc->IDESC_slLock, iregInterLevel);        /*  打开中断, 同时打开 spinlock */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

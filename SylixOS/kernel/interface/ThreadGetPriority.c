@@ -76,7 +76,7 @@ ULONG  API_ThreadGetPriority (LW_OBJECT_HANDLE    ulId, UINT8  *pucPriority)
     }
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 

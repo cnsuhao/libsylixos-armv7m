@@ -95,7 +95,6 @@ INT  API_TimerfdDevCreate (VOID)
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

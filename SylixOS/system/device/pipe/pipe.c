@@ -144,7 +144,6 @@ INT  API_PipeDevCreate (PCHAR  pcName,
     
     p_pipedev->PIPEDEV_timeCreate = lib_time(LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -205,7 +204,6 @@ INT  API_PipeDevDelete (PCHAR  pcName, BOOL  bForce)
 
     __SHEAP_FREE((PVOID)p_pipedev);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

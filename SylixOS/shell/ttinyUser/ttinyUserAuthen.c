@@ -135,7 +135,6 @@ ULONG  __tshellUserAuthen (INT  iTtyFd)
     ioctl(iTtyFd, FIOSETOPTIONS, iOldOpt);                              /*  返回先前的模式              */
     
     if (iRetValue == 0) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     

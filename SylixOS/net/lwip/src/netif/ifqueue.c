@@ -39,6 +39,7 @@
 #include "lwip/netif.h"
 #include "lwip/pbuf.h"
 #include "lwip/mem.h"
+#include "lwip/tcpip.h"
 #include "netif/ifqueue.h"
 
 #include <stddef.h>
@@ -76,6 +77,7 @@ void pktq_deinit (struct pktq *pktq)
 
 /*
  * put a packet into packet queue (must using in netif send packet function)
+ * IN LOCK_TCPIP_CORE() stats.
  */
 err_t pktq_put (struct pktq *pktq, struct pbuf *p)
 {
@@ -131,8 +133,10 @@ void pktq_free (struct pktq *pktq, struct pktn *pktn)
 {
   pktn = pktq->out;
   if (pktn) {
+    LOCK_TCPIP_CORE();
     pktq->out = pktn->prev;
     pktq->cur_size -= pktn->p.tot_len;
+    UNLOCK_TCPIP_CORE();
     mem_free(pktn);
   }
 }

@@ -175,7 +175,6 @@ INT  API_SpipeDevCreate (PCHAR  pcName, size_t  stBufferByteSize)
     
     pspipedev->SPIPEDEV_timeCreate = lib_time(LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -239,7 +238,6 @@ INT  API_SpipeDevDelete (PCHAR  pcName, BOOL  bForce)
     
     __SHEAP_FREE((PVOID)pspipedev);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

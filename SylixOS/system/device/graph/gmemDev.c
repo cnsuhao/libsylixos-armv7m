@@ -86,7 +86,6 @@ static LONG  __gmemOpen (PLW_GM_DEVICE  pgmdev, INT  iFlag, INT  iMode)
         }
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  ((LONG)pgmdev);
 }
 /*********************************************************************************************************
@@ -101,8 +100,8 @@ static INT  __gmemClose (PLW_GM_DEVICE  pgmdev)
 {
     if (LW_DEV_DEC_USE_COUNT((PLW_DEV_HDR)pgmdev) == 0) {
         return  (pgmdev->GMDEV_gmfileop->GMFO_pfuncClose(pgmdev));
+    
     } else {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }
@@ -270,7 +269,6 @@ INT   API_GMemDevAdd (CPCHAR  cpcName, PLW_GM_DEVICE  pgmdev)
         return  (PX_ERROR);
     }
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -297,8 +295,8 @@ PLW_GM_DEVICE  API_GMemGet2D (INT  iFd)
     if (gmvi.GMVI_bHardwareAccelerate) {                                /*  检测设备是否支持 2D 加速    */
         gmdev = (PLW_GM_DEVICE)API_IosFdValue(iFd);                     /*  获得设备控制块              */
         if (gmdev != (PLW_GM_DEVICE)PX_ERROR) {
-            _ErrorHandle(ERROR_NONE);
             return  (gmdev);
+        
         } else {
             _ErrorHandle(ENOSYS);
             return  (LW_NULL);

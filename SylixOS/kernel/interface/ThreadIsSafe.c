@@ -72,7 +72,6 @@ BOOL    API_ThreadIsSafe (LW_OBJECT_HANDLE    ulId)
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (bIsInSafeMode);
 }
 /*********************************************************************************************************

@@ -121,7 +121,6 @@ __wait_again:
         pevent->EVENT_ulCounter = LW_FALSE;
         LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);                                       /*  退出                        */
         return  (ERROR_NONE);
     }
     
@@ -181,7 +180,6 @@ __wait_again:
             LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, 
                                  iregInterLevel);                       /*  打开中断, 同时打开 spinlock */
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         }
         
@@ -197,7 +195,6 @@ __wait_again:
         
     } else {
         if (ptcbCur->TCB_ucIsEventDelete == LW_EVENT_EXIST) {           /*  事件是否存在                */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         } else {
             _ErrorHandle(ERROR_EVENT_WAS_DELETED);                      /*  已经被删除                  */

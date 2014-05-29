@@ -813,7 +813,6 @@ INT  __diskCacheIoctl (PLW_DISKCACHE_CB   pdiskcDiskCache, INT  iCmd, LONG  lArg
     case LW_BLKD_DISKCACHE_GET_OPT:
         lArg = (LONG)pdiskcDiskCache->DISKC_iCacheOpt;
         __LW_DISKCACHE_UNLOCK(pdiskcDiskCache);                         /*  解锁                        */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     case LW_BLKD_DISKCACHE_SET_OPT:
@@ -825,7 +824,6 @@ INT  __diskCacheIoctl (PLW_DISKCACHE_CB   pdiskcDiskCache, INT  iCmd, LONG  lArg
         }
         pdiskcDiskCache->DISKC_iCacheOpt = (INT)lArg;
         __LW_DISKCACHE_UNLOCK(pdiskcDiskCache);                         /*  解锁                        */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     case LW_BLKD_DISKCACHE_INVALID:                                     /*  全部不命中                  */
@@ -857,7 +855,6 @@ INT  __diskCacheIoctl (PLW_DISKCACHE_CB   pdiskcDiskCache, INT  iCmd, LONG  lArg
     case FIOUNMOUNT:                                                    /*  卸载卷                      */
         iError = ERROR_NONE;
         __diskCacheMemReset(pdiskcDiskCache);                           /*  重新初始化 CACHE 内存       */
-        _ErrorHandle(ERROR_NONE);
         break;
     }
     

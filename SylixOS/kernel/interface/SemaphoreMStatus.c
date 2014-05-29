@@ -87,7 +87,6 @@ ULONG  API_SemaphoreMStatus (LW_OBJECT_HANDLE   ulId,
     
     LW_SPIN_UNLOCK(&pevent->EVENT_slLock);                              /*  ´ò¿ª spinlock               */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

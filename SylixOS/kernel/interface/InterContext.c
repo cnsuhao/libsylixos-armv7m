@@ -59,7 +59,6 @@ ULONG  API_InterGetNestingById (ULONG  ulCPUId, ULONG *pulMaxNesting)
         *pulMaxNesting = LW_CPU_GET_NESTING_MAX(ulCPUId);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (LW_CPU_GET_NESTING(ulCPUId));
 }
 /*********************************************************************************************************

@@ -93,7 +93,7 @@ ULONG  API_ThreadVarInfo (LW_OBJECT_HANDLE  ulId, ULONG  *pulAddr[], INT  iMaxCo
     }
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ulNum);
 }
 

@@ -510,6 +510,12 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-05-29: han.hui
+    修正 msgqueue mutex 任务安全性问题.
+    去除多余的 _ErrorHandle(ERROR_NONE);
+    log thread 在第一次设置文件描述符时激活.
+    修正 ramfs truncate 扩大文件.
+
     2014-05-23: han.hui
     升级 lwip.
     修正 armv7 系统 L1 cache 与 L2 cache 配合问题.

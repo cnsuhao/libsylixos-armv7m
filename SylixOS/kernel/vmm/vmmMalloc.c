@@ -268,7 +268,6 @@ PVOID  API_VmmMallocAlign (size_t  stSize, size_t  stAlign, ULONG  ulFlag)
                       pvmpageVirtual->PAGE_ulPageAddr, 
                       stSize, stAlign, ulFlag, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pvmpageVirtual->PAGE_ulPageAddr);                   /*  返回虚拟地址                */
         
 __error_handle:                                                         /*  出现错误                    */
@@ -429,7 +428,6 @@ PVOID  API_VmmMallocAreaAlign (size_t  stSize, size_t  stAlign,
                       pvmpageVirtual->PAGE_ulPageAddr, 
                       stSize, stAlign, iFlags, ulFlag, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pvmpageVirtual->PAGE_ulPageAddr);
 }
 /*********************************************************************************************************
@@ -489,8 +487,6 @@ VOID  API_VmmFreeArea (PVOID  pvVirtualMem)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_FREE,
                       pvVirtualMem, LW_NULL);
-    
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmExpandArea
@@ -635,7 +631,6 @@ PVOID  API_VmmSplitArea (PVOID  pvVirtualMem, size_t  stSize)
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_SPLIT, 
                       pvVirtualMem, stSize, LW_NULL);
 
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pvmpageVirtualSplit->PAGE_ulPageAddr);
 }
 /*********************************************************************************************************
@@ -682,7 +677,6 @@ ULONG  API_VmmSetFiller (PVOID  pvVirtualMem, FUNCPTR  pfuncFiller, PVOID  pvArg
     
     __VMM_UNLOCK();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -728,7 +722,6 @@ ULONG  API_VmmSetFindShare (PVOID  pvVirtualMem, PVOIDFUNCPTR  pfuncFindShare, P
     
     __VMM_UNLOCK();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -773,7 +766,6 @@ ULONG  API_VmmPCountInArea (PVOID  pvVirtualMem, ULONG  *pulPageNum)
     
     *pulPageNum = ulCounter;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -832,7 +824,6 @@ ULONG  API_VmmInvalidateArea (PVOID  pvVirtualMem, PVOID  pvSubMem, size_t  stSi
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_INVAL_A,
                       pvSubMem, stSize, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -951,7 +942,6 @@ ULONG  API_VmmPreallocArea (PVOID       pvVirtualMem,
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_PREALLOC_A,
                       pvSubMem, stSize, ulFlag, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
     
 __error_handle:
@@ -1124,7 +1114,6 @@ ULONG  API_VmmShareArea (PVOID      pvVirtualMem1,
                       stStartOft1, stStartOft2, 
                       stSize, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
     
 __error_handle:

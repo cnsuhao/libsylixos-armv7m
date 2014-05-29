@@ -264,7 +264,6 @@ INT  _doSigEvent (LW_OBJECT_HANDLE  ulId, struct sigevent *psigevent, INT  iSigC
     }
     
     if (psigevent->sigev_notify == SIGEV_NONE) {                        /*  不发送信号                  */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -333,7 +332,6 @@ INT  _doSigEventEx (LW_OBJECT_HANDLE  ulId, struct sigevent *psigevent, struct s
     }
     
     if (psigevent->sigev_notify == SIGEV_NONE) {                        /*  不发送信号                  */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     

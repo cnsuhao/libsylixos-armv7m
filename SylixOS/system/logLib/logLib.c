@@ -23,6 +23,7 @@
 2009.04.07  printk 使用数组队列实现缓冲, 这样可以允许 printk 在中断中的处理.
 2009.11.03  API_LogPrintk() 在入队之前, 进行一次等级判断.
 2012.03.12  使用自动 attr 
+2014.05.29  第一次设置文件描述符时启动打印线程.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDARG
 #define  __SYLIXOS_STDIO
@@ -118,6 +119,8 @@ VOID    __logPrintf(CPCHAR       pcFormat,
 LW_API  
 INT  API_LogFdSet (INT  iWidth, fd_set  *pfdsetLog)
 {
+    static BOOL  bIsInit = LW_FALSE;
+    
     if (!pfdsetLog || !iWidth) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "pfdsetLog invalidate.\r\n");
         _ErrorHandle(ERROR_LOG_FDSET_NULL);
@@ -129,7 +132,11 @@ INT  API_LogFdSet (INT  iWidth, fd_set  *pfdsetLog)
         _G_iMaxWidth  = iWidth;
     );
     
-    _ErrorHandle(ERROR_NONE);
+    if (bIsInit == LW_FALSE) {
+        bIsInit =  LW_TRUE;
+        API_ThreadStart(_S_ulThreadLogId);                              /*  启动内核打印线程            */
+    }
+    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -156,7 +163,6 @@ INT  API_LogFdGet (INT  *piWidth, fd_set  *pfdsetLog)
         *piWidth   = _G_iMaxWidth;
     );
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -228,7 +234,6 @@ INT  API_LogPrintk (CPCHAR   pcFormat, ...)
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (iRet);
 }
 /*********************************************************************************************************
@@ -302,7 +307,6 @@ INT  API_LogMsg (CPCHAR       pcFormat,
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -344,10 +348,10 @@ INT  _logInit (VOID)
                         (LW_OPTION_THREAD_STK_CHK | LW_OPTION_THREAD_SAFE | LW_OPTION_OBJECT_GLOBAL), 
                         LW_NULL);
     
-    _S_ulThreadLogId = API_ThreadCreate("t_log",
-                                        (PTHREAD_START_ROUTINE)_LogThread,
-                                        &threadattr,
-                                        LW_NULL);                       /*  建立LOG 处理线程            */
+    _S_ulThreadLogId = API_ThreadInit("t_log",
+                                      (PTHREAD_START_ROUTINE)_LogThread,
+                                      &threadattr,
+                                      LW_NULL);                         /*  建立LOG 处理线程            */
     if (!_S_ulThreadLogId) {
         API_PartitionDelete(&_G_cLogPartition);
         API_MsgQueueDelete(&_G_hLogMsgHandle);

@@ -425,7 +425,6 @@ INT  API_YaffsDevCreate (PCHAR   pcName)
     _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -696,7 +695,6 @@ __re_umount_vol:
             
             _DebugHandle(__LOGMESSAGE_LEVEL, "yaffs unmount ok.\r\n");
             
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         
         } else if (__STR_IS_YVOL(pcName)) {                             /*  yaffs π“‘ÿµƒ…Ë±∏            */
@@ -719,7 +717,6 @@ __re_umount_vol:
             _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
             _DebugHandle(__LOGMESSAGE_LEVEL, "\" unmount ok.\r\n");
             
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         
         } else {
@@ -1464,7 +1461,6 @@ static INT  __yaffsReadDir (PLW_FD_ENTRY  pfdentry, DIR  *dir)
             iError = ERROR_NONE;
         }
         
-        _ErrorHandle(ERROR_NONE);
         return  (iError);
     }
     

@@ -96,8 +96,6 @@ VOID    API_IoDrvShow (VOID)
             (addr_t)_S_deventryTbl[i].DEVENTRY_pfuncDevMmap);
         }
     }
-    
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_IoDrvLicenseShow
@@ -148,7 +146,6 @@ VOID    API_IoDrvLicenseShow (VOID)
         }
     }
     printf("\n");
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_IoDevShow
@@ -211,8 +208,6 @@ VOID    API_IoDevShow (INT  iShowType)
         }
     }
     _IosUnlock();                                                       /*  退出 IO 临界区              */
-    
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_IoFdShow
@@ -290,8 +285,6 @@ VOID    API_IoFdShow (VOID)
         }
     }
     _IosUnlock();                                                       /*  退出 IO 临界区              */
-    
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_IoFdentryShow
@@ -362,8 +355,6 @@ VOID    API_IoFdentryShow (VOID)
          
     }
     _IosUnlock();                                                       /*  退出 IO 临界区              */
-    
-    _ErrorHandle(ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0) &&   */
                                                                         /*  (LW_CFG_FIO_LIB_EN > 0)     */

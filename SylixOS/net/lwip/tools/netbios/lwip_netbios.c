@@ -116,9 +116,8 @@ ULONG  API_INetNetBiosNameSet (CPCHAR  pcLocalName)
             }
         }
         *pcDes = PX_EOS;
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
+        
     } else {
         _ErrorHandle(ERROR_KERNEL_PNAME_NULL);
         return  (ERROR_KERNEL_PNAME_NULL);
@@ -130,8 +129,8 @@ ULONG  API_INetNetBiosNameGet (PCHAR  pcLocalNameBuffer, INT  iMaxLen)
 {
     if (pcLocalNameBuffer && (iMaxLen > 0)) {
         lib_strlcpy(pcLocalNameBuffer, _G_cNetBiosLocalName, iMaxLen);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
+    
     } else {
         _ErrorHandle(ERROR_KERNEL_BUFFER_NULL);
         return  (ERROR_KERNEL_BUFFER_NULL);

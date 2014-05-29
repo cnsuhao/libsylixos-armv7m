@@ -47,7 +47,6 @@ ULONG  API_ThreadIsLock (VOID)
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
-    _ErrorHandle(ERROR_NONE);
     return  (__THREAD_LOCK_GET(ptcbCur));
 }
 /*********************************************************************************************************

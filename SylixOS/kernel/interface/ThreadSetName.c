@@ -89,11 +89,11 @@ ULONG  API_ThreadSetName (LW_OBJECT_HANDLE  ulId, CPCHAR  pcName)
 
     lib_strcpy(ptcb->TCB_cThreadName, pcName);                          /*  拷贝名字                    */
     
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_NAME, 
                       ulId, pcName);
-    
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

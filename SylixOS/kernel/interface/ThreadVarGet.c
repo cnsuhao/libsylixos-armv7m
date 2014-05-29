@@ -99,8 +99,7 @@ ULONG  API_ThreadVarGet (LW_OBJECT_HANDLE  ulId, ULONG  *pulAddr)
             }
             
             __KERNEL_EXIT();                                            /*  ÍË³öÄÚºË                    */
-            _ErrorHandle(ERROR_NONE);
-            return (ulValue);
+            return  (ulValue);
         }
     }
     

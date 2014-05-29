@@ -102,7 +102,6 @@ LW_OBJECT_HANDLE  API_RmsCreate (CPCHAR             pcName,
     _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulIdTemp);
 }
 #endif                                                                  /*  (LW_CFG_RMS_EN > 0)         */

@@ -109,7 +109,6 @@ ULONG  __monitorBufferDelete (PVOID  pvMonitorBuffer)
     
     __SHEAP_FREE(pmb);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

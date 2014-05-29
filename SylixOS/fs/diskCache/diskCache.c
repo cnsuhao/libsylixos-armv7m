@@ -238,9 +238,8 @@ ULONG  API_DiskCacheCreate (PLW_BLK_DEV   pblkdDisk,
                                             LW_OPTION_INHERIT_PRIORITY | LW_OPTION_OBJECT_GLOBAL,
                                             LW_NULL);
     if (!pdiskcDiskCache->DISKC_hDiskCacheLock) {
-        iError = (INT)API_GetLastError();
         __SHEAP_FREE(pdiskcDiskCache);
-        return  ((ULONG)iError);
+        return  (API_GetLastError());
     }
     
     /*
@@ -313,7 +312,6 @@ ULONG  API_DiskCacheCreate (PLW_BLK_DEV   pblkdDisk,
     
     *ppblkDiskCache = (PLW_BLK_DEV)pdiskcDiskCache;                     /*  保存控制块地址              */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
     
 __error_handle:
@@ -360,7 +358,6 @@ INT  API_DiskCacheDelete (PLW_BLK_DEV   pblkdDiskCache)
     REGISTER PLW_DISKCACHE_CB   pdiskcDiskCache = (PLW_DISKCACHE_CB)pblkdDiskCache;
 
     if (pblkdDiskCache) {
-    
         __LW_DISKCACHE_LOCK(pdiskcDiskCache);                           /*  等待使用权                  */
         
         __diskCacheListDel(pdiskcDiskCache);                            /*  退出背景线程                */
@@ -371,8 +368,8 @@ INT  API_DiskCacheDelete (PLW_BLK_DEV   pblkdDiskCache)
         __SHEAP_FREE(pdiskcDiskCache->DISKC_pcBurstBuffer);
         __SHEAP_FREE(pdiskcDiskCache);
         
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
+    
     } else {
         _ErrorHandle(ERROR_IOS_DEVICE_NOT_FOUND);
         return  (PX_ERROR);

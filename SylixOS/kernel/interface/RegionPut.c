@@ -90,8 +90,6 @@ PVOID  API_RegionPut (LW_OBJECT_HANDLE  ulId, PVOID  pvSegmentData)
     
     if (pvSegmentData) {
         _ErrorHandle(ERROR_REGION_NULL);
-    } else {
-        _ErrorHandle(ERROR_NONE);
     }
     
     return  (pvSegmentData);

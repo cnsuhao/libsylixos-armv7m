@@ -136,7 +136,6 @@ LW_OBJECT_HANDLE  API_SemaphoreMCreate (CPCHAR             pcName,
     _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulIdTemp);
 }
 

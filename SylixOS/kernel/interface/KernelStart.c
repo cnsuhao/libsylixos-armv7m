@@ -230,7 +230,6 @@ ULONG  API_KernelStartParam (CPCHAR  pcParam)
         pcTok = lib_strtok_r(LW_NULL, pcDelim, &pcLast);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

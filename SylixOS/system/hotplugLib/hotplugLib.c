@@ -301,7 +301,6 @@ INT  API_HotplugPollAdd (VOIDFUNCPTR   pfunc, PVOID  pvArg)
                     (PVOID)pfunc, pvArg, 0, 0, 0, 0);
 #endif
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -337,7 +336,6 @@ INT  API_HotplugPollDelete (VOIDFUNCPTR   pfunc, PVOID  pvArg)
     if (plineTemp != LW_NULL) {
         __resDelRawHook(&phppn->HPPN_resraw);
         __SHEAP_FREE(phppn);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     

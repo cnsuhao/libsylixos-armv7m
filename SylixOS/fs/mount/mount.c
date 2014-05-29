@@ -375,7 +375,6 @@ static INT  __mount (CPCHAR  pcDevName, CPCHAR  pcVolName, CPCHAR  pcFileSystem,
                          &_G_plineMountDevHeader);                      /*  挂入链表                    */
     __LW_MOUNT_UNLOCK();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -441,7 +440,6 @@ static INT  __unmount (CPCHAR  pcVolName)
     __SHEAP_FREE(pmnDev->MN_blkd.BLKD_pcName);
     __SHEAP_FREE(pmnDev);                                               /*  释放控制块                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

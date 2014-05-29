@@ -171,7 +171,6 @@ INT  _SpipeRemove (PLW_SPIPE_DEV  pspipedev, PCHAR  pcName)
     
     __SHEAP_FREE((PVOID)pspipedev);                                     /*  free pipe memory            */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

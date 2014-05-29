@@ -114,7 +114,6 @@ ULONG  API_MsgQueueStatusEx (LW_OBJECT_HANDLE   ulId,
     
     LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);        /*  打开中断, 同时打开 spinlock */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_MSGQUEUE_EN > 0      */

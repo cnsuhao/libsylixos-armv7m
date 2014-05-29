@@ -195,7 +195,6 @@ ULONG  API_InterVectorConnectEx (ULONG              ulVector,
     }
 #endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
                                                                         /*  LW_CFG_LOGMESSAGE_EN > 0    */
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -267,7 +266,6 @@ ULONG  API_InterVectorDisconnect (ULONG             ulVector,
         __KHEAP_FREE(piaction);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

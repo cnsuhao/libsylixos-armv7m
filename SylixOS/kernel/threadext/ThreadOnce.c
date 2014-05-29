@@ -52,7 +52,6 @@ INT  API_ThreadOnce (BOOL  *pbOnce, VOIDFUNCPTR  pfuncRoutine)
         pfuncRoutine();                                                 /*  Ö´ÐÐ                        */
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

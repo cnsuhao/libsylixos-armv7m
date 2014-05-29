@@ -97,8 +97,7 @@ ULONG  API_ThreadVarDelete (LW_OBJECT_HANDLE  ulId, ULONG  *pulAddr)
             _Free_ThreadVar_Object(pthreadvar);                         /*  释放控制块                  */
         
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);
-            return (ERROR_NONE);
+            return  (ERROR_NONE);
         }
     }
     

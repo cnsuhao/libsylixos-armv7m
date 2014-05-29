@@ -41,7 +41,6 @@ ULONG  API_ThreadUnsafe (VOID)
     
     _ThreadUnsafeInternal();
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

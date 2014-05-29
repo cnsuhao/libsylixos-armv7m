@@ -108,7 +108,6 @@ ULONG  API_MsgQueueFlush (LW_OBJECT_HANDLE  ulId, ULONG  *pulThreadUnblockNum)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_MSGQ, MONITOR_EVENT_MSGQ_FLUSH, ulId, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_MSGQUEUE_EN > 0)    */

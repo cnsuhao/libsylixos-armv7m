@@ -171,7 +171,6 @@ INT  API_IosDrvInstall (LONGFUNCPTR    pfuncCreate,
     
     _IosUnlock();                                                       /*  退出 IO 临界区              */
     
-    _ErrorHandle(ERROR_NONE);
     return  (iDrvNum);
 }
 /*********************************************************************************************************
@@ -241,7 +240,6 @@ INT  API_IosDrvInstallEx (struct file_operations  *pfileop)
     
     _IosUnlock();                                                       /*  退出 IO 临界区              */
     
-    _ErrorHandle(ERROR_NONE);
     return  (iDrvNum);
 }
 /*********************************************************************************************************
@@ -320,7 +318,6 @@ INT  API_IosDrvInstallEx2 (struct file_operations  *pfileop, INT  iType)
     
     _IosUnlock();                                                       /*  退出 IO 临界区              */
     
-    _ErrorHandle(ERROR_NONE);
     return  (iDrvNum);
 }
 /*********************************************************************************************************
@@ -390,7 +387,6 @@ ULONG  API_IosDrvRemove (INT  iDrvNum, BOOL  bForceClose)
     
     _IosFileListUnlock();                                               /*  结束遍历, 删除请求删除的节点*/
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -419,7 +415,6 @@ ULONG  API_IosDrvGetType (INT  iDrvNum, INT  *piType)
         *piType = pdeventry->DEVENTRY_iType;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -471,7 +466,6 @@ INT     API_IosDevFileAbnormal (PLW_DEV_HDR    pdevhdrHdr)
     
     _IosFileListUnlock();                                               /*  结束遍历, 删除请求删除的节点*/
     
-    _ErrorHandle(ERROR_NONE);
     return  (iCounter);
 }
 /*********************************************************************************************************
@@ -546,7 +540,6 @@ ULONG  API_IosDevAddEx (PLW_DEV_HDR    pdevhdrHdr,
     
     _IosUnlock();                                                       /*  退出 IO 临界区              */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -596,9 +589,6 @@ VOID  API_IosDevDelete (PLW_DEV_HDR    pdevhdrHdr)
     _IosUnlock();                                                       /*  退出 IO 临界区              */
     
     __SHEAP_FREE(pdevhdrHdr->DEVHDR_pcName);                            /*  释放名字空间                */
-    
-    _ErrorHandle(ERROR_NONE);
-    return;
 }
 /*********************************************************************************************************
 ** 函数名称: API_IosDevFind
@@ -699,7 +689,6 @@ PLW_DEV_HDR  API_IosDevMatch (CPCHAR  pcName)
         }
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (pdevhdrBest);
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
 }
@@ -761,7 +750,6 @@ PLW_DEV_HDR  API_IosDevMatchFull (CPCHAR  pcName)
         }
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (pdevhdrBest);
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
 }
@@ -780,9 +768,7 @@ PLW_DEV_HDR  API_IosNextDevGet (PLW_DEV_HDR    pdevhdrHdr)
 {
     REGISTER PLW_LIST_LINE  plineDevHdrNext;
     REGISTER PLW_DEV_HDR    pdevhdrNext;
-    
-    _ErrorHandle(ERROR_NONE);
-    
+        
     if (pdevhdrHdr == LW_NULL) {                                        /*  链表中的第一个设备          */
         pdevhdrNext = _LIST_ENTRY(_S_plineDevHdrHeader, LW_DEV_HDR, DEVHDR_lineManage); 
         return  (pdevhdrNext);

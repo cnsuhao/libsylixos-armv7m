@@ -95,7 +95,7 @@ ULONG   API_RmsExecTimeGet (LW_OBJECT_HANDLE  ulId, ULONG  *pulExecTime)
     *pulExecTime = _RmsGetExecTime(prms);                               /*  获得运行时间                */
     
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_RMS_EN > 0)         */

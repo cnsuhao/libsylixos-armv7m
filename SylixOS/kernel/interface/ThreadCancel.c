@@ -96,7 +96,6 @@ ULONG  API_ThreadCancel (LW_OBJECT_HANDLE  *pulId)
         return  (ERROR_THREAD_DISCANCEL);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_THREAD_CANCEL_EN > 0 */

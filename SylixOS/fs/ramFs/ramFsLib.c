@@ -399,6 +399,26 @@ static INT  __ram_automem (PRAM_NODE  pramn, ULONG  ulNBlk, size_t  stStart, siz
     }
 }
 /*********************************************************************************************************
+** 函数名称: __ram_automem
+** 功能描述: ramfs 根据需要设置文件缓冲区
+** 输　入  : pramn            文件节点
+**           ulNBlk           需求缓冲数量
+**           stStart          在此范围内不清零
+**           stLen
+** 输　出  : 增长结果
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+VOID  __ram_increase(PRAM_NODE  pramn, size_t  stNewSize)
+{
+    if (pramn->RAMN_stSize < stNewSize) {
+        pramn->RAMN_stSize = stNewSize;
+        if (pramn->RAMN_stVSize < pramn->RAMN_stSize) {
+            pramn->RAMN_stVSize = pramn->RAMN_stSize;
+        }
+    }
+}
+/*********************************************************************************************************
 ** 函数名称: __ram_getbuf
 ** 功能描述: ramfs 读取文件内容
 ** 输　入  : pramn            文件节点
@@ -477,6 +497,10 @@ static PRAM_BUFFER  __ram_getbuf (PRAM_NODE  pramn, size_t  stOft, size_t  *pstB
 static PRAM_BUFFER  __ram_getbuf_next (PRAM_NODE  pramn)
 {
 #define RAM_COOKIE_NEXT(cookie) (PRAM_BUFFER)_list_line_get_next(&(cookie)->RAMB_lineManage)
+
+    if (pramn == LW_NULL) {
+        return  (LW_NULL);
+    }
 
     if (pramn->RAMN_prambCookie) {
         pramn->RAMN_prambCookie = RAM_COOKIE_NEXT(pramn->RAMN_prambCookie);

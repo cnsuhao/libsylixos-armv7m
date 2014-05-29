@@ -140,7 +140,6 @@ INT  API_SpiAdapterCreate (CPCHAR           pcName,
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -186,7 +185,6 @@ INT  API_SpiAdapterDelete (CPCHAR  pcName)
     API_SemaphoreMDelete(&pspiadapter->SPIADAPTER_hBusLock);            /*  删除总线锁信号量            */
     __SHEAP_FREE(pspiadapter);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -206,8 +204,8 @@ PLW_SPI_ADAPTER  API_SpiAdapterGet (CPCHAR  pcName)
     if (pspiadapter == LW_NULL) {
         _ErrorHandle(ERROR_KERNEL_OBJECT_NULL);                         /*  未找到适配器                */
         return  (LW_NULL);
+    
     } else {
-        _ErrorHandle(ERROR_NONE);
         return  (pspiadapter);
     }
 }
@@ -257,7 +255,6 @@ PLW_SPI_DEVICE  API_SpiDeviceCreate (CPCHAR  pcAdapterName,
     
     LW_BUS_INC_DEV_COUNT(&pspiadapter->SPIADAPTER_pbusadapter);         /*  总线设备++                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (pspidevice);
 }
 /*********************************************************************************************************
@@ -299,7 +296,6 @@ INT  API_SpiDeviceDelete (PLW_SPI_DEVICE   pspidevice)
     
     __SHEAP_FREE(pspidevice);                                           /*  释放内存                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

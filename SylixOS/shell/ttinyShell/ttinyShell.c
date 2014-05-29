@@ -443,8 +443,6 @@ ULONG  API_TShellHelpAdd (CPCHAR  pcKeyword, CPCHAR  pcHelp)
         }
         lib_strcpy(pskwNode->SK_pcHelpString, pcHelp);
         __TTINY_SHELL_UNLOCK();                                         /*  释放资源                    */
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {
@@ -513,8 +511,6 @@ ULONG  API_TShellFormatAdd (CPCHAR  pcKeyword, CPCHAR  pcFormat)
         }
         lib_strcpy(pskwNode->SK_pcFormatString, pcFormat);
         __TTINY_SHELL_UNLOCK();                                         /*  释放资源                    */
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {

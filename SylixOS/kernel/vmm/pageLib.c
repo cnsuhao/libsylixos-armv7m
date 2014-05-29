@@ -645,7 +645,6 @@ ULONG  __pageExpand (PLW_VMM_PAGE   pvmpage,
                    &plineDummyHeader);                                  /*  从邻居链表中删除            */
     __pageCbFree(pvmpageRight);                                         /*  释放页面控制块内存          */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -693,7 +692,6 @@ ULONG  __pageSplit (PLW_VMM_PAGE   pvmpage,
     
     *ppvmpageSplit = pvmpageSplit;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -883,7 +881,6 @@ ULONG  __pageZoneCreate (PLW_VMM_ZONE   pvmzone,
     
     __pageAddToFreeHash(pvmzone, pvmpage);                              /*  插入空闲表                  */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */

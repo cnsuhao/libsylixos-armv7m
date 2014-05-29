@@ -442,7 +442,6 @@ VOID  API_INetTelnetInit (const PCHAR  pcPtyStartName)
              LW_OBJECT_HANDLE       ulId;
 
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return;
     }
     

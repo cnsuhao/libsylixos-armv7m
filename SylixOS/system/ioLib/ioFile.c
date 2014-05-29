@@ -759,7 +759,6 @@ LONG  API_IosFdValue (INT  iFd)
     pfdentry = _IosFileGet(iFd, LW_FALSE);
     
     if (pfdentry) {                                                     /*  文件有效                    */
-        _ErrorHandle(ERROR_NONE);
         return  (pfdentry->FDENTRY_lValue);
     
     } else {
@@ -795,7 +794,6 @@ VOID  API_IosFdFree (INT  iFd)
         __LW_FD_DELETE_HOOK(iFd, __PROC_GET_PID_CUR());
         _IosUnlock();                                                   /*  退出 IO 临界区              */
         _IosFileDelete(pfdentry);
-        _ErrorHandle(ERROR_NONE);
         
     } else {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "file descriptor invalidate.\r\n");
@@ -830,7 +828,6 @@ INT  API_IosFdSet (INT            iFd,
     
     _IosFileSet(pfdentry, pdevhdrHdr, lValue, iFlag);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -926,7 +923,6 @@ INT  API_IosFdNew (PLW_DEV_HDR    pdevhdrHdr,
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
 	return  (iFd);
 }
 /*********************************************************************************************************
@@ -1007,7 +1003,6 @@ PLW_DEV_HDR  API_IosFdDevFind (INT  iFd)
     pfdentry = _IosFileGet(iFd, LW_FALSE);
     
     if (pfdentry) {                                                     /*  文件有效                    */
-        _ErrorHandle(ERROR_NONE);
         return  (pfdentry->FDENTRY_pdevhdrHdr);
     
     } else {

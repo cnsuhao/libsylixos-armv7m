@@ -70,7 +70,6 @@ ULONG  API_KernelHeapInfo (ULONG    ulOption,
             *pstMaxUsedByteSize = _K_pheapKernel->HEAP_stMaxUsedByteSize;
         }
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     case LW_OPTION_HEAP_SYSTEM:
@@ -91,7 +90,6 @@ ULONG  API_KernelHeapInfo (ULONG    ulOption,
             *pstMaxUsedByteSize = _K_pheapSystem->HEAP_stMaxUsedByteSize;
         }
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     default:
@@ -149,8 +147,6 @@ ULONG  API_KernelHeapInfoEx (ULONG                ulOption,
         if (psegmentList) {
             (VOID)_HeapGetInfo(_K_pheapKernel, psegmentList, iMaxCounter);
         }
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     case LW_OPTION_HEAP_SYSTEM:
@@ -175,8 +171,6 @@ ULONG  API_KernelHeapInfoEx (ULONG                ulOption,
         if (psegmentList) {
             (VOID)_HeapGetInfo(_K_pheapSystem, psegmentList, iMaxCounter);
         }
-        
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
         
     default:

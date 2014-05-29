@@ -139,7 +139,6 @@ PVOID   API_CoroutineCreate (PCOROUTINE_START_ROUTINE pCoroutineStartAddr,
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_COROUTINE, MONITOR_EVENT_COROUTINE_CREATE, 
                       ptcbCur->TCB_ulId, pcrcbNew, stStackByteSize, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  ((PVOID)pcrcbNew);                                          /*  创建成功                    */
 }
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */

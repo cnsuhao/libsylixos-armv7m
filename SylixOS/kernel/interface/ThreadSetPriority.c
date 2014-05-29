@@ -86,14 +86,13 @@ ULONG  API_ThreadSetPriority (LW_OBJECT_HANDLE    ulId, UINT8    ucPriority)
     
     if (LW_PRIO_IS_EQU(ptcb->TCB_ucPriority, ucPriority)) {
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
     _SchedSetPrio(ptcb, ucPriority);
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+
     return  (ERROR_NONE);
 }
 

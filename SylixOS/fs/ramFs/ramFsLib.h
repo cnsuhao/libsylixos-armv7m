@@ -121,6 +121,7 @@ PRAM_NODE   __ram_maken(PRAM_VOLUME  pramfs,
                         CPCHAR       pcLink);
 INT         __ram_unlink(PRAM_NODE  pramn);
 VOID        __ram_truncate(PRAM_NODE  pramn, size_t  stOft);
+VOID        __ram_increase(PRAM_NODE  pramn, size_t  stNewSize);
 ssize_t     __ram_read(PRAM_NODE  pramn, PVOID  pvBuffer, size_t  stSize, size_t  stOft);
 ssize_t     __ram_write(PRAM_NODE  pramn, CPVOID  pvBuffer, size_t  stNBytes, size_t  stOft);
 VOID        __ram_mount(PRAM_VOLUME  pramfs);

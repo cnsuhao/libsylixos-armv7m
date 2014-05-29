@@ -48,7 +48,6 @@ LW_CLASS_THREADATTR  API_ThreadAttrGetDefault (VOID)
                                                      LW_OPTION_THREAD_STK_CHK,
                                                      LW_NULL,                          
                                                      LW_NULL};
-    _ErrorHandle(ERROR_NONE);
     return  (threadattrDefault);
 }
 /*********************************************************************************************************
@@ -115,7 +114,6 @@ LW_CLASS_THREADATTR  API_ThreadAttrGet (LW_OBJECT_HANDLE  ulId)
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (threadattr);
 }
 /*********************************************************************************************************
@@ -170,7 +168,6 @@ ULONG   API_ThreadAttrBuild (PLW_CLASS_THREADATTR    pthreadattr,
     pthreadattr->THREADATTR_pvArg           = pvArg;
     pthreadattr->THREADATTR_pvExt           = LW_NULL;                  /*  没有附加信息                */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -236,7 +233,6 @@ ULONG   API_ThreadAttrBuildEx (PLW_CLASS_THREADATTR    pthreadattr,
     pthreadattr->THREADATTR_pvArg           = pvArg;
     pthreadattr->THREADATTR_pvExt           = pvExt;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -253,7 +249,6 @@ ULONG   API_ThreadAttrBuildEx (PLW_CLASS_THREADATTR    pthreadattr,
 LW_API  
 ULONG   API_ThreadAttrBuildFP (PLW_CLASS_THREADATTR  pthreadattr, PVOID  pvFP)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -286,7 +281,6 @@ ULONG   API_ThreadAttrSetGuardSize (PLW_CLASS_THREADATTR    pthreadattr,
 
     pthreadattr->THREADATTR_stGuardSize = stGuardSize;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -319,7 +313,6 @@ ULONG   API_ThreadAttrSetStackSize (PLW_CLASS_THREADATTR    pthreadattr,
 
     pthreadattr->THREADATTR_stStackByteSize = stStackByteSize;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -346,7 +339,6 @@ ULONG   API_ThreadAttrSetArg (PLW_CLASS_THREADATTR    pthreadattr,
 
     pthreadattr->THREADATTR_pvArg = pvArg;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

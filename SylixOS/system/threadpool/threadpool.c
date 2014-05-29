@@ -149,7 +149,6 @@ LW_OBJECT_HANDLE  API_ThreadPoolCreate (PCHAR                    pcName,
     _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulIdTemp);
 }
 /*********************************************************************************************************
@@ -242,7 +241,6 @@ ULONG  API_ThreadPoolDelete (LW_OBJECT_HANDLE   *pulId)
     
     __LW_OBJECT_DELETE_HOOK(ulId);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -326,7 +324,6 @@ ULONG  API_ThreadPoolAddThread (LW_OBJECT_HANDLE   ulId, PVOID  pvArg)
     
     __THREADPOOL_UNLOCK(pthreadpool);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -404,7 +401,6 @@ ULONG  API_ThreadPoolDeleteThread (LW_OBJECT_HANDLE   ulId)
     
     __THREADPOOL_UNLOCK(pthreadpool);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -462,7 +458,6 @@ ULONG  API_ThreadPoolSetAttr (LW_OBJECT_HANDLE  ulId, PLW_CLASS_THREADATTR  pthr
     
     __THREADPOOL_UNLOCK(pthreadpool);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -521,7 +516,6 @@ ULONG  API_ThreadPoolGetAttr (LW_OBJECT_HANDLE  ulId, PLW_CLASS_THREADATTR  pthr
     
     __THREADPOOL_UNLOCK(pthreadpool);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -590,7 +584,6 @@ ULONG  API_ThreadPoolStatus (LW_OBJECT_HANDLE         ulId,
     
     __THREADPOOL_UNLOCK(pthreadpool);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_THREAD_POOL_EN > 0   */

@@ -81,7 +81,6 @@ ULONG  API_CoroutineResume (PVOID  pvCrcb)
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  ´ò¿ªÖÐ¶Ï                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */

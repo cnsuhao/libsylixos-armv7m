@@ -91,7 +91,6 @@ ULONG  API_SemaphoreMPost (LW_OBJECT_HANDLE  ulId)
     pevent = &_K_eventBuffer[usIndex];
     
     if (!LW_SYS_STATUS_IS_RUNNING()) {                                  /*  系统还没有启动              */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -117,7 +116,6 @@ ULONG  API_SemaphoreMPost (LW_OBJECT_HANDLE  ulId)
         pevent->EVENT_pvPtr = (PVOID)((ULONG)pevent->EVENT_pvPtr - 1);  /*  临时计数器--                */
         LW_SPIN_UNLOCK(&pevent->EVENT_slLock);                          /*  打开 spinlock               */
         __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);                                       /*  正常                        */
         return  (ERROR_NONE);
     }
     
@@ -158,8 +156,6 @@ ULONG  API_SemaphoreMPost (LW_OBJECT_HANDLE  ulId)
         if (pevent->EVENT_ulOption & LW_OPTION_DELETE_SAFE) {           /*  退出安全模式                */
             _ThreadUnsafeInternal();
         }
-        
-        _ErrorHandle(ERROR_NONE);                                       /*  正常                        */
         return  (ERROR_NONE);
     
     } else {                                                            /*  没有线程等待                */
@@ -178,8 +174,6 @@ ULONG  API_SemaphoreMPost (LW_OBJECT_HANDLE  ulId)
             if (pevent->EVENT_ulOption & LW_OPTION_DELETE_SAFE) {       /*  退出安全模式                */
                 _ThreadUnsafeInternal();
             }
-            
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         
         } else {                                                        /*  已经满了                    */

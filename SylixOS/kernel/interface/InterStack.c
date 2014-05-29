@@ -87,8 +87,6 @@ VOID  API_InterStackCheck (ULONG   ulCPUId,
     if (pstUsedByteSize) {
         *pstUsedByteSize = LW_CFG_INT_STK_SIZE - (stFree * sizeof(LW_STACK));
     }
-    
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
   END

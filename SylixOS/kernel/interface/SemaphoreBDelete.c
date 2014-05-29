@@ -129,7 +129,6 @@ ULONG  API_SemaphoreBDelete (LW_OBJECT_HANDLE  *pulId)
     _DebugHandle(__LOGMESSAGE_LEVEL, pevent->EVENT_cEventName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
 
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_SEMB_EN > 0)        */

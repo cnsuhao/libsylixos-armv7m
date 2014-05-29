@@ -244,7 +244,6 @@ LW_OBJECT_HANDLE  API_ThreadInit (CPCHAR                   pcName,
     _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been initialized.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ulIdTemp);
     
 __error_handle:

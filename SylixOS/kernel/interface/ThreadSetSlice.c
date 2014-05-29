@@ -82,7 +82,6 @@ ULONG  API_ThreadSetSlice (LW_OBJECT_HANDLE  ulId, UINT16  usSlice)
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLICE, 
                       ulId, usSlice, LW_NULL);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

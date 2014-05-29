@@ -97,7 +97,6 @@ ULONG  API_TimerReset (LW_OBJECT_HANDLE  ulId)
     KN_INT_ENABLE(iregInterLevel);
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
         
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  ((LW_CFG_HTIMER_EN > 0)     */

@@ -37,6 +37,7 @@
 2012.03.20  减少对 _K_ptcbTCBCur 的引用, 尽量采用局部变量, 减少对当前 CPU ID 获取的次数.
 2013.05.05  判断调度器返回值, 决定是重启调用还是退出.
 2013.07.18  使用新的获取 TCB 的方法, 确保 SMP 系统安全.
+2014.05.29  修复超时后瞬间被激活时对消息接收的错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -124,9 +125,7 @@ __wait_again:
         pevent->EVENT_ulCounter = LW_FALSE;
         pvMsgPtr = pevent->EVENT_pvPtr;                                 /*  截获消息                    */
         LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        _ErrorHandle(ERROR_NONE);                                       /*  退出                        */
-        
+        __KERNEL_EXIT();                                                /*  退出内核                    */        
         if (ppvMsgPtr) {
             *ppvMsgPtr = pvMsgPtr;                                      /*  保存信息                    */
         }
@@ -189,7 +188,10 @@ __wait_again:
             LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, 
                                  iregInterLevel);                       /*  打开中断, 同时打开 spinlock */
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
+            pvMsgPtr = ptcbCur->TCB_pvMsgBoxMessage;                    /*  截获消息                    */
+            if (ppvMsgPtr) {
+                *ppvMsgPtr = pvMsgPtr;                                  /*  保存信息                    */
+            }
             return  (ERROR_NONE);
         }
         
@@ -209,7 +211,6 @@ __wait_again:
             if (ppvMsgPtr) {
                 *ppvMsgPtr = pvMsgPtr;                                  /*  保存信息                    */
             }
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         } else {
             _ErrorHandle(ERROR_EVENT_WAS_DELETED);                      /*  已经被删除                  */

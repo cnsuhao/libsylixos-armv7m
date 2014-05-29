@@ -95,7 +95,6 @@ ULONG  API_RegionDeleteEx (LW_OBJECT_HANDLE   *pulId, BOOL  bForce)
     _DebugHandle(__LOGMESSAGE_LEVEL, pheap->HEAP_cHeapName);
     _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

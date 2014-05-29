@@ -75,7 +75,6 @@ VOID  API_INetNatInit (VOID)
     static   BOOL   bIsInit = LW_FALSE;
     
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return;
     }
     
@@ -152,7 +151,6 @@ INT  API_INetNatStart (CPCHAR  pcLocalNetif, CPCHAR  pcApNetif)
     
     __NAT_OP_UNLOCK();                                                  /*  解锁 NAT 链表               */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -181,7 +179,6 @@ INT  API_INetNatStop (VOID)
     
     __NAT_OP_UNLOCK();                                                  /*  解锁 NAT 链表               */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

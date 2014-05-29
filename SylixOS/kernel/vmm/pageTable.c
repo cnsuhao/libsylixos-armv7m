@@ -133,7 +133,6 @@ ULONG  __vmmLibPrimaryInit (PLW_MMU_GLOBAL_DESC  pmmugdesc, CPCHAR  pcMachineNam
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "mmu initialized.\r\n");
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
     
 __error_handle:
@@ -171,7 +170,6 @@ ULONG  __vmmLibSecondaryInit (CPCHAR  pcMachineName)
     KN_SMP_MB();
     __VMM_MMU_ENABLE();                                                 /*  启动 MMU                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 
@@ -358,7 +356,6 @@ ULONG  __vmmLibVirtualToPhysical (addr_t  ulVirtualAddr, addr_t  *pulPhysicalAdd
     } else {
         *pulPhysicalAddr = (ulVirtualAddr & (LW_CFG_VMM_PAGE_SIZE - 1))
                          + (*pulPhysicalAddr);                          /*  加入页内偏移量              */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     

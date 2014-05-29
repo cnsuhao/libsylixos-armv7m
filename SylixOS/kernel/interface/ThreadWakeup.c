@@ -94,7 +94,6 @@ ULONG  API_ThreadWakeup (LW_OBJECT_HANDLE  ulId)
         
         MONITOR_EVT_LONG1(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_WAKEUP, ulId, LW_NULL);
         
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {

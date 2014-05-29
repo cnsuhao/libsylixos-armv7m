@@ -110,7 +110,6 @@ INT  API_GpiofdDevCreate (VOID)
         return  (PX_ERROR);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

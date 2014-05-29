@@ -150,7 +150,6 @@ ULONG   API_CacheLibPrimaryInit (CACHE_MODE  uiInstruction, CACHE_MODE  uiData, 
     static BOOL bIsInit = LW_FALSE;
 
     if (bIsInit) {
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 
@@ -177,7 +176,6 @@ ULONG   API_CacheLibPrimaryInit (CACHE_MODE  uiInstruction, CACHE_MODE  uiData, 
 LW_API  
 ULONG   API_CacheLibSecondaryInit (CPCHAR  pcMachineName)
 {
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

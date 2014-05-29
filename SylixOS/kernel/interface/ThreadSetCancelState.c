@@ -60,7 +60,6 @@ ULONG   API_ThreadSetCancelState (INT  iNewState, INT  *piOldState)
     ptcbCur->TCB_iCancelState = iNewState;
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核同时打开中断        */
         
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

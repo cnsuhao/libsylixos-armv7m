@@ -63,7 +63,6 @@ VOID  API_TimeSleep (ULONG    ulTick)
     
 __wait_again:
     if (!ulTick) {                                                      /*  不进行延迟                  */
-        _ErrorHandle(ERROR_NONE);
         return;
     }
 
@@ -81,9 +80,6 @@ __wait_again:
         ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
         goto __wait_again;                                              /*  继续等待                    */
     }
-    
-    _ErrorHandle(ERROR_NONE);
-    return;
 }
 /*********************************************************************************************************
 ** 函数名称: API_TimeSSleep

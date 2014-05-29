@@ -110,7 +110,6 @@ ULONG  API_TimerStatus (LW_OBJECT_HANDLE          ulId,
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  ((LW_CFG_HTIMER_EN > 0)     */

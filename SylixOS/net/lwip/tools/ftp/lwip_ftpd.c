@@ -1839,7 +1839,6 @@ INT  API_INetFtpServerPath (CPCHAR  pcPath)
         __SHEAP_FREE(pcTemp);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

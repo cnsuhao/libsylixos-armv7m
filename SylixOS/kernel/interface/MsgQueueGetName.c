@@ -81,7 +81,7 @@ ULONG  API_MsgQueueGetName (LW_OBJECT_HANDLE  ulId, PCHAR  pcName)
     lib_strcpy(pcName, pevent->EVENT_cEventName);
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
-    _ErrorHandle(ERROR_NONE);
+    
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  (LW_CFG_MSGQUEUE_EN > 0)    */

@@ -77,7 +77,6 @@ ULONG  API_ThreadCondAttrInit (ULONG  *pulAttr)
 {
     if (pulAttr) {
         *pulAttr = 0ul;
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {
@@ -99,7 +98,6 @@ ULONG  API_ThreadCondAttrDestroy (ULONG  *pulAttr)
 {
     if (pulAttr) {
         *pulAttr = 0ul;
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {
@@ -122,7 +120,6 @@ ULONG  API_ThreadCondAttrSetPshared (ULONG  *pulAttr, INT  iShared)
 {
     if (pulAttr) {
         *pulAttr |= (ULONG)iShared;
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {
@@ -145,7 +142,6 @@ ULONG  API_ThreadCondAttrGetPshared (const ULONG  *pulAttr, INT  *piShared)
 {
     if (pulAttr && piShared) {
         *piShared = (INT)(*pulAttr & LW_THREAD_PROCESS_SHARED);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {
@@ -373,7 +369,6 @@ ULONG  API_ThreadCondWait (PLW_THREAD_COND  ptcd, LW_OBJECT_HANDLE  ulMutex, ULO
         ptcd->TCD_ulMutxe = 0ul;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 

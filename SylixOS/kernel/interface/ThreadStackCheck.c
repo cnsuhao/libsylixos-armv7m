@@ -114,8 +114,6 @@ ULONG  API_ThreadStackCheck (LW_OBJECT_HANDLE  ulId,
         if (pstTcbByteSize) {
             *pstTcbByteSize = sizeof(LW_CLASS_TCB);
         }
-
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     
     } else {

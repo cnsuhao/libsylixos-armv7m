@@ -148,9 +148,8 @@ __wait_again:
                                      iregInterLevel);                   /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
+        
         } else {
             if (ulTimeOut == LW_OPTION_NOT_WAIT) {                      /*  不等待                      */
                 __EVENTSET_NOT_READY();
@@ -178,8 +177,8 @@ __wait_again:
                                      iregInterLevel);                   /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
+        
         } else {
             if (ulTimeOut == LW_OPTION_NOT_WAIT) {                      /*  不等待                      */
                 __EVENTSET_NOT_READY();
@@ -207,8 +206,8 @@ __wait_again:
                                      iregInterLevel);                   /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
+        
         } else {
             if (ulTimeOut == LW_OPTION_NOT_WAIT) {                      /*  不等待                      */
                 __EVENTSET_NOT_READY();
@@ -236,8 +235,8 @@ __wait_again:
                                      iregInterLevel);                   /*  打开中断, 同时打开 spinlock */
                 __KERNEL_EXIT();                                        /*  退出内核                    */
             }
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
+        
         } else {
             if (ulTimeOut == LW_OPTION_NOT_WAIT) {                      /*  不等待                      */
                 __EVENTSET_NOT_READY();
@@ -319,7 +318,6 @@ __wait_again:
                     return  (ERROR_EVENTSET_WAIT_TYPE);
                 }
             }
-            _ErrorHandle(ERROR_NONE);                                   /*  正常                        */
             return  (ERROR_NONE);
         
         } else {

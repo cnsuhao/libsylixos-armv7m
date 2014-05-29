@@ -167,7 +167,6 @@ INT  API_TtyDevCreate (PCHAR     pcName,
     } else {
         ptycoDev->TYCODEV_tydevTyDev.TYDEV_timeCreate = lib_time(LW_NULL);
                                                                         /*  记录创建时间 (UTC 时间)     */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
 }
@@ -237,7 +236,6 @@ INT  API_TtyDevRemove (PCHAR   pcName, BOOL  bForce)
     
     __SHEAP_FREE(ptycoDev);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

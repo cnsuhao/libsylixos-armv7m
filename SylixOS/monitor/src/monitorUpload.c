@@ -444,7 +444,6 @@ ULONG  API_MonitorUploadDelete (PVOID  pvMonitorUpload)
     
     API_ThreadJoin(pmu->UPLOAD_hMonitorThread, LW_NULL);                /*  等待任务结束                */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -470,7 +469,6 @@ ULONG  API_MonitorUploadSetPid (PVOID  pvMonitorUpload, pid_t  pid)
     
     pmu->UPLOAD_pid = pid;
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -497,7 +495,6 @@ ULONG  API_MonitorUploadGetPid (PVOID  pvMonitorUpload, pid_t  *pid)
         *pid = pmu->UPLOAD_pid;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -544,7 +541,6 @@ ULONG  API_MonitorUploadSetFilter (PVOID    pvMonitorUpload,
         return  (ERROR_MONITOR_EINVAL);
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -574,7 +570,6 @@ ULONG  API_MonitorUploadGetFilter (PVOID    pvMonitorUpload,
         *pu64SubEventAllow = pmu->UPLOAD_u64SubEventAllow[uiEventId];
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -598,7 +593,6 @@ ULONG  API_MonitorUploadEnable (PVOID  pvMonitorUpload)
     
     API_MonitorTraceEnable(pmu->UPLOAD_pvMonitorTrace);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -622,7 +616,6 @@ ULONG  API_MonitorUploadDisable (PVOID  pvMonitorUpload)
     
     API_MonitorTraceDisable(pmu->UPLOAD_pvMonitorTrace);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -646,7 +639,6 @@ ULONG  API_MonitorUploadFlush (PVOID  pvMonitorUpload)
     
     __monitorBufferFlush(pmu->UPLOAD_pvMonitorBuffer);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -673,7 +665,6 @@ ULONG  API_MonitorUploadClearOverrun (PVOID  pvMonitorUpload)
     pmu->UPLOAD_ulOverrun = 0;
     LW_SPIN_UNLOCK_QUICK(&pmu->UPLOAD_slLock, iregInterLevel);
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -700,7 +691,6 @@ ULONG  API_MonitorUploadGetOverrun (PVOID  pvMonitorUpload, ULONG  *pulOverRun)
         *pulOverRun = pmu->UPLOAD_ulOverrun;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -727,7 +717,6 @@ ULONG  API_MonitorUploadFd (PVOID  pvMonitorUpload, INT  *piFd)
         *piFd = pmu->UPLOAD_iFd;
     }
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 #endif                                                                  /*  LW_CFG_MONITOR_EN > 0       */

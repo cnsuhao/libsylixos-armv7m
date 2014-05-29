@@ -55,8 +55,6 @@ VOID  API_ThreadLock (VOID)
 #if LW_CFG_SMP_EN > 0
     KN_SMP_MB();
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-    
-    _ErrorHandle(ERROR_NONE);
 }
 /*********************************************************************************************************
   END

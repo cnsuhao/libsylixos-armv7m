@@ -285,7 +285,6 @@ static ssize_t  _IosZeroRead (LW_DEV_HDR  *pdevhdr, PCHAR  pcBuffer, size_t  stS
     
     lib_bzero(pcBuffer, stSize);
     
-    _ErrorHandle(ERROR_NONE);
     return  ((ssize_t)stSize);
 }
 /*********************************************************************************************************

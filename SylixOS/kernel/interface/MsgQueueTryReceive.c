@@ -99,7 +99,6 @@ ULONG  API_MsgQueueTryReceive (LW_OBJECT_HANDLE    ulId,
         
         LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
         
-        _ErrorHandle(ERROR_NONE);                                       /*  退出                        */
         return  (ERROR_NONE);
     
     } else {                                                            /*  事件无效                    */

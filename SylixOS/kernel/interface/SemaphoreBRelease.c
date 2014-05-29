@@ -135,7 +135,7 @@ ULONG  API_SemaphoreBRelease (LW_OBJECT_HANDLE  ulId, ULONG  ulReleaseCounter, B
     LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);        /*  打开中断, 同时打开 spinlock */
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */
-    _ErrorHandle(ERROR_NONE);
+    
     return  (ERROR_NONE);
 }
 

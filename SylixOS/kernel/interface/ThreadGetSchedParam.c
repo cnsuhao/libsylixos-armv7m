@@ -79,7 +79,6 @@ ULONG  API_ThreadGetSchedParam (LW_OBJECT_HANDLE  ulId,
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     
-    _ErrorHandle(ERROR_NONE);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

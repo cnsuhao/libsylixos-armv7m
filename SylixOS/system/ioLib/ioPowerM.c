@@ -115,7 +115,6 @@ INT  API_IosDevPowerMAdd (CPCHAR        pcName,
                 *ppvPowerM = (PVOID)pdevpm;                             /*  保存控制句柄                */
             }
             
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         }
     }
@@ -161,7 +160,6 @@ INT  API_IosDevPowerMDeleteAll (CPCHAR  pcName)
             }
             _IosUnlock();                                               /*  退出 IO 临界区              */
             
-            _ErrorHandle(ERROR_NONE);
             return  (ERROR_NONE);
         }
     }
@@ -189,7 +187,6 @@ INT  API_IosDevPowerMMaxIdleTimeSet (PVOID  pvPowerM, ULONG  ulMaxIdleTime)
         API_PowerMCancel(pdevpm->DEVPM_ulPowerM);
         API_PowerMStart(pdevpm->DEVPM_ulPowerM, ulMaxIdleTime, 
                         _IosDevPowerMCallback, (PVOID)pdevpm);          /*  重新启动电源管理定时器      */
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -216,7 +213,6 @@ INT  API_IosDevPowerMMaxIdleTimeGet (PVOID  pvPowerM, ULONG  *pulMaxIdleTime)
         API_PowerMStatus(pdevpm->DEVPM_ulPowerM, LW_NULL,
                          pulMaxIdleTime,
                          LW_NULL, LW_NULL);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
@@ -239,7 +235,6 @@ INT  API_IosDevPowerMCancel (PVOID  pvPowerM)
 
     if (pdevpm) {
         API_PowerMCancel(pdevpm->DEVPM_ulPowerM);
-        _ErrorHandle(ERROR_NONE);
         return  (ERROR_NONE);
     }
     
