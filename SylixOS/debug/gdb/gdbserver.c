@@ -82,7 +82,11 @@ typedef struct {
     LW_GDB_BP               GDB_bpStep;                                 /* 单步断点                     */
     LONG                    GDB_lOpCThreadId;                           /* c,s命令线程                  */
     LONG                    GDB_lOpGThreadId;                           /* 其它命令线程                 */
+    ULONG                   GDB_lOptThreadId;                           /* t命令停止的线程              */
     BOOL                    GDB_bNonStop;                               /* Non-stop模式                 */
+    UINT                    GDB_uiThdNum;                               /* 线程数                       */
+    ULONG                   GDB_ulThreads[GDB_MAX_THREAD_NUM + 1];      /* 线程数组                     */
+    CHAR                    GDB_cThdStates[GDB_MAX_THREAD_NUM + 1];     /* 线程状态                     */
 } LW_GDB_PARAM;
 /*********************************************************************************************************
   全局变量定义
@@ -306,11 +310,12 @@ static VOID gdbReplyOk (PCHAR pcReply)
 ** 功能描述: 发送rsp数据包
 ** 输　入  : pparam       系统参数
 **           pcOutBuff    发送缓冲区
+**           bNotify      是否发送notify包
 ** 输　出  : ERROR_NONE 表示没有错误, PX_ERROR 表示错误
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-static INT gdbRspPkgPut (LW_GDB_PARAM *pparam, PCHAR pcOutBuff)
+static INT gdbRspPkgPut (LW_GDB_PARAM *pparam, PCHAR pcOutBuff, BOOL bNotify)
 {
     CHAR    cHeader    = '$';
     UCHAR   ucCheckSum = 0;
@@ -321,6 +326,10 @@ static INT gdbRspPkgPut (LW_GDB_PARAM *pparam, PCHAR pcOutBuff)
     while (pcOutBuff[iPkgLen] != '\0') {
         ucCheckSum += pcOutBuff[iPkgLen];
         iPkgLen++;
+    }
+
+    if (bNotify) {                                                      /* 异步通知包                   */
+        cHeader = '%';
     }
 
     if (iPkgLen > GDB_RSP_MAX_LEN - 10) {
@@ -349,8 +358,12 @@ static INT gdbRspPkgPut (LW_GDB_PARAM *pparam, PCHAR pcOutBuff)
             iSendLen = write(pparam->GDB_iCommFd, pcOutBuff, iPkgLen);
         }
 
-        if (read(pparam->GDB_iCommFd, &cAck, 1) <= 0) {
-            return  (PX_ERROR);
+        if (bNotify) {                                                  /* notify命令gdb不回应+/-       */
+            cAck = '+';
+        } else {
+            if (read(pparam->GDB_iCommFd, &cAck, 1) <= 0) {
+                return  (PX_ERROR);
+            }
         }
     } while(cAck != '+');
 
@@ -361,11 +374,12 @@ static INT gdbRspPkgPut (LW_GDB_PARAM *pparam, PCHAR pcOutBuff)
 ** 功能描述: 接受rsp数据包
 ** 输　入  : pparam       系统参数
 **           pcInBuff     接受缓冲区
-** 输　出  : 接受到的数据长度
+** 输　出  : pfdsi        如果为中断信号，则输出信号信息
+**           返回值       ERROR_NONE 表示没有错误, PX_ERROR 表示错误
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-static INT gdbRspPkgGet (LW_GDB_PARAM *pparam, PCHAR pcInBuff)
+static INT gdbRspPkgGet (LW_GDB_PARAM *pparam, PCHAR pcInBuff, struct signalfd_siginfo *pfdsi)
 {
     CHAR    cHeader;
     CHAR    cSend;
@@ -375,17 +389,47 @@ static INT gdbRspPkgGet (LW_GDB_PARAM *pparam, PCHAR pcInBuff)
     UCHAR   ucCheckSum  = 0;
     UCHAR   ucXmitcSum  = 0;
 
+    fd_set  fdset;
+    ssize_t szLen;
+    INT     iMaxFd;
+
+    iMaxFd = max(pparam->GDB_iCommFd, pparam->GDB_iSigFd);
+
     while (1) {
-        iReadLen = read(pparam->GDB_iCommFd, &cHeader, 1);
-        while (iReadLen > 0 ) {
-            if ((cHeader & 0x7F) == '$') {
-                break;
+        FD_ZERO(&fdset);
+        FD_SET(pparam->GDB_iCommFd, &fdset);
+        if (pparam->GDB_bNonStop) {                                     /* nonstop中断与网络异步操作    */
+            FD_SET(pparam->GDB_iSigFd, &fdset);
+        }
+
+        while (select(iMaxFd + 1, &fdset, NULL, NULL, NULL) >= 0) {
+            if (FD_ISSET(pparam->GDB_iCommFd, &fdset)) {                /* 网络命令                     */
+                iReadLen = read(pparam->GDB_iCommFd, &cHeader, 1);
+
+                if (iReadLen < 0) {
+                    return  (PX_ERROR);
+                }
+
+                if ((cHeader & 0x7F) == '$') {
+                    break;
+                }
             }
 
-            iReadLen = read(pparam->GDB_iCommFd, &cHeader, 1);
-        }
-        if (iReadLen < 0) {
-            return  (PX_ERROR);
+            if (FD_ISSET(pparam->GDB_iSigFd, &fdset)) {                 /* 中断到来                     */
+                szLen = read(pparam->GDB_iSigFd, pfdsi,
+                             sizeof(struct signalfd_siginfo));
+                if (szLen != sizeof(struct signalfd_siginfo)) {
+                    continue;
+                }
+                return  (ERROR_NONE);
+            }
+
+            FD_ZERO(&fdset);
+            FD_SET(pparam->GDB_iCommFd, &fdset);
+            if (pparam->GDB_bNonStop) {
+                FD_SET(pparam->GDB_iSigFd, &fdset);
+            }
+
         }
 
         cSend = '+';
@@ -396,7 +440,8 @@ static INT gdbRspPkgGet (LW_GDB_PARAM *pparam, PCHAR pcInBuff)
         while (iReadLen > 0) {
             while (iReadLen > 0) {
                 if ((pcInBuff[iDataLen] & 0x7F) == '#') {
-                    while (iReadLen < 3 && (GDB_RSP_MAX_LEN - iDataLen) > 3) {
+                    while (iReadLen < 3 &&
+                           (GDB_RSP_MAX_LEN - iDataLen) > 3) {          /* 读取未完成的字节             */
                         iReadChkSum = read(pparam->GDB_iCommFd,
                                            pcInBuff + iDataLen + iReadLen,
                                            2 - iReadLen);
@@ -408,7 +453,7 @@ static INT gdbRspPkgGet (LW_GDB_PARAM *pparam, PCHAR pcInBuff)
                     ucXmitcSum  = gdbAsc2Hex(pcInBuff[iDataLen + 1] & 0x7f) << 4;
                     ucXmitcSum += gdbAsc2Hex(pcInBuff[iDataLen + 2] & 0x7f);
 
-                    if (ucXmitcSum == ucCheckSum) {
+                    if (ucXmitcSum == ucCheckSum) {                     /* 发送确认包                   */
                         cSend = '+';
                         write(pparam->GDB_iCommFd, &cSend, sizeof(cSend));
                         return iDataLen;
@@ -438,6 +483,48 @@ static INT gdbRspPkgGet (LW_GDB_PARAM *pparam, PCHAR pcInBuff)
             return  (PX_ERROR);
         }
     }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: gdbReportStopReason
+** 功能描述: 上报停止原因
+** 输　入  : pdmsg         中断信息
+**           pcOutBuff     输出缓冲区
+** 输　出  : ERROR_NONE 表示没有错误, PX_ERROR 表示错误
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT gdbReportStopReason (PLW_DTRACE_MSG pdmsg, PCHAR pcOutBuff)
+{
+    if (pdmsg->DTM_uiType == SIGQUIT) {                                 /* 进程退出                     */
+        sprintf(pcOutBuff, "W00");
+        return  (ERROR_NONE);
+    }
+
+    sprintf(pcOutBuff, "T%02xthread:%lx;",
+            pdmsg->DTM_uiType, pdmsg->DTM_ulThread);                    /* 返回停止原因，默认为中断     */
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: gdbNotfyStopReason
+** 功能描述: non-stop模式上报停止原因
+** 输　入  : pdmsg         中断信息
+**           pcOutBuff     输出缓冲区
+** 输　出  : ERROR_NONE 表示没有错误, PX_ERROR 表示错误
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT gdbNotfyStopReason (PLW_DTRACE_MSG pdmsg, PCHAR pcOutBuff)
+{
+    if (pdmsg->DTM_uiType == SIGQUIT) {                                 /* 进程退出                     */
+        sprintf(pcOutBuff, "W00");
+        return  (ERROR_NONE);
+    }
+
+    sprintf(pcOutBuff, "Stop:T%02xthread:%lx;",
+            pdmsg->DTM_uiType, pdmsg->DTM_ulThread);                    /* 返回停止原因，默认为中断     */
 
     return  (ERROR_NONE);
 }
@@ -817,7 +904,7 @@ static INT gdbGoTo (LW_GDB_PARAM    *pparam,
         archGdbRegSetPc(pparam->GDB_pvDtrace, pdmsg->DTM_ulThread, ulAddr);
     }
 
-    if (iBeStep) {
+    if (iBeStep) {                                                      /* 单步，在下一条指令设置断点   */
         archGdbRegsGet(pparam->GDB_pvDtrace, pdmsg->DTM_ulThread, &regset);
         pparam->GDB_bpStep.BP_addr = archGdbGetNextPc(&regset);
         API_DtraceBreakpointInsert(pparam->GDB_pvDtrace,
@@ -964,6 +1051,7 @@ static INT gdbHandleQCmd (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
 {
     if (lib_strstr(pcInBuff, "NonStop:1") == pcInBuff) {
         pparam->GDB_bNonStop = 1;
+        API_DtraceContinueProcess(pparam->GDB_pvDtrace);                /* non-stop先启动进程           */
         gdbReplyOk(pcOutBuff);
 
     } else if (lib_strstr(pcInBuff, "NonStop:0") == pcInBuff) {
@@ -989,8 +1077,6 @@ static INT gdbCmdQuery (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
     addr_t            addrData = 0;
     addr_t            addrBss  = 0;
 
-    LW_OBJECT_HANDLE *phdArray = NULL;
-    UINT              uiThreadNum;
     UINT              i;
     UINT              uiStrLen = 0;
     ULONG             ulThreadId;
@@ -1011,7 +1097,7 @@ static INT gdbCmdQuery (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
             pcOutBuff[0] = 0;
         }
     
-    } else if (lib_strstr(pcInBuff, "Supported") == pcInBuff) {
+    } else if (lib_strstr(pcInBuff, "Supported") == pcInBuff) {         /* 获取能力项                   */
         sprintf(pcOutBuff, "PacketSize=1000;"
                            "qXfer:features:read+;"
                            "qXfer:libraries:read+;"
@@ -1032,35 +1118,27 @@ static INT gdbCmdQuery (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
         }
     
     } else if (lib_strstr(pcInBuff, "fThreadInfo") == pcInBuff) {
-        phdArray = (LW_OBJECT_HANDLE*)LW_GDB_SAFEMALLOC(GDB_MAX_THREAD_NUM *
-                                                        sizeof(LW_OBJECT_HANDLE));
-        if (phdArray == LW_NULL) {
+        API_DtraceProcessThread(pparam->GDB_pvDtrace,
+                                pparam->GDB_ulThreads,
+                                GDB_MAX_THREAD_NUM,
+                                &pparam->GDB_uiThdNum);                 /* 获取线程列表                 */
+        if (pparam->GDB_uiThdNum <= 0) {
             gdbReplyError(pcOutBuff, 1);
-            return  (PX_ERROR);
-        }
-
-        API_DtraceProcessThread(pparam->GDB_pvDtrace, phdArray,
-                                GDB_MAX_THREAD_NUM, &uiThreadNum);      /* 获取线程信息                 */
-        if (uiThreadNum <= 0) {
-            gdbReplyError(pcOutBuff, 1);
-            LW_GDB_SAFEFREE(phdArray);
             return  (PX_ERROR);
         }
 
         uiStrLen += sprintf(pcOutBuff, "m");
-        for (i = 0; i < uiThreadNum - 1; i++) {
-            uiStrLen += sprintf(pcOutBuff + uiStrLen, "%lx,", (ULONG)phdArray[i]);
+        for (i = 0; i < pparam->GDB_uiThdNum - 1; i++) {
+            uiStrLen += sprintf(pcOutBuff + uiStrLen, "%lx,", pparam->GDB_ulThreads[i]);
         }
 
         uiStrLen += sprintf(pcOutBuff + uiStrLen,
-                            "%lx", (ULONG)phdArray[i]);                 /* 最后一个线程不追加","        */
-
-        LW_GDB_SAFEFREE(phdArray);
+                            "%lx", pparam->GDB_ulThreads[i]);           /* 最后一个线程不追加","        */
     
     } else if (lib_strstr(pcInBuff, "sThreadInfo") == pcInBuff) {
         sprintf(pcOutBuff, "l");
     
-    } else if (lib_strstr(pcInBuff, "ThreadExtraInfo") == pcInBuff) {
+    } else if (lib_strstr(pcInBuff, "ThreadExtraInfo") == pcInBuff) {   /* 获取线程信息                 */
         if (sscanf(pcInBuff + lib_strlen("ThreadExtraInfo,"), "%lx", &ulThreadId) < 1) {
             gdbReplyError(pcOutBuff, 1);
             return  (PX_ERROR);
@@ -1071,30 +1149,12 @@ static INT gdbCmdQuery (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
             gdbByte2Asc(&pcOutBuff[i * 2], cThreadInfo[i]);
         }
     
+    } else if (lib_strstr(pcInBuff, "C") == pcInBuff) {                 /* 获取当前线程                 */
+        sprintf(pcOutBuff, "QC%lx", pparam->GDB_ulThreads[0]);
+
     } else {
         pcOutBuff[0] = 0;
     }
-
-    return  (ERROR_NONE);
-}
-/*********************************************************************************************************
-** 函数名称: gdbReportStopReason
-** 功能描述: 上报停止原因
-** 输　入  : pdmsg         中断信息
-**           pcOutBuff     输出缓冲区
-** 输　出  : ERROR_NONE 表示没有错误, PX_ERROR 表示错误
-** 全局变量:
-** 调用模块:
-*********************************************************************************************************/
-static INT gdbReportStopReason (PLW_DTRACE_MSG pdmsg, PCHAR pcOutBuff)
-{
-    if (pdmsg->DTM_uiType == SIGQUIT) {
-        sprintf(pcOutBuff, "W00");
-        return  (ERROR_NONE);
-    }
-
-    sprintf(pcOutBuff, "T%02xthread:%lx;",
-            pdmsg->DTM_uiType, pdmsg->DTM_ulThread);                    /* 返回停止原因，默认为中断     */
 
     return  (ERROR_NONE);
 }
@@ -1165,57 +1225,91 @@ static INT gdbContHandle (LW_GDB_PARAM     *pparam,
     ULONG       ulTid    = 0;
     INT         iSigNo;
     GDB_REG_SET regset;
+    INT         i;
+    PCHAR       pcPos    = pcInBuff;
 
-    chOp = pcInBuff[0];
-    if ('S' == chOp || 'C' == chOp) {
-        sscanf(pcInBuff + 1, "%02x:%lx", &iSigNo, &ulTid);
 
-    } else if ('s' == chOp || 'c' == chOp) {
-        sscanf(pcInBuff + 1, ":%lx", &ulTid);
+    API_DtraceProcessThread(pparam->GDB_pvDtrace,
+                            pparam->GDB_ulThreads,
+                            GDB_MAX_THREAD_NUM,
+                            &pparam->GDB_uiThdNum);                     /* 重新获取线程信息             */
 
-    } else if ('t' == chOp) {
-        sscanf(pcInBuff + 1, ":%lx", &ulTid);
+    lib_bzero(pparam->GDB_cThdStates, pparam->GDB_uiThdNum);
 
-        if (ulTid <= 0) {
-            API_DtraceStopProcess(pparam->GDB_pvDtrace);
+    while (pcPos[0]) {
+        chOp  = pcPos[0];
+        ulTid = 0;
+        if ('S' == chOp || 'C' == chOp) {
+            sscanf(pcPos + 1, "%02x:%lx", &iSigNo, &ulTid);
+
+        } else if ('s' == chOp || 'c' == chOp) {
+            sscanf(pcPos + 1, ":%lx", &ulTid);
+
+        } else if ('t' == chOp) {
+            sscanf(pcPos + 1, ":%lx", &ulTid);
+
         } else {
-            API_DtraceStopThread(pparam->GDB_pvDtrace,
-                                pparam->GDB_lOpCThreadId);
-        }
+            lib_bzero(pparam->GDB_cThdStates, pparam->GDB_uiThdNum);
 
-        gdbReplyOk(pcOutBuff);
-
-        return  (ERROR_NONE);
-    } else {
-        gdbReplyError(pcOutBuff, 1);
-
-        return  (ERROR_NONE);
-    }
-
-    pparam->GDB_lOpCThreadId = ulTid;
-
-    if ('S' == chOp || 's' == chOp) {
-        if (ulTid == 0 || ulTid == -1) {
-            gdbReplyError(pcOutBuff, 2);
+            gdbReplyError(pcOutBuff, 1);
 
             return  (ERROR_NONE);
         }
 
-        archGdbRegsGet(pparam->GDB_pvDtrace, ulTid, &regset);
-        pparam->GDB_bpStep.BP_addr = archGdbGetNextPc(&regset);
-        API_DtraceBreakpointInsert(pparam->GDB_pvDtrace,
-                                   pparam->GDB_bpStep.BP_addr,
-                                   &pparam->GDB_bpStep.BP_ulInstOrg);
+        for (i = 0; i < pparam->GDB_uiThdNum; i++) {
+            if (pparam->GDB_ulThreads[i] == ulTid) {
+                pparam->GDB_cThdStates[i] = chOp;
+            } else if (0 == ulTid && pparam->GDB_cThdStates[i] == '\0'){
+                pparam->GDB_cThdStates[i] = chOp;
+            }
+        }
+
+        if (('t' != chOp)) {                                            /* 非non-stop中断时需停止进程   */
+            pparam->GDB_lOpCThreadId = ulTid;
+        }
+
+        while((*pcPos) && (*pcPos) != ';') {
+            pcPos++;
+        }
+
+        if ((*pcPos) == ';') {
+            pcPos++;
+        }
     }
 
-    if (pparam->GDB_lOpCThreadId <= 0) {
-        API_DtraceContinueProcess(pparam->GDB_pvDtrace);
-    } else {
-        API_DtraceContinueThread(pparam->GDB_pvDtrace,
-                                 pparam->GDB_lOpCThreadId);             /* 当前线程停止计数减一         */
+    for (i = 0; i < pparam->GDB_uiThdNum; i++) {
+        switch (pparam->GDB_cThdStates[i]) {
+        case 'S':
+        case 's':
+            archGdbRegsGet(pparam->GDB_pvDtrace, pparam->GDB_ulThreads[i], &regset);
+            pparam->GDB_bpStep.BP_addr = archGdbGetNextPc(&regset);
+            API_DtraceBreakpointInsert(pparam->GDB_pvDtrace,
+                                       pparam->GDB_bpStep.BP_addr,
+                                       &pparam->GDB_bpStep.BP_ulInstOrg);
+                                                                        /* 不需要break                  */
+        case 'C':
+        case 'c':
+            API_DtraceContinueThread(pparam->GDB_pvDtrace,
+                                     pparam->GDB_ulThreads[i]);
+            break;
+
+        case 't':
+            API_DtraceStopThread(pparam->GDB_pvDtrace,
+                                 pparam->GDB_ulThreads[i]);
+            pdmsg->DTM_uiType   = 0;
+            pdmsg->DTM_ulAddr   = 0;
+            pdmsg->DTM_ulThread = pparam->GDB_ulThreads[i];
+            pparam->GDB_lOptThreadId = pparam->GDB_ulThreads[i];
+            break;
+
+        default:
+            break;
+        }
     }
 
-    return  (1);
+    gdbReplyOk(pcOutBuff);
+
+    return  (pparam->GDB_bNonStop ? (ERROR_NONE): 1);                   /* non-stop模式则命令循环不退出 */
 }
 /*********************************************************************************************************
 ** 函数名称: gdbHcmdHandle
@@ -1233,21 +1327,30 @@ static INT gdbVcmdHandle (LW_GDB_PARAM     *pparam,
                           PCHAR             pcOutBuff)
 {
 
-    if (lib_strstr(pcInBuff, "Cont?") == pcInBuff) {
-        lib_strncpy(pcOutBuff, "vCont;c;C;s;S", GDB_RSP_MAX_LEN);  //in linux is vCont;c;C;s;S;t;r
+    if (lib_strstr(pcInBuff, "Cont?") == pcInBuff) {                    /* 支持的vCont命令列表          */
+        lib_strncpy(pcOutBuff, "vCont;c;C;s;S;t", GDB_RSP_MAX_LEN);
 
-    } else if (lib_strstr(pcInBuff, "Cont;") == pcInBuff) {
+    } else if (lib_strstr(pcInBuff, "Cont;") == pcInBuff) {             /* vCont命令处理                */
         return gdbContHandle(pparam,
                              pdmsg,
                              pcInBuff + lib_strlen("Cont;"),
                              pcOutBuff);
+
+    } else if (lib_strstr(pcInBuff, "Stopped") == pcInBuff) {           /* 查询下一个断点线程           */
+        if (API_DtraceGetBreakInfo(pparam->GDB_pvDtrace,
+                                   pdmsg, 0) == ERROR_NONE) {
+            gdbReportStopReason(pdmsg, pcOutBuff);
+            gdbRspPkgPut(pparam, pcOutBuff, FALSE);
+        }
+
+        gdbReplyOk(pcOutBuff);
     }
 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: gdbCheckThread
-** 功能描述: 响应gdb H命令
+** 功能描述: 响应gdb T命令，查询线程状态
 ** 输　入  : pparam        gdb全局参数
 **           cInBuff       rsp包，含开始执行的地址
 ** 输　出  : cOutBuff      rsp包，表示操作执行结果
@@ -1284,9 +1387,10 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
                             PLW_DTRACE_MSG   pdmsg,
                             BOOL             bNeedReport)
 {
-    INT      iRet;
-    CHAR    *cInBuff  = NULL;
-    CHAR    *cOutBuff = NULL;
+    struct signalfd_siginfo  fdsi;
+    INT                      iRet;
+    CHAR                    *cInBuff   = LW_NULL;
+    CHAR                    *cOutBuff  = LW_NULL;
 
     pparam->GDB_lOpGThreadId = 0;                                       /* 每次进去循环前复位Hg的值     */
 
@@ -1299,9 +1403,9 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
         return  (PX_ERROR);
     }
 
-    if (bNeedReport) {
+    if (bNeedReport) {                                                  /* 上报停止原因                 */
         gdbReportStopReason(pdmsg, cOutBuff);
-        if (gdbRspPkgPut(pparam, cOutBuff) < 0) {
+        if (gdbRspPkgPut(pparam, cOutBuff, FALSE) < 0) {
             LW_GDB_SAFEFREE(cInBuff);
             LW_GDB_SAFEFREE(cOutBuff);
             LW_GDB_MSG("[GDB]Host close.\n");
@@ -1312,14 +1416,46 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
     while (1) {
         lib_bzero(cInBuff, GDB_RSP_MAX_LEN);
         lib_bzero(cOutBuff, GDB_RSP_MAX_LEN);
+        lib_bzero(&fdsi, sizeof(fdsi));
 
-        iRet = gdbRspPkgGet(pparam, cInBuff);
+        if (pparam->GDB_lOptThreadId != 0) {                            /* 上个命令有停线程,如: vCont;t */
+            gdbNotfyStopReason(pdmsg, cOutBuff);
+            gdbRspPkgPut(pparam, cOutBuff, TRUE);
+            pparam->GDB_lOptThreadId = 0;
+        }
+
+        iRet = gdbRspPkgGet(pparam, cInBuff, &fdsi);
         if (iRet < 0) {
             LW_GDB_SAFEFREE(cInBuff);
             LW_GDB_SAFEFREE(cOutBuff);
             LW_GDB_MSG("[GDB]Host close.\n");
             return  (PX_ERROR);
         }
+
+        if (fdsi.ssi_signo == SIGTRAP) {                                /* non-stop异步上报             */
+            if (API_DtraceGetBreakInfo(pparam->GDB_pvDtrace,
+                                       pdmsg, 0) == ERROR_NONE) {
+                if (pdmsg->DTM_ulAddr == pparam->GDB_bpStep.BP_addr) {
+                    API_DtraceBreakpointRemove(pparam->GDB_pvDtrace,
+                                               pparam->GDB_bpStep.BP_addr,
+                                               pparam->GDB_bpStep.BP_ulInstOrg);
+                }
+                gdbNotfyStopReason(pdmsg, cOutBuff);
+                gdbRspPkgPut(pparam, cOutBuff, TRUE);
+                continue;
+            }
+
+        } else if ((fdsi.ssi_signo == SIGCHLD) &&
+                    (fdsi.ssi_code == CLD_EXITED)) {                    /* 进程退出                     */
+            pdmsg->DTM_ulAddr   = 0;
+            pdmsg->DTM_ulThread = vprocMainThread(pparam->GDB_iPid);;
+            pdmsg->DTM_uiType   = SIGQUIT;
+            gdbNotfyStopReason(pdmsg, cOutBuff);
+            gdbRspPkgPut(pparam, cOutBuff, TRUE);
+            LW_GDB_MSG("[GDB]Targer process exit.\n");
+            continue;
+        }
+
         switch (cInBuff[0]) {
         
         case 'g':
@@ -1361,6 +1497,15 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
             break;
         
         case '?':
+            if (pparam->GDB_bNonStop &&
+                API_DtraceGetBreakInfo(pparam->GDB_pvDtrace,
+                                       pdmsg, 0) == ERROR_NONE) {
+                if (pdmsg->DTM_ulAddr == pparam->GDB_bpStep.BP_addr) {
+                    API_DtraceBreakpointRemove(pparam->GDB_pvDtrace,
+                                               pparam->GDB_bpStep.BP_addr,
+                                               pparam->GDB_bpStep.BP_ulInstOrg);
+                }
+            }
             gdbReportStopReason(pdmsg, cOutBuff);
             break;
         
@@ -1400,7 +1545,7 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
             break;
         }
 
-        if (gdbRspPkgPut(pparam, cOutBuff) < 0) {
+        if (gdbRspPkgPut(pparam, cOutBuff, FALSE) < 0) {
             LW_GDB_SAFEFREE(cInBuff);
             LW_GDB_SAFEFREE(cOutBuff);
             LW_GDB_MSG("[GDB]Host close.\n");
@@ -1441,7 +1586,9 @@ static INT gdbWaitSig (LW_GDB_PARAM            *pparam,
 
     while (select(iMaxFd + 1, &fdset, NULL, NULL, NULL) >= 0) {
         if (FD_ISSET(pparam->GDB_iCommFd, &fdset)) {
-            if (read(pparam->GDB_iCommFd, &chCmd, sizeof(chCmd)) <= 0) {
+            if (read(pparam->GDB_iCommFd,
+                     &chCmd,
+                     sizeof(chCmd)) <= 0) {                             /* 中断命令0x3                  */
                 return  (PX_ERROR);
             }
 
@@ -1452,12 +1599,18 @@ static INT gdbWaitSig (LW_GDB_PARAM            *pparam,
         }
 
         if (FD_ISSET(pparam->GDB_iSigFd, &fdset)) {
-            szLen = read(pparam->GDB_iSigFd, pfdsi, sizeof(struct signalfd_siginfo));
+            szLen = read(pparam->GDB_iSigFd,
+                         pfdsi,
+                         sizeof(struct signalfd_siginfo));              /* 中断                         */
             if (szLen != sizeof(struct signalfd_siginfo)) {
                 continue;
             }
             return  (ERROR_NONE);
         }
+
+        FD_ZERO(&fdset);
+        FD_SET(pparam->GDB_iCommFd, &fdset);
+        FD_SET(pparam->GDB_iSigFd, &fdset);
     }
 
     return  (PX_ERROR);
@@ -1525,9 +1678,41 @@ static INT gdbRelease (LW_GDB_PARAM *pparam)
         close(pparam->GDB_iCommFd);
     }
 
+    LW_GDB_SAFEFREE(pparam);
+
     LW_GDB_MSG("[GDB]Server exit.\n");
 
     return  (ERROR_NONE);
+}
+
+/*********************************************************************************************************
+** 函数名称: gdbReadEvent
+** 功能描述: 读取事件信息
+** 输　入  : pparam     系统参数
+** 输　出  : pdmsg      事件信息
+**           ERROR_NONE 表示没有错误, PX_ERROR 表示错误
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT gdbReadEvent (LW_GDB_PARAM *pparam, PLW_DTRACE_MSG pdmsg)
+{
+    INT i;
+
+    for (i = 0; i < pparam->GDB_uiThdNum; i++) {
+        if (pparam->GDB_cThdStates[i] == 'c' ||
+            pparam->GDB_cThdStates[i] == 'C'||
+            pparam->GDB_cThdStates[i] == 's'||
+            pparam->GDB_cThdStates[i] == 'S') {
+            if (API_DtraceGetBreakInfo(pparam->GDB_pvDtrace,
+                                       pdmsg,
+                                       pparam->GDB_ulThreads[i]) == ERROR_NONE) {
+                return  (ERROR_NONE);
+            }
+        }
+    }
+
+    return API_DtraceGetBreakInfo(pparam->GDB_pvDtrace, pdmsg,
+                                  pparam->GDB_lOpCThreadId);
 }
 
 /*********************************************************************************************************
@@ -1549,9 +1734,10 @@ static INT gdbEventLoop (LW_GDB_PARAM *pparam)
     if (gdbRspPkgHandle(pparam, &dmsg, FALSE) == PX_ERROR) {            /* 初始化时进程处于暂停状态     */
         return  (ERROR_NONE);
     }
-    
-    API_DtraceContinueProcess(pparam->GDB_pvDtrace);                    /* 启动进程                     */
 
+    /*
+     *  以下程序只有当非non-stop模式才进入
+     */
     while (gdbWaitSig(pparam, &bClientSig, &fdsi) == ERROR_NONE) {
         if (bClientSig) {                                               /* 客户端信号额外处理           */
             API_DtraceStopProcess(pparam->GDB_pvDtrace);                /* 停止进程                     */
@@ -1571,8 +1757,13 @@ static INT gdbEventLoop (LW_GDB_PARAM *pparam)
             return  (ERROR_NONE);
         }
 
-        while (API_DtraceGetBreakInfo(pparam->GDB_pvDtrace, &dmsg,
-                                      pparam->GDB_lOpCThreadId) == ERROR_NONE) {
+        while (gdbReadEvent(pparam, &dmsg) == ERROR_NONE) {
+            if (pparam->GDB_lOpCThreadId <= 0) {
+                API_DtraceStopProcess(pparam->GDB_pvDtrace);            /* 停止进程                     */
+                API_DtraceContinueThread(pparam->GDB_pvDtrace,
+                                         dmsg.DTM_ulThread);            /* 当前线程停止计数减一         */
+            }
+
             if (dmsg.DTM_ulAddr == pparam->GDB_bpStep.BP_addr) {        /* 单步断点自动移除             */
                 pparam->GDB_bpStep.BP_addr = (addr_t)0;
                 API_DtraceBreakpointRemove(pparam->GDB_pvDtrace,
@@ -1580,15 +1771,7 @@ static INT gdbEventLoop (LW_GDB_PARAM *pparam)
                                            pparam->GDB_bpStep.BP_ulInstOrg);
             }
 
-            if (pparam->GDB_lOpCThreadId <= 0 &&
-                0 == pparam->GDB_bNonStop) {
-                API_DtraceStopProcess(pparam->GDB_pvDtrace);            /* 停止进程                     */
-                API_DtraceContinueThread(pparam->GDB_pvDtrace,
-                                         dmsg.DTM_ulThread);            /* 当前线程停止计数减一         */
-            }
-
             if (gdbRspPkgHandle(pparam, &dmsg, TRUE) == PX_ERROR) {     /* 小于0表示客户端关闭连接      */
-                API_DtraceContinueProcess(pparam->GDB_pvDtrace);
                 return  (ERROR_NONE);
             }
         }
@@ -1644,7 +1827,7 @@ static INT gdbWaitSpawmSig (INT iSigNo)
 *********************************************************************************************************/
 static INT gdbMain (INT argc, CHAR **argv)
 {
-    LW_GDB_PARAM        param     = {0};
+    LW_GDB_PARAM       *pparam    = LW_NULL;
     UINT32              ui32Ip    = INADDR_ANY;
     UINT16              usPort    = 0;
     INT                 iArgPos   = 1;
@@ -1653,14 +1836,27 @@ static INT gdbMain (INT argc, CHAR **argv)
     INT                 iPid;
     posix_spawnattr_t   spawnattr;
     posix_spawnstop_t   spawnstop = {0};
-    PCHAR               pcSerial  = LW_NULL;    
+    PCHAR               pcSerial  = LW_NULL;
 
-    param.GDB_iCommFd = PX_ERROR;
-    param.GDB_iSigFd  = PX_ERROR;
+    PLW_LIST_LINE       plineTemp;
+    LW_GDB_BP          *pbpItem;
+
+    pparam = (LW_GDB_PARAM *)LW_GDB_SAFEMALLOC(sizeof(LW_GDB_PARAM));
+    if (LW_NULL == pparam) {
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "Malloc mem error.\r\n");
+        _ErrorHandle(ENOMEM);
+        return  (PX_ERROR);
+    }
+
+    lib_bzero(pparam, sizeof(LW_GDB_PARAM));
+
+    pparam->GDB_iCommFd = PX_ERROR;
+    pparam->GDB_iSigFd  = PX_ERROR;
 
     if (iArgPos > argc) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "Parameter error.\r\n");
         _ErrorHandle(ERROR_GDB_PARAM);
+        LW_GDB_SAFEFREE(pparam);
         return  (PX_ERROR);
     }
 
@@ -1672,10 +1868,11 @@ static INT gdbMain (INT argc, CHAR **argv)
     if (iArgPos > argc) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "Parameter error.\r\n");
         _ErrorHandle(ERROR_GDB_PARAM);
+        LW_GDB_SAFEFREE(pparam);
         return  (PX_ERROR);
     }
 
-    param.GDB_byCommType = COMM_TYPE_TTY;
+    pparam->GDB_byCommType = COMM_TYPE_TTY;
     for (i = 0; argv[iArgPos][i] != '\0'; i++) {                        /* 解析ip和端口                 */
         if (argv[iArgPos][i] == ':') {
             argv[iArgPos][i] = '\0';
@@ -1688,34 +1885,34 @@ static INT gdbMain (INT argc, CHAR **argv)
             } else {
                 ui32Ip = INADDR_ANY;
             }
-            param.GDB_byCommType = COMM_TYPE_TCP;
+            pparam->GDB_byCommType = COMM_TYPE_TCP;
         }
     }
     
-    if (param.GDB_byCommType == COMM_TYPE_TTY) {                        /* 串口调试                     */
+    if (pparam->GDB_byCommType == COMM_TYPE_TTY) {                      /* 串口调试                     */
         pcSerial = argv[iArgPos];
     }
 
     iArgPos++;
 
-    if ((param.GDB_iSigFd = gdbSigInit()) < 0) {                        /* 初始化调试信号               */
-        gdbRelease(&param);
+    if ((pparam->GDB_iSigFd = gdbSigInit()) < 0) {                      /* 初始化调试信号               */
+        gdbRelease(pparam);
         _DebugHandle(__ERRORMESSAGE_LEVEL, "Initialize signal failed.\r\n");
         _ErrorHandle(ERROR_GDB_INIT_SOCK);
         return  (PX_ERROR);
     }
 
-    param.GDB_pvDtrace = API_DtraceCreate(LW_DTRACE_PROCESS, 0,
+    pparam->GDB_pvDtrace = API_DtraceCreate(LW_DTRACE_PROCESS, 0,
                                           API_ThreadIdSelf());          /*  创建dtrace对象              */
-    if (param.GDB_pvDtrace == NULL) {
-        gdbRelease(&param);
+    if (pparam->GDB_pvDtrace == NULL) {
+        gdbRelease(pparam);
         _DebugHandle(__ERRORMESSAGE_LEVEL, "Create dtrace object error.\r\n");
         _ErrorHandle(ERROR_GDB_PARAM);
         return  (PX_ERROR);
     }
 
     if (iArgPos > argc) {
-        gdbRelease(&param);
+        gdbRelease(pparam);
         _DebugHandle(__ERRORMESSAGE_LEVEL, "Parameter error.\r\n");
         _ErrorHandle(ERROR_GDB_PARAM);
         return  (PX_ERROR);
@@ -1723,21 +1920,21 @@ static INT gdbMain (INT argc, CHAR **argv)
 
     if (iBeAttach) {                                                    /* attach到现有进程             */
         if (sscanf(argv[iArgPos], "%d", &iPid) != 1) {
-            gdbRelease(&param);
+            gdbRelease(pparam);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Parameter error.\r\n");
             _ErrorHandle(ERROR_GDB_PARAM);
             return  (PX_ERROR);
         }
 
-        param.GDB_iPid = iPid;
-        if (API_DtraceSetPid(param.GDB_pvDtrace, iPid) == PX_ERROR) {   /* 关联进程                     */
-            gdbRelease(&param);
+        pparam->GDB_iPid = iPid;
+        if (API_DtraceSetPid(pparam->GDB_pvDtrace, iPid) == PX_ERROR) { /* 关联进程                     */
+            gdbRelease(pparam);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Attach to program failed.\r\n");
             _ErrorHandle(ERROR_GDB_ATTACH_PROG);
             return  (PX_ERROR);
         }
 
-        if (API_DtraceStopProcess(param.GDB_pvDtrace) == PX_ERROR) {    /* 停止进程                     */
+        if (API_DtraceStopProcess(pparam->GDB_pvDtrace) == PX_ERROR) {  /* 停止进程                     */
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Stop program failed.\r\n");
             _ErrorHandle(ERROR_GDB_ATTACH_PROG);
             return  (PX_ERROR);
@@ -1748,10 +1945,10 @@ static INT gdbMain (INT argc, CHAR **argv)
         spawnstop.SPS_ulId      = API_ThreadIdSelf();
         posix_spawnattr_setstop(&spawnattr, &spawnstop);
         
-        if (posix_spawn(&param.GDB_iPid, argv[iArgPos], NULL,
+        if (posix_spawn(&pparam->GDB_iPid, argv[iArgPos], NULL,
                         &spawnattr, &argv[iArgPos], NULL) != ERROR_NONE) {
             posix_spawnattr_destroy(&spawnattr);
-            gdbRelease(&param);
+            gdbRelease(pparam);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Start program failed.\r\n");
             _ErrorHandle(ERROR_GDB_ATTACH_PROG);
             return  (PX_ERROR);
@@ -1760,38 +1957,65 @@ static INT gdbMain (INT argc, CHAR **argv)
             posix_spawnattr_destroy(&spawnattr);
         }
 
-        if (API_DtraceSetPid(param.GDB_pvDtrace, 
-                             param.GDB_iPid) == PX_ERROR) {             /* 关联进程                     */
-            gdbRelease(&param);
+        if (API_DtraceSetPid(pparam->GDB_pvDtrace,
+                             pparam->GDB_iPid) == PX_ERROR) {           /* 关联进程                     */
+            gdbRelease(pparam);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Attach to program failed.\r\n");
             _ErrorHandle(ERROR_GDB_ATTACH_PROG);
             return  (PX_ERROR);
         }
 
         if (gdbWaitSpawmSig(spawnstop.SPS_iSigNo) == PX_ERROR) {        /* 等待加载就绪信号             */
-            gdbRelease(&param);
+            gdbRelease(pparam);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Load program failed.\r\n");
             return  (PX_ERROR);
         }
     }
     
-    vprocGetPath(param.GDB_iPid, param.GDB_cProgPath, MAX_FILENAME_LENGTH);
+    vprocGetPath(pparam->GDB_iPid, pparam->GDB_cProgPath, MAX_FILENAME_LENGTH);
 
-    if (param.GDB_byCommType == COMM_TYPE_TCP) {
-        param.GDB_iCommFd = gdbTcpSockInit(ui32Ip, usPort);             /* 初始化socket，获取连接句柄   */
+    if (pparam->GDB_byCommType == COMM_TYPE_TCP) {
+        pparam->GDB_iCommFd = gdbTcpSockInit(ui32Ip, usPort);           /* 初始化socket，获取连接句柄   */
     } else {
-        param.GDB_iCommFd = gdbSerialInit(pcSerial);
+        pparam->GDB_iCommFd = gdbSerialInit(pcSerial);
     }
         
-    if (param.GDB_iCommFd < 0) {
+    if (pparam->GDB_iCommFd < 0) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "Initialize comunication failed.\r\n");
         _ErrorHandle(ERROR_GDB_INIT_SOCK);
         return  (PX_ERROR);
     }
 
-    gdbEventLoop(&param);                                               /* 进入事件循环                 */
+    gdbEventLoop(pparam);                                               /* 进入事件循环                 */
 
-    gdbRelease(&param);
+    plineTemp = pparam->GDB_plistBpHead;                                /* 释放断点链表                 */
+    while (plineTemp) {
+        pbpItem  = _LIST_ENTRY(plineTemp, LW_GDB_BP, BP_plistBpLine);
+        plineTemp = _list_line_get_next(plineTemp);
+        API_DtraceBreakpointRemove(pparam->GDB_pvDtrace,
+                                   pbpItem->BP_addr,
+                                   pbpItem->BP_ulInstOrg);
+        LW_GDB_SAFEFREE(pbpItem);
+    }
+    pparam->GDB_plistBpHead = LW_NULL;
+
+    API_DtraceContinueProcess(pparam->GDB_pvDtrace);
+
+    if (!iBeAttach) {                                                   /* 如果不是attch则停止进程      */
+        API_DtraceProcessThread(pparam->GDB_pvDtrace,
+                                pparam->GDB_ulThreads,
+                                GDB_MAX_THREAD_NUM,
+                                &pparam->GDB_uiThdNum);                 /* 获取线程信息                 */
+
+        for (i = 0; i < pparam->GDB_uiThdNum; i++) {
+            kill(pparam->GDB_ulThreads[i], SIGKILL);
+        }
+
+        LW_GDB_MSG("[GDB]Warning: Process is kill by GDB server.\n"
+                   "     Restart SylixOS is recommended!\n");
+    }
+
+    gdbRelease(pparam);
 
     return  (ERROR_NONE);
 }

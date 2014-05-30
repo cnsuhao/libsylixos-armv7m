@@ -4,6 +4,10 @@ HISTORY
 
 ++ New features:
 
+    2014-05-30: han.hui
+    shell 加入 dsize 命令查看文件夹大小.
+    GDB 支持 Non-Stop 多线程调试模式.
+    
     2014-05-24: han.hui
     SylixOS 加入 ramfs 支持.
 

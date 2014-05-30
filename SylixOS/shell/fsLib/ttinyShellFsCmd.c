@@ -59,6 +59,7 @@
 2013.01.22  ll 加入对文件所有者的显示, chmod 加入对通配符的支持.
 2013.04.01  修正 GCC 4.7.3 引发的新 warning.
 2013.06.24  加入对 vfat 卷标的支持.
+2014.05.30  加入查看文件夹大小的命令.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -1227,6 +1228,82 @@ static INT  __tshellFsCmdLl (INT  iArgC, PCHAR  ppcArgV[])
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __getDsize
+** 功能描述: 递归获取文件夹的文件数量和大小
+** 输　入  : pcDirName     目录名
+**           stDirLen      当前目录名长度
+**           pulFileCnt    文件数量
+**           poftSize      总大小
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __getDsize (PCHAR  pcDirName, size_t  stDirLen, ULONG  *pulFileCnt, off_t  *poftSize)
+{
+    DIR            *pdir;
+    struct dirent  *pdirent;
+    struct stat     statGet;
+    
+    pdir = opendir(pcDirName);
+    if (pdir) {
+        do {
+            pdirent = readdir(pdir);
+            if (pdirent) {
+                bnprintf(pcDirName, MAX_FILENAME_LENGTH, stDirLen, "/%s", pdirent->d_name);
+                if (lstat(pcDirName, &statGet) == ERROR_NONE) {
+                    if (S_ISDIR(statGet.st_mode)) {
+                        __getDsize(pcDirName, lib_strlen(pcDirName), pulFileCnt, poftSize);
+                    
+                    } else {
+                        (*pulFileCnt) += 1;
+                        (*poftSize)   += statGet.st_size;
+                    }
+                }
+                pcDirName[stDirLen] = PX_EOS;
+            }
+        } while (pdirent);
+        closedir(pdir);
+    }
+}
+/*********************************************************************************************************
+** 函数名称: __tshellFsCmdDsize
+** 功能描述: 系统命令 "dsize"
+** 输　入  : iArgC         参数个数
+**           ppcArgV       参数表
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __tshellFsCmdDsize (INT  iArgC, PCHAR  ppcArgV[])
+{
+    ULONG       ulFiles = 0ul;
+    off_t       oftSize = 0;
+    struct stat statGet;
+    CHAR        cDirName[MAX_FILENAME_LENGTH];
+    
+    if (iArgC < 2) {
+        printf("df argments error, (dsize directory)\n");
+        return  (-1);
+    }
+    
+    if (stat(ppcArgV[1], &statGet)) {
+        printf("can not get %s stat().\n", ppcArgV[1]);
+        return  (-ERROR_TSHELL_EPARAM);
+    }
+    
+    if (S_ISDIR(statGet.st_mode)) {
+        lib_strlcpy(cDirName, ppcArgV[1], MAX_FILENAME_LENGTH);
+        printf("scanning...\n");
+        __getDsize(cDirName, lib_strlen(cDirName), &ulFiles, &oftSize);
+        printf("total file %lu size %llu\n", ulFiles, oftSize);
+        
+    } else {
+        printf("total file 1 size %llu\n", statGet.st_size);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: __tshellFsCmdDf
 ** 功能描述: 系统命令 "df"
 ** 输　入  : iArgC         参数个数
@@ -1798,6 +1875,10 @@ VOID  __tshellFsCmdInit (VOID)
     API_TShellKeywordAdd("ll", __tshellFsCmdLl);
     API_TShellFormatAdd("ll", " [path name]");
     API_TShellHelpAdd("ll", "get file(s) attrib\n");
+    
+    API_TShellKeywordAdd("dsize", __tshellFsCmdDsize);
+    API_TShellFormatAdd("dsize", " [path name]");
+    API_TShellHelpAdd("dsize", "get directory size\n");
     
     API_TShellKeywordAdd("chmod", __tshellFsCmdChmod);
     API_TShellFormatAdd("chmod", " newmode filename");
