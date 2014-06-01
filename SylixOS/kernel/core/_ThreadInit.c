@@ -124,8 +124,9 @@ VOID  _TCBBuild (UINT8                    ucPriority,
                  PLW_CLASS_TCB            ptcb,
                  PVOID                    pvArg)
 {
+             INTREG           iregInterLevel;
+    REGISTER PLW_CLASS_PCB    ppcb;
     REGISTER PLW_CLASS_TCB    ptcbCur;
-    REGISTER PLW_LIST_LINE    plineList;
     
 #if LW_CFG_THREAD_NOTE_PAD_EN > 0
     REGISTER UINT8            ucI;
@@ -161,10 +162,7 @@ VOID  _TCBBuild (UINT8                    ucPriority,
     ptcb->TCB_ucSchedActivateMode = LW_OPTION_RESPOND_AUTO;             /*  相同优先级响应程度          */
                                                                         /*  初始化为内核自动识别        */
     ptcb->TCB_ucSchedActivate     = LW_SCHED_ACT_OTHER;                 /*  初始化为非中断激活方式      */
-
-    _K_ptcbTCBIdTable[_ObjectGetIndex(ulId)] = ptcb;                    /*  保存TCB控制块               */
-    
-    ptcb->TCB_iDeleteProcStatus = LW_TCB_DELETE_PROC_NONE;              /*  没有被删除                  */
+    ptcb->TCB_iDeleteProcStatus   = LW_TCB_DELETE_PROC_NONE;            /*  没有被删除                  */
     
 #if	LW_CFG_THREAD_RESTART_EN > 0
     ptcb->TCB_pthreadStartAddress = pThread;                            /*  保存任务起始代码指针        */
@@ -286,21 +284,8 @@ VOID  _TCBBuild (UINT8                    ucPriority,
 
     __KERNEL_SPACE_SET2(ptcb, 0);                                       /*  初始化为用户空间            */
     ptcb->TCB_pvPosixContext = LW_NULL;                                 /*  非 posix 线程               */
-    
-#if LW_CFG_MODULELOADER_EN > 0                                          /*  如果为 GLOBAL 则不属于进程  */
-    if (ptcbCur && !(ulOption & LW_OPTION_OBJECT_GLOBAL)) {             /*  继承进程控制块              */
-        ptcb->TCB_pvVProcessContext = ptcbCur->TCB_pvVProcessContext;
-        vprocThreadAdd(ptcb->TCB_pvVProcessContext, ptcb);
-    }
-#endif
 
     ptcb->TCB_usStatus = LW_THREAD_STATUS_RDY;                          /*  暂设为就绪状态              */
-    
-    plineList = &ptcb->TCB_lineManage;
-    
-    __KERNEL_MODE_PROC(
-        _List_Line_Add_Ahead(plineList, &_K_plineTCBHeader);            /*  进入 TCB 管理链表           */
-    );
 
 #if LW_CFG_THREAD_SUSPEND_EN > 0                                        /*  阻塞                        */
     if (ulOption & LW_OPTION_THREAD_SUSPEND) {
@@ -313,9 +298,7 @@ VOID  _TCBBuild (UINT8                    ucPriority,
     ptcb->TCB_ulSuspendNesting = 0;
 #endif                                                                  /*  LW_CFG_THREAD_SUSPEND_EN    */
     
-    if (ulOption & LW_OPTION_THREAD_INIT) {
-        ptcb->TCB_usStatus |= LW_THREAD_STATUS_INIT;                    /*  初始化                      */
-    }
+    ptcb->TCB_usStatus |= LW_THREAD_STATUS_INIT;                        /*  初始化                      */
 
     if (LW_SYS_STATUS_IS_RUNNING()) {
         INT i;
@@ -354,6 +337,26 @@ VOID  _TCBBuild (UINT8                    ucPriority,
     ptcb->TCB_pvStackFP = &ptcb->TCB_fpuctxContext;
     __ARCH_FPU_CTX_INIT(ptcb->TCB_pvStackFP);                           /*  初始化当前任务 FPU 上下文   */
 #endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
+
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    _K_ptcbTCBIdTable[_ObjectGetIndex(ulId)] = ptcb;                    /*  保存TCB控制块               */
+    _List_Line_Add_Ahead(&ptcb->TCB_lineManage, 
+                         &_K_plineTCBHeader);                           /*  进入 TCB 管理链表           */
+    
+    LW_SPIN_LOCK_QUICK(&_K_slScheduler, &iregInterLevel);
+    ppcb = _GetPcb(ptcb);
+    ppcb->PCB_usThreadCounter++;
+    LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);
+    
+    _LIST_RING_INIT_IN_CODE(ptcb->TCB_ringReady);
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+
+#if LW_CFG_MODULELOADER_EN > 0                                          /*  如果为 GLOBAL 则不属于进程  */
+    if (ptcbCur && !(ulOption & LW_OPTION_OBJECT_GLOBAL)) {             /*  继承进程控制块              */
+        ptcb->TCB_pvVProcessContext = ptcbCur->TCB_pvVProcessContext;
+        vprocThreadAdd(ptcb->TCB_pvVProcessContext, ptcb);
+    }
+#endif
 
     bspTCBInitHook(ulId, ptcb);                                         /*  调用钩子函数                */
     __LW_THREAD_INIT_HOOK(ulId, ptcb);
@@ -461,10 +464,7 @@ VOID  _TCBTryRun (PLW_CLASS_TCB  ptcb)
     iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核同时关闭中断        */
     
     ppcb = _GetPcb(ptcb);
-    ppcb->PCB_usThreadCounter++;
-    
-    _LIST_RING_INIT_IN_CODE(ptcb->TCB_ringReady);
-    
+    ptcb->TCB_usStatus &= ~LW_THREAD_STATUS_INIT;                       /*  去掉 init 标志              */
     if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  就绪                        */
         __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入到相对优先级就绪环      */
     }

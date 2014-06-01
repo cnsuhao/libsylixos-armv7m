@@ -43,14 +43,15 @@
 #define POSIX_SPAWN_SETSCHEDULER            0x20
 
 /*********************************************************************************************************
-  Data structure to contain attributes for process stop option.
+  Data structure to contain attributes for process option.
 *********************************************************************************************************/
 
 typedef struct {
-    INT                 SPS_iSigNo;                                     /*  信号                        */
-    LW_OBJECT_HANDLE    SPS_ulId;                                       /*  目标线程 (或进程)           */
-    ULONG               SPS_ulReserve[2];
-} posix_spawnstop_t;
+    INT                 SPO_iSigNo;                                     /*  信号                        */
+    LW_OBJECT_HANDLE    SPO_ulId;                                       /*  目标线程 (或进程)           */
+    ULONG               SPO_ulMainOption;                               /*  主线程 OPTION               */
+    size_t              SPO_stStackSize;                                /*  主线程堆栈大小 (0 为继承)   */
+} posix_spawnopt_t;
 
 /*********************************************************************************************************
   Data structure to contain attributes for process creation.
@@ -65,7 +66,7 @@ typedef struct {
     INT                 SPA_iPolicy;
     PCHAR               SPA_pcWd;
     PLW_RESOURCE_RAW    SPA_presraw;                                    /*  资源管理节点                */
-    posix_spawnstop_t   SPA_stop;                                       /*  进程运行前是否等待调试器信号*/
+    posix_spawnopt_t    SPA_opt;
     ULONG               SPA_ulPad[6];
 } posix_spawnattr_t;
 
@@ -188,10 +189,8 @@ LW_API int   posix_spawn_file_actions_adddup2(posix_spawn_file_actions_t *file_a
   sylixos extern (debuger use only!)
 *********************************************************************************************************/
 
-#ifdef __SYLIXOS_KERNEL
-LW_API int   posix_spawnattr_getstop(const posix_spawnattr_t *attrp, posix_spawnstop_t *pstop);
-LW_API int   posix_spawnattr_setstop(posix_spawnattr_t *attrp, const posix_spawnstop_t *pstop);
-#endif                                                                  /*  __SYLIXOS_KERNEL            */
+LW_API int   posix_spawnattr_getopt(const posix_spawnattr_t *attrp, posix_spawnopt_t *popt);
+LW_API int   posix_spawnattr_setopt(posix_spawnattr_t *attrp, const posix_spawnopt_t *popt);
 
 #ifdef __cplusplus
 }

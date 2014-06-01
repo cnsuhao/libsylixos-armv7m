@@ -27,6 +27,7 @@
 2009.04.08  加入对 SMP 多核的支持.
 2009.07.28  自旋锁的初始化放在初始化所有的控制块中, 这里去除相关操作.
 2011.07.29  加入对象创建/销毁回调.
+2014.05.31  使用 ROUND_UP 代替除法.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -61,7 +62,6 @@ LW_OBJECT_HANDLE  API_MsgQueueCreate (CPCHAR             pcName,
     REGISTER PLW_CLASS_WAITQUEUE   pwqTemp;
     REGISTER ULONG                 ulIdTemp;
     
-    REGISTER size_t                stExcess;
     REGISTER size_t                stMaxMsgByteSizeReal;
     REGISTER size_t                stHeapAllocateByteSize;
     REGISTER PVOID                 pvMemAllocate;
@@ -115,11 +115,8 @@ LW_OBJECT_HANDLE  API_MsgQueueCreate (CPCHAR             pcName,
     }
     
     stMaxMsgByteSizeReal = stMaxMsgByteSize + sizeof(size_t);           /*  多分配 size_t 存储长度      */
-    
-    stExcess = stMaxMsgByteSizeReal % sizeof(LW_STACK);                 /*  对齐大小处理                */
-    if (stExcess) {
-        stMaxMsgByteSizeReal += (sizeof(LW_STACK) - stExcess);
-    }
+    stMaxMsgByteSizeReal = ROUND_UP(stMaxMsgByteSizeReal, 
+                                    sizeof(LW_STACK));                  /*  对齐大小处理                */
     
     stHeapAllocateByteSize = ((size_t)ulMaxMsgCounter
                            * stMaxMsgByteSizeReal);                     /*  计算需要开辟的缓冲区大小    */

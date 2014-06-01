@@ -361,48 +361,46 @@ int   posix_spawnattr_destroy (posix_spawnattr_t *attrp)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: posix_spawnattr_getstop
-** 功能描述: Get signal stop setting from ATTR
+** 函数名称: posix_spawnattr_getopt
+** 功能描述: Get spawn option from ATTR
 ** 输　入  : attrp         spawn attr
-**           pstop         signal stop setting
+**           popt          spawn option
 ** 输　出  : ok or not
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-int   posix_spawnattr_getstop (const posix_spawnattr_t *attrp, posix_spawnstop_t *pstop)
+int   posix_spawnattr_getopt (const posix_spawnattr_t *attrp, posix_spawnopt_t *popt)
 {
-    if (!attrp || !pstop) {
+    if (!attrp || !popt) {
         errno = EINVAL;
         return  (EINVAL);
     }
     
-    *pstop = attrp->SPA_stop;
+    *popt = attrp->SPA_opt;
     
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: posix_spawnattr_setstop
-** 功能描述: Set signal stop setting for ATTR
+** 函数名称: posix_spawnattr_setopt
+** 功能描述: Set spawn option setting for ATTR
 ** 输　入  : attrp         spawn attr
-**           stop          signal stop setting
+**           popt          spawn option
 ** 输　出  : ok or not
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-int   posix_spawnattr_setstop (posix_spawnattr_t *attrp, const posix_spawnstop_t *pstop)
+int   posix_spawnattr_setopt (posix_spawnattr_t *attrp, const posix_spawnopt_t *popt)
 {
-    if (!attrp || !pstop) {
+    if (!attrp || !popt) {
         errno = EINVAL;
         return  (EINVAL);
     }
     
-    attrp->SPA_stop                  = *pstop;
-    attrp->SPA_stop.SPS_ulReserve[0] = 0ul;
-    attrp->SPA_stop.SPS_ulReserve[1] = 0ul;
+    attrp->SPA_opt = *popt;
     
     return  (ERROR_NONE);
 }

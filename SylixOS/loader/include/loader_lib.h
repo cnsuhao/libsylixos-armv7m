@@ -79,7 +79,9 @@ typedef struct lw_ld_vproc {
     LW_LIST_LINE_HEADER     VP_plineThread;                             /*  子线程链表                  */
     
     LW_FD_DESC              VP_fddescTbl[LW_VP_MAX_FILES];              /*  进程 fd 表                  */
-    ULONG                   VP_ulPad[11];                               /*  预留                        */
+    
+    INT                     VP_iExitMode;                               /*  退出模式                    */
+    ULONG                   VP_ulPad[10];                               /*  预留                        */
 } LW_LD_VPROC;
 
 /*********************************************************************************************************

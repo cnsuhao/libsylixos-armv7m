@@ -287,14 +287,14 @@ INT  __spawnArgProc (__PSPAWN_ARG  psarg)
 *********************************************************************************************************/
 static LW_LD_VPROC_STOP *__spawnStopGet (__PSPAWN_ARG  psarg, LW_LD_VPROC_STOP *pvpstop)
 {
-    posix_spawnstop_t *pstop = &psarg->SA_spawnattr.SPA_stop;
+    posix_spawnopt_t *popt = &psarg->SA_spawnattr.SPA_opt;
     
-    if (!__issig(pstop->SPS_iSigNo)) {
+    if (!__issig(popt->SPO_iSigNo)) {
         return  (LW_NULL);
     }
     
-    pvpstop->VPS_iSigNo   = pstop->SPS_iSigNo;
-    pvpstop->VPS_ulId     = pstop->SPS_ulId;
+    pvpstop->VPS_iSigNo   = popt->SPO_iSigNo;
+    pvpstop->VPS_ulId     = popt->SPO_ulId;
     
     return  (pvpstop);
 }
@@ -405,13 +405,25 @@ INT  __processStart (INT  mode, __PSPAWN_ARG  psarg)
     PLW_CLASS_TCB       ptcbCur;
     INT                 iRetValue = ERROR_NONE;
     pid_t               pid;
+    ULONG               ulOption;
+    size_t              stStackSize;
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
+    ulOption = LW_OPTION_THREAD_STK_CHK
+             | LW_OPTION_OBJECT_GLOBAL
+             | psarg->SA_spawnattr.SPA_opt.SPO_ulMainOption;
+             
+    if (psarg->SA_spawnattr.SPA_opt.SPO_stStackSize) {
+        stStackSize = psarg->SA_spawnattr.SPA_opt.SPO_stStackSize;
+    } else {
+        stStackSize = ptcbCur->TCB_stStackSize * sizeof(LW_STACK);
+    }
+    
     API_ThreadAttrBuild(&threadattr,
-                        (ptcbCur->TCB_stStackSize * sizeof(LW_STACK)),
+                        stStackSize,
                         ptcbCur->TCB_ucPriority,
-                        LW_OPTION_THREAD_STK_CHK | LW_OPTION_OBJECT_GLOBAL,
+                        ulOption,
                         (PVOID)psarg);
                         
     if (psarg->SA_spawnattr.SPA_sFlags & POSIX_SPAWN_SETSCHEDPARAM) {   /*  设置优先级                  */

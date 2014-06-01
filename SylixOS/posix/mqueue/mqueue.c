@@ -31,6 +31,7 @@
 2013.03.18  改进 mqueue 的原子操作性.
 2013.04.01  加入创建 mode 的保存, 为未来权限操作提供基础.
 2013.12.12  使用 archFindLsb() 来确定消息优先级.
+2014.05.30  使用 ROUND_UP 代替除法.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDARG
 #define  __SYLIXOS_KERNEL
@@ -385,12 +386,11 @@ static VOID  __mqueueInitBuffer (__PX_MSG  *pmq)
 *********************************************************************************************************/
 static __PX_MSG  *__mqueueCreate (const char  *name, mode_t mode, struct mq_attr  *pmqattr)
 {
-             INT        iErrLevel = 0;
-             
-             size_t     stMemBufferSize;                                /*  需要的缓存大小              */
-    REGISTER size_t     stExcess;
-             size_t     stLen = lib_strlen(name);
-             __PX_MSG  *pmq;
+    INT        iErrLevel = 0;
+    size_t     stMemBufferSize;                                         /*  需要的缓存大小              */
+    size_t     stLen = lib_strlen(name);
+    __PX_MSG  *pmq;
+    
     /*
      *  创建控制块内存
      */
@@ -413,12 +413,9 @@ static __PX_MSG  *__mqueueCreate (const char  *name, mode_t mode, struct mq_attr
      */
     stMemBufferSize = ((size_t)pmqattr->mq_msgsize 
                     + sizeof(__PX_MSG_NODE));                           /*  一个消息节点的大小          */
-    stExcess = stMemBufferSize % sizeof(LW_STACK);                      /*  对齐大小处理                */
-    if (stExcess) {
-        stMemBufferSize += (sizeof(LW_STACK) - stExcess);
-    }
-    pmq->PMSG_pmsgmem.PMSGM_stBytesPerMsg = stMemBufferSize;            /*  每一条消息占用的字节数      */
+    stMemBufferSize = ROUND_UP(stMemBufferSize, sizeof(LW_STACK));      /*  对齐大小处理                */
     
+    pmq->PMSG_pmsgmem.PMSGM_stBytesPerMsg = stMemBufferSize;            /*  每一条消息占用的字节数      */
     
     /*
      *  创建消息缓冲内存

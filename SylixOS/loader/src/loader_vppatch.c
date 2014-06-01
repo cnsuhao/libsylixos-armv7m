@@ -49,11 +49,13 @@
 2014.05.17  加入 GDB 调试所需的一些获取信息的函数.
 2014.05.20  用更加快捷的方法判断进程是否允许退出.
 2014.05.21  notify parent 将信号同时发送给调试器.
+2014.05.31  加入退出模式的选择.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
 #include "sys/wait.h"
+#include "sys/vproc.h"
 #if LW_CFG_GDB_EN > 0
 #include "dtrace.h"
 #endif
@@ -437,6 +439,8 @@ LW_LD_VPROC *vprocCreate (CPCHAR  pcFile)
         pvproc->VP_pidGroup = pvproc->VP_pid;                           /*  与 pid 相同                 */
     }
     
+    pvproc->VP_iExitMode = LW_VPROC_EXIT_NORMAL;                        /*  正常模式退出                */
+    
     _List_Line_Add_Tail(&pvproc->VP_lineManage, 
                         &_G_plineVProcHeader);                          /*  加入进程表                  */
     LW_LD_UNLOCK();
@@ -718,6 +722,20 @@ static BOOL vprocCanExit (VOID)
     }
 }
 /*********************************************************************************************************
+** 函数名称: vprocKillThread
+** 功能描述: 删除线程 (除主线程外)
+** 输　入  : pvproc     进程控制块指针
+** 输　出  : NONE
+** 全局变量:
+** 调用模块: 
+*********************************************************************************************************/
+static VOID vprocKillThread (LW_OBJECT_HANDLE  ulThread, LW_LD_VPROC *pvproc)
+{
+    if (pvproc->VP_ulMainThread != ulThread) {
+        _excJobAdd((VOIDFUNCPTR)kill, (PVOID)ulThread, (PVOID)SIGKILL, 0, 0, 0, 0);
+    }
+}
+/*********************************************************************************************************
 ** 函数名称: vprocAtExit
 ** 功能描述: 进程自行退出时, 会调用此函数运行 atexit 函数以及整个进程的析构函数.
 ** 输　入  : pvproc     进程控制块指针
@@ -782,8 +800,17 @@ __recheck:
 __recheck:
 #endif                                                                  /*  LW_CFG_THREAD_EXT_EN > 0    */
     
+    if (pvproc->VP_iExitMode == LW_VPROC_EXIT_FORCE) {
+        vprocThreadTraversal(pvproc, vprocKillThread, (PVOID)pvproc, 
+                             0, 0, 0, 0, 0);
+    }
+    
     do {                                                                /*  等待所有的线程安全退出      */
         if (vprocCanExit() == LW_FALSE) {                               /*  进程是否可以退出            */
+            if (pvproc->VP_iExitMode == LW_VPROC_EXIT_FORCE) {
+                vprocThreadTraversal(pvproc, vprocKillThread, (PVOID)pvproc, 
+                                     0, 0, 0, 0, 0);
+            }
             API_SemaphoreBPend(pvproc->VP_ulWaitForExit, LW_OPTION_WAIT_INFINITE);
         } else {
             break;                                                      /*  只有这一个线程了            */
@@ -873,6 +900,73 @@ __recheck:
     }
     
     API_SemaphoreBClear(pvproc->VP_ulWaitForExit);                      /*  清空信号量                  */
+}
+/*********************************************************************************************************
+** 函数名称: vprocExitModeGet
+** 功能描述: 获取进程退出模式
+** 输　入  : pid       进程 id
+**           piMode    退出模式
+** 输　出  : ERROR
+** 全局变量:
+** 调用模块:
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  vprocExitModeGet (pid_t  pid, INT  *piMode)
+{
+    LW_LD_VPROC *pvproc;
+    
+    if (!piMode) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    LW_LD_LOCK();
+    pvproc = vprocGet(pid);
+    if (pvproc == LW_NULL) {
+        LW_LD_UNLOCK();
+        _ErrorHandle(ESRCH);
+        return  (PX_ERROR);
+    }
+    
+    *piMode = pvproc->VP_iExitMode;
+    LW_LD_UNLOCK();
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: vprocExitModeSet
+** 功能描述: 设置进程退出模式
+** 输　入  : pid       进程 id
+**           iMode     退出模式
+** 输　出  : ERROR
+** 全局变量:
+** 调用模块:
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  vprocExitModeSet (pid_t  pid, INT  iMode)
+{
+    LW_LD_VPROC *pvproc;
+    
+    if ((iMode != LW_VPROC_EXIT_NORMAL) &&
+        (iMode != LW_VPROC_EXIT_FORCE)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    LW_LD_LOCK();
+    pvproc = vprocGet(pid);
+    if (pvproc == LW_NULL) {
+        LW_LD_UNLOCK();
+        _ErrorHandle(ESRCH);
+        return  (PX_ERROR);
+    }
+    
+    pvproc->VP_iExitMode = iMode;
+    LW_LD_UNLOCK();
+    
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: vprocSetFilesid
@@ -1333,7 +1427,8 @@ static LW_LD_EXEC_MODULE  *vprocModuleFind (pid_t  pid, PCHAR  pcModPath)
     pvproc = vprocGet(pid);
     if (!pvproc) {
         LW_LD_UNLOCK();
-        return  LW_NULL;
+        _ErrorHandle(ESRCH);
+        return  (LW_NULL);
     }
 
     LW_VP_LOCK(pvproc);
@@ -1349,12 +1444,13 @@ static LW_LD_EXEC_MODULE  *vprocModuleFind (pid_t  pid, PCHAR  pcModPath)
         if (lib_strcmp(pcFileMod, pcFileFind) == 0) {
             LW_VP_UNLOCK(pvproc);
             LW_LD_UNLOCK();
-            return  pmodTemp;
+            return  (pmodTemp);
         }
     }
     LW_VP_UNLOCK(pvproc);
     LW_LD_UNLOCK();
-
+    
+    _ErrorHandle(ERROR_LOADER_NO_MODULE);
     return  (LW_NULL);
 }
 /*********************************************************************************************************

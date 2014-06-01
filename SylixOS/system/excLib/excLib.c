@@ -35,7 +35,8 @@
   裁剪控制
 *********************************************************************************************************/
 #if LW_CFG_SIGNAL_EN > 0
-#define MAX_EXC_MSG_NUM     (NSIG + LW_CFG_MAX_EXCEMSGS)                /*  消息队列消息数量            */
+#define MAX_EXC_MSG_NUM     (NSIG + LW_CFG_MAX_EXCEMSGS + LW_CFG_MAX_THREADS)
+                                                                        /*  消息队列消息数量            */
 static LW_JOB_QUEUE         _G_jobqExc;
 static LW_JOB_MSG           _G_jobmsgExc[MAX_EXC_MSG_NUM];
 /*********************************************************************************************************

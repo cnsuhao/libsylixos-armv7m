@@ -54,6 +54,7 @@
 2013.09.17  加入对 SIGCNCL 信号的处理.
 2013.11.24  加入对 signalfd 功能的支持.
 2013.12.12  _sigGetLsb() 使用 archFindLsb() 寻找最需要递送的信号编号最小的信号.
+2014.06.01  遇到紧急停止信号, 进程将会被强制停止.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -67,6 +68,8 @@
   进程相关处理
 *********************************************************************************************************/
 #if LW_CFG_MODULELOADER_EN > 0
+#include "sys/vproc.h"
+#include "unistd.h"
 #include "../SylixOS/loader/include/loader_vppatch.h"
 #define __tcb_pid(ptcb)     __lw_vp_get_tcb_pid(ptcb)
 #else
@@ -175,7 +178,15 @@ static VOID  __signalExitHandle (INT  iSigNo, struct siginfo *psiginfo)
     }
 #endif                                                                  /*  LW_CFG_LOG_LIB_EN > 0       */
     
-    if ((iSigNo == SIGSEGV) || (iSigNo == SIGABRT)) {
+    if ((iSigNo == SIGSEGV) || 
+        (iSigNo == SIGABRT) || 
+        (iSigNo == SIGTERM)) {
+#if LW_CFG_MODULELOADER_EN > 0
+        pid_t   pid = getpid();
+        if (pid > 0) {
+            vprocExitModeSet(pid, LW_VPROC_EXIT_FORCE);                 /*  强制进程退出                */
+        }
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
         _exit(EXIT_FAILURE);                                            /*  进程错误退出                */
     
     } else {

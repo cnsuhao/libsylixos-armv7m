@@ -230,7 +230,10 @@ LW_OBJECT_HANDLE  API_ThreadCreate (CPCHAR                   pcName,
                       pthreadattr->THREADATTR_pvArg,
                       pcName);
     
-    _TCBTryRun(ptcb);                                                   /*  尝试运行新任务              */
+    if (!(pthreadattr->THREADATTR_ulOption & 
+          LW_OPTION_THREAD_INIT)) {                                     /*  非仅初始化                  */
+        _TCBTryRun(ptcb);                                               /*  尝试运行新任务              */
+    }
     
     if (pulId) {
         *pulId = ulIdTemp;                                              /*  记录 ID                     */

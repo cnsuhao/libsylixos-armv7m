@@ -17,6 +17,9 @@
 ** 文件创建日期: 2014 年 05 月 06 日
 **
 ** 描        述: GDBServer 主控程序
+**
+** BUG:
+2014.05.31  使用 LW_VPROC_EXIT_FORCE 删除进程.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -1835,7 +1838,7 @@ static INT gdbMain (INT argc, CHAR **argv)
     INT                 iBeAttach = 0;
     INT                 iPid;
     posix_spawnattr_t   spawnattr;
-    posix_spawnstop_t   spawnstop = {0};
+    posix_spawnopt_t    spawnopt  = {0};
     PCHAR               pcSerial  = LW_NULL;
 
     PLW_LIST_LINE       plineTemp;
@@ -1903,7 +1906,7 @@ static INT gdbMain (INT argc, CHAR **argv)
     }
 
     pparam->GDB_pvDtrace = API_DtraceCreate(LW_DTRACE_PROCESS, 0,
-                                          API_ThreadIdSelf());          /*  创建dtrace对象              */
+                                            API_ThreadIdSelf());        /*  创建dtrace对象              */
     if (pparam->GDB_pvDtrace == NULL) {
         gdbRelease(pparam);
         _DebugHandle(__ERRORMESSAGE_LEVEL, "Create dtrace object error.\r\n");
@@ -1941,9 +1944,11 @@ static INT gdbMain (INT argc, CHAR **argv)
         }
     } else {                                                            /* 启动程序并attach             */
         posix_spawnattr_init(&spawnattr);
-        spawnstop.SPS_iSigNo    = SIGUSR1;
-        spawnstop.SPS_ulId      = API_ThreadIdSelf();
-        posix_spawnattr_setstop(&spawnattr, &spawnstop);
+        spawnopt.SPO_iSigNo       = SIGUSR1;
+        spawnopt.SPO_ulId         = API_ThreadIdSelf();
+        spawnopt.SPO_ulMainOption = LW_OPTION_DEFAULT;
+        spawnopt.SPO_stStackSize  = 0;
+        posix_spawnattr_setopt(&spawnattr, &spawnopt);
         
         if (posix_spawn(&pparam->GDB_iPid, argv[iArgPos], NULL,
                         &spawnattr, &argv[iArgPos], NULL) != ERROR_NONE) {
@@ -1965,7 +1970,7 @@ static INT gdbMain (INT argc, CHAR **argv)
             return  (PX_ERROR);
         }
 
-        if (gdbWaitSpawmSig(spawnstop.SPS_iSigNo) == PX_ERROR) {        /* 等待加载就绪信号             */
+        if (gdbWaitSpawmSig(spawnopt.SPO_iSigNo) == PX_ERROR) {         /* 等待加载就绪信号             */
             gdbRelease(pparam);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Load program failed.\r\n");
             return  (PX_ERROR);
@@ -2002,15 +2007,7 @@ static INT gdbMain (INT argc, CHAR **argv)
     API_DtraceContinueProcess(pparam->GDB_pvDtrace);
 
     if (!iBeAttach) {                                                   /* 如果不是attch则停止进程      */
-        API_DtraceProcessThread(pparam->GDB_pvDtrace,
-                                pparam->GDB_ulThreads,
-                                GDB_MAX_THREAD_NUM,
-                                &pparam->GDB_uiThdNum);                 /* 获取线程信息                 */
-
-        for (i = 0; i < pparam->GDB_uiThdNum; i++) {
-            kill(pparam->GDB_ulThreads[i], SIGKILL);
-        }
-
+        kill(pparam->GDB_iPid, SIGABRT);                                /* 强制进程停止                 */
         LW_GDB_MSG("[GDB]Warning: Process is kill by GDB server.\n"
                    "     Restart SylixOS is recommended!\n");
     }
