@@ -1373,6 +1373,42 @@ VOID  vprocThreadDel (PVOID   pvVProc, PLW_CLASS_TCB  ptcb)
     }
 }
 /*********************************************************************************************************
+** 函数名称: vprocThreadNum
+** 功能描述: 获得进程中的线程总数
+** 输　入  : pid        进程 id
+**           pulCnt     数量
+** 输　出  : ERROR
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+INT  vprocThreadNum (pid_t pid, ULONG  *pulCnt)
+{
+    LW_LD_VPROC    *pvproc;
+    PLW_LIST_LINE   plineTemp;
+    
+    if (!pulCnt) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    LW_LD_LOCK();
+    pvproc = vprocGet(pid);
+    if (pvproc == LW_NULL) {
+        LW_LD_UNLOCK();
+        return  (PX_ERROR);
+    }
+    
+    for (plineTemp  = pvproc->VP_plineThread;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {
+         
+        (*pulCnt)++;
+    }
+    LW_VP_UNLOCK(pvproc);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: vprocThreadTraversal
 ** 功能描述: 遍历进程内的所有线程
 ** 输　入  : pvVProc    进程控制块指针

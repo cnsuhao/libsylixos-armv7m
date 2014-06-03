@@ -1039,6 +1039,10 @@ LW_API VOID             API_InterShow(VOID);                            /*  显示
 LW_API VOID             API_TimeShow(VOID);                             /*  显示时间                    */
 #endif
 
+#if LW_CFG_FIO_LIB_EN > 0 && ((LW_CFG_HTIMER_EN > 0) || (LW_CFG_ITIMER_EN > 0))
+LW_API VOID             API_TimerShow(LW_OBJECT_HANDLE  ulId);          /*  显示定时器信息              */
+#endif
+
 #if LW_CFG_FIO_LIB_EN > 0 && LW_CFG_RMS_EN > 0 && LW_CFG_MAX_RMSS > 0
 LW_API VOID             API_RmsShow(LW_OBJECT_HANDLE  ulId);            /*  显示 RMS                    */
 #endif

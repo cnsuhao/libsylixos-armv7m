@@ -53,7 +53,7 @@ vsnprintf(str, n, fmt, ap)
 	FILE f;
 	char c;
 
-	if ((int)n < 1) /* SylixOS support zero to measuring string length */
+	if ((int)n < 0) /* SylixOS support zero to measuring string length */
 		return (EOF);
 	if ((int)n == 0) {
 	    n = 1;

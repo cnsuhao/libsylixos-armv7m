@@ -82,6 +82,7 @@ pid_t               vprocFindProc(PVOID  pvAddr);
 INT                 vprocGetPath(pid_t  pid, PCHAR  pcPath, size_t stMaxLen);
 VOID                vprocThreadAdd(PVOID   pvVProc, PLW_CLASS_TCB  ptcb);
 VOID                vprocThreadDel(PVOID   pvVProc, PLW_CLASS_TCB  ptcb);
+INT                 vprocThreadNum(pid_t pid, ULONG  *pulCnt);
 VOID                vprocThreadTraversal(PVOID          pvVProc, 
                                          VOIDFUNCPTR    pfunc, 
                                          PVOID          pvArg0,

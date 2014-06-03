@@ -20,6 +20,7 @@
 **
 ** BUG:
 2014.05.31  使用 LW_VPROC_EXIT_FORCE 删除进程.
+2014.06.03  使用 posix_spawnp 创建进程.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -1950,8 +1951,8 @@ static INT gdbMain (INT argc, CHAR **argv)
         spawnopt.SPO_stStackSize  = 0;
         posix_spawnattr_setopt(&spawnattr, &spawnopt);
         
-        if (posix_spawn(&pparam->GDB_iPid, argv[iArgPos], NULL,
-                        &spawnattr, &argv[iArgPos], NULL) != ERROR_NONE) {
+        if (posix_spawnp(&pparam->GDB_iPid, argv[iArgPos], NULL,
+                         &spawnattr, &argv[iArgPos], NULL) != ERROR_NONE) {
             posix_spawnattr_destroy(&spawnattr);
             gdbRelease(pparam);
             _DebugHandle(__ERRORMESSAGE_LEVEL, "Start program failed.\r\n");
@@ -1977,7 +1978,13 @@ static INT gdbMain (INT argc, CHAR **argv)
         }
     }
     
-    vprocGetPath(pparam->GDB_iPid, pparam->GDB_cProgPath, MAX_FILENAME_LENGTH);
+    if (vprocGetPath(pparam->GDB_iPid, 
+                     pparam->GDB_cProgPath, 
+                     MAX_FILENAME_LENGTH)) {
+        gdbRelease(pparam);
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "Get process path fail.\r\n");
+        return  (PX_ERROR);
+    }
 
     if (pparam->GDB_byCommType == COMM_TYPE_TCP) {
         pparam->GDB_iCommFd = gdbTcpSockInit(ui32Ip, usPort);           /* 初始化socket，获取连接句柄   */

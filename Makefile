@@ -486,6 +486,7 @@ SylixOS/kernel/show/RmsShow.c \
 SylixOS/kernel/show/SemaphoreShow.c \
 SylixOS/kernel/show/StackShow.c \
 SylixOS/kernel/show/ThreadShow.c \
+SylixOS/kernel/show/TimerShow.c \
 SylixOS/kernel/show/TimeShow.c \
 SylixOS/kernel/show/VmmShow.c \
 SylixOS/kernel/threadext/ThreadCleanup.c \

@@ -515,6 +515,7 @@
 #define Lw_MsgQueue_Show                        API_MsgQueueShow
 #define Lw_Interrupt_Show                       API_InterShow
 #define Lw_Time_Show                            API_TimeShow
+#define Lw_Timer_Show                           API_TimerShow
 #define Lw_Rms_Show                             API_RmsShow
 #define Lw_CPUUsage_Show                        API_CPUUsageShow
 #define Lw_EventSet_Show                        API_EventSetShow
