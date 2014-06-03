@@ -27,7 +27,7 @@
 #endif                                                                  /*  NULL                        */
 
 #ifndef CLOCKS_PER_SEC
-#define CLOCKS_PER_SEC          LW_CFG_TICKS_PER_SEC
+#define CLOCKS_PER_SEC          API_TimeGetFrequency()
 #endif                                                                  /*  CLOCKS_PER_SEC              */
 
 #ifndef CLK_TCK

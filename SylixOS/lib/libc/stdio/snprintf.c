@@ -62,9 +62,14 @@ snprintf(str, n, fmt, va_alist)
 	int ret;
 	va_list ap;
 	FILE f;
+	char c;
 
-	if ((int)n < 1)
+	if ((int)n < 0) /* SylixOS support zero to measuring string length */
 		return (EOF);
+	if ((int)n == 0) {
+	    n = 1;
+	    str = &c;
+	}
 #if __STDC__
 	va_start(ap, fmt);
 #else

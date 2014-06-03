@@ -124,7 +124,6 @@ typedef LW_CLASS_SIGCTLMSG  *PLW_CLASS_SIGCTLMSG;
 *********************************************************************************************************/
 
 #define __SIGNO_UNMASK              (__sigmask(SIGKILL) |       \
-                                     __sigmask(SIGTERM) |       \
                                      __sigmask(SIGABRT) |       \
                                      __sigmask(SIGSTOP) |       \
                                      __sigmask(SIGILL)  |       \

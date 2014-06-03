@@ -161,7 +161,7 @@
 #define  LW_OPTION_WAIT_INFINITE                        __ARCH_ULONG_MAX
                                                                         /*  永远等待                    */
 #define  LW_OPTION_WAIT_A_TICK                          0x00000001      /*  等待一个时钟嘀嗒            */
-#define  LW_OPTION_WAIT_A_SECOND                        LW_CFG_TICKS_PER_SEC
+#define  LW_OPTION_WAIT_A_SECOND                        CLOCKS_PER_SEC
                                                                         /*  等待一秒                    */
 /*********************************************************************************************************
   创建选项
@@ -317,7 +317,7 @@
 *********************************************************************************************************/
 
 #define  LW_OPTION_ONE_TICK         0x00000001                          /*  等待一个 TICK               */
-#define  LW_OPTION_ONE_SECOND       LW_CFG_TICKS_PER_SEC                /*  一秒                        */
+#define  LW_OPTION_ONE_SECOND       CLOCKS_PER_SEC                      /*  一秒                        */
 #define  LW_OPTION_ONE_MINUTE       (60 * LW_OPTION_ONE_SECOND)         /*  一分钟                      */
 #define  LW_OPTION_ONE_HOUR         (60 * LW_OPTION_ONE_MINUTE)         /*  一小时                      */
 

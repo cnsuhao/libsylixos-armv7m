@@ -80,10 +80,10 @@
   micro-second
 *********************************************************************************************************/
 #define LW_MSECOND_TO_TICK_1(ulMs)      \
-        (((ulMs * LW_CFG_TICKS_PER_SEC) / 1000) ? ((ulMs * LW_CFG_TICKS_PER_SEC) / 1000) : (1))
+        (((ulMs * CLOCKS_PER_SEC) / 1000) ? ((ulMs * CLOCKS_PER_SEC) / 1000) : (1))
          
 #define LW_MSECOND_TO_TICK_0(ulMs)      \
-        ((ulMs * LW_CFG_TICKS_PER_SEC) / 1000)
+        ((ulMs * CLOCKS_PER_SEC) / 1000)
 
 #endif                                                                  /*  __K_VALUE_H                 */
 /*********************************************************************************************************

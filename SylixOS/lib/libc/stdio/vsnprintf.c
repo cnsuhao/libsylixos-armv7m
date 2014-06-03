@@ -51,9 +51,14 @@ vsnprintf(str, n, fmt, ap)
 {
 	int ret;
 	FILE f;
+	char c;
 
-	if ((int)n < 1)
+	if ((int)n < 1) /* SylixOS support zero to measuring string length */
 		return (EOF);
+	if ((int)n == 0) {
+	    n = 1;
+	    str = &c;
+	}
 	f._flags = __SWR | __SSTR;
 	f._bf._base = f._p = (unsigned char *)str;
 	f._bf._size = f._w = n - 1;

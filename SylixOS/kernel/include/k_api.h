@@ -648,6 +648,8 @@ LW_API ULONG            API_EventSetGetName(LW_OBJECT_HANDLE  ulId,
 
 LW_API VOID             API_TimeSleep(ULONG    ulTick);                 /*  当前线程睡眠                */
 
+LW_API ULONG            API_TimeSleepEx(ULONG   ulTick, BOOL  bSigRet); /*  当前线程睡眠                */
+
 LW_API VOID             API_TimeMSleep(ULONG   ulMSeconds);             /*  以毫秒为单位睡眠            */
 
 LW_API VOID             API_TimeSSleep(ULONG   ulSeconds);              /*  以秒为单位睡眠              */

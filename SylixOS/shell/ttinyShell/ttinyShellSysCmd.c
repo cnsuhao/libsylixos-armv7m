@@ -489,7 +489,6 @@ static INT  __tshellSysCmdKill (INT  iArgC, PCHAR  ppcArgV[])
     INT               iSigNum = SIGTERM;
 
     if (iArgC == 2) {
-        
         if (ppcArgV[1][0] < '0' ||
             ppcArgV[1][0] > '9') {
             printf("option error.\n");
@@ -500,10 +499,9 @@ static INT  __tshellSysCmdKill (INT  iArgC, PCHAR  ppcArgV[])
         if (API_ObjectGetClass(ulId) != _OBJECT_THREAD) {
             sscanf(ppcArgV[1], "%ld", &ulId);                           /*  进程 id                     */
         }
-        return  (kill(ulId, SIGTERM));
+        return  (kill(ulId, SIGKILL));
     
     } else if (iArgC == 4) {
-        
         if (lib_strcmp(ppcArgV[1], "-n")) {
             printf("option error.\n");
             return  (-1);
@@ -540,7 +538,6 @@ static INT  __tshellSysCmdSigqueue (INT  iArgC, PCHAR  ppcArgV[])
     sigvalue.sival_int = 0;
     
     if (iArgC == 2) {
-        
         if (ppcArgV[1][0] < '0' ||
             ppcArgV[1][0] > '9') {
             printf("option error.\n");
@@ -551,10 +548,9 @@ static INT  __tshellSysCmdSigqueue (INT  iArgC, PCHAR  ppcArgV[])
         if (API_ObjectGetClass(ulId) != _OBJECT_THREAD) {
             sscanf(ppcArgV[1], "%ld", &ulId);                           /*  进程 id                     */
         }
-        return  (sigqueue(ulId, SIGTERM, sigvalue));
+        return  (sigqueue(ulId, SIGKILL, sigvalue));
     
     } else if (iArgC == 4) {
-        
         if (lib_strcmp(ppcArgV[1], "-n")) {
             printf("option error.\n");
             return  (-1);
@@ -568,7 +564,6 @@ static INT  __tshellSysCmdSigqueue (INT  iArgC, PCHAR  ppcArgV[])
         return  (sigqueue(ulId, iSigNum, sigvalue));
     
     } else {
-        
         printf("option error.\n");
         return  (-1);
     }

@@ -33,6 +33,7 @@
 2012.12.11  不再显示堆栈首地址和入口, 加入所属进程 ID 显示.
             加入显示扩展接口, 可以显示指定进程内的线程.
 2014.05.05  加入 pend show 功能, 可以查看正在阻塞的线程信息.
+2014.06.02  pend 类型的显示更加详尽.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -132,6 +133,12 @@ VOID    API_ThreadShowEx (pid_t  pid)
         
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_DELAY) {    /*  睡眠                        */
             pcPendType = "SLP";
+            
+        } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_STOP) {     /*  停止                        */
+            pcPendType = "STOP";
+            
+        } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_WSTAT) {    /*  等待状态转换                */
+            pcPendType = "WSTAT";
         
         } else {
             pcPendType = "RDY";                                         /*  就绪态                      */
@@ -254,6 +261,12 @@ VOID    API_ThreadPendShowEx (pid_t  pid)
         
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_DELAY) {    /*  睡眠                        */
             pcPendType = "SLP";
+        
+        } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_STOP) {     /*  停止                        */
+            pcPendType = "STOP";
+            
+        } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_WSTAT) {    /*  等待状态转换                */
+            pcPendType = "WSTAT";
         
         } else {
             continue;                                                   /*  就绪态                      */

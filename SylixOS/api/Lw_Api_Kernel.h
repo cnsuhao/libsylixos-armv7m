@@ -360,6 +360,7 @@
 *********************************************************************************************************/
 
 #define Lw_Time_Sleep                           API_TimeSleep
+#define Lw_Time_SleepEx                         API_TimeSleepEx
 #define Lw_Time_Delay                           API_TimeSleep
 
 #define Lw_Time_SSleep                          API_TimeSSleep
@@ -508,6 +509,8 @@
 
 #define Lw_Thread_Show                          API_ThreadShow
 #define Lw_Thread_ShowEx                        API_ThreadShowEx
+#define Lw_Thread_PendShow                      API_ThreadPendShow
+#define Lw_Thread_PendShowEx                    API_ThreadPendShowEx
 #define Lw_Semaphore_Show                       API_SemaphoreShow
 #define Lw_MsgQueue_Show                        API_MsgQueueShow
 #define Lw_Interrupt_Show                       API_InterShow

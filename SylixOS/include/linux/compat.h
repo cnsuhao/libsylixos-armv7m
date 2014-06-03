@@ -100,7 +100,7 @@ extern void udelay(unsigned long us);
 #define ALIGN(p, align)         (((unsigned long)(p) + (align - 1)) & ~(align - 1))
 #endif
 
-#define CONFIG_SYS_HZ           LW_CFG_TICKS_PER_SEC
+#define CONFIG_SYS_HZ           CLOCKS_PER_SEC
 #define ENOTSUPP                ENOTSUP
 
 #ifndef likely

@@ -180,7 +180,7 @@ static VOID  __signalExitHandle (INT  iSigNo, struct siginfo *psiginfo)
     
     if ((iSigNo == SIGSEGV) || 
         (iSigNo == SIGABRT) || 
-        (iSigNo == SIGTERM)) {
+        (iSigNo == SIGKILL)) {                                          /*  强制信号                    */
 #if LW_CFG_MODULELOADER_EN > 0
         pid_t   pid = getpid();
         if (pid > 0) {
@@ -504,7 +504,7 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx, INT  iSigNo, struct 
             vfuncHandle(iSigNo);                                        /*  执行信号句柄                */
         }
     
-        if (__SIGNO_MUST_EXIT & __sigmask(iSigNo)) {                    /*  必须杀死                    */
+        if (__SIGNO_MUST_EXIT & __sigmask(iSigNo)) {                    /*  必须退出                    */
             __signalExitHandle(iSigNo, psiginfo);
         
         } else if (iSigNo == SIGCNCL) {                                 /*  线程取消信号                */
@@ -513,6 +513,7 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx, INT  iSigNo, struct 
     } else {
         switch (iSigNo) {                                               /*  默认处理句柄                */
         
+        case SIGINT:
         case SIGFPE:
         case SIGKILL:
         case SIGBUS:
@@ -531,6 +532,7 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx, INT  iSigNo, struct 
             
         case SIGCNCL:
             __signalCnclHandle(iSigNo, psiginfo);
+            break;
             
         default:
             break;

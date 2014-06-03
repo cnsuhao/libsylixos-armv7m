@@ -82,6 +82,63 @@ __wait_again:
     }
 }
 /*********************************************************************************************************
+** 函数名称: API_TimeSleepEx
+** 功能描述: 线程睡眠函数
+** 输　入  : ulTick            睡眠的时间
+**           bSigRet           是否允许信号唤醒
+** 输　出  : ERROR_NONE or EINTR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+                                           
+                                       (不得在中断中调用)
+*********************************************************************************************************/
+LW_API
+ULONG  API_TimeSleepEx (ULONG  ulTick, BOOL  bSigRet)
+{
+             INTREG                iregInterLevel;
+             
+             PLW_CLASS_TCB         ptcbCur;
+	REGISTER PLW_CLASS_PCB         ppcb;
+	REGISTER ULONG                 ulKernelTime;
+    
+    if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
+        _ErrorHandle(ERROR_KERNEL_IN_ISR);
+        return  (ERROR_KERNEL_IN_ISR);
+    }
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
+    
+    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLEEP, 
+                      ptcbCur->TCB_ulId, ulTick, LW_NULL);
+    
+__wait_again:
+    if (!ulTick) {                                                      /*  不进行延迟                  */
+        return  (ERROR_NONE);
+    }
+
+    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核                    */
+
+    ppcb = _GetPcb(ptcbCur);
+    __DEL_FROM_READY_RING(ptcbCur, ppcb);                               /*  从就绪表中删除              */
+    
+    ptcbCur->TCB_ulDelay = ulTick;
+    __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
+    
+    __KERNEL_TIME_GET(ulKernelTime, ULONG);                             /*  记录系统时间                */
+    
+    if (__KERNEL_EXIT_IRQ(iregInterLevel)) {                            /*  被信号激活                  */
+        if (bSigRet) {
+            _ErrorHandle(EINTR);
+            return  (EINTR);
+        }
+        ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
+        goto __wait_again;                                              /*  继续等待                    */
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: API_TimeSSleep
 ** 功能描述: 线程睡眠函数
 ** 输　入  : ulSeconds            睡眠的时间 (秒)

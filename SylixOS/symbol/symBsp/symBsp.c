@@ -58,6 +58,36 @@ static LW_SYMBOL    _G_symBsp[] = {
     {   {LW_NULL, LW_NULL}, "bspDelayNs", (caddr_t)bspDelayNs,
     	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
     },
+/*********************************************************************************************************
+  驱动函数 CPU 识别
+*********************************************************************************************************/
+    {   {LW_NULL, LW_NULL}, "bspInfoCpu", (caddr_t)bspInfoCpu,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoCache", (caddr_t)bspInfoCache,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoPacket", (caddr_t)bspInfoPacket,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoVersion", (caddr_t)bspInfoVersion,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoHwcap", (caddr_t)bspInfoHwcap,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoRomBase", (caddr_t)bspInfoRomBase,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoRomSize", (caddr_t)bspInfoRomSize,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoRamBase", (caddr_t)bspInfoRamBase,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "bspInfoRamSize", (caddr_t)bspInfoRamSize,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
 };
 /*********************************************************************************************************
 ** 函数名称: __symbolAddBsp
