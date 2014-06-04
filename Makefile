@@ -954,6 +954,7 @@ SylixOS/system/device/graph/gmemDev.c \
 SylixOS/system/device/hstimerfd/hstimerfdDev.c \
 SylixOS/system/device/hwrtc/hwrtc.c \
 SylixOS/system/device/i2c/i2cLib.c \
+SylixOS/system/device/mem/memDev.c \
 SylixOS/system/device/mii/miiDev.c \
 SylixOS/system/device/pci/pciDb.c \
 SylixOS/system/device/pci/pciLib.c \

@@ -36,7 +36,7 @@
 *********************************************************************************************************/
 
 #define LW_CFG_MAX_EVENTS                       1500    /*  系统使用事件的最大个数              < 65535 */
-#define LW_CFG_MAX_EVENTSETS                    20      /*  系统使用事件集的最大个数            < 65535 */
+#define LW_CFG_MAX_EVENTSETS                    100     /*  系统使用事件集的最大个数            < 65535 */
 #define LW_CFG_MAX_PARTITIONS                   30      /*  系统定长分区内存管理最大分区数      < 65535 */
 #define LW_CFG_MAX_REGIONS                      20      /*  系统变长分区内存管理对大分区数      < 65535 */
 #define LW_CFG_MAX_MSGQUEUES                    300     /*  系统消息队列最大个数                < 65535 */

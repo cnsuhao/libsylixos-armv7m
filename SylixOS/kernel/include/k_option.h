@@ -251,16 +251,18 @@
   EVENT SET
 *********************************************************************************************************/
 /*********************************************************************************************************
-  等待选项
+  等待(接收)选项
 *********************************************************************************************************/
-#define  LW_OPTION_EVENTSET_WAIT_CLR_ALL                0x00000000      /*  指定位都为0时激活           */
-#define  LW_OPTION_EVENTSET_WAIT_CLR_ANY                0x00000001      /*  指定位中任何一位为0时激活   */
-#define  LW_OPTION_EVENTSET_WAIT_SET_ALL                0x00000002      /*  指定位都为1时激活           */
-#define  LW_OPTION_EVENTSET_WAIT_SET_ANY                0x00000003      /*  指定位中任何一位为1时激活   */
+#define  LW_OPTION_EVENTSET_WAIT_CLR_ALL                0               /*  指定位都为0时激活           */
+#define  LW_OPTION_EVENTSET_WAIT_CLR_ANY                1               /*  指定位中任何一位为0时激活   */
+#define  LW_OPTION_EVENTSET_WAIT_SET_ALL                2               /*  指定位都为1时激活           */
+#define  LW_OPTION_EVENTSET_WAIT_SET_ANY                3               /*  指定位中任何一位为1时激活   */
 
+#define  LW_OPTION_EVENTSET_RETURN_ALL                  0x00000040      /*  获得事件后返回所有有效的事件*/
 #define  LW_OPTION_EVENTSET_RESET                       0x00000080      /*  获得事件后是否自动清除事件  */
+#define  LW_OPTION_EVENTSET_RESET_ALL                   0x00000100      /*  获得事件后清除所有事件      */
 /*********************************************************************************************************
-  设置选项
+  设置(发送)选项
 *********************************************************************************************************/
 #define  LW_OPTION_EVENTSET_SET                         0x1             /*  将指定事件设为 1            */
 #define  LW_OPTION_EVENTSET_CLR                         0x0             /*  将指定事件设为 0            */

@@ -16,7 +16,7 @@
 **
 ** 文件创建日期: 2006 年 12 月 20 日
 **
-** 描        述: 释放事件集相关事件   (采用 uCOS 机制，加入链式反应能力)
+** 描        述: 释放事件集相关事件.
 
 ** BUG
 2007.11.13  使用链表库对链表操作进行完全封装.
@@ -82,9 +82,11 @@ ULONG  API_EventSetSet (LW_OBJECT_HANDLE  ulId,
     case LW_OPTION_EVENTSET_CLR:                                        /*  清除操作                    */
         pes->EVENTSET_ulEventSets &= (~ulEvent);
         break;
+    
     case LW_OPTION_EVENTSET_SET:                                        /*  置位操作                    */
         pes->EVENTSET_ulEventSets |= ulEvent;
         break;
+    
     default:
         LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
         _DebugHandle(__ERRORMESSAGE_LEVEL, "ulOption invalidate.\r\n");
@@ -163,4 +165,3 @@ ULONG  API_EventSetSet (LW_OBJECT_HANDLE  ulId,
 /*********************************************************************************************************
   END
 *********************************************************************************************************/
-

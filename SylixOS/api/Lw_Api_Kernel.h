@@ -319,9 +319,17 @@
 #define Lw_Event_TryGet                         API_EventSetTryGet
 #define Lw_Event_TryTake                        API_EventSetTryGet
 
+#define Lw_Event_TryWaitEx                      API_EventSetTryGetEx
+#define Lw_Event_TryGetEx                       API_EventSetTryGetEx
+#define Lw_Event_TryTakeEx                      API_EventSetTryGetEx
+
 #define Lw_Event_Wait                           API_EventSetGet
 #define Lw_Event_Get                            API_EventSetGet
 #define Lw_Event_Take                           API_EventSetGet
+
+#define Lw_Event_WaitEx                         API_EventSetGetEx
+#define Lw_Event_GetEx                          API_EventSetGetEx
+#define Lw_Event_TakeEx                         API_EventSetGetEx
 
 #define Lw_Event_Send                           API_EventSetSet
 #define Lw_Event_Post                           API_EventSetSet
@@ -467,6 +475,10 @@
 *********************************************************************************************************/
 
 #define Lw_Error_GetLast                        API_GetLastError
+#define Lw_Error_GetLastEx                      API_GetLastErrorEx
+
+#define Lw_Error_SetLast                        API_SetLastError
+#define Lw_Error_SetLastEx                      API_SetLastErrorEx
 
 /*********************************************************************************************************
   KERNEL

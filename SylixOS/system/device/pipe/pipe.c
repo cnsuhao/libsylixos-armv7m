@@ -52,15 +52,14 @@
 LW_API 
 INT  API_PipeDrvInstall (VOID)
 {
-    if (_G_iPipeDrvNum == (PX_ERROR)) {
-        
-        _G_iPipeDrvNum = iosDrvInstall(  (LONGFUNCPTR)LW_NULL,        /*  CREATE                        */
-                                         (FUNCPTR)LW_NULL,            /*  DELETE                        */
-                                         _PipeOpen,                   /*  OPEN                          */
-                                         _PipeClose,                  /*  CLOSE                         */
-                                         _PipeRead,                   /*  READ                          */
-                                         _PipeWrite,                  /*  WRITE                         */
-                                         _PipeIoctl);                 /*  IOCTL                         */
+    if (_G_iPipeDrvNum == PX_ERROR) {
+        _G_iPipeDrvNum =  iosDrvInstall( (LONGFUNCPTR)LW_NULL,          /*  CREATE                      */
+                                         (FUNCPTR)LW_NULL,              /*  DELETE                      */
+                                         _PipeOpen,                     /*  OPEN                        */
+                                         _PipeClose,                    /*  CLOSE                       */
+                                         _PipeRead,                     /*  READ                        */
+                                         _PipeWrite,                    /*  WRITE                       */
+                                         _PipeIoctl);                   /*  IOCTL                       */
                                           
         DRIVER_LICENSE(_G_iPipeDrvNum,     "Dual BSD/GPL->Ver 1.0");
         DRIVER_AUTHOR(_G_iPipeDrvNum,      "Han.hui");

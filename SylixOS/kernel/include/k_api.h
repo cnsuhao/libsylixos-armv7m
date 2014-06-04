@@ -629,11 +629,22 @@ LW_API ULONG            API_EventSetGet(LW_OBJECT_HANDLE  ulId,
                                         ULONG             ulEvent,
                                         ULONG             ulOption,
                                         ULONG             ulTimeOut);   /*  接收事件                    */
+                                        
+LW_API ULONG            API_EventSetGetEx(LW_OBJECT_HANDLE  ulId, 
+                                          ULONG             ulEvent,
+                                          ULONG             ulOption,
+                                          ULONG             ulTimeOut,
+                                          ULONG            *pulEvent);  /*  接收事件扩展接口            */
 
 LW_API ULONG            API_EventSetTryGet(LW_OBJECT_HANDLE  ulId, 
                                            ULONG             ulEvent,
                                            ULONG             ulOption); /*  无阻塞接收事件              */
-
+                                           
+LW_API ULONG            API_EventSetTryGetEx(LW_OBJECT_HANDLE  ulId, 
+                                             ULONG             ulEvent,
+                                             ULONG             ulOption,
+                                             ULONG            *pulEvent);
+                                                                        /*  无阻塞接收事件扩展接口      */
 LW_API ULONG            API_EventSetStatus(LW_OBJECT_HANDLE  ulId, 
                                            ULONG            *pulEvent,
                                            ULONG            *pulOption);/*  获得事件集状态              */
@@ -887,10 +898,22 @@ LW_API VOID             API_InterStackCheck(ULONG   ulCPUId,
                                             size_t *pstUsedByteSize);   /*  中断堆栈检查                */
 
 /*********************************************************************************************************
-  KERNEL
+  LAST ERROR
 *********************************************************************************************************/
 
 LW_API ULONG            API_GetLastError(VOID);                         /*  获得系统最后一次错误        */
+
+LW_API ULONG            API_GetLastErrorEx(LW_OBJECT_HANDLE  ulId, 
+                                           ULONG  *pulError);           /*  获得指定任务的最后一次错误  */
+
+LW_API VOID             API_SetLastError(ULONG  ulError);               /*  设置系统最后一次错误        */
+
+LW_API ULONG            API_SetLastErrorEx(LW_OBJECT_HANDLE  ulId, 
+                                           ULONG  ulError);             /*  设置指定任务的最后一次错误  */
+
+/*********************************************************************************************************
+  KERNEL
+*********************************************************************************************************/
 
 LW_API VOID             API_KernelNop(CPCHAR  pcArg, LONG  lArg);       /*  内核空操作                  */
 

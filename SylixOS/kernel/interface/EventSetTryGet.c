@@ -16,7 +16,7 @@
 **
 ** 文件创建日期: 2006 年 12 月 20 日
 **
-** 描        述: 无阻塞等待事件集相关事件   (采用 uCOS 机制，加入链式反应能力)
+** 描        述: 无阻塞等待事件集相关事件.
 
 ** BUG
 2008.01.13  加入 _DebugHandle() 功能。
@@ -27,7 +27,7 @@
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-             ERROR MACRO
+  MACRO
 *********************************************************************************************************/
 #define  __EVENTSET_NOT_READY() do {                          \
              LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock,      \
@@ -36,13 +36,26 @@
              _ErrorHandle(ERROR_THREAD_WAIT_TIMEOUT);         \
              return (ERROR_THREAD_WAIT_TIMEOUT);              \
          } while (0)
+         
+#define  __EVENTSET_SAVE_RET()  do {                          \
+             if (ulOption & LW_OPTION_EVENTSET_RETURN_ALL) {  \
+                 if (pulEvent) {                              \
+                     *pulEvent = pes->EVENTSET_ulEventSets;   \
+                 }                                            \
+             } else {                                         \
+                 if (pulEvent) {                              \
+                     *pulEvent = ulEventRdy;                  \
+                 }                                            \
+             }                                                \
+         } while (0)
 /*********************************************************************************************************
-** 函数名称: API_EventSetTryGet
+** 函数名称: API_EventSetTryGetEx
 ** 功能描述: 无阻塞等待事件集相关事件
 ** 输　入  : 
 **           ulId            事件集句柄
 **           ulEvent         等待事件
 **           ulOption        等待方法选项
+**           pulEvent        接收的事件
 ** 输　出  : 事件句柄
 ** 全局变量: 
 ** 调用模块: 
@@ -51,26 +64,20 @@
 #if (LW_CFG_EVENTSET_EN > 0) && (LW_CFG_MAX_EVENTSETS > 0)
 
 LW_API  
-ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId, 
-                           ULONG             ulEvent,
-                           ULONG             ulOption)
+ULONG  API_EventSetTryGetEx (LW_OBJECT_HANDLE  ulId, 
+                             ULONG             ulEvent,
+                             ULONG             ulOption,
+                             ULONG            *pulEvent)
 {
              INTREG                iregInterLevel;
              
              PLW_CLASS_TCB         ptcbCur;
     REGISTER UINT16                usIndex;
     REGISTER PLW_CLASS_EVENTSET    pes;
-    REGISTER BOOL                  bIsReset;
     REGISTER UINT8                 ucWaitType;
     REGISTER ULONG                 ulEventRdy;
     
     usIndex = _ObjectGetIndex(ulId);
-    
-    if (ulOption & LW_OPTION_EVENTSET_RESET) {                          /*  是否需要复位相关位          */
-        bIsReset = LW_TRUE;
-    } else {
-        bIsReset = LW_FALSE;
-    }
     
     ucWaitType = (UINT8)(ulOption & 0x0F);                              /*  获得等待类型                */
     
@@ -106,20 +113,17 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
     case LW_OPTION_EVENTSET_WAIT_SET_ALL:
         ulEventRdy = (ulEvent & pes->EVENTSET_ulEventSets);
         if (ulEvent == ulEventRdy) {
-            if (bIsReset) {                                             /*  消耗掉相关位                */
+            __EVENTSET_SAVE_RET();
+            if (ulOption & LW_OPTION_EVENTSET_RESET) {
                 pes->EVENTSET_ulEventSets &= (~ulEventRdy);
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
-                API_EventSetSet(ulId, 0, LW_OPTION_EVENTSET_SET);       /*  可能还有其他任务被激活      */
-            } else {
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
+            } else if (ulOption & LW_OPTION_EVENTSET_RESET_ALL) {
+                pes->EVENTSET_ulEventSets = 0ul;
             }
+            ptcbCur->TCB_ulEventSets = ulEventRdy;
+            LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, iregInterLevel);/*  打开中断, 同时打开 spinlock */
+            __KERNEL_EXIT();                                            /*  退出内核                    */
             return  (ERROR_NONE);
+
         } else {
             __EVENTSET_NOT_READY();
         }
@@ -128,20 +132,17 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
     case LW_OPTION_EVENTSET_WAIT_SET_ANY:
         ulEventRdy = (ulEvent & pes->EVENTSET_ulEventSets);
         if (ulEventRdy) {
-            if (bIsReset) {
+            __EVENTSET_SAVE_RET();
+            if (ulOption & LW_OPTION_EVENTSET_RESET) {
                 pes->EVENTSET_ulEventSets &= (~ulEventRdy);
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
-                API_EventSetSet(ulId, 0, LW_OPTION_EVENTSET_SET);       /*  可能还有其他任务被激活      */
-            } else {
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
+            } else if (ulOption & LW_OPTION_EVENTSET_RESET_ALL) {
+                pes->EVENTSET_ulEventSets = 0ul;
             }
+            ptcbCur->TCB_ulEventSets = ulEventRdy;
+            LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, iregInterLevel);/*  打开中断, 同时打开 spinlock */
+            __KERNEL_EXIT();                                            /*  退出内核                    */
             return  (ERROR_NONE);
+
         } else {
             __EVENTSET_NOT_READY();
         }
@@ -150,20 +151,17 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
     case LW_OPTION_EVENTSET_WAIT_CLR_ALL:
         ulEventRdy = (ulEvent & ~pes->EVENTSET_ulEventSets);
         if (ulEvent == ulEventRdy) {
-            if (bIsReset) {
-                pes->EVENTSET_ulEventSets |= ulEventRdy;                /*  “清除”相关位              */
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
-                API_EventSetSet(ulId, 0, LW_OPTION_EVENTSET_SET);       /*  可能还有其他任务被激活      */
-            } else {
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
+            __EVENTSET_SAVE_RET();
+            if (ulOption & LW_OPTION_EVENTSET_RESET) {
+                pes->EVENTSET_ulEventSets |= ulEventRdy;
+            } else if (ulOption & LW_OPTION_EVENTSET_RESET_ALL) {
+                pes->EVENTSET_ulEventSets  = __ARCH_ULONG_MAX;
             }
+            ptcbCur->TCB_ulEventSets = ulEventRdy;
+            LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, iregInterLevel);/*  打开中断, 同时打开 spinlock */
+            __KERNEL_EXIT();                                            /*  退出内核                    */
             return  (ERROR_NONE);
+
         } else {
             __EVENTSET_NOT_READY();
         }
@@ -172,20 +170,17 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
     case LW_OPTION_EVENTSET_WAIT_CLR_ANY:
         ulEventRdy = (ulEvent & ~pes->EVENTSET_ulEventSets);
         if (ulEventRdy) {
-            if (bIsReset) {
-                pes->EVENTSET_ulEventSets |= ulEventRdy;                /*  “清除”相关位              */
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
-                API_EventSetSet(ulId, 0, LW_OPTION_EVENTSET_SET);       /*  可能还有其他任务被激活      */
-            } else {
-                ptcbCur->TCB_ulEventSets = ulEventRdy;
-                LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                                       iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-                __KERNEL_EXIT();                                        /*  退出内核                    */
+            __EVENTSET_SAVE_RET();
+            if (ulOption & LW_OPTION_EVENTSET_RESET) {
+                pes->EVENTSET_ulEventSets |= ulEventRdy;
+            } else if (ulOption & LW_OPTION_EVENTSET_RESET_ALL) {
+                pes->EVENTSET_ulEventSets  = __ARCH_ULONG_MAX;
             }
+            ptcbCur->TCB_ulEventSets = ulEventRdy;
+            LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, iregInterLevel);/*  打开中断, 同时打开 spinlock */
+            __KERNEL_EXIT();                                            /*  退出内核                    */
             return  (ERROR_NONE);
+            
         } else {
             __EVENTSET_NOT_READY();
         }
@@ -197,6 +192,25 @@ ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId,
         _ErrorHandle(ERROR_EVENTSET_WAIT_TYPE);
         return  (ERROR_EVENTSET_WAIT_TYPE);
     }
+}
+/*********************************************************************************************************
+** 函数名称: API_EventSetTryGet
+** 功能描述: 无阻塞等待事件集相关事件
+** 输　入  : 
+**           ulId            事件集句柄
+**           ulEvent         等待事件
+**           ulOption        等待方法选项
+** 输　出  : 事件句柄
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG  API_EventSetTryGet (LW_OBJECT_HANDLE  ulId, 
+                           ULONG             ulEvent,
+                           ULONG             ulOption)
+{
+    return  (API_EventSetTryGetEx(ulId, ulEvent, ulOption, LW_NULL));
 }
 
 #endif                                                                  /*  (LW_CFG_EVENTSET_EN > 0)    */
