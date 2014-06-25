@@ -80,6 +80,7 @@
 2013.01.21  提供 shell 命令设置 fat 默认的 uid gid.
 2013.04.11  正常卸载卷时, uniq 发生器没有卸载.
 2013.06.24  升级 fat 文件系统, 同时支持卷标.
+2014.06.24  FAT 设备 64 为序列号为 -1.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -847,7 +848,7 @@ static LONG  __fatFsOpen (PFAT_VOLUME     pfatvol,
             
             if (__STR_IS_ROOT(pfatfile->FATFIL_cName)) {
                 pfatfile->FATFIL_iFileType = __FAT_FILE_TYPE_DEV;       /*  仅仅打开设备, 未格式化      */
-                pfatfile->FATFIL_u64Uniq   = 0;                         /*  不与任何文件重复(根目录)    */
+                pfatfile->FATFIL_u64Uniq   = (UINT64)~0;                /*  不与任何文件重复(根目录)    */
                 goto    __file_open_ok;                                 /*  文件打开正常                */
             }
             

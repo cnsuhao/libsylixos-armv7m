@@ -173,6 +173,9 @@ SylixOS/fs/diskCache/diskCacheLib.c \
 SylixOS/fs/diskCache/diskCacheProc.c \
 SylixOS/fs/diskCache/diskCacheThread.c \
 SylixOS/fs/diskPartition/diskPartition.c \
+SylixOS/fs/diskRaid/diskRaid0.c \
+SylixOS/fs/diskRaid/diskRaid1.c \
+SylixOS/fs/diskRaid/diskRaidLib.c \
 SylixOS/fs/fatFs/diskio.c \
 SylixOS/fs/fatFs/fatFs.c \
 SylixOS/fs/fatFs/fatstat.c \

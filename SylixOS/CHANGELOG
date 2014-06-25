@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-06-24: han.hui
+    加入软件磁盘阵列管理.
+
     2014-06-04: han.hui
     加入内存设备.
     扩着 get last error 接口.
