@@ -28,6 +28,7 @@
 2013.10.14  加入 aodv_rt 获取 aodv 当前路由表.
 2014.04.03  加入 packet.
 2014.05.06  tcp listen 打印, 如果是 IPv6 则打印是否只接受 IPv6 链接请求.
+2014.06.25  加入 wireless 文件.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -83,6 +84,19 @@ static struct mld_group  *mld_group_list;
   ARP
 *********************************************************************************************************/
 #include "netif/etharp.h"
+/*********************************************************************************************************
+  PPP 网络
+*********************************************************************************************************/
+#if LW_CFG_LWIP_PPP > 0
+#include "lwip/pppapi.h"
+#endif                                                                  /*  LW_CFG_LWIP_PPP > 0         */
+/*********************************************************************************************************
+  无线网络
+*********************************************************************************************************/
+#if LW_CFG_NET_WIRELESS_EN > 0
+#include "net/if_wireless.h"
+#include "net/if_whandler.h"
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
 /*********************************************************************************************************
   网络 proc 文件函数声明
 *********************************************************************************************************/
@@ -154,6 +168,14 @@ static ssize_t  __procFsNetPacketRead(PLW_PROCFS_NODE  p_pfsn,
                                       PCHAR            pcBuffer, 
                                       size_t           stMaxBytes,
                                       off_t            oft);
+static ssize_t  __procFsNetPppRead(PLW_PROCFS_NODE  p_pfsn, 
+                                   PCHAR            pcBuffer, 
+                                   size_t           stMaxBytes,
+                                   off_t            oft);
+static ssize_t  __procFsNetWlRead(PLW_PROCFS_NODE  p_pfsn, 
+                                  PCHAR            pcBuffer, 
+                                  size_t           stMaxBytes,
+                                  off_t            oft);
 /*********************************************************************************************************
   网络 proc 文件操作函数组
 *********************************************************************************************************/
@@ -213,6 +235,12 @@ static LW_PROCFS_NODE_OP    _G_pfsnoNetAodvRtFuncs = {
 };
 static LW_PROCFS_NODE_OP    _G_pfsnoNetPacketFuncs = {
     __procFsNetPacketRead,        LW_NULL
+};
+static LW_PROCFS_NODE_OP    _G_pfsnoNetPppFuncs = {
+    __procFsNetPppRead,        LW_NULL
+};
+static LW_PROCFS_NODE_OP    _G_pfsnoNetWlFuncs = {
+    __procFsNetWlRead,        LW_NULL
 };
 /*********************************************************************************************************
   网络 proc 文件目录树
@@ -341,6 +369,18 @@ static LW_PROCFS_NODE       _G_pfsnNet[] =
                         (S_IFREG | S_IRUSR | S_IRGRP | S_IROTH), 
                         &_G_pfsnoNetPacketFuncs, 
                         "P",
+                        0),
+                        
+    LW_PROCFS_INIT_NODE("ppp", 
+                        (S_IFREG | S_IRUSR | S_IRGRP | S_IROTH), 
+                        &_G_pfsnoNetPppFuncs, 
+                        "p",
+                        0),
+                        
+    LW_PROCFS_INIT_NODE("wireless", 
+                        (S_IFREG | S_IRUSR | S_IRGRP | S_IROTH), 
+                        &_G_pfsnoNetWlFuncs, 
+                        "w",
                         0),
 };
 /*********************************************************************************************************
@@ -1745,7 +1785,6 @@ static ssize_t  __procFsNetDevRead (PLW_PROCFS_NODE  p_pfsn,
         
         stRealSize = bnprintf(pcFileBuffer, stNeedBufferSize, 0, cDevInfoHdr); 
                                                                         /*  打印头信息                  */
-                                                                        
         LOCK_TCPIP_CORE();
         for (netif = netif_list; netif != LW_NULL; netif = netif->next) {
             __procFsNetDevPrint(netif, pcFileBuffer, stNeedBufferSize, &stRealSize);
@@ -2321,6 +2360,261 @@ static ssize_t  __procFsNetPacketRead (PLW_PROCFS_NODE  p_pfsn,
     return  ((ssize_t)stCopeBytes);
 }
 /*********************************************************************************************************
+** 函数名称: __procFsNetPppPrint
+** 功能描述: 打印网络 ppp 文件
+** 输　入  : netif         网络设备
+**           pcBuffer      缓冲
+**           stTotalSize   缓冲区大小
+**           pstOft        当前偏移量
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_LWIP_PPP > 0
+
+static VOID  __procFsNetPppPrint (struct netif *netif, PCHAR  pcBuffer, 
+                                  size_t  stTotalSize, size_t *pstOft)
+{
+    ppp_pcb  *pcb;
+    
+    PCHAR     pcType;
+    PCHAR     pcPhase;
+    
+    pcb = _LIST_ENTRY(netif, ppp_pcb, netif);
+    if (pcb->pppoe_sc) {
+        pcType = "PPPoE";
+    } else if (pcb->l2tp_pcb) {
+        pcType = "PPPoL2TP";
+    } else {
+        pcType = "PPPoS";
+    }
+    
+    switch (pcb->phase) {
+    
+    case PPP_PHASE_DEAD:            pcPhase = "dead";           break;
+    case PPP_PHASE_INITIALIZE:      pcPhase = "initialize";     break;
+    case PPP_PHASE_SERIALCONN:      pcPhase = "serialconn";     break;
+    case PPP_PHASE_DORMANT:         pcPhase = "dormant";        break;
+    case PPP_PHASE_ESTABLISH:       pcPhase = "establish";      break;
+    case PPP_PHASE_AUTHENTICATE:    pcPhase = "authenticate";   break;
+    case PPP_PHASE_CALLBACK:        pcPhase = "callback";       break;
+    case PPP_PHASE_NETWORK:         pcPhase = "network";        break;
+    case PPP_PHASE_RUNNING:         pcPhase = "running";        break;
+    case PPP_PHASE_TERMINATE:       pcPhase = "terminate";      break;
+    case PPP_PHASE_DISCONNECT:      pcPhase = "disconnect";     break;
+    case PPP_PHASE_HOLDOFF:         pcPhase = "holdoff";        break;
+    case PPP_PHASE_MASTER:          pcPhase = "master";         break;
+    default:                        pcPhase = "<unknown>";      break;
+    }
+    
+    *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
+                       "%c%c%d  %-8s %-6u %-12s %-12u %-12u\n",
+                       netif->name[0], netif->name[1], netif->num,
+                       pcType,
+                       netif->mtu,
+                       pcPhase,
+                       netif->ifinoctets,
+                       netif->ifoutoctets);
+}
+
+#endif                                                                  /*  LW_CFG_LWIP_PPP > 0         */
+/*********************************************************************************************************
+** 函数名称: __procFsNetPppRead
+** 功能描述: procfs 读一个读取网络 ppp 文件
+** 输　入  : p_pfsn        节点控制块
+**           pcBuffer      缓冲区
+**           stMaxBytes    缓冲区大小
+**           oft           文件指针
+** 输　出  : 实际读取的数目
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static ssize_t  __procFsNetPppRead (PLW_PROCFS_NODE  p_pfsn, 
+                                    PCHAR            pcBuffer, 
+                                    size_t           stMaxBytes,
+                                    off_t            oft)
+{
+#if LW_CFG_LWIP_PPP > 0
+    const CHAR      cPppInfoHdr[] = 
+    "FACE TYPE     MTU    PHASE        RX-BYTES     TX-BYTES\n";
+          PCHAR     pcFileBuffer;
+          size_t    stRealSize;                                         /*  实际的文件内容大小          */
+          size_t    stCopeBytes;
+          
+    /*
+     *  由于预置内存大小为 0 , 所以打开后第一次读取需要手动开辟内存.
+     */
+    pcFileBuffer = (PCHAR)API_ProcFsNodeBuffer(p_pfsn);
+    if (pcFileBuffer == LW_NULL) {                                      /*  还没有分配内存              */
+        size_t        stNeedBufferSize = 0;
+        struct netif *netif;
+        
+        LOCK_TCPIP_CORE();
+        for (netif = netif_list; netif != LW_NULL; netif = netif->next) {
+            if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
+                stNeedBufferSize += 64;
+            }
+        }
+        UNLOCK_TCPIP_CORE();
+        
+        stNeedBufferSize += sizeof(cPppInfoHdr);
+        
+        if (API_ProcFsAllocNodeBuffer(p_pfsn, stNeedBufferSize)) {
+            _ErrorHandle(ENOMEM);
+            return  (0);
+        }
+        pcFileBuffer = (PCHAR)API_ProcFsNodeBuffer(p_pfsn);             /*  重新获得文件缓冲区地址      */
+        
+        stRealSize = bnprintf(pcFileBuffer, stNeedBufferSize, 0, cPppInfoHdr); 
+                                                                        /*  打印头信息                  */
+        LOCK_TCPIP_CORE();
+        for (netif = netif_list; netif != LW_NULL; netif = netif->next) {
+            if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
+                __procFsNetPppPrint(netif, pcFileBuffer, stNeedBufferSize, &stRealSize);
+            }
+        }
+        UNLOCK_TCPIP_CORE();
+        
+        API_ProcFsNodeSetRealFileSize(p_pfsn, stRealSize);
+    } else {
+        stRealSize = API_ProcFsNodeGetRealFileSize(p_pfsn);
+    }
+    if (oft >= stRealSize) {
+        _ErrorHandle(ENOSPC);
+        return  (0);
+    }
+    
+    stCopeBytes  = __MIN(stMaxBytes, (size_t)(stRealSize - oft));       /*  计算实际拷贝的字节数        */
+    lib_memcpy(pcBuffer, (CPVOID)(pcFileBuffer + oft), (UINT)stCopeBytes);
+    
+    return  ((ssize_t)stCopeBytes);
+#else
+    return  (0);
+#endif                                                                  /*  LW_CFG_LWIP_PPP > 0         */
+}
+/*********************************************************************************************************
+** 函数名称: __procFsNetWlPrint
+** 功能描述: 打印网络 wireless 文件
+** 输　入  : netif         网络设备
+**           pcBuffer      缓冲
+**           stTotalSize   缓冲区大小
+**           pstOft        当前偏移量
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_NET_WIRELESS_EN > 0
+
+static VOID  __procFsNetWlPrint (struct netif *netif, PCHAR  pcBuffer, 
+                                 size_t  stTotalSize, size_t *pstOft)
+{
+extern struct iw_statistics *get_wireless_stats(struct netif *);
+
+    struct iw_statistics *stats = get_wireless_stats(netif);
+    
+    if (!stats) {
+        return;
+    }
+    
+    *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
+                       "%c%c%d: %04x  %3d%c  %3d%c  %3d%c  %6d %6d %6d "
+                       "%6d %6d   %6d\n",
+                       netif->name[0], netif->name[1], netif->num,
+                       stats->status, stats->qual.qual,
+                       stats->qual.updated & IW_QUAL_QUAL_UPDATED
+        			   ? '.' : ' ',
+        			   ((s32) stats->qual.level) -
+        			   ((stats->qual.updated & IW_QUAL_DBM) ? 0x100 : 0),
+        			   stats->qual.updated & IW_QUAL_LEVEL_UPDATED
+        			   ? '.' : ' ',
+        			   ((s32) stats->qual.noise) -
+        			   ((stats->qual.updated & IW_QUAL_DBM) ? 0x100 : 0),
+        			   stats->qual.updated & IW_QUAL_NOISE_UPDATED
+        			   ? '.' : ' ',
+        			   stats->discard.nwid, stats->discard.code,
+        			   stats->discard.fragment, stats->discard.retries,
+        			   stats->discard.misc, stats->miss.beacon);
+}
+
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
+/*********************************************************************************************************
+** 函数名称: __procFsNetWlRead
+** 功能描述: procfs 读一个读取网络 wireless 文件
+** 输　入  : p_pfsn        节点控制块
+**           pcBuffer      缓冲区
+**           stMaxBytes    缓冲区大小
+**           oft           文件指针
+** 输　出  : 实际读取的数目
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static ssize_t  __procFsNetWlRead (PLW_PROCFS_NODE  p_pfsn, 
+                                   PCHAR            pcBuffer, 
+                                   size_t           stMaxBytes,
+                                   off_t            oft)
+{
+#if LW_CFG_NET_WIRELESS_EN > 0
+    const CHAR      cWlInfoHdr[] = 
+    "Inter-| sta-|   Quality        |   Discarded "
+	"packets               | Missed | WE\n"
+	" face | tus | link level noise |  nwid  "
+	"crypt   frag  retry   misc | beacon | %d\n";
+          PCHAR     pcFileBuffer;
+          size_t    stRealSize;                                         /*  实际的文件内容大小          */
+          size_t    stCopeBytes;
+          
+    /*
+     *  由于预置内存大小为 0 , 所以打开后第一次读取需要手动开辟内存.
+     */
+    pcFileBuffer = (PCHAR)API_ProcFsNodeBuffer(p_pfsn);
+    if (pcFileBuffer == LW_NULL) {                                      /*  还没有分配内存              */
+        size_t        stNeedBufferSize = 0;
+        struct netif *netif;
+        
+        LOCK_TCPIP_CORE();
+        for (netif = netif_list; netif != LW_NULL; netif = netif->next) {
+            if (netif->wireless_handlers) {
+                stNeedBufferSize += 180;
+            }
+        }
+        UNLOCK_TCPIP_CORE();
+        
+        stNeedBufferSize += sizeof(cWlInfoHdr);
+        
+        if (API_ProcFsAllocNodeBuffer(p_pfsn, stNeedBufferSize)) {
+            _ErrorHandle(ENOMEM);
+            return  (0);
+        }
+        pcFileBuffer = (PCHAR)API_ProcFsNodeBuffer(p_pfsn);             /*  重新获得文件缓冲区地址      */
+        
+        stRealSize = bnprintf(pcFileBuffer, stNeedBufferSize, 0, cWlInfoHdr, WIRELESS_EXT);
+                                                                        /*  打印头信息                  */
+        LOCK_TCPIP_CORE();
+        for (netif = netif_list; netif != LW_NULL; netif = netif->next) {
+            if (netif->wireless_handlers) {
+                __procFsNetWlPrint(netif, pcFileBuffer, stNeedBufferSize, &stRealSize);
+            }
+        }
+        UNLOCK_TCPIP_CORE();
+        
+        API_ProcFsNodeSetRealFileSize(p_pfsn, stRealSize);
+    } else {
+        stRealSize = API_ProcFsNodeGetRealFileSize(p_pfsn);
+    }
+    if (oft >= stRealSize) {
+        _ErrorHandle(ENOSPC);
+        return  (0);
+    }
+    
+    stCopeBytes  = __MIN(stMaxBytes, (size_t)(stRealSize - oft));       /*  计算实际拷贝的字节数        */
+    lib_memcpy(pcBuffer, (CPVOID)(pcFileBuffer + oft), (UINT)stCopeBytes);
+    
+    return  ((ssize_t)stCopeBytes);
+#else
+    return  (0);
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
+}
+/*********************************************************************************************************
 ** 函数名称: __procFsNetInit
 ** 功能描述: procfs 初始化网络 proc 文件
 ** 输　入  : NONE
@@ -2351,6 +2645,8 @@ VOID  __procFsNetInit (VOID)
     API_ProcFsMakeNode(&_G_pfsnNet[18], "/net");
     API_ProcFsMakeNode(&_G_pfsnNet[19], "/net");
     API_ProcFsMakeNode(&_G_pfsnNet[20], "/net");
+    API_ProcFsMakeNode(&_G_pfsnNet[21], "/net");
+    API_ProcFsMakeNode(&_G_pfsnNet[22], "/net");
 }
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */
                                                                         /*  LW_CFG_PROCFS_EN > 0        */

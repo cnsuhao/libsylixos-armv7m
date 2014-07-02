@@ -10,7 +10,7 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: lwip_pppfd.h
+** 文   件   名: lwip_ppp.h
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
@@ -19,52 +19,52 @@
 ** 描        述: lwip ppp 连接管理器.
 *********************************************************************************************************/
 
-#ifndef __LWIP_PPPFD_H
-#define __LWIP_PPPFD_H
+#ifndef __LWIP_PPP_H
+#define __LWIP_PPP_H
 
 /*********************************************************************************************************
   裁剪控制
 *********************************************************************************************************/
-#define LW_CFG_NET_EN   1
-#define LW_CFG_LWIP_PPP 1
-
 #if (LW_CFG_NET_EN > 0) && (LW_CFG_LWIP_PPP > 0)
 
-#include "sys/ioctl.h"
-
 /*********************************************************************************************************
-  ioctl 命令
+  ppp 拨号串口参数
 *********************************************************************************************************/
 
-struct pppfd_dial {
-    char   *user;
-    size_t  userlen;
-    char   *passwd;
-    size_t  passwdlen;
-    int     redial_delay;
-    int     redial_max;
-};
+typedef struct {
+    INT     baud;
+    INT     stop_bits;                                                  /*  停止位数 1, 2               */
+    INT     parity;                                                     /*  0:无校验 1:奇校验 2:偶校验  */
+} LW_PPP_TTY;
 
-#define PPPFD_CMD_ERRCODE       _IOR('p', 1, int)
-#define PPPFD_CMD_PHASE         _IOR('p', 2, int)
-#define PPPFD_CMD_DIAL          _IOW('p', 3, struct pppfd_dial)
-#define PPPFD_CMD_HUP           _IO( 'p', 4)
+/*********************************************************************************************************
+  ppp 拨号参数
+*********************************************************************************************************/
+
+typedef struct {
+    char   *user;
+    char   *passwd;
+} LW_PPP_DIAL;
 
 /*********************************************************************************************************
   api
 *********************************************************************************************************/
 
-LW_API INT  API_PppfdDrvInstall(VOID);
+LW_API INT  API_PppOsCreate(CPCHAR  pcSerial, LW_PPP_TTY  *ptty, PCHAR  pcIfName, size_t  stMaxSize);
+LW_API INT  API_PppOeCreate(CPCHAR  pcEthIf,  PCHAR  pcIfName, size_t  stMaxSize);
+LW_API INT  API_PppOl2tpCreate(CPCHAR  pcEthIf, CPCHAR  pcIp, UINT16  usPort, CPCHAR  pcSecret,
+                               size_t  stSecretLen, PCHAR   pcIfName, size_t  stMaxSize);
+LW_API INT  API_PppDelete(CPCHAR  pcIfName);
+LW_API INT  API_PppConnect(CPCHAR  pcIfName, LW_PPP_DIAL *pdial);
+LW_API INT  API_PppDisconnect(CPCHAR  pcIfName, BOOL  bForce);
+LW_API INT  API_PppGetPhase(CPCHAR  pcIfName, INT  *piPhase);
 
-#define pppfdDrv    API_PppfdDrvInstall
-
-LW_API int  pppfd_os_create(const char *serial, char *pppif, size_t bufsize);
-LW_API int  pppfd_oe_create(const char *ethif, const char *service_name, const char *concentrator_name,
-                            char       *pppif, size_t      bufsize);
-LW_API int  pppfd_ol2tp_create(const char *ethif,
-                               const char *ipaddr, short   port,
-                               const char *secret, size_t  secret_len,
-                               char       *pppif,  size_t  bufsize);
+#define pppOsCreate     API_PppOsCreate
+#define pppOeCreate     API_PppOeCreate
+#define pppOl2tpCreate  API_PppOl2tpCreate
+#define pppConnect      API_PppConnect
+#define pppDisconnect   API_PppDisconnect
+#define pppGetPhase     API_PppGetPhase
 
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */
                                                                         /*  LW_CFG_LWIP_PPP > 0         */

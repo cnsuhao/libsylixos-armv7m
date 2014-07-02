@@ -148,6 +148,7 @@ VOID  _hotplugDevPutMsg (INT  iMsg, CPVOID pvMsg, size_t stSize)
 {
     PLW_LIST_LINE       plineTemp;
     PLW_HOTPLUG_FILE    photplugfil;
+    BOOL                bWakeup = LW_FALSE;
     
     if ((_G_hotplugdev.HOTPDEV_ulMutex   == LW_OBJECT_HANDLE_INVALID) ||
         (_G_hotplugdev.HOTPDEV_plineFile == LW_NULL)) {
@@ -164,11 +165,14 @@ VOID  _hotplugDevPutMsg (INT  iMsg, CPVOID pvMsg, size_t stSize)
             (photplugfil->HOTPFIL_iMsg == LW_HOTPLUG_MSG_ALL)) {
             _bmsgPut(photplugfil->HOTPFIL_pbmsg, pvMsg, stSize);
             API_SemaphoreBPost(photplugfil->HOTPFIL_ulReadSync);
+            bWakeup = LW_TRUE;
         }
     }
     HOTPLUG_DEV_UNLOCK();
     
-    SEL_WAKE_UP_ALL(&_G_hotplugdev.HOTPDEV_selwulList, SELREAD);
+    if (bWakeup) {
+        SEL_WAKE_UP_ALL(&_G_hotplugdev.HOTPDEV_selwulList, SELREAD);
+    }
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: _hotplugOpen
@@ -404,6 +408,7 @@ static INT  _hotplugIoctl (PLW_HOTPLUG_FILE  photplugfil,
         pbmsg = _bmsgCreate((size_t)lArg);
         if (pbmsg) {
             HOTPLUG_DEV_LOCK();
+            _bmsgDelete(photplugfil->HOTPFIL_pbmsg);
             photplugfil->HOTPFIL_pbmsg = pbmsg;
             HOTPLUG_DEV_UNLOCK();
         } else {

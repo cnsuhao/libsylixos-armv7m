@@ -21,6 +21,7 @@
 ** BUG:
 2011.07.07  _G_ulNetifLock 改名.
 2014.03.22  优化获得网络接口.
+2014.06.24  加入 if_down 与 if_up API.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -30,8 +31,200 @@
 *********************************************************************************************************/
 #if LW_CFG_NET_EN > 0
 #include "lwip/netif.h"
+#include "lwip/netifapi.h"
 #include "net/if.h"
 #include "lwip_if.h"
+/*********************************************************************************************************
+** 函数名称: if_down
+** 功能描述: 关闭网卡
+** 输　入  : ifname        if name
+** 输　出  : 关闭是否成功
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  if_down (const char *ifname)
+{
+    INT            iError;
+    struct netif  *pnetif;
+    
+    LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
+    pnetif = netif_find((char *)ifname);
+    if (pnetif) {
+        netifapi_netif_set_down(pnetif);
+        iError = ERROR_NONE;
+    } else {
+        _ErrorHandle(ENXIO);
+        iError = PX_ERROR;
+    }
+    LWIP_NETIF_UNLOCK();                                                /*  退出临界区                  */
+    
+    return  (iError);
+}
+/*********************************************************************************************************
+** 函数名称: if_up
+** 功能描述: 打开网卡
+** 输　入  : ifname        if name
+** 输　出  : 网卡是否打开
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  if_up (const char *ifname)
+{
+    INT            iError;
+    struct netif  *pnetif;
+    
+    LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
+    pnetif = netif_find((char *)ifname);
+    if (pnetif) {
+        netifapi_netif_set_up(pnetif);
+        iError = ERROR_NONE;
+    } else {
+        _ErrorHandle(ENXIO);
+        iError = PX_ERROR;
+    }
+    LWIP_NETIF_UNLOCK();                                                /*  退出临界区                  */
+    
+    return  (iError);
+}
+/*********************************************************************************************************
+** 函数名称: if_isup
+** 功能描述: 网卡是否使能
+** 输　入  : ifname        if name
+** 输　出  : 网卡是否使能 0: 禁能  1: 使能  -1: 网卡名字错误
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  if_isup (const char *ifname)
+{
+    INT            iRet;
+    struct netif  *pnetif;
+    
+    LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
+    pnetif = netif_find((char *)ifname);
+    if (pnetif) {
+        if (pnetif->flags & NETIF_FLAG_UP) {
+            iRet = 1;
+        } else {
+            iRet = 0;
+        }
+    } else {
+        _ErrorHandle(ENXIO);
+        iRet = PX_ERROR;
+    }
+    LWIP_NETIF_UNLOCK();                                                /*  退出临界区                  */
+    
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: if_islink
+** 功能描述: 网卡是否已经连接
+** 输　入  : ifname        if name
+** 输　出  : 网卡是否连接 0: 连接  1: 没有连接  -1: 网卡名字错误
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  if_islink (const char *ifname)
+{
+    INT            iRet;
+    struct netif  *pnetif;
+    
+    LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
+    pnetif = netif_find((char *)ifname);
+    if (pnetif) {
+        if (pnetif->flags & NETIF_FLAG_LINK_UP) {
+            iRet = 1;
+        } else {
+            iRet = 0;
+        }
+    } else {
+        _ErrorHandle(ENXIO);
+        iRet = PX_ERROR;
+    }
+    LWIP_NETIF_UNLOCK();                                                /*  退出临界区                  */
+    
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: if_set_dhcp
+** 功能描述: 设置网卡 dhcp 选项 (必须在网卡禁能时设置)
+** 输　入  : ifname        if name
+**           en            1: 使能 dhcp  0: 禁能 dhcp
+** 输　出  : OK or ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  if_set_dhcp (const char *ifname, int en)
+{
+    INT            iRet;
+    struct netif  *pnetif;
+    ip_addr_t      inaddrNone;
+    
+    lib_bzero(&inaddrNone, sizeof(ip_addr_t));
+    
+    LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
+    pnetif = netif_find((char *)ifname);
+    if (pnetif) {
+        if (pnetif->flags & NETIF_FLAG_UP) {
+            _ErrorHandle(EISCONN);
+            iRet = PX_ERROR;
+        } else {
+            if (en) {
+                pnetif->flags |= NETIF_FLAG_DHCP;
+            } else {
+                pnetif->flags &= ~NETIF_FLAG_DHCP;
+                netifapi_netif_set_addr(pnetif, &inaddrNone, &inaddrNone, &inaddrNone);
+            }
+            iRet = ERROR_NONE;
+        }
+    } else {
+        _ErrorHandle(ENXIO);
+        iRet = PX_ERROR;
+    }
+    LWIP_NETIF_UNLOCK();                                                /*  退出临界区                  */
+    
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: if_get_dhcp
+** 功能描述: 获取网卡 dhcp 选项
+** 输　入  : ifname        if name
+** 输　出  : 1: 使能 dhcp  0: 禁能 dhcp -1: 网卡名字错误
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  if_get_dhcp (const char *ifname)
+{
+    INT            iRet;
+    struct netif  *pnetif;
+    
+    LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
+    pnetif = netif_find((char *)ifname);
+    if (pnetif) {
+        if (pnetif->flags & NETIF_FLAG_DHCP) {
+            iRet = 1;
+        } else {
+            iRet = 0;
+        }
+    } else {
+        _ErrorHandle(ENXIO);
+        iRet = PX_ERROR;
+    }
+    LWIP_NETIF_UNLOCK();                                                /*  退出临界区                  */
+    
+    return  (iRet);
+}
 /*********************************************************************************************************
 ** 函数名称: if_nametoindex
 ** 功能描述: map a network interface name to its corresponding index

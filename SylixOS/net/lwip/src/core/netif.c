@@ -95,11 +95,8 @@ static err_t netif_null_output_ip6(struct netif *netif, struct pbuf *p, ip6_addr
 #endif
 
 #ifdef SYLIXOS
-#if LW_CFG_HOTPLUG_EN > 0
-extern INT API_HotplugEventMessage(INT, BOOL, CPCHAR, UINT32, UINT32, UINT32, UINT32);
-#else
-#define API_HotplugEventMessage(a, b, c, d, e, f, g)
-#endif /* LW_CFG_HOTPLUG_EN > 0 */
+#define  __SYLIXOS_KERNEL
+#include "net/if_event.h"
 #endif /* SYLIXOS */
 
 #if LWIP_HAVE_LOOPIF
@@ -160,6 +157,10 @@ netif_init(void)
 #endif /* LWIP_IPV6 */
 
   netif_set_up(&loop_netif);
+  
+#ifdef SYLIXOS
+  netif_set_link_up(&loop_netif);
+#endif
 
 #endif /* LWIP_HAVE_LOOPIF */
 }
@@ -221,7 +222,11 @@ netif_add(struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask,
 #endif /* LWIP_IPV6_DHCP6 */
 #ifdef SYLIXOS
   netif->ioctl = NULL;
-  lib_bzero(netif->reserve, sizeof(void *[8]));
+  netif->up = NULL;
+  netif->down = NULL;
+  netif->wireless_handlers = NULL;
+  netif->wireless_data = NULL;
+  lib_bzero(netif->reserve, sizeof(void *[4]));
 #endif /* SYLIXOS */
 #if LWIP_NETIF_STATUS_CALLBACK
   netif->status_callback = NULL;
@@ -273,6 +278,10 @@ netif_add(struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask,
     igmp_start(netif);
   }
 #endif /* LWIP_IGMP */
+
+#ifdef SYLIXOS
+  netEventIfAdd(netif);
+#endif
 
   LWIP_DEBUGF(NETIF_DEBUG, ("netif: added interface %c%c IP addr ",
     netif->name[0], netif->name[1]));
@@ -350,6 +359,7 @@ netif_remove(struct netif *netif)
   snmp_dec_iflist();
   
 #ifdef SYLIXOS
+  netEventIfRemove(netif);
   netif_remove_hook((void *)netif);
 #endif
   
@@ -574,15 +584,10 @@ void netif_set_up(struct netif *netif)
     }
     
 #ifdef SYLIXOS
-    {
-      char  ifname[4];
-      ifname[0] = netif->name[0];
-      ifname[1] = netif->name[1];
-      ifname[2] = (char)(netif->num + '0');
-      ifname[3] = '\0';
-      API_HotplugEventMessage(LW_HOTPLUG_MSG_NETLINK_CHANGE,
-                              LW_TRUE, ifname, 0, 0, 0, 0);
+    if (netif->up) {
+      netif->up(netif);
     }
+    netEventIfUp(netif);
 #endif
   }
 }
@@ -611,15 +616,10 @@ void netif_set_down(struct netif *netif)
     NETIF_STATUS_CALLBACK(netif);
     
 #ifdef SYLIXOS
-    {
-      char  ifname[4];
-      ifname[0] = netif->name[0];
-      ifname[1] = netif->name[1];
-      ifname[2] = (char)(netif->num + '0');
-      ifname[3] = '\0';
-      API_HotplugEventMessage(LW_HOTPLUG_MSG_NETLINK_CHANGE,
-                              LW_FALSE, ifname, 0, 0, 0, 0);
+    if (netif->down) {
+      netif->down(netif);
     }
+    netEventIfDown(netif);
 #endif
   }
 }
@@ -691,15 +691,7 @@ void netif_set_link_up(struct netif *netif )
     NETIF_LINK_CALLBACK(netif);
   
 #ifdef SYLIXOS
-    {
-      char  ifname[4];
-      ifname[0] = netif->name[0];
-      ifname[1] = netif->name[1];
-      ifname[2] = (char)(netif->num + '0');
-      ifname[3] = '\0';
-      API_HotplugEventMessage(LW_HOTPLUG_MSG_NETLINK_CHANGE,
-                              LW_TRUE, ifname, 1, 0, 0, 0);
-    }
+    netEventIfLink(netif);
 #endif
   }
 }
@@ -714,15 +706,7 @@ void netif_set_link_down(struct netif *netif )
     NETIF_LINK_CALLBACK(netif);
     
 #ifdef SYLIXOS
-    {
-      char  ifname[4];
-      ifname[0] = netif->name[0];
-      ifname[1] = netif->name[1];
-      ifname[2] = (char)(netif->num + '0');
-      ifname[3] = '\0';
-      API_HotplugEventMessage(LW_HOTPLUG_MSG_NETLINK_CHANGE,
-                              LW_FALSE, ifname, 1, 0, 0, 0);
-    }
+    netEventIfUnlink(netif);
 #endif
   }
 }

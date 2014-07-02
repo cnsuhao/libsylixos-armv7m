@@ -62,6 +62,10 @@
 #include "lwip_if.h"
 #include "./packet/af_packet.h"
 #include "./unix/af_unix.h"
+#if LW_CFG_NET_WIRELESS_EN > 0
+#include "net/if_wireless.h"
+#include "./wireless/lwip_wl.h"
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
 /*********************************************************************************************************
   ipv6 extern vars
 *********************************************************************************************************/
@@ -846,7 +850,22 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
         break;
     
     default:
+#if LW_CFG_NET_WIRELESS_EN > 0
+        if ((iCmd >= SIOCIWFIRST) &&
+            (iCmd <= SIOCIWLASTPRIV)) {                                 /*  无线连接设置                */
+            LWIP_NETIF_LOCK();                                          /*  进入临界区                  */
+            iRet = wext_handle_ioctl(iCmd, (struct ifreq *)pvArg);
+            LWIP_NETIF_UNLOCK();                                        /*  退出临界区                  */
+            if (iRet) {
+                _ErrorHandle(lib_abs(iRet));
+                iRet = PX_ERROR;
+            }
+        } else {
+            _ErrorHandle(ENOSYS);
+        }
+#else
         _ErrorHandle(ENOSYS);
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
         break;
     }
     

@@ -67,7 +67,6 @@ struct arphdr {
 #endif
 };
 
-
 /*********************************************************************************************************
  * ARP ioctl request
 *********************************************************************************************************/
@@ -87,8 +86,6 @@ struct arpreq {
 #define ATF_PERM            0x04                            /* permanent entry                          */
 #define ATF_PUBL            0x08                            /* publish entry (respond for other host)   */
 #define ATF_USETRAILERS     0x10                            /* has requested trailers                   */
-
-
 
 #endif                                                      /*  LW_CFG_NET_EN                           */
 #endif                                                      /*  __IF_ARP_H                              */

@@ -53,6 +53,13 @@ struct if_nameindex {
   posix if api
 *********************************************************************************************************/
 
+LW_API INT                   if_down(const char *ifname);               /* net interface down           */
+LW_API INT                   if_up(const char *ifname);                 /* net interface up             */
+LW_API INT                   if_isup(const char *ifname);               /* net interface is up          */
+LW_API INT                   if_islink(const char *ifname);             /* net interface is on link     */
+LW_API INT                   if_set_dhcp(const char *ifname, int en);   /* set net if dhcp flag         */
+LW_API INT                   if_get_dhcp(const char *ifname);           /* get net if dhcp flag         */
+
 LW_API unsigned              if_nametoindex(const char *ifname);
 LW_API char                 *if_indextoname(unsigned  ifindex, char *ifname);
 LW_API struct if_nameindex  *if_nameindex(void);

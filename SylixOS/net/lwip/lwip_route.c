@@ -28,6 +28,7 @@
 2013.01.24  route 命令不再打印 aodv 路由表, 加入 aodvs 命令打印 aodv 路由表.
 2013.06.21  adovs 命令加入对目标跳数和单项连接的显示.
 2013.08.22  route_msg 加入 metric 字段, 但当前无用.
+2014.07.02  修正内建路由表对于 ppp 连接的错误显示.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -258,8 +259,14 @@ static VOID __rtBuildinTraversal (VOIDFUNCPTR  pfuncHook,
         
         pfuncHook(&rte, pvArg0, pvArg1, pvArg2, pvArg3, pvArg4);
         
-        rte.RTE_ipaddrDest.addr = netif->ip_addr.addr & netif->netmask.addr;
-        rte.RTE_uiFlag          = LW_RT_FLAG_U;
+        if (netif->flags & NETIF_FLAG_POINTTOPOINT) {                   /*  PPP / SLIP 连接             */
+            rte.RTE_ipaddrDest.addr = netif->gw.addr;
+            rte.RTE_uiFlag          = LW_RT_FLAG_U | LW_RT_FLAG_H;
+            
+        } else {                                                        /*  普通链接                    */
+            rte.RTE_ipaddrDest.addr = netif->ip_addr.addr & netif->netmask.addr;
+            rte.RTE_uiFlag          = LW_RT_FLAG_U;
+        }
         
         pfuncHook(&rte, pvArg0, pvArg1, pvArg2, pvArg3, pvArg4);
     }
@@ -812,11 +819,20 @@ static VOID __buildinRtPrint (PCHAR  pcBuffer, size_t  stSize, size_t *pstOffset
     CHAR    cIfName[IF_NAMESIZE] = "\0";
     
     for (netif = netif_list; netif != NULL; netif = netif->next) {
-        ipaddr.addr = netif->ip_addr.addr & netif->netmask.addr;
-        ipaddr_ntoa_r(&ipaddr, cIpDest, INET_ADDRSTRLEN);
-        ipaddr_ntoa_r(&netif->netmask, cMask, INET_ADDRSTRLEN);
-        if_indextoname(netif->num, cIfName);
-        lib_strcpy(cFlag, "U");
+        if (netif->flags & NETIF_FLAG_POINTTOPOINT) {                   /*  PPP / SLIP 连接             */
+            ipaddr.addr = netif->gw.addr;
+            ipaddr_ntoa_r(&ipaddr, cIpDest, INET_ADDRSTRLEN);
+            ipaddr_ntoa_r(&netif->netmask, cMask, INET_ADDRSTRLEN);
+            if_indextoname(netif->num, cIfName);
+            lib_strcpy(cFlag, "UH");
+        
+        } else {                                                        /*  普通链接                    */
+            ipaddr.addr = netif->ip_addr.addr & netif->netmask.addr;
+            ipaddr_ntoa_r(&ipaddr, cIpDest, INET_ADDRSTRLEN);
+            ipaddr_ntoa_r(&netif->netmask, cMask, INET_ADDRSTRLEN);
+            if_indextoname(netif->num, cIfName);
+            lib_strcpy(cFlag, "U");
+        }
         
         *pstOffset = bnprintf(pcBuffer, stSize, *pstOffset,
                               "%-18s %-18s %-18s %-8s %-3s\n",

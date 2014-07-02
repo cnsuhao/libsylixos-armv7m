@@ -45,6 +45,7 @@
             sys_mbox_post() 增加一种新的方式, 即可允许写阻塞.
 2013.04.23  sys_thread_new() 修正注释.
 2013.09.04  优化代码顺序并加入 lwip 断言专用的输出函数.
+2014.07.01  SIO 驱动所有的文件描述符为内核文件描述符操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_PANIC
@@ -808,13 +809,16 @@ sio_fd_t  sio_open (u8_t  port)
     snprintf(cNameBuffer, sizeof(cNameBuffer), 
              "%s%d", LWIP_SYLIXOS_TTY_NAME, port);                      /*  合成文件名                  */
     
+    __KERNEL_SPACE_ENTER();                                             /*  内核文件描述符              */
     iFd = open(cNameBuffer, O_RDWR);
     if (iFd < 0) {
+        __KERNEL_SPACE_EXIT();
         fprintf(stderr, "sio_open() can not open file : \"%s\".\n", cNameBuffer);
         return  (0);                                                    /*  无法打开文件                */
     }
     ioctl(iFd, FIOOPTIONS, OPT_RAW);                                    /*  进入原始模式                */
     ioctl(iFd, FIORTIMEOUT, LW_NULL);                                   /*  无限长等待时间              */
+    __KERNEL_SPACE_EXIT();
     
     return  ((sio_fd_t)iFd);
 }
@@ -829,7 +833,9 @@ sio_fd_t  sio_open (u8_t  port)
 *********************************************************************************************************/
 void  sio_send (u8_t  data, sio_fd_t  fd)
 {
+    __KERNEL_SPACE_ENTER();                                             /*  内核文件描述符              */
     write((int)fd, (const void *)&data, 1);
+    __KERNEL_SPACE_EXIT();
 }
 /*********************************************************************************************************
 ** 函数名称: sio_recv
@@ -843,7 +849,9 @@ u8_t  sio_recv (sio_fd_t  fd)
 {
     char    data;
     
+    __KERNEL_SPACE_ENTER();                                             /*  内核文件描述符              */
     read((int)fd, (void *)&data, 1);
+    __KERNEL_SPACE_EXIT();
     
     return  ((u8_t)data);
 }
@@ -861,7 +869,9 @@ u32_t  sio_read (sio_fd_t  fd, u8_t *buffer, u32_t  num)
 {
     ssize_t     sstReadNum;
     
+    __KERNEL_SPACE_ENTER();
     sstReadNum = read((int)fd, (void *)buffer, (size_t)num);
+    __KERNEL_SPACE_EXIT();
 
     if (sstReadNum < 0) {
         return  (0);
@@ -871,7 +881,7 @@ u32_t  sio_read (sio_fd_t  fd, u8_t *buffer, u32_t  num)
     }
 }
 /*********************************************************************************************************
-** 函数名称: sio_read
+** 函数名称: sio_tryread
 ** 功能描述: sylixos sio try read (if no data is available and never blocks)
 ** 输　入  : fd        文件描述符
 **           buffer    缓冲区
@@ -883,14 +893,20 @@ u32_t  sio_read (sio_fd_t  fd, u8_t *buffer, u32_t  num)
 u32_t  sio_tryread (sio_fd_t  fd, u8_t *buffer, u32_t  num)
 {
     INT    iNRead = 0;
+    u32_t  uiRead = 0;
 
-    if (ioctl((int)fd, FIONREAD, &iNRead) == 0) {
-        if (iNRead > 0) {
-            return  ((u32_t)read((int)fd, (void *)buffer, num));
-        }
+    __KERNEL_SPACE_ENTER();
+    if (ioctl((int)fd, FIONREAD, &iNRead)) {
+        __KERNEL_SPACE_EXIT();
+        return  (0);
     }
     
-    return  (0);
+    if (iNRead > 0) {
+        uiRead = (u32_t)read((int)fd, (void *)buffer, num);
+    }
+    __KERNEL_SPACE_EXIT();
+    
+    return  (uiRead);
 }
 /*********************************************************************************************************
 ** 函数名称: sio_write
@@ -906,7 +922,9 @@ u32_t  sio_write (sio_fd_t  fd, u8_t *buffer, u32_t  num)
 {
     ssize_t     ssWriteNum;
     
+    __KERNEL_SPACE_ENTER();
     ssWriteNum = write((int)fd, (const void *)buffer, (size_t)num);
+    __KERNEL_SPACE_EXIT();
     
     if (ssWriteNum < 0) {
         return  (0);
@@ -925,7 +943,9 @@ u32_t  sio_write (sio_fd_t  fd, u8_t *buffer, u32_t  num)
 *********************************************************************************************************/
 void  sio_read_abort (sio_fd_t  fd)
 {
+    __KERNEL_SPACE_ENTER();
     ioctl((int)fd, FIOWAITABORT, OPT_RABORT);                           /*  解除一个读阻塞              */
+    __KERNEL_SPACE_EXIT();
 }
 /*********************************************************************************************************
   ip extern 

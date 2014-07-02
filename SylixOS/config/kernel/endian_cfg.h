@@ -96,7 +96,7 @@
 
 *********************************************************************************************************/
 
-#ifdef  __arm                                                           /*  armcc or arm-none-eabi-gcc  */
+#ifdef __CC_ARM                                                         /*  armcc or arm-none-eabi-gcc  */
 #define LW_CFG_DOUBLE_MIX_ENDIAN            0                           /*  armcc default native-endian */
 
 #elif defined(__GNUC__) && defined(__arm__)
@@ -111,7 +111,7 @@
 
 #else
 #define LW_CFG_DOUBLE_MIX_ENDIAN            0                           /*  default native-endian       */
-#endif                                                                  /*  __arm                       */
+#endif                                                                  /*  __CC_ARM                    */
                                                                         
 #endif                                                                  /*  __ENDIAN_CFG_H              */
 /*********************************************************************************************************

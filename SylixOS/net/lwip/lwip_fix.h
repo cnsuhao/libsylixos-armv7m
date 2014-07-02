@@ -72,11 +72,11 @@ typedef ULONG                       mem_ptr_t;
 #if BYTE_ORDER == LITTLE_ENDIAN
 
 #ifndef __GNUC__
-#ifdef  __arm
+#ifdef  __CC_ARM
 #define inline  __inline
 #else
 #define inline
-#endif                                                                  /*  __arm (armcc compiler)      */
+#endif                                                                  /*  __CC_ARM (armcc compiler)   */
 #endif                                                                  /*  __GNUC__                    */
 
 static inline u16_t  __LW_HTONS (u16_t  x)

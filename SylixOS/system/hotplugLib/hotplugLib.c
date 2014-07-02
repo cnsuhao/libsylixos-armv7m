@@ -233,7 +233,7 @@ INT      API_HotplugEventMessage (INT       iMsg,
     
     i += 6;                                                             /*  包含最后的 \0               */
     
-    ucBuffer[i++] = (UCHAR)((uiArg0 >> 24) & 0xff);
+    ucBuffer[i++] = (UCHAR)((uiArg0 >> 24) & 0xff);                     /*  MSB                         */
     ucBuffer[i++] = (UCHAR)((uiArg0 >> 16) & 0xff);
     ucBuffer[i++] = (UCHAR)((uiArg0 >>  8) & 0xff);
     ucBuffer[i++] = (UCHAR)((uiArg0)       & 0xff);

@@ -4,6 +4,12 @@ HISTORY
 
 ++ New features:
 
+    2014-07-01: han.hui
+    加入 ppp 管理工具.
+
+    2014-06-25: han.hui
+    加入网络接口电源管理与 wireless 802.11 支持.
+
     2014-06-24: han.hui
     加入软件磁盘阵列管理.
 
@@ -521,6 +527,9 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-07-02: han.hui
+    修正 ip_route() 针对 ppp /slip 连接的路由问题.
+    
     2014-05-29: han.hui
     修正 msgqueue mutex 任务安全性问题.
     去除多余的 _ErrorHandle(ERROR_NONE);

@@ -129,9 +129,16 @@ ip_route(ip_addr_t *dest)
         && (!ip_addr_isany(&(netif->ip_addr)))
 #endif /* LWIP_IPV6 */ 
         ) {
-      if (ip_addr_netcmp(dest, &(netif->ip_addr), &(netif->netmask))) {
-        /* return netif on which to forward IP packet */
-        return netif;
+      /* sylixos fixed point-to-point route bug! */
+      if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
+        if (ip_addr_cmp(dest, &(netif->gw))) {
+          return netif;
+        }
+      } else {
+        if (ip_addr_netcmp(dest, &(netif->ip_addr), &(netif->netmask))) {
+          /* return netif on which to forward IP packet */
+          return netif;
+        }
       }
     }
   }

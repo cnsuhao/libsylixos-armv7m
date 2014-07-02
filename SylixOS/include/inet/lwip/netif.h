@@ -203,7 +203,11 @@ struct netif {
 #endif /* LWIP_NETIF_REMOVE_CALLBACK */
 #ifdef SYLIXOS
   int (*ioctl)(struct netif *, int, void *);
-  void *reserve[8];
+  void (*up)(struct netif *); /* make net device up */
+  void (*down)(struct netif *); /* make net device down */
+  void *wireless_handlers; /* iw_handler_def ptr */
+  void *wireless_data; /* iw_public_data ptr */
+  void *reserve[4];
 #endif /* SYLIXOS */
   /** This field can be set by the device driver and could point
    *  to state information for the device. */

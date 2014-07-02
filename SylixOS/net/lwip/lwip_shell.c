@@ -293,12 +293,13 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
         }
         printf("%02X\n", netif->hwaddr[netif->hwaddr_len - 1]);
     } else if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
-        printf(" type : point-to-point\n");                             /*  点对点网络接口              */
+        printf(" type : WAN (PPP/SLIP)\n");                             /*  点对点网络接口              */
     } else {
         printf(" type : general\n");                                    /*  通用网络接口                */
     }
     
-    printf("          speed : %d(bps)\n", netif->link_speed);           /*  打印链接速度                */
+    printf("          dhcp : %s speed : %d(bps)\n", (netif->dhcp) ? "yes" : "no",
+                                                    netif->link_speed); /*  打印链接速度                */
 
     /*
      *  打印网口协议地址信息
@@ -311,10 +312,18 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
                                                   ip4_addr2(&netif->netmask),
                                                   ip4_addr3(&netif->netmask),
                                                   ip4_addr4(&netif->netmask));
-    printf("          gateway   : %d.%d.%d.%d\n", ip4_addr1(&netif->gw),
-                                                  ip4_addr2(&netif->gw),
-                                                  ip4_addr3(&netif->gw),
-                                                  ip4_addr4(&netif->gw));
+
+    if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
+        printf("          P-t-P     : %d.%d.%d.%d\n", ip4_addr1(&netif->gw),
+                                                      ip4_addr2(&netif->gw),
+                                                      ip4_addr3(&netif->gw),
+                                                      ip4_addr4(&netif->gw));
+    } else {
+        printf("          gateway   : %d.%d.%d.%d\n", ip4_addr1(&netif->gw),
+                                                      ip4_addr2(&netif->gw),
+                                                      ip4_addr3(&netif->gw),
+                                                      ip4_addr4(&netif->gw));
+    }
     
     if (netif->flags & NETIF_FLAG_BROADCAST) {                          /*  打印广播地址信息            */
         ipaddrBroadcast.addr = (netif->ip_addr.addr | (~netif->netmask.addr));

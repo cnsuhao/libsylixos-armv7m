@@ -741,6 +741,7 @@ SylixOS/net/lwip/lwip_shell.c \
 SylixOS/net/lwip/lwip_shell6.c \
 SylixOS/net/lwip/lwip_socket.c \
 SylixOS/net/lwip/lwip_sylixos.c \
+SylixOS/net/lwip/event/lwip_netevent.c \
 SylixOS/net/lwip/packet/af_packet_eth.c \
 SylixOS/net/lwip/packet/af_packet.c \
 SylixOS/net/lwip/proc/lwip_proc.c \
@@ -850,6 +851,7 @@ SylixOS/net/lwip/tools/netbios/lwip_netbios.c \
 SylixOS/net/lwip/tools/npf/lwip_npf.c \
 SylixOS/net/lwip/tools/ping/lwip_ping.c \
 SylixOS/net/lwip/tools/ping6/lwip_ping6.c \
+SylixOS/net/lwip/tools/ppp/lwip_ppp.c \
 SylixOS/net/lwip/tools/rpc/auth_none.c \
 SylixOS/net/lwip/tools/rpc/auth_unix.c \
 SylixOS/net/lwip/tools/rpc/auth_unix_prot.c \
@@ -869,7 +871,10 @@ SylixOS/net/lwip/tools/vpn/lwip_vpnclient.c \
 SylixOS/net/lwip/tools/vpn/lwip_vpnnetif.c \
 SylixOS/net/lwip/tools/vpn/lwip_vpnshell.c \
 SylixOS/net/lwip/unix/af_unix.c \
-SylixOS/net/lwip/unix/af_unix_msg.c
+SylixOS/net/lwip/unix/af_unix_msg.c \
+SylixOS/net/lwip/wireless/lwip_wlext.c \
+SylixOS/net/lwip/wireless/lwip_wlpriv.c \
+SylixOS/net/lwip/wireless/lwip_wlspy.c 
 
 #*********************************************************************************************************
 # posix source

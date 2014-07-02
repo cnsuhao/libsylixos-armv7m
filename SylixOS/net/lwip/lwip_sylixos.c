@@ -62,6 +62,11 @@ VOID  __tshellNet6Init(VOID);
 *********************************************************************************************************/
 VOID  __inetHostTableInit(VOID);
 /*********************************************************************************************************
+  网络事件初始化
+*********************************************************************************************************/
+INT   _netEventInit(VOID);
+INT   _netEventDevCreate(VOID);
+/*********************************************************************************************************
   拨号网络函数声明
 *********************************************************************************************************/
 #if LW_CFG_LWIP_PPP > 0 || LW_CFG_LWIP_PPPOE > 0
@@ -166,6 +171,10 @@ VOID  API_NetInit (VOID)
         bIsInit = LW_TRUE;
     }
     
+    _netJobqueueInit();                                                 /*  创建网络驱动作业处理队列    */
+    _netEventInit();                                                    /*  初始化网络事件              */
+    _netEventDevCreate();                                               /*  创建网络事件设备            */
+    
     API_SystemHookAdd((LW_HOOK_FUNC)__netCloseAll, 
                       LW_OPTION_KERNEL_REBOOT);                         /*  安装系统关闭时, 回调函数    */
                       
@@ -183,8 +192,6 @@ VOID  API_NetInit (VOID)
 #endif                                                                  /*  !__LWIP_USE_PPP_NEW         */
 #endif                                                                  /*  LW_CFG_LWIP_PPP             */
                                                                         /*  LW_CFG_LWIP_PPPOE           */
-                                                                        
-    _netJobqueueInit();                                                 /*  创建网络驱动作业处理队列    */
     
 #if LWIP_SNMP > 0
     __netSnmpInit();                                                    /*  初始化 SNMP 基本信息        */
