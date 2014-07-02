@@ -54,6 +54,8 @@ typedef struct {
     LW_OBJECT_HANDLE    CTXP_ulInput;                                   /*  pppos 输入线程              */
     BOOL                CTXP_bNeedDelete;                               /*  是否需要删除                */
     UINT8               CTXP_ucPhase;                                   /*  最后一次状态                */
+    PCHAR               CTXP_cUser;                                     /*  拨号用户名                  */
+    PCHAR               CTXP_cPass;                                     /*  拨号密码                    */
     ppp_pcb            *CTXP_pcb;                                       /*  回指向连接控制块            */
 } PPP_CTX_PRIV;
 /*********************************************************************************************************
@@ -225,6 +227,12 @@ static VOID  __pppOsThread (ppp_pcb *pcb)
             (pcb->phase == PPP_PHASE_DEAD)) {                           /*  需要删除 PPP 连接           */
             close((INT)pcb->fd);
             pppapi_delete(pcb);
+            if (pctxp->CTXP_cUser) {
+                lib_free(pctxp->CTXP_cUser);
+            }
+            if (pctxp->CTXP_cPass) {
+                lib_free(pctxp->CTXP_cPass);
+            }
             __SHEAP_FREE(pctxp);
             break;
         }
@@ -582,6 +590,12 @@ INT  API_PppDelete (CPCHAR  pcIfName)
 
     } else {
         pppapi_delete(pcb);                                             /*  直接删除                    */
+        if (pctxp->CTXP_cUser) {
+            lib_free(pctxp->CTXP_cUser);
+        }
+        if (pctxp->CTXP_cPass) {
+            lib_free(pctxp->CTXP_cPass);
+        }
         __SHEAP_FREE(pctxp);
     }
 
@@ -620,11 +634,41 @@ INT  API_PppConnect (CPCHAR  pcIfName, LW_PPP_DIAL *pdial)
         return  (PX_ERROR);
     }
 
-    if (pdial) {
-        pppapi_set_auth(pcb, PPPAUTHTYPE_ANY, pdial->user, pdial->passwd);
+    pctxp = (PPP_CTX_PRIV *)pcb->ctx_cb;
+
+    if (pdial && pdial->user && pdial->passwd) {
+        if (pctxp->CTXP_cUser) {
+            if (lib_strcmp(pctxp->CTXP_cUser, pdial->user) == 0) {
+                goto    __user_same;
+            }
+            lib_free(pctxp->CTXP_cUser);
+        }
+        pctxp->CTXP_cUser = lib_strdup(pdial->user);
+        if (pctxp->CTXP_cUser == LW_NULL) {
+            _ErrorHandle(ENOMEM);
+            return  (PX_ERROR);
+        }
+        
+__user_same:
+        if (pctxp->CTXP_cPass) {
+            if (lib_strcmp(pctxp->CTXP_cPass, pdial->passwd) == 0) {
+                goto    __passwd_same;
+            }
+            lib_free(pctxp->CTXP_cPass);
+        }
+        pctxp->CTXP_cPass = lib_strdup(pdial->passwd);
+        if (pctxp->CTXP_cPass == LW_NULL) {
+            _ErrorHandle(ENOMEM);
+            return  (PX_ERROR);
+        }
+
+__passwd_same:
+        pppapi_set_auth(pcb, PPPAUTHTYPE_ANY, pctxp->CTXP_cUser, pctxp->CTXP_cPass);
+    
+    } else {
+        pppapi_set_auth(pcb, PPPAUTHTYPE_ANY, LW_NULL, LW_NULL);
     }
 
-    pctxp = (PPP_CTX_PRIV *)pcb->ctx_cb;
     if ((pctxp->CTXP_uiType  == PPP_OS) &&
         (pctxp->CTXP_ulInput == LW_OBJECT_HANDLE_INVALID)) {
         API_ThreadAttrBuild(&attr, LW_CFG_LWIP_STK_SIZE, LW_PRIO_T_NETPROTO,

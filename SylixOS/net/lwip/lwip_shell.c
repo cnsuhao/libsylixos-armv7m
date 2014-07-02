@@ -293,7 +293,7 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
         }
         printf("%02X\n", netif->hwaddr[netif->hwaddr_len - 1]);
     } else if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
-        printf(" type : WAN (PPP/SLIP)\n");                             /*  点对点网络接口              */
+        printf(" type : WAN(PPP/SLIP)\n");                              /*  点对点网络接口              */
     } else {
         printf(" type : general\n");                                    /*  通用网络接口                */
     }
