@@ -133,6 +133,16 @@ __LW_RETU_FUNC_DEFINE(void *, xcalloc, (size_t  stNNum, size_t  stSize), (stNNum
 __LW_RETU_FUNC_DEFINE(void *, xrealloc, (void *pvPtr, size_t  stNewSize), (pvPtr, stNewSize))
 __LW_RETU_FUNC_DEFINE(int, posix_memalign, (void **memptr, size_t alignment, size_t size), (memptr, alignment, size))
 
+void *aligned_malloc (size_t  bytes, size_t alignment)
+{
+    return  (mallocalign(bytes, alignment));
+}
+
+void aligned_free (void *p)
+{
+    free(p);
+}
+
 __LW_RETU_FUNC_DEFINE(int, rand, (void), ())
 __LW_RETU_FUNC_DEFINE(int, rand_r, (uint_t *puiSeed), (puiSeed))
 __LW_VOID_FUNC_DEFINE(srand, (uint_t  uiSeed), (uiSeed))
@@ -235,6 +245,9 @@ __LW_RETU_FUNC_DEFINE(int, gettimeofday, (struct timeval *tv, struct timezone *t
 __LW_RETU_FUNC_DEFINE(int, settimeofday, (struct timeval *tv, const struct timezone *tz), (tv, tz))
 
 __LW_VOID_FUNC_DEFINE(tzset, (void), ())
+
+__LW_RETU_FUNC_DEFINE(hrtime_t, gethrtime, (void), ())
+__LW_RETU_FUNC_DEFINE(hrtime_t, gethrvtime, (void), ())
 
 /*********************************************************************************************************
   string

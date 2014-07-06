@@ -24,6 +24,7 @@
 2009.11.03  API_LogPrintk() 在入队之前, 进行一次等级判断.
 2012.03.12  使用自动 attr 
 2014.05.29  第一次设置文件描述符时启动打印线程.
+2014.07.04  系统没有初始化 log 时, 通过 bspDebugMsg() 打印.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDARG
 #define  __SYLIXOS_STDIO
@@ -166,6 +167,33 @@ INT  API_LogFdGet (INT  *piWidth, fd_set  *pfdsetLog)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __logBspMsg
+** 功能描述: log 没有初始化时的 log / printk 打印
+** 输　入  : pcMsg                      需要打印的信息
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+** 说  明  : 由于系统初始化之初, 使用 bspDebugMsg() 打印, 所以这里必须将 \n 变为 \r\n 序列.
+*********************************************************************************************************/
+static VOID  __logBspMsg (PCHAR  pcMsg)
+{
+    PCHAR   pcLn = lib_index(pcMsg, '\n');
+    size_t  stLen;
+    
+    if (pcLn) {
+        stLen = pcLn - pcMsg;
+        if (stLen && stLen < (__MAX_MSG_LEN - 2)) {
+            if (pcMsg[stLen - 1] != '\r') {
+                pcMsg[stLen]      = '\r';
+                pcMsg[stLen + 1]  = '\n';
+                pcMsg[stLen + 2]  = PX_EOS;
+            }
+        }
+    }
+    
+    bspDebugMsg(pcMsg);
+}
+/*********************************************************************************************************
 ** 函数名称: API_LogPrintk
 ** 功能描述: 记录格式化日志信息
 ** 输　入  : pcFormat                   格式化字串
@@ -178,44 +206,53 @@ INT  API_LogFdGet (INT  *piWidth, fd_set  *pfdsetLog)
 LW_API  
 INT  API_LogPrintk (CPCHAR   pcFormat, ...)
 {
+    static   CHAR          cBspMsgBuf[__MAX_MSG_LEN];                   /*  没有初始化之前暂时使用      */
+                                                                        /*  线程不安全!                 */
              va_list       varlist;
              LW_LOG_MSG    logmsg;
     REGISTER INT           iRet;
     REGISTER PCHAR         pcBuffer;
     REGISTER ULONG         ulError;
+             BOOL          bHaveLevel = LW_FALSE;
+             BOOL          bBspMsg    = LW_FALSE;
     
-    pcBuffer = (PCHAR)__LOG_PRINTK_GET_BUFFER();
-    if (pcBuffer == LW_NULL) {
-        _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
-        return  (PX_ERROR);
+    if (_G_hLogMsgHandle == LW_OBJECT_HANDLE_INVALID) {                 /*  log 还没有初始化            */
+        pcBuffer = cBspMsgBuf;
+        bBspMsg  = LW_TRUE;
+        
+    } else {
+        pcBuffer = (PCHAR)__LOG_PRINTK_GET_BUFFER();
+        if (pcBuffer == LW_NULL) {
+            _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
+            return  (PX_ERROR);
+        }
     }
     
-    logmsg.LOGMSG_iLevel = PX_ERROR;
+    logmsg.LOGMSG_iLevel = default_message_loglevel;
     if (lib_strnlen(pcFormat, 3) >= 3) {
         if ((pcFormat[0] == '<') && (pcFormat[2] == '>')) {
             if ((pcFormat[1] <= '9') && (pcFormat[1] >= '0')) {
                 logmsg.LOGMSG_iLevel = pcFormat[1] - '0';
+                bHaveLevel = LW_TRUE;
             }
         }
     }
     
-    if (logmsg.LOGMSG_iLevel == PX_ERROR) {
-        logmsg.LOGMSG_iLevel =  default_message_loglevel;               /*  使用默认优先级              */
-        if (logmsg.LOGMSG_iLevel > console_loglevel) {
+    if (logmsg.LOGMSG_iLevel > console_loglevel) {                      /*  至少应该为 7                */
+        if (bBspMsg == LW_FALSE) {
             __LOG_PRINTK_FREE_BUFFER(pcBuffer);
-            return  (ERROR_NONE);                                       /*  等级太低, 无法打印          */
         }
+        return  (ERROR_NONE);                                           /*  等级太低, 无法打印          */
+    }
+    
+    if (bHaveLevel) {
         va_start(varlist, pcFormat);
-        iRet = vsnprintf(pcBuffer, __MAX_MSG_LEN, pcFormat, varlist);
+        iRet = vsnprintf(pcBuffer, __MAX_MSG_LEN, &pcFormat[3], varlist);
         va_end(varlist);
     
     } else {
-        if (logmsg.LOGMSG_iLevel > console_loglevel) {
-            __LOG_PRINTK_FREE_BUFFER(pcBuffer);
-            return  (ERROR_NONE);                                       /*  等级太低, 无法打印          */
-        }
         va_start(varlist, pcFormat);
-        iRet = vsnprintf(pcBuffer, __MAX_MSG_LEN, &pcFormat[3], varlist);
+        iRet = vsnprintf(pcBuffer, __MAX_MSG_LEN, pcFormat, varlist);
         va_end(varlist);
     }
     
@@ -225,13 +262,18 @@ INT  API_LogPrintk (CPCHAR   pcFormat, ...)
     logmsg.LOGMSG_bIsNeedHeader = LW_FALSE;                             /*  不需要打印头部              */
     logmsg.LOGMSG_ulThreadId    = LW_OBJECT_HANDLE_INVALID;
     
-    ulError = API_MsgQueueSend(_G_hLogMsgHandle, &logmsg, sizeof(LW_LOG_MSG));
-    if (ulError) {
-        __LOG_PRINTK_FREE_BUFFER(pcBuffer);
-        _G_iLogMsgsLost++;
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "log message lost.\r\n");
-        _ErrorHandle(ERROR_LOG_LOST);
-        return  (PX_ERROR);
+    if (bBspMsg) {                                                      /*  log 还没有初始化            */
+        __logBspMsg(pcBuffer);
+    
+    } else {
+        ulError = API_MsgQueueSend(_G_hLogMsgHandle, &logmsg, sizeof(LW_LOG_MSG));
+        if (ulError) {
+            __LOG_PRINTK_FREE_BUFFER(pcBuffer);
+            _G_iLogMsgsLost++;
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "log message lost.\r\n");
+            _ErrorHandle(ERROR_LOG_LOST);
+            return  (PX_ERROR);
+        }
     }
     
     return  (iRet);
@@ -299,12 +341,21 @@ INT  API_LogMsg (CPCHAR       pcFormat,
         logmsg.LOGMSG_ulThreadId = API_ThreadIdSelf();
     }
     
-    ulError = API_MsgQueueSend(_G_hLogMsgHandle, &logmsg, sizeof(LW_LOG_MSG));
-    if (ulError) {
-        _G_iLogMsgsLost++;
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "log message lost.\r\n");
-        _ErrorHandle(ERROR_LOG_LOST);
-        return  (PX_ERROR);
+    if (_G_hLogMsgHandle == LW_OBJECT_HANDLE_INVALID) {                 /*  log 还没有初始化            */
+        CHAR       cPrintBuffer[__MAX_MSG_LEN];                         /*  输出缓冲                    */
+        snprintf(cPrintBuffer, __MAX_MSG_LEN, pcFormat,
+                 pvArg0, pvArg1, pvArg2, pvArg3, pvArg4, 
+                 pvArg5, pvArg6, pvArg7, pvArg8, pvArg9);
+        __logBspMsg(cPrintBuffer);
+    
+    } else {
+        ulError = API_MsgQueueSend(_G_hLogMsgHandle, &logmsg, sizeof(LW_LOG_MSG));
+        if (ulError) {
+            _G_iLogMsgsLost++;
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "log message lost.\r\n");
+            _ErrorHandle(ERROR_LOG_LOST);
+            return  (PX_ERROR);
+        }
     }
     
     return  (ERROR_NONE);

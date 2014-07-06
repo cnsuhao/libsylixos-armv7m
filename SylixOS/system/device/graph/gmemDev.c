@@ -26,6 +26,7 @@
 2011.06.03  环境变量支持保存功能, 所以创建 gmem 时不再需要设置 FRAMEBUFFER 环境变量.
 2011.08.02  加入对 mmap 的支持.
 2011.11.09  加入 GMFO_pfuncIoctl 接口, 以支持驱动程序的更多功能.
+2014.07.05  加入 LW_GM_GET_PHYINFO 可以获取显示物理特征.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -161,6 +162,14 @@ LW_API time_t  API_RootFsTime(time_t  *time);
         
     case LW_GM_GET_SCRINFO:
         iError = pgmdev->GMDEV_gmfileop->GMFO_pfuncGetScrInfo((LONG)pgmdev, (PLW_GM_SCRINFO)lArg);
+        break;
+        
+    case LW_GM_GET_PHYINFO:
+        if (pgmdev->GMDEV_gmfileop->GMFO_pfuncGetPhyInfo) {
+            iError = pgmdev->GMDEV_gmfileop->GMFO_pfuncGetPhyInfo((LONG)pgmdev, (PLW_GM_PHYINFO)lArg);
+        } else {
+            _ErrorHandle(ENOSYS);
+        }
         break;
 
     case LW_GM_GET_MODE:

@@ -578,8 +578,10 @@ static INT  __tshellModuleShow (INT  iArgC, PCHAR  *ppcArgV)
     PLW_CLASS_HEAP      pheapVpPatch;
     CHAR                cVpVersion[128] = "";
     
+    INT                 i, iNum;
     ULONG               ulPages;
     size_t              stTotalMem;
+    PVOID               pvVmem[LW_LD_VMEM_MAX];
     
     if (iArgC < 2) {
         pcFileName = LW_NULL;
@@ -631,7 +633,17 @@ static INT  __tshellModuleShow (INT  iArgC, PCHAR  *ppcArgV)
             if (pheapVpPatch) {                                         /*  获得 vp 进程私有 heap       */
 #if LW_CFG_VMM_EN > 0
                 ulPages = 0;
-                if (API_VmmPCountInArea(pheapVpPatch->HEAP_pvStartAddress, &ulPages) == ERROR_NONE) {
+                iNum = __moduleVpPatchVmem(pmodTemp, pvVmem, LW_LD_VMEM_MAX);
+                if (iNum > 0) {
+                    for (i = 0; i < iNum; i++) {
+                        if (API_VmmPCountInArea(pvVmem[i], 
+                                                &ulPages) == ERROR_NONE) {
+                            stTotalMem += (size_t)(ulPages 
+                                        *  LW_CFG_VMM_PAGE_SIZE);
+                        }
+                    }
+                } else if (API_VmmPCountInArea(pheapVpPatch->HEAP_pvStartAddress, 
+                                               &ulPages) == ERROR_NONE) {
                     stTotalMem += (size_t)(ulPages * LW_CFG_VMM_PAGE_SIZE);
                 }
 #else
@@ -709,8 +721,10 @@ static INT  __tshellVProcShow (INT  iArgC, PCHAR  *ppcArgV)
     
     PLW_CLASS_HEAP      pheapVpPatch;
     
+    INT                 i, iNum;
     ULONG               ulPages;
     size_t              stTotalMem;
+    PVOID               pvVmem[LW_LD_VMEM_MAX];
     
     struct passwd       passwd;
     struct passwd      *ppasswd = LW_NULL;
@@ -765,7 +779,17 @@ static INT  __tshellVProcShow (INT  iArgC, PCHAR  *ppcArgV)
             if (pheapVpPatch) {                                         /*  获得 vp 进程私有 heap       */
 #if LW_CFG_VMM_EN > 0
                 ulPages = 0;
-                if (API_VmmPCountInArea(pheapVpPatch->HEAP_pvStartAddress, &ulPages) == ERROR_NONE) {
+                iNum = __moduleVpPatchVmem(pmodTemp, pvVmem, LW_LD_VMEM_MAX);
+                if (iNum > 0) {
+                    for (i = 0; i < iNum; i++) {
+                        if (API_VmmPCountInArea(pvVmem[i], 
+                                                &ulPages) == ERROR_NONE) {
+                            stTotalMem += (size_t)(ulPages 
+                                        *  LW_CFG_VMM_PAGE_SIZE);
+                        }
+                    }
+                } else if (API_VmmPCountInArea(pheapVpPatch->HEAP_pvStartAddress, 
+                                               &ulPages) == ERROR_NONE) {
                     stTotalMem += (size_t)(ulPages * LW_CFG_VMM_PAGE_SIZE);
                 }
 #else

@@ -56,13 +56,33 @@ extern "C" {
 LW_API int              sched_get_priority_max(int  iPolicy);
 LW_API int              sched_get_priority_min(int  iPolicy);
 LW_API int              sched_yield(void);
-LW_API int              sched_setparam(pid_t  lThreadId, const struct sched_param  *pschedparam);
-LW_API int              sched_getparam(pid_t  lThreadId, struct sched_param  *pschedparam);
-LW_API int              sched_setscheduler(pid_t                      lThreadId, 
-                                           int                        iPolicy, 
+LW_API int              sched_setparam(pid_t  pid, const struct sched_param  *pschedparam);
+LW_API int              sched_getparam(pid_t  pid, struct sched_param  *pschedparam);
+LW_API int              sched_setscheduler(pid_t    pid, 
+                                           int      iPolicy, 
                                            const struct sched_param  *pschedparam);
-LW_API int              sched_getscheduler(pid_t  lThreadId);
-LW_API int              sched_rr_get_interval(pid_t  lThreadId, struct timespec  *interval);
+LW_API int              sched_getscheduler(pid_t  pid);
+LW_API int              sched_rr_get_interval(pid_t  pid, struct timespec  *interval);
+
+/*********************************************************************************************************
+  sched affinity (由于与应适时调度算法产生冲突, 所以这里不支持, 只是为了兼容性要求声明相关结构)
+*********************************************************************************************************/
+
+#define CPU_SETSIZE     2048
+typedef ULONG           cpu_mask;
+#define NCPUBITS        (sizeof(cpu_mask) * NBBY)                       /*  每一个单位掩码的位数        */
+
+typedef struct {
+    cpu_mask            cpus_bits[__HOWMANY(CPU_SETSIZE, NCPUBITS)];
+} cpu_set_t;
+
+#define CPU_SET(n, p)   ((p)->cpus_bits[(n) / NCPUBITS] |= (ULONG)( (1u << ((n) % NCPUBITS))))
+#define CPU_CLR(n, p)   ((p)->cpus_bits[(n) / NCPUBITS] &= (ULONG)(~(1u << ((n) % NCPUBITS))))
+#define CPU_ISSET(n, p) ((p)->cpus_bits[(n) / NCPUBITS] &  (ULONG)( (1u << ((n) % NCPUBITS))))
+#define CPU_ZERO(p)     lib_bzero((PVOID)(p), sizeof(*(p)))             /*  编译时兼容不同的 FD_SETSIZE */
+
+LW_API int              sched_setaffinity(pid_t pid, size_t setsize, const cpu_set_t *set);
+LW_API int              sched_getaffinity(pid_t pid, size_t setsize, cpu_set_t *set);
 
 #ifdef __cplusplus
 }

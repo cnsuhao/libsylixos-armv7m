@@ -673,6 +673,9 @@ LW_API INT64            API_TimeGet64(VOID);                            /*  获得
 
 LW_API ULONG            API_TimeGetFrequency(VOID);                     /*  获得系统时钟嘀嗒频率        */
 
+LW_API VOID             API_TimeTodAdj(INT32  *piDelta, 
+                                       INT32  *piOldDelta);             /*  微调系统 TOD 时间           */
+
 /*********************************************************************************************************
   TIMER
 *********************************************************************************************************/
@@ -765,6 +768,8 @@ LW_API ULONG            API_RegionDelete(LW_OBJECT_HANDLE   *pulId);    /*  删除
 
 LW_API ULONG            API_RegionDeleteEx(LW_OBJECT_HANDLE   *pulId, BOOL  bForce);
 
+LW_API ULONG            API_RegionAddMem(LW_OBJECT_HANDLE  ulId, PVOID  pvMem, size_t  stByteSize);
+                                                                        /*  向 REGION 里添加一段内存    */
 LW_API PVOID            API_RegionGet(LW_OBJECT_HANDLE  ulId, 
                                       size_t            stByteSize);    /*  获得 REGION 一个分段        */
 

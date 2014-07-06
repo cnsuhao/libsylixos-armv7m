@@ -41,6 +41,8 @@ typedef lib_lldiv_t lldiv_t;
 
 __LW_RETU_FUNC_DECLARE(void *, malloc, (size_t  stNbytes))
 __LW_RETU_FUNC_DECLARE(void *, mallocalign, (size_t  stNbytes, size_t  stAlign))
+__LW_RETU_FUNC_DECLARE(void *, aligned_malloc, (size_t  stNbytes, size_t  stAlign))
+__LW_RETU_FUNC_DECLARE(void, aligned_free, (void *pvPtr))
 __LW_RETU_FUNC_DECLARE(void *, memalign, (size_t  stAlign, size_t  stNbytes))
 __LW_RETU_FUNC_DECLARE(void, free, (void *pvPtr))
 __LW_RETU_FUNC_DECLARE(void *, calloc, (size_t  stNNum, size_t  stSize))

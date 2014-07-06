@@ -819,9 +819,9 @@ typedef LW_CLASS_HEAP   *PLW_CLASS_HEAP;
 *********************************************************************************************************/
 
 typedef struct {
-    LW_LIST_LINE         SEGMENT_lineManage;                           /*  左右邻居指针                 */
-    size_t               SEGMENT_stSegmentByteSize;                    /*  分段大小                     */
-    LW_LIST_RING         SEGMENT_ringFreeList;                         /*  下一个空闲分段链表           */
+    LW_LIST_LINE         SEGMENT_lineManage;                            /*  左右邻居指针                */
+    LW_LIST_RING         SEGMENT_ringFreeList;                          /*  下一个空闲分段链表          */
+    size_t               SEGMENT_stSegmentByteSize;                     /*  分段大小                    */
 } LW_CLASS_SEGMENT;
 typedef LW_CLASS_SEGMENT    *PLW_CLASS_SEGMENT;
 

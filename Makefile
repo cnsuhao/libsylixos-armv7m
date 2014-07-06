@@ -354,6 +354,7 @@ SylixOS/kernel/interface/PartitionGet.c \
 SylixOS/kernel/interface/PartitionGetName.c \
 SylixOS/kernel/interface/PartitionPut.c \
 SylixOS/kernel/interface/PartitionStatus.c \
+SylixOS/kernel/interface/RegionAddMem.c \
 SylixOS/kernel/interface/RegionCreate.c \
 SylixOS/kernel/interface/RegionDelete.c \
 SylixOS/kernel/interface/RegionGet.c \
@@ -466,6 +467,7 @@ SylixOS/kernel/interface/TimerReset.c \
 SylixOS/kernel/interface/TimerStart.c \
 SylixOS/kernel/interface/TimerStatus.c \
 SylixOS/kernel/interface/TimeSleep.c \
+SylixOS/kernel/interface/TimeTod.c \
 SylixOS/kernel/interface/ugid.c \
 SylixOS/kernel/list/listEvent.c \
 SylixOS/kernel/list/listEventSet.c \
@@ -649,6 +651,7 @@ SylixOS/lib/libc/time/lib_ctime.c \
 SylixOS/lib/libc/time/lib_daytime.c \
 SylixOS/lib/libc/time/lib_difftime.c \
 SylixOS/lib/libc/time/lib_gmtime.c \
+SylixOS/lib/libc/time/lib_hrtime.c \
 SylixOS/lib/libc/time/lib_localtime.c \
 SylixOS/lib/libc/time/lib_mktime.c \
 SylixOS/lib/libc/time/lib_time.c \
@@ -907,6 +910,7 @@ SylixOS/posix/semaphore/semaphore.c \
 SylixOS/posix/spawn/spawn.c \
 SylixOS/posix/sysconf/sysconf.c \
 SylixOS/posix/syslog/syslog.c \
+SylixOS/posix/timeb/adjtime.c \
 SylixOS/posix/timeb/timeb.c \
 SylixOS/posix/timeb/times.c \
 SylixOS/posix/utsname/utsname.c

@@ -35,6 +35,12 @@
 #endif                                                                  /*  CLK_TCK                     */
 
 /*********************************************************************************************************
+  特殊类型
+*********************************************************************************************************/
+
+typedef int64_t        hrtime_t;
+
+/*********************************************************************************************************
   时区信息 (timezone = UTC - LOCAL)
 *********************************************************************************************************/
 extern time_t          timezone;                                        /*  时区(以秒为单位)            */
@@ -89,6 +95,9 @@ INT          lib_gettimeofday(struct timeval *tv, struct timezone *tz);
 INT          lib_settimeofday(struct timeval *tv, const struct timezone *tz);
 
 VOID         lib_tzset(VOID);
+
+hrtime_t     lib_gethrtime(VOID);
+hrtime_t     lib_gethrvtime(VOID);
 
 #endif                                                                  /*  LW_CFG_RTC_EN               */
 #endif                                                                  /*  __LIB_TIME_H                */

@@ -182,6 +182,7 @@ static ssize_t  __procFsProcMemRead (PLW_PROCFS_NODE  p_pfsn,
     
     stRealSize = API_ProcFsNodeGetRealFileSize(p_pfsn);
     if (stRealSize == 0) {                                              /*  需要生成文件                */
+        INT                 i, iNum;
         ULONG               ulPages;
         size_t              stTotalMem;
         size_t              stStatic;
@@ -191,6 +192,7 @@ static ssize_t  __procFsProcMemRead (PLW_PROCFS_NODE  p_pfsn,
         LW_LD_EXEC_MODULE  *pmodTemp;
         
         PLW_CLASS_HEAP      pheapVpPatch;
+        PVOID               pvVmem[LW_LD_VMEM_MAX];
         
         LW_LD_LOCK();
         pvproc = (LW_LD_VPROC *)p_pfsn->PFSN_pvValue;
@@ -225,7 +227,17 @@ static ssize_t  __procFsProcMemRead (PLW_PROCFS_NODE  p_pfsn,
             if (pheapVpPatch) {                                         /*  获得 vp 进程私有 heap       */
 #if LW_CFG_VMM_EN > 0
                 ulPages = 0;
-                if (API_VmmPCountInArea(pheapVpPatch->HEAP_pvStartAddress, &ulPages) == ERROR_NONE) {
+                iNum = __moduleVpPatchVmem(pmodTemp, pvVmem, LW_LD_VMEM_MAX);
+                if (iNum > 0) {
+                    for (i = 0; i < iNum; i++) {
+                        if (API_VmmPCountInArea(pvVmem[i], 
+                                                &ulPages) == ERROR_NONE) {
+                            stTotalMem += (size_t)(ulPages 
+                                        *  LW_CFG_VMM_PAGE_SIZE);
+                        }
+                    }
+                } else if (API_VmmPCountInArea(pheapVpPatch->HEAP_pvStartAddress, 
+                                               &ulPages) == ERROR_NONE) {
                     stTotalMem += (size_t)(ulPages * LW_CFG_VMM_PAGE_SIZE);
                 }
 #else

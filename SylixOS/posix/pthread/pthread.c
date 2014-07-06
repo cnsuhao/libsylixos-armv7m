@@ -34,6 +34,7 @@
 2013.09.18  pthread_create() 加入对堆栈警戒区的处理.
 2013.12.02  加入 pthread_yield().
 2014.01.01  加入 pthread_safe_np() 与 pthread_unsafe_np().
+2014.07.04  加入 pthread_setaffinity_np 与 pthread_getaffinity_np();
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../include/px_pthread.h"                                      /*  已包含操作系统头文件        */
@@ -746,6 +747,51 @@ int  pthread_int_unlock_np (pthread_int_t irqctx)
     
     return  (ERROR_NONE);
 }
+/*********************************************************************************************************
+** 函数名称: pthread_setaffinity_np
+** 功能描述: 设置进程调度的 CPU 集合
+** 输　入  : pid           进程 / 线程 ID
+**           setsize       CPU 集合大小
+**           set           CPU 集合
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+int  pthread_setaffinity_np (pthread_t  thread, size_t setsize, const cpu_set_t *set)
+{
+    _ErrorHandle(ENOSYS);
+    return  (PX_ERROR);
+}
+/*********************************************************************************************************
+** 函数名称: pthread_getaffinity_np
+** 功能描述: 获取进程调度的 CPU 集合
+** 输　入  : pid           进程 / 线程 ID
+**           setsize       CPU 集合大小
+**           set           CPU 集合
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+int  pthread_getaffinity_np (pthread_t  thread, size_t setsize, cpu_set_t *set)
+{
+    ULONG   i;
+    
+    if (!set) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    for (i = 0; (i < setsize) && (i < LW_NCPUS); i++) {
+        CPU_SET(i, set);
+    }
+    
+    return  (ERROR_NONE);
+}
+
 #endif                                                                  /*  LW_CFG_POSIXEX_EN > 0       */
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
 /*********************************************************************************************************

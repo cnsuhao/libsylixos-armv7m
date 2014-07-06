@@ -119,7 +119,11 @@ LW_API
 ULONG  API_ThreadCondAttrSetPshared (ULONG  *pulAttr, INT  iShared)
 {
     if (pulAttr) {
-        *pulAttr |= (ULONG)iShared;
+        if (iShared) {
+            (*pulAttr) |= LW_THREAD_PROCESS_SHARED;
+        } else {
+            (*pulAttr) &= ~LW_THREAD_PROCESS_SHARED;
+        }
         return  (ERROR_NONE);
     
     } else {

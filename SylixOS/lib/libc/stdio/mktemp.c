@@ -39,101 +39,165 @@ static char sccsid[] = "@(#)mktemp.c	8.1 (Berkeley) 6/4/93";
 
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_FIO_LIB_EN > 0)
 
-static int  getpid ()
-{
-    long    l = (long)API_ThreadIdSelf();
-    
-    return  (int)((l & 0xffff));
-}
-
 #include "sys/types.h"
 #include "sys/stat.h"
 #include "fcntl.h"
 #include "errno.h"
 #include "stdio.h"
 #include "ctype.h"
+#include "unistd.h"
 
-static int _gettemp();
+static int _gettemp(char *, int *, int, int);
+
+static const char padchar[] =
+"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+int
+mkstemps(path, slen)
+    char *path;
+    int slen;
+{
+    int fd;
+
+    return (_gettemp(path, &fd, 0, slen) ? fd : -1);
+}
 
 int
 mkstemp(path)
-	char *path;
+    char *path;
 {
-	int fd;
+    int fd;
 
-	return (_gettemp(path, &fd) ? fd : -1);
+    return (_gettemp(path, &fd, 0, 0) ? fd : -1);
+}
+
+char *
+mkdtemp(path)
+    char *path;
+{
+    return (_gettemp(path, (int *)NULL, 1, 0) ? path : (char *)NULL);
+}
+
+char *
+_mktemp(path)
+    char *path;
+{
+    return (_gettemp(path, (int *)NULL, 0, 0) ? path : (char *)NULL);
 }
 
 char *
 mktemp(path)
-	char *path;
+    char *path;
 {
-	return(_gettemp(path, (int *)NULL) ? path : (char *)NULL);
+    return (_mktemp(path));
 }
 
 static int
-_gettemp(path, doopen)
-	char *path;
-	register int *doopen;
+_gettemp(path, doopen, domkdir, slen)
+    char *path;
+    int *doopen;
+    int domkdir;
+    int slen;
 {
-	extern int errno;
-	register char *start, *trv;
-	struct stat sbuf;
-	u_int pid;
+    char *start, *trv, *suffp, *carryp;
+    char *pad;
+    struct stat sbuf;
+    int rval;
+    uint32_t rand;
+    char carrybuf[MAXPATHLEN];
+    
+    if ((doopen != NULL && domkdir) || slen < 0) {
+        errno = EINVAL;
+        return (0);
+    }
 
-	pid = getpid();
-	for (trv = path; *trv; ++trv);		/* extra X's get set to 0's */
-	while (*--trv == 'X') {
-		*trv = (pid % 10) + '0';
-		pid /= 10;
-	}
+    for (trv = path; *trv != '\0'; ++trv) {
+        ;
+    }
+        
+    if (trv - path >= MAXPATHLEN) {
+        errno = ENAMETOOLONG;
+        return (0);
+    }
+    trv -= slen;
+    suffp = trv;
+    --trv;
+    if (trv < path || NULL != lib_strchr(suffp, '/')) {
+        errno = EINVAL;
+        return (0);
+    }
 
-	/*
-	 * check the target directory; if you have six X's and it
-	 * doesn't exist this runs for a *very* long time.
-	 */
-	for (start = trv + 1;; --trv) {
-		if (trv <= path)
-			break;
-		if (*trv == '/') {
-			*trv = '\0';
-			if (stat(path, &sbuf))
-				return(0);
-			if (!S_ISDIR(sbuf.st_mode)) {
-				errno = ENOTDIR;
-				return(0);
-			}
-			*trv = '/';
-			break;
-		}
-	}
+    /* Fill space with random characters */
+    while (trv >= path && *trv == 'X') {
+        rand = lib_rand() % (sizeof(padchar) - 1);
+        *trv-- = padchar[rand];
+    }
+    start = trv + 1;
 
-	for (;;) {
-		if (doopen) {
-			if ((*doopen =
-			    open(path, O_CREAT|O_EXCL|O_RDWR, 0600)) >= 0)
-				return(1);
-			if (errno != EEXIST)
-				return(0);
-		}
-		else if (stat(path, &sbuf))
-			return(errno == ENOENT ? 1 : 0);
-		/* tricky little algorithm for backward compatibility */
-		for (trv = start;;) {
-			if (!*trv)
-				return(0);
-			if (*trv == 'z')
-				*trv++ = 'a';
-			else {
-				if (isdigit(*trv))
-					*trv = 'a';
-				else
-					++*trv;
-				break;
-			}
-		}
-	}
-	/*NOTREACHED*/
+    /* save first combination of random characters */
+    lib_memcpy(carrybuf, start, suffp - start);
+
+    /*
+     * check the target directory.
+     */
+    if (doopen != NULL || domkdir) {
+        for (; trv > path; --trv) {
+            if (*trv == '/') {
+                *trv = '\0';
+                rval = stat(path, &sbuf);
+                *trv = '/';
+                if (rval != 0)
+                        return (0);
+                if (!S_ISDIR(sbuf.st_mode)) {
+                    errno = ENOTDIR;
+                    return (0);
+                }
+                break;
+            }
+        }
+    }
+
+    for (;;) {
+        if (doopen) {
+            if ((*doopen =
+                open(path, O_CREAT|O_EXCL|O_RDWR, 0600)) >= 0)
+                    return (1);
+            if (errno != EEXIST)
+                    return (0);
+        } else if (domkdir) {
+            if (mkdir(path, 0700) == 0)
+                    return (1);
+            if (errno != EEXIST)
+                    return (0);
+        } else if (lstat(path, &sbuf))
+            return (errno == ENOENT);
+
+        /* If we have a collision, cycle through the space of filenames */
+        for (trv = start, carryp = carrybuf;;) {
+            /* have we tried all possible permutations? */
+            if (trv == suffp)
+                return (0); /* yes - exit with EEXIST */
+            pad = lib_strchr(padchar, *trv);
+            if (pad == NULL) {
+                /* this should never happen */
+                errno = EIO;
+                return (0);
+            }
+            /* increment character */
+            *trv = (*++pad == '\0') ? padchar[0] : *pad;
+            /* carry to next position? */
+            if (*trv == *carryp) {
+                /* increment position and loop */
+                ++trv;
+                ++carryp;
+            } else {
+                /* try with new name */
+                break;
+            }
+        }
+    }
+    /*NOTREACHED*/
 }
+
 #endif  /*  (LW_CFG_DEVICE_EN > 0)      */
         /*  (LW_CFG_FIO_LIB_EN > 0)     */

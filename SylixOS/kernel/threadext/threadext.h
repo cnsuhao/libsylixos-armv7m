@@ -29,8 +29,13 @@
 *********************************************************************************************************/
 
 #define LW_THREAD_COND_INITIALIZER      {0ul, 0ul, 0ul}                 /*  pthread_cond_t 初始值       */
-#define LW_THREAD_PROCESS_SHARED        0x1                             /*  目前不支持进程              */
+#define LW_THREAD_PROCESS_SHARED        0x1
 #define LW_THREAD_PROCESS_PRIVATE       0x0
+
+#ifdef __SYLIXOS_KERNEL
+#define LW_THREAD_COND_CLK_REALTIME     0x0000
+#define LW_THREAD_COND_CLK_MONOTONIC    0x1000                          /*  目前暂不支持                */
+#endif
 
 /*********************************************************************************************************
   API

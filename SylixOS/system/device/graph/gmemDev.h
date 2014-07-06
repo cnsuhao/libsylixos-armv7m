@@ -89,6 +89,18 @@ typedef struct {
 typedef LW_GM_SCRINFO  *PLW_GM_SCRINFO;
 
 /*********************************************************************************************************
+  物理信息 (当 GMPHY_uiXmm 与 GMPHY_uiYmm 都为 0 时, GMPHY_uiDpi 必须有效)
+*********************************************************************************************************/
+
+typedef struct {
+    UINT                GMPHY_uiXmm;                                    /*  横向毫米数                  */
+    UINT                GMPHY_uiYmm;                                    /*  纵向毫米数                  */
+    UINT                GMPHY_uiDpi;                                    /*  每英寸像素数                */
+    ULONG               GMPHY_ulReserve[16];                            /*  保留                        */
+} LW_GM_PHYINFO;
+typedef LW_GM_PHYINFO  *PLW_GM_PHYINFO;
+
+/*********************************************************************************************************
   图形设备 file_operations
 *********************************************************************************************************/
 
@@ -105,6 +117,8 @@ typedef struct gmem_file_operations {
                                                                         /*  设置 VARINFO                */
     INT               (*GMFO_pfuncGetScrInfo)(LONG            lDev, 
                                               PLW_GM_SCRINFO  pgmsi);   /*  获得 SCRINFO                */
+    INT               (*GMFO_pfuncGetPhyInfo)(LONG            lDev, 
+                                              PLW_GM_PHYINFO  pgmphy);  /*  获得 PHYINFO                */
     INT               (*GMFO_pfuncGetMode)(LONG     lDev, 
                                            ULONG   *pulMode);           /*  获取显示模式                */
     INT               (*GMFO_pfuncSetMode)(LONG     lDev, 
@@ -171,7 +185,7 @@ typedef LW_GM_DEVICE           *PLW_GM_DEVICE;
 #define LW_GM_GET_VARINFO               200                             /*  获得显示规格                */
 #define LW_GM_SET_VARINFO               201                             /*  设置显示规格                */
 #define LW_GM_GET_SCRINFO               202                             /*  获得显示属性                */
-#define LW_GM_GET_FRAMEMEM              203                             /*  获得显示 framebuffer 基址   */
+#define LW_GM_GET_PHYINFO               203                             /*  获得显示物理特征            */
 
 /*********************************************************************************************************
   显示模式

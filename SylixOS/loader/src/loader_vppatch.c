@@ -50,6 +50,7 @@
 2014.05.20  用更加快捷的方法判断进程是否允许退出.
 2014.05.21  notify parent 将信号同时发送给调试器.
 2014.05.31  加入退出模式的选择.
+2014.07.03  加入获取进程虚拟空间组的函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -86,6 +87,7 @@ LW_LD_VPROC             *_G_pvprocTable[LW_CFG_MAX_THREADS];
 *********************************************************************************************************/
 #define __LW_VP_PATCH_VERSION        "__vp_patch_version"
 #define __LW_VP_PATCH_HEAP           "__vp_patch_heap"
+#define __LW_VP_PATCH_VMEM           "__vp_patch_vmem"
 #define __LW_VP_PATCH_CTOR           "__vp_patch_ctor"
 #define __LW_VP_PATCH_DTOR           "__vp_patch_dtor"
 #define __LW_VP_PATCH_AERUN          "__vp_patch_aerun"
@@ -135,6 +137,28 @@ PVOID __moduleVpPatchHeap (LW_LD_EXEC_MODULE *pmodule)
     }
     
     return  (pvHeap);
+}
+/*********************************************************************************************************
+** 函数名称: __moduleVpPatchVmem
+** 功能描述: vp 补丁获得虚拟地址空间
+** 输　入  : pmodule       进程主模块句柄
+**           ppvArea       内存空间数组
+**           iSize         数组空间大小
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+INT __moduleVpPatchVmem (LW_LD_EXEC_MODULE *pmodule, PVOID  ppvArea[], INT  iSize)
+{
+    FUNCPTR     funcVpVmem;
+    INT         iRet = PX_ERROR;
+
+    funcVpVmem = (FUNCPTR)API_ModuleSym(pmodule, __LW_VP_PATCH_VMEM);
+    if (funcVpVmem) {
+        iRet = funcVpVmem(pmodule->EMOD_pvproc, ppvArea, iSize);
+    }
+    
+    return  (iRet);
 }
 /*********************************************************************************************************
 ** 函数名称: __moduleVpPatchInit
@@ -1003,7 +1027,7 @@ static VOID  vprocSetFilesid (LW_LD_VPROC *pvproc, CPCHAR  pcFile)
 }
 /*********************************************************************************************************
 ** 函数名称: vprocPatchVerCheck
-** 功能描述: 检查进程补丁的版本, 如果没有则不允许运行 (补丁至少要是 1.1.6 版本)
+** 功能描述: 检查进程补丁的版本, 如果没有则不允许运行 (补丁至少要是 1.3.0 版本)
 ** 输　入  : pvproc      进程控制块
 ** 输　出  : 
 ** 全局变量:
@@ -1015,7 +1039,7 @@ static INT  vprocPatchVerCheck (LW_LD_VPROC *pvproc)
     PCHAR              pcVersion;
     ULONG              ulMajor = 0, ulMinor = 0, ulRevision = 0;
     
-    ULONG              ulLowVpVer = __SYLIXOS_MAKEVER(1, 1, 6);         /*  最低进程补丁版本要求        */
+    ULONG              ulLowVpVer = __SYLIXOS_MAKEVER(1, 3, 0);         /*  最低进程补丁版本要求        */
     ULONG              ulCurrent;
     
     pmodule   = _LIST_ENTRY(pvproc->VP_ringModules, LW_LD_EXEC_MODULE, EMOD_ringModules);
@@ -1039,7 +1063,7 @@ static INT  vprocPatchVerCheck (LW_LD_VPROC *pvproc)
     
 __bad_version:
     fprintf(stderr, "bad version of vprocess patch, "
-                    "the minimum version of vprocess patch MUST higher than 1.1.6\n");
+                    "the minimum version of vprocess patch MUST higher than 1.3.0\n");
     return  (PX_ERROR);
 }
 /*********************************************************************************************************

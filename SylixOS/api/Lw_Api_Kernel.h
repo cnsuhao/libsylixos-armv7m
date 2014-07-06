@@ -386,6 +386,8 @@
 #define Lw_Time_Ticks                           API_KernelTicks
 #define Lw_Time_TicksContext                    API_KernelTicksContext
 
+#define Lw_Time_TodAdj                          API_TimeTodAdj
+
 /*********************************************************************************************************
   RMS
 *********************************************************************************************************/
@@ -432,6 +434,8 @@
 #define Lw_Region_Create                        API_RegionCreate
 #define Lw_Region_Delete                        API_RegionDelete
 #define Lw_Region_DeleteEx                      API_RegionDeleteEx
+
+#define Lw_Region_AddMem                        API_RegionAddMem
 
 #define Lw_Region_Get                           API_RegionGet
 #define Lw_Region_Take                          API_RegionGet

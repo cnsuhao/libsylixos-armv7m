@@ -569,6 +569,8 @@ PLW_CLASS_HEAP _HeapDtor(PLW_CLASS_HEAP  pheap, BOOL  bIsCheckUsed);
 PLW_CLASS_HEAP _HeapCreate(PVOID               pvStartAddress, 
                            size_t              stByteSize);
 PLW_CLASS_HEAP _HeapDelete(PLW_CLASS_HEAP     pheap, BOOL  bIsCheckUsed);
+VOID           _HeapAddMemory(PLW_CLASS_HEAP  pheap, PVOID pvMemory, size_t  stSize);
+
 PVOID          _HeapAllocate(PLW_CLASS_HEAP   pheap, size_t  stByteSize, CPCHAR  pcPurpose);
 PVOID          _HeapAllocateAlign(PLW_CLASS_HEAP   pheap, size_t  stByteSize, 
                                   size_t  stAlign, CPCHAR  pcPurpose);

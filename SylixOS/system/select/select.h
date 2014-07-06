@@ -58,7 +58,7 @@ typedef ULONG               fd_mask;                                    /*  单位
   文件集的类型
 *********************************************************************************************************/
 
-typedef struct  fd_set {
+typedef struct fd_set {
     fd_mask                 fds_bits[__HOWMANY(FD_SETSIZE, NFDBITS)];   /*  建立掩码表                  */
 } fd_set;
 

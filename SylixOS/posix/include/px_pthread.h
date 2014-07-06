@@ -36,6 +36,7 @@ extern "C" {
 
 #include "px_pthread_attr.h"
 #include "px_sched.h"
+
 /*********************************************************************************************************
   pthread once & cancel
 *********************************************************************************************************/
@@ -230,6 +231,8 @@ LW_API int          pthread_condattr_init(pthread_condattr_t  *pcondattr);
 LW_API int          pthread_condattr_destroy(pthread_condattr_t  *pcondattr);
 LW_API int          pthread_condattr_setpshared(pthread_condattr_t  *pcondattr, int  ishare);
 LW_API int          pthread_condattr_getpshared(const pthread_condattr_t  *pcondattr, int  *pishare);
+LW_API int          pthread_condattr_setclock(pthread_condattr_t  *pcondattr, clockid_t  clock_id);
+LW_API int          pthread_condattr_getclock(const pthread_condattr_t  *pcondattr, clockid_t  *pclock_id);
 LW_API int          pthread_cond_init(pthread_cond_t  *pcond, const pthread_condattr_t  *pcondattr);
 LW_API int          pthread_cond_destroy(pthread_cond_t  *pcond);
 LW_API int          pthread_cond_signal(pthread_cond_t  *pcond);

@@ -55,6 +55,8 @@
 2013.05.01  加入内存越界检查.
 2013.10.09  修正一些错误打印信息的内容.
 2014.05.03  内存错误时, 打印堆的名字.
+2014.07.03  可以给 heap 中添加内存.
+            free 操作确保最右侧分段应该在 freelist 的最后, 为最不推荐分配的段.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -106,24 +108,34 @@ VOIDFUNCPTR _K_pfuncHeapTraceFree;
   则尽量节约物理页面的使用量.
 *********************************************************************************************************/
 #define __HEAP_ADD_NEW_SEG_TO_FREELIST(psegment, pheap)    do {                         \
-            if (_list_line_get_next(&psegment->SEGMENT_lineManage) == LW_NULL) {        \
-                                                                                        \
-                _List_Ring_Add_Last(&psegment->SEGMENT_ringFreeList,                    \
-                                    &pheap->HEAP_pringFreeSegment);                     \
-            } else {                                                                    \
-                                                                                        \
+            if (_list_line_get_next(&psegment->SEGMENT_lineManage)) {                   \
                 _List_Ring_Add_Ahead(&psegment->SEGMENT_ringFreeList,                   \
                                      &pheap->HEAP_pringFreeSegment);                    \
+            } else {                                                                    \
+                _List_Ring_Add_Last(&psegment->SEGMENT_ringFreeList,                    \
+                                    &pheap->HEAP_pringFreeSegment);                     \
             }                                                                           \
         } while (0)
+/*********************************************************************************************************
+  分段使用标志 (当在空闲链表中时, 分段为空闲分段, 不在空闲链表中, 则为正在使用的分段)
+*********************************************************************************************************/
+#define __HEAP_SEGMENT_IS_USED(psegment)    (!_list_ring_get_prev(&((psegment)->SEGMENT_ringFreeList)))
 /*********************************************************************************************************
   分段数据指针
 *********************************************************************************************************/
 #define __HEAP_SEGMENT_DATA_PTR(psegment)   ((UINT8 *)(psegment) + __SEGMENT_BLOCK_SIZE_ALIGN)
 /*********************************************************************************************************
-  分段使用标志 (当在空闲链表中时, 分段为空闲分段, 不在空闲链表中, 则为正在使用的分段)
+  理论上下一个分段地址
 *********************************************************************************************************/
-#define __HEAP_SEGMENT_IS_USED(psegment)    (!_list_ring_get_prev(&((psegment)->SEGMENT_ringFreeList)))
+#define __HEAP_SEGMENT_NEXT_PTR(psegment)   ((PLW_CLASS_SEGMENT)(__HEAP_SEGMENT_DATA_PTR(psegment) + \
+                                                                 psegment->SEGMENT_stSegmentByteSize))
+/*********************************************************************************************************
+  是否可以合并分段判断
+*********************************************************************************************************/
+#define __HEAP_SEGMENT_CAN_MR(psegment, psegmentRight)  \
+        (__HEAP_SEGMENT_NEXT_PTR(psegment) == psegmentRight)
+#define __HEAP_SEGMENT_CAN_ML(psegment, psegmentLeft)   \
+        (__HEAP_SEGMENT_NEXT_PTR(psegmentLeft) == psegment)
 /*********************************************************************************************************
   当出现需要归还的内存不在内存堆时, 需要打印如下信息
 *********************************************************************************************************/
@@ -247,6 +259,7 @@ PLW_CLASS_HEAP  _HeapCtor (PLW_CLASS_HEAP    pheapToBuild,
     
     psegment->SEGMENT_stSegmentByteSize  = stByteSize
                                          - __SEGMENT_BLOCK_SIZE_ALIGN;  /*  第一个分段的大小            */
+                                         
     pheapToBuild->HEAP_pringFreeSegment  = LW_NULL;
     _List_Ring_Add_Ahead(&psegment->SEGMENT_ringFreeList, 
                          &pheapToBuild->HEAP_pringFreeSegment);         /*  加入空闲表                  */
@@ -359,6 +372,57 @@ PLW_CLASS_HEAP  _HeapDelete (PLW_CLASS_HEAP  pheap, BOOL  bIsCheckUsed)
     }
 }
 /*********************************************************************************************************
+** 函数名称: _HeapAddMemory
+** 功能描述: 向一个堆内添加内存
+** 输　入  : pheap                 堆控制块
+**           pvMemory              需要添加的内存 (必须保证对其)
+**           stSize                内存大小 (必须大于一个分段大小最小值)
+** 输　出  : SEGMENT 的数量
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  _HeapAddMemory (PLW_CLASS_HEAP  pheap, PVOID  pvMemory, size_t  stSize)
+{
+    REGISTER PLW_LIST_LINE      plineTemp;
+    REGISTER PLW_CLASS_SEGMENT  psegmentLast;
+    REGISTER PLW_CLASS_SEGMENT  psegmentNew;
+    REGISTER ULONG              ulLockErr;
+    
+    stSize = ROUND_DOWN(stSize, sizeof(LW_STACK));                      /*  分段大小对其                */
+
+    ulLockErr = __heap_lock(pheap);
+    if (ulLockErr) {                                                    /*  出现锁错误                  */
+        return;
+    }
+    
+    psegmentLast = (PLW_CLASS_SEGMENT)pheap->HEAP_pvStartAddress;
+    plineTemp    = &psegmentLast->SEGMENT_lineManage;
+    
+    do {
+        if (_list_line_get_next(plineTemp) == LW_NULL) {
+            break;
+        }
+        plineTemp = _list_line_get_next(plineTemp);
+    } while (1);
+    
+    psegmentLast = _LIST_ENTRY(plineTemp, LW_CLASS_SEGMENT, SEGMENT_lineManage);
+    
+    psegmentNew = (PLW_CLASS_SEGMENT)pvMemory;
+    psegmentNew->SEGMENT_stSegmentByteSize = stSize - __SEGMENT_BLOCK_SIZE_ALIGN;
+    
+    _List_Line_Add_Right(&psegmentNew->SEGMENT_lineManage,
+                         &psegmentLast->SEGMENT_lineManage);
+                         
+    __HEAP_ADD_NEW_SEG_TO_FREELIST(psegmentNew, pheap);
+    
+    pheap->HEAP_ulSegmentCounter++;
+    pheap->HEAP_stTotalByteSize += stSize;
+    pheap->HEAP_stUsedByteSize  += __SEGMENT_BLOCK_SIZE_ALIGN;
+    pheap->HEAP_stFreeByteSize  += psegmentNew->SEGMENT_stSegmentByteSize;
+    
+    __heap_unlock(pheap);
+}
+/*********************************************************************************************************
 ** 函数名称: _HeapGetInfo
 ** 功能描述: 获得一个堆的状态
 ** 输　入  : pheap                 堆控制块
@@ -450,6 +514,8 @@ BOOL    _HeapVerify (PLW_CLASS_HEAP     pheap,
             }
         }
     }
+    
+    return  (LW_FALSE);                                                 /*  不会运行到这里              */
 }
 /*********************************************************************************************************
 ** 函数名称: _HeapAllocate
@@ -816,7 +882,8 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL  bIsNeedVer
     stSegmentByteSizeFree = psegment->SEGMENT_stSegmentByteSize;        /*  将要释放的分段内容大小      */
         
     if (psegmentLeft) {
-        if (__HEAP_SEGMENT_IS_USED(psegmentLeft)) {                     /*  不能聚合                    */
+        if (__HEAP_SEGMENT_IS_USED(psegmentLeft) ||
+            !__HEAP_SEGMENT_CAN_ML(psegment, psegmentLeft)) {           /*  不能聚合                    */
             goto    __merge_right;                                      /*  进入右段聚合                */
         }
         
@@ -832,13 +899,20 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL  bIsNeedVer
         
         psegment = psegmentLeft;                                        /*  当前分段变成左分段          */
     
+        if (plineRight == LW_NULL) {                                    /*  最右侧分段                  */
+            _List_Ring_Del(&psegment->SEGMENT_ringFreeList, 
+                           &pheap->HEAP_pringFreeSegment);
+            __HEAP_ADD_NEW_SEG_TO_FREELIST(psegment, pheap);            /*  重新插入适当的位置(节约内存)*/
+        }
+    
         bIsMergeOk = LW_TRUE;                                           /*  成功进行了左端合并          */
     }
     
 __merge_right:
     
     if (psegmentRight) {                                                /*  右分段聚合                  */
-        if (__HEAP_SEGMENT_IS_USED(psegmentRight)) {                    /*  不能聚合                    */
+        if (__HEAP_SEGMENT_IS_USED(psegmentRight) ||
+            !__HEAP_SEGMENT_CAN_MR(psegment, psegmentRight)) {          /*  不能聚合                    */
             goto    __right_merge_fail;                                 /*  进入右段聚合失败            */
         }
         
@@ -854,13 +928,18 @@ __merge_right:
         pheap->HEAP_ulSegmentCounter--;                                 /*  分区分段数量--              */
         
         if (bIsMergeOk == LW_FALSE) {                                   /*  当没有产生左合并时          */
-            _List_Ring_Add_Ahead(&psegment->SEGMENT_ringFreeList,       /*  这里插到空闲表头, 优先分配  */
-                                 &pheap->HEAP_pringFreeSegment);        /*  将当前分段加入空闲链表      */
+            __HEAP_ADD_NEW_SEG_TO_FREELIST(psegment, pheap);            /*  这里插到空闲表头            */
             
             pheap->HEAP_stUsedByteSize -= (__SEGMENT_BLOCK_SIZE_ALIGN + stSegmentByteSizeFree);
             pheap->HEAP_stFreeByteSize += (__SEGMENT_BLOCK_SIZE_ALIGN + stSegmentByteSizeFree);
         
         } else {                                                        /*  左分段合并成功              */
+            if (!_list_line_get_next(&psegment->SEGMENT_lineManage)) {  /*  合并后为最右侧分段          */
+                _List_Ring_Del(&psegment->SEGMENT_ringFreeList, 
+                               &pheap->HEAP_pringFreeSegment);
+                __HEAP_ADD_NEW_SEG_TO_FREELIST(psegment, pheap);        /*  重新插入适当的位置(节约内存)*/
+            }
+        
             pheap->HEAP_stUsedByteSize -= (__SEGMENT_BLOCK_SIZE_ALIGN);
             pheap->HEAP_stFreeByteSize += (__SEGMENT_BLOCK_SIZE_ALIGN);
         }
@@ -872,8 +951,7 @@ __merge_right:
 __right_merge_fail:                                                     /*  右分段合并错误              */
     
     if (bIsMergeOk == LW_FALSE) {                                       /*  左分段合并失败              */
-        _List_Ring_Add_Ahead(&psegment->SEGMENT_ringFreeList,           /*  这里插到空闲表头, 优先分配  */
-                             &pheap->HEAP_pringFreeSegment);            /*  加入空闲链表                */
+        __HEAP_ADD_NEW_SEG_TO_FREELIST(psegment, pheap);                /*  这里插到空闲表头            */
         
         pheap->HEAP_stUsedByteSize -= (stSegmentByteSizeFree);
         pheap->HEAP_stFreeByteSize += (stSegmentByteSizeFree);
@@ -981,7 +1059,8 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
             psegmentRight = _LIST_ENTRY(plineRight, 
                                         LW_CLASS_SEGMENT, 
                                         SEGMENT_lineManage);            /*  右分段控制块                */
-            if (!__HEAP_SEGMENT_IS_USED(psegmentRight)) {
+            if (!__HEAP_SEGMENT_IS_USED(psegmentRight) &&
+                __HEAP_SEGMENT_CAN_MR(psegment, psegmentRight)) {
                                                                         /*  右分段没有使用              */
                 if ((psegmentRight->SEGMENT_stSegmentByteSize + 
                      __SEGMENT_BLOCK_SIZE_ALIGN) >=

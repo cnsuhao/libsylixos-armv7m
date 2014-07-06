@@ -21,6 +21,7 @@
 ** BUG:
 2013.06.13  实现 setpriority getpriority 与 nice. 
             setpriority 与 getpriority 优先级参数必须在 PRIO_MIN PRIO_MAX 之间. 数值越小, 优先级越高.
+2014.07.04  修正 getpriority 与 setpriority 参数处理错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "unistd.h"
@@ -217,9 +218,19 @@ int  getpriority (int which, id_t who)
     INT    iRet       = PX_ERROR;
     UINT8  ucPriority = PRIO_MIN;
     
-    if ((which != PRIO_PROCESS) &&
-        (which != PRIO_PGRP) &&
-        (which != PRIO_USER)) {
+    if (which == PRIO_PROCESS) {
+        if (who == 0) {
+            who =  (id_t)getpid();
+        }
+    } else if (which == PRIO_PGRP) {
+        if (who == 0) {
+            who =  (id_t)getpgid(getpid());
+        }
+    } else if (PRIO_USER) {
+        if (who == 0) {
+            who =  (id_t)geteuid();
+        }
+    } else {
         errno = EINVAL;
         return  (PX_ERROR);
     }
@@ -263,15 +274,25 @@ int  setpriority (int which, id_t who, int value)
     INT    iRet = PX_ERROR;
     UINT8  ucPriority;
     
-    if ((which != PRIO_PROCESS) &&
-        (which != PRIO_PGRP) &&
-        (which != PRIO_USER)) {
+    if ((value < PRIO_MIN) ||
+        (value > PRIO_MAX)) {
         errno = EINVAL;
         return  (PX_ERROR);
     }
     
-    if ((value < PRIO_MIN) ||
-        (value > PRIO_MAX)) {
+    if (which == PRIO_PROCESS) {
+        if (who == 0) {
+            who =  (id_t)getpid();
+        }
+    } else if (which == PRIO_PGRP) {
+        if (who == 0) {
+            who =  (id_t)getpgid(getpid());
+        }
+    } else if (PRIO_USER) {
+        if (who == 0) {
+            who =  (id_t)geteuid();
+        }
+    } else {
         errno = EINVAL;
         return  (PX_ERROR);
     }

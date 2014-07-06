@@ -38,6 +38,7 @@
 2012.07.07  合并 API_KernelTicksContext 到这里.
 2013.08.28  加入内核事件监控器.
 2014.01.01  API_KernelTicksContext() 需要锁定调度器.
+2014.07.04  系统内核支持 tod 时钟微调.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -54,16 +55,30 @@
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : _K_i64TODDelta 为 adjtime 所设置, 用来修正系统 tod 时钟.
+
                                            API 函数
 *********************************************************************************************************/
 #if LW_CFG_RTC_EN > 0
 
 VOID  __kernelTODTicks (VOID)
 {
-    static LONG lNsec = (1000 * 1000 * 1000) / LW_CFG_TICKS_PER_SEC;    /*  一个 tick 有多少 nsec       */
+    static LONG lNsecStd = (1000 * 1000 * 1000) / LW_CFG_TICKS_PER_SEC; /*  一个 tick 有多少 nsec       */
+           LONG lNsec;
+           
     INTREG      iregInterLevel;
     
     LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    if (_K_iTODDelta > 0) {                                             /*  需要加快系统时钟一个 TICK   */
+        _K_iTODDelta--;
+        lNsec = lNsecStd << 1;                                          /*  加快一个 tick               */
+    } else if (_K_iTODDelta < 0) {
+        _K_iTODDelta++;
+        goto    __tod_tick_over;                                        /*  系统 tod 时间停止一个 tick  */
+    } else {
+        lNsec = lNsecStd;
+    }
+    
     _K_tvTODCurrent.tv_nsec += lNsec;                                   /*  CLOCK_REALTIME              */
     if (_K_tvTODCurrent.tv_nsec >= __TIMEVAL_NSEC_MAX) {                /*  是否产生秒进位              */
         _K_tvTODCurrent.tv_nsec -= __TIMEVAL_NSEC_MAX;
@@ -75,6 +90,8 @@ VOID  __kernelTODTicks (VOID)
         _K_tvTODMono.tv_nsec -= __TIMEVAL_NSEC_MAX;
         _K_tvTODMono.tv_sec  += 1;                                      /*  产生秒进位                  */
     }
+    
+__tod_tick_over:
     LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
 }
 

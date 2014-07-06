@@ -116,6 +116,7 @@ __KERNEL_EXT  LW_CLASS_WAKEUP         _K_wuITmr;                        /*  普通
   RTC
 *********************************************************************************************************/
 #if LW_CFG_RTC_EN > 0
+__KERNEL_EXT  INT32                   _K_iTODDelta;                     /*  系统时钟微调参数            */
 __KERNEL_EXT  struct timespec         _K_tvTODCurrent;                  /*  当前TOD时间 CLOCK_REALTIME  */
 __KERNEL_EXT  struct timespec         _K_tvTODMono;                     /*  MonoTOD时间 CLOCK_MONOTONIC */
 __KERNEL_EXT  LW_SPINLOCK_DEFINE     (_K_slKernelRtc);                  /*  内核 RTC spinlock           */

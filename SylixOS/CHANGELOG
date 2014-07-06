@@ -4,6 +4,10 @@ HISTORY
 
 ++ New features:
 
+    2014-07-03: han.hui
+    heap 内存管理加入内存添加功能.
+    增加一些 posix 定义的一些函数, 其中包括支持 adjtime 微调系统时钟.
+    
     2014-07-01: han.hui
     加入 ppp 管理工具.
 

@@ -65,6 +65,15 @@ __LW_RETU_FUNC_DECLARE(int, settimeofday, (struct timeval *tv, const struct time
 
 __LW_RETU_FUNC_DECLARE(void, tzset, (void))
 
+__LW_RETU_FUNC_DECLARE(hrtime_t, gethrtime, (VOID))
+__LW_RETU_FUNC_DECLARE(hrtime_t, gethrvtime, (VOID))
+
+/*********************************************************************************************************
+  POSIX library
+*********************************************************************************************************/
+
+LW_API int  adjtime(const struct timeval *delta, struct timeval *olddelta);
+
 #endif                                                                  /*  LW_CFG_RTC_EN               */
 
 #ifdef __cplusplus

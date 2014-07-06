@@ -37,9 +37,12 @@
  *  environ
  */
 char **environ;
-static LW_OBJECT_HANDLE env_lock;
-#define __ENV_LOCK()      API_SemaphoreMPend(env_lock, LW_OPTION_WAIT_INFINITE)
-#define __ENV_UNLOCK()    API_SemaphoreMPost(env_lock)
+
+extern void __vp_patch_lock(void);
+extern void __vp_patch_unlock(void);
+
+#define __ENV_LOCK()      __vp_patch_lock()
+#define __ENV_UNLOCK()    __vp_patch_unlock()
 
 /*
  *  _init_env
@@ -51,10 +54,6 @@ __attribute__((constructor)) static void _init_env (void)
     struct passwd   passwd;
     struct passwd  *ppasswd = LW_NULL;
     char user[LOGIN_NAME_MAX];
-
-    env_lock = API_SemaphoreMCreate("vp_env", LW_PRIO_DEF_CEILING, 
-                                    LW_OPTION_INHERIT_PRIORITY | 
-                                    LW_OPTION_OBJECT_GLOBAL, LW_NULL);
     
     sysnum = API_TShellVarGetNum();
     
@@ -88,10 +87,6 @@ __attribute__((destructor)) static void _deinit_env (void)
             free(environ[i]);
         }
         free(environ);
-    }
-    
-    if (env_lock) {
-        API_SemaphoreMDelete(&env_lock);
     }
 }
 

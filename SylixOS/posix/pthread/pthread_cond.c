@@ -22,6 +22,7 @@
 2012.12.13  由于 SylixOS 支持进程资源回收, 这里开始支持静态初始化.
 2013.05.01  If successful, the pthread_cond_*() functions shall return zero; 
             otherwise, an error number shall be returned to indicate the error.
+2014.07.04  加入时钟类型设置与获取.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../include/px_pthread.h"                                      /*  已包含操作系统头文件        */
@@ -94,7 +95,7 @@ int  pthread_condattr_destroy (pthread_condattr_t  *pcondattr)
 LW_API 
 int  pthread_condattr_setpshared (pthread_condattr_t  *pcondattr, int  ishare)
 {
-    API_ThreadCondAttrSetPshared(pcondattr, ishare);
+    API_ThreadCondAttrSetPshared(pcondattr, LW_THREAD_PROCESS_SHARED);
     
     return  (ERROR_NONE);
 }
@@ -112,6 +113,53 @@ LW_API
 int  pthread_condattr_getpshared (const pthread_condattr_t  *pcondattr, int  *pishare)
 {
     API_ThreadCondAttrGetPshared(pcondattr, pishare);
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: pthread_condattr_setclock
+** 功能描述: 设置 pthread 时钟类型.
+** 输　入  : pcondattr     属性
+**           clock_id      时钟类型 CLOCK_REALTIME only
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+int  pthread_condattr_setclock (pthread_condattr_t  *pcondattr, clockid_t  clock_id)
+{
+    if (!pcondattr) {
+        errno = EINVAL;
+        return  (EINVAL);
+    }
+    
+    if (clock_id != CLOCK_REALTIME) {
+        errno = EINVAL;
+        return  (EINVAL);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: pthread_condattr_getclock
+** 功能描述: 获取 pthread 时钟类型.
+** 输　入  : pcondattr     属性
+**           pclock_id     时钟类型
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+int  pthread_condattr_getclock (const pthread_condattr_t  *pcondattr, clockid_t  *pclock_id)
+{
+    if (!pcondattr || !pclock_id) {
+        errno = EINVAL;
+        return  (EINVAL);
+    }
+    
+    *pclock_id = CLOCK_REALTIME;
     
     return  (ERROR_NONE);
 }

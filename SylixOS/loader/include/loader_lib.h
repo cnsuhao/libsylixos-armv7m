@@ -297,11 +297,14 @@ INT     __ldShareConfig(BOOL  bShareEn, BOOL  *pbPrev);
 /*********************************************************************************************************
   vp 补丁操作
 *********************************************************************************************************/
+#define LW_LD_VMEM_MAX      64
+
 PCHAR __moduleVpPatchVersion(LW_LD_EXEC_MODULE *pmodule);               /*  获得补丁版本                */
 PVOID __moduleVpPatchHeap(LW_LD_EXEC_MODULE *pmodule);                  /*  获得补丁独立内存堆          */
-
-VOID __moduleVpPatchInit(LW_LD_EXEC_MODULE *pmodule);                   /*  进程补丁构造与析构          */
-VOID __moduleVpPatchFini(LW_LD_EXEC_MODULE *pmodule);
+INT   __moduleVpPatchVmem(LW_LD_EXEC_MODULE *pmodule, PVOID  ppvArea[], INT  iSize);
+                                                                        /*  获得进程虚拟内存空间        */
+VOID  __moduleVpPatchInit(LW_LD_EXEC_MODULE *pmodule);                  /*  进程补丁构造与析构          */
+VOID  __moduleVpPatchFini(LW_LD_EXEC_MODULE *pmodule);
 /*********************************************************************************************************
   体系结构特有函数
 *********************************************************************************************************/
