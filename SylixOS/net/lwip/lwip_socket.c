@@ -860,12 +860,11 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
                 _ErrorHandle(lib_abs(iRet));
                 iRet = PX_ERROR;
             }
-        } else {
+        } else
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
+        {
             _ErrorHandle(ENOSYS);
         }
-#else
-        _ErrorHandle(ENOSYS);
-#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
         break;
     }
     
@@ -1205,6 +1204,7 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
                 iRet = lwip_ioctl(psock->SOCK_iLwipFd, (long)iCmd, pvArg);
                 break;
                 
+            case SIOCGSIZIFCONF:
             case SIOCGIFCONF:
             case SIOCSIFADDR:
             case SIOCSIFNETMASK:
@@ -1235,7 +1235,15 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
                 break;
             
             default:
-                iRet = lwip_ioctl(psock->SOCK_iLwipFd, (long)iCmd, pvArg);
+#if LW_CFG_NET_WIRELESS_EN > 0
+                if ((iCmd >= SIOCIWFIRST) &&
+                    (iCmd <= SIOCIWLASTPRIV)) {                         /*  无线连接设置                */
+                    iRet = __ifIoctl(psock->SOCK_iLwipFd, iCmd, pvArg);
+                } else 
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
+                {
+                    iRet = lwip_ioctl(psock->SOCK_iLwipFd, (long)iCmd, pvArg);
+                }
                 break;
             }
         }
