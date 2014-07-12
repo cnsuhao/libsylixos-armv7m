@@ -38,6 +38,12 @@ typedef INT               (*PCOMMAND_START_ROUTINE)(INT  iArgC, PCHAR  ppcArgV[]
 *********************************************************************************************************/
 LW_API VOID                 API_TShellInit(VOID);                       /*  安装 tshell 系统            */
 
+LW_API VOID                 API_TShellTermAlert(INT  iFd);              /*  响铃警报                    */
+
+LW_API VOID                 API_TShellSetTitel(INT  iFd, CPCHAR  pcTitel);
+                                                                        /*  设置标题                    */
+LW_API VOID                 API_TShellScrClear(INT  iFd);               /*  清屏                        */
+
 LW_API INT                  API_TShellSetStackSize(size_t  stNewSize, size_t  *pstOldSize);
                                                                         /*  设置堆栈大小                */
 
@@ -71,8 +77,6 @@ LW_API INT                  API_TShellExec(CPCHAR  pcCommandExec);      /*  在当
 LW_API INT                  API_TShellExecBg(CPCHAR  pcCommandExec, INT  iFd[3], BOOL  bClosed[3], 
                                              BOOL  bIsJoin, LW_OBJECT_HANDLE *pulSh);
                                                                         /*  背景执行一条 shell 命令     */
-LW_API INT                  API_TShellCtlCharSend(ULONG  ulFunc, PCHAR  pcArg);
-                                                                        /*  发送一个转义序列            */
                                                                         
 #define tshellInit          API_TShellInit
 #define tshellSetStackSize  API_TShellSetStackSize
@@ -87,7 +91,9 @@ LW_API INT                  API_TShellCtlCharSend(ULONG  ulFunc, PCHAR  pcArg);
 #define tshellHelpAdd       API_TShellHelpAdd
 #define tshellExec          API_TShellExec
 #define tshellExecBg        API_TShellExecBg
-#define tshellCtlCharSend   API_TShellCtlCharSend
+#define tshellTermAlert     API_TShellTermAlert
+#define tshellSetTitel      API_TShellSetTitel
+#define tshellScrClear      API_TShellScrClear
                                                                         
 #endif                                                                  /*  LW_CFG_SHELL_EN > 0         */
 #endif                                                                  /*  __TTINYSHELL_H              */

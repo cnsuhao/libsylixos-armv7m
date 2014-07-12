@@ -10,29 +10,37 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: ttiny_shell_api.h
+** 文   件   名: ttinyShellColor.h
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2008 年 07 月 27 日
+** 文件创建日期: 2014 年 07 月 08 日
 **
-** 描        述: 一个超小型的 shell 系统, 使用 tty/pty 做接口, API 接口
+** 描        述: tty 颜色系统.
 *********************************************************************************************************/
 
-#ifndef __TTINY_SHELL_API_H
-#define __TTINY_SHELL_API_H
+#ifndef __TTINYSHELLCOLOR_H
+#define __TTINYSHELLCOLOR_H
 
 /*********************************************************************************************************
-  API 头文件
+  裁剪控制
 *********************************************************************************************************/
-#include "../SylixOS/shell/ttinyShell/ttinyShell.h"
-#include "../SylixOS/shell/ttinyShell/ttinyShellColor.h"
-#include "../SylixOS/shell/ttinyVar/ttinyVar.h"
-#include "../SylixOS/shell/getopt/getopt_var.h"
-#include "../SylixOS/shell/getopt/getopt.h"
-#include "../SylixOS/shell/getopt/getopt_long.h"
+#if LW_CFG_SHELL_EN > 0
 
-#endif                                                                  /*  __TTINY_SHELL_H             */
+LW_API  VOID  API_TShellColorRefresh(VOID);
+LW_API  VOID  API_TShellColorStart(CPCHAR  pcName, CPCHAR  pcLink, mode_t  mode, INT  iFd);
+LW_API  VOID  API_TShellColorEnd(INT  iFd);
+
+#define tshellColorRefresh  API_TShellColorRefresh
+#define tshellColorStart    API_TShellColorStart
+#define tshellColorEnd      API_TShellColorEnd
+
+#ifdef __SYLIXOS_KERNEL
+VOID          __tshellColorInit(VOID);
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
+
+#endif                                                                  /*  LW_CFG_SHELL_EN > 0         */
+#endif                                                                  /*  __TTINYSHELLCOLOR_H         */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

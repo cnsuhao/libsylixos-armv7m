@@ -602,18 +602,10 @@ __print_dirent:
                     }
                     
                     if (S_ISDIR(statGet.st_mode)) {
-                        API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                              __LW_VT100_COLOR_LIGHT_BLUE);
-                                                                        /*  设置前景淡蓝色              */
                         lib_strlcat(pdirent->d_name, PX_STR_DIVIDER, MAX_FILENAME_LENGTH);
-                        
-                    } else if (S_ISLNK(statGet.st_mode)) {
-                        API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                              __LW_VT100_COLOR_PURPLE); /*  紫色字体                    */
-                    } else if (S_IXUSR & statGet.st_mode) {
-                        API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                              __LW_VT100_COLOR_RED);    /*  红色字体                    */
                     }
+                    
+                    API_TShellColorStart(pdirent->d_name, "", statGet.st_mode, STD_OUT);
                     stPrintLen = printf("%-15s ", pdirent->d_name);     /*  打印文件名                  */
                     if (stPrintLen > __TSHELL_BYTES_PERFILE) {
                         stPad = ROUND_UP(stPrintLen, __TSHELL_BYTES_PERFILE)
@@ -623,8 +615,7 @@ __print_dirent:
                         stPad = 0;
                     }
                     stTotalLen += stPrintLen + stPad;
-                    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                          __LW_VT100_COLOR_GREEN);      /*  回复正常                    */
+                    API_TShellColorEnd(STD_OUT);
                     
                     if (stTotalLen >= __TSHELL_BYTES_PERLINE) {
                         printf("\n");                                   /*  换行                        */

@@ -5,18 +5,31 @@
 
 #*********************************************************************************************************
 # configure area you can set the following config to you own system
-# cpu (arm920t arm1176t cortex-a8 ...)
+# FPUFLAGS (-mfloat-abi=softfp -mfpu=vfpv3 ...)
+# CPUFLAGS (-mcpu=arm920t ...)
+# NOTICE: libsylixos, BSP and other kernel modules projects CAN NOT use vfp!
 #*********************************************************************************************************
-CPU = arm920t
+FPUFLAGS = -mfloat-abi=softfp -mfpu=vfpv3
+CPUFLAGS = -mcpu=arm920t
 
 #*********************************************************************************************************
-# compiler select
+# toolchain select
 #*********************************************************************************************************
-CC  = arm-none-eabi-gcc
-CXX = arm-none-eabi-g++
-AS  = arm-none-eabi-gcc
-AR  = arm-none-eabi-ar
-LD  = arm-none-eabi-g++
+TOOLCHAIN_PROBE = $(shell arm-sylixos-eabi-gcc -v 2>null && \
+					 (rm -rf null; echo commercial) || \
+					 (rm -rf null; echo opensource))
+
+ifneq (,$(findstring commercial, $(TOOLCHAIN_PROBE)))
+TOOLCHAIN_PREFIX = arm-sylixos-eabi-
+else 
+TOOLCHAIN_PREFIX = arm-none-eabi-
+endif
+
+CC  = $(TOOLCHAIN_PREFIX)gcc
+CXX = $(TOOLCHAIN_PREFIX)g++
+AS  = $(TOOLCHAIN_PREFIX)gcc
+AR  = $(TOOLCHAIN_PREFIX)ar
+LD  = $(TOOLCHAIN_PREFIX)g++
 
 #*********************************************************************************************************
 # debug options (debug or release)
@@ -927,6 +940,7 @@ SylixOS/shell/heapLib/ttinyShellHeapCmd.c \
 SylixOS/shell/modemLib/ttinyShellModemCmd.c \
 SylixOS/shell/tarLib/ttinyShellTarCmd.c \
 SylixOS/shell/ttinyShell/ttinyShell.c \
+SylixOS/shell/ttinyShell/ttinyShellColor.c \
 SylixOS/shell/ttinyShell/ttinyShellLib.c \
 SylixOS/shell/ttinyShell/ttinyShellReadline.c \
 SylixOS/shell/ttinyShell/ttinyShellSysCmd.c \
@@ -1109,11 +1123,12 @@ SylixOS/xsiipc/xsiipc.c
 # build path
 #*********************************************************************************************************
 ifeq ($(DEBUG_LEVEL), debug)
-OUTPATH = ./Debug
+OUTDIR = Debug
 else
-OUTPATH = ./Release
+OUTDIR = Release
 endif
 
+OUTPATH = ./$(OUTDIR)
 OBJPATH = $(OUTPATH)/obj
 DEPPATH = $(OUTPATH)/dep
 
@@ -1213,25 +1228,56 @@ OPTIMIZE = -O2 -Os -g1 -gdwarf-2										#you can try use O3
 endif
 
 #*********************************************************************************************************
+# rm command parameter
+#*********************************************************************************************************
+UNAME = $(shell uname -sm)
+
+ifneq (,$(findstring Linux, $(UNAME)))
+HOST_OS = linux
+endif
+ifneq (,$(findstring Darwin, $(UNAME)))
+HOST_OS = darwin
+endif
+ifneq (,$(findstring Macintosh, $(UNAME)))
+HOST_OS = darwin
+endif
+ifneq (,$(findstring CYGWIN, $(UNAME)))
+HOST_OS = windows
+endif
+ifneq (,$(findstring windows, $(UNAME)))
+HOST_OS = windows
+endif
+
+ifeq ($(HOST_OS),)
+$(error Unable to determine HOST_OS from uname -sm: $(UNAME)!)
+endif
+
+ifeq ($(HOST_OS), windows) 
+RM_PARAM = -rdf
+else
+RM_PARAM = -rf
+endif
+
+#*********************************************************************************************************
 # depends and compiler parameter (cplusplus in kernel MUST NOT use exceptions and rtti)
 #*********************************************************************************************************
 DEPENDFLAG  = -MM
 CXX_EXCEPT  = -fno-exceptions -fno-rtti
-COMMONFLAGS = -Wall -c -fmessage-length=0 -mcpu=$(CPU) $(OPTIMIZE) -fsigned-char -fno-short-enums
-ASFLAGS     = -x assembler-with-cpp $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(COMMONFLAGS)
-CFLAGS      = $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(COMMONFLAGS)
-CXXFLAGS    = $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(CXX_EXCEPT) $(COMMONFLAGS)
+COMMONFLAGS = $(CPUFLAGS) $(OPTIMIZE) -Wall -fmessage-length=0 -fsigned-char -fno-short-enums
+ASFLAGS     = -x assembler-with-cpp $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(COMMONFLAGS) -c
+CFLAGS      = $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(COMMONFLAGS) -c
+CXXFLAGS    = $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(CXX_EXCEPT) $(COMMONFLAGS) -c
 ARFLAGS     = -r
 
 #*********************************************************************************************************
-# define some useful variable (select vfpv3 compile our assembler file)
+# define some useful variable
 #*********************************************************************************************************
 DEPEND          = $(CC)  $(DEPENDFLAG) $(CFLAGS)
 DEPEND.d        = $(subst -g ,,$(DEPEND))
-COMPILE.S       = $(AS)  $(ASFLAGS) -c
-COMPILE_VFP.S   = $(AS)  $(ASFLAGS) -mfpu=vfpv3 -mfloat-abi=softfp -c
-COMPILE.c       = $(CC)  $(CFLAGS) -c
-COMPILE.cxx     = $(CXX) $(CXXFLAGS) -c
+COMPILE.S       = $(AS)  $(ASFLAGS)
+COMPILE_VFP.S   = $(AS)  $(ASFLAGS) $(FPUFLAGS)
+COMPILE.c       = $(CC)  $(CFLAGS)
+COMPILE.cxx     = $(CXX) $(CXXFLAGS)
 
 #*********************************************************************************************************
 # compile -fPIC
@@ -1273,14 +1319,14 @@ $(DEPPATH)/%.d: %.c
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		@rm -f $@; \
 		echo -n '$@ $(addprefix $(OBJPATH)/, $(dir $<))' > $@; \
-		$(DEPEND.d) $< >> $@;
+		$(DEPEND.d) $< >> $@ || rm -f $@; exit;
 
 $(DEPPATH)/%.d: %.cpp
 		@echo creating $@
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		@rm -f $@; \
 		echo -n '$@ $(addprefix $(OBJPATH)/, $(dir $<))' > $@; \
-		$(DEPEND.d) $< >> $@;
+		$(DEPEND.d) $< >> $@ || rm -f $@; exit;
 
 #*********************************************************************************************************
 # compile source files
@@ -1316,7 +1362,7 @@ $(OBJPATH)/SylixOS/arch/arm/fpu/vfpv3/armVfpV3Asm.o: ./SylixOS/arch/arm/fpu/vfpv
 # link libsylixos.a object files
 #*********************************************************************************************************
 $(TARGET): $(OBJS)
-		-rm -rf $(TARGET)
+		-rm $(RM_PARAM) $(TARGET)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_APPL)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_ARCH)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_DEBUG)
@@ -1381,19 +1427,19 @@ $(VPMPDM_A_TARGET): $(OBJS_VPMPDM)
 # link libvpmpdm.so object files
 #*********************************************************************************************************
 $(VPMPDM_S_TARGET): $(OBJS_VPMPDM)
-		$(LD) -mcpu=$(CPU) -nostdlib -fPIC -shared -o $(VPMPDM_S_TARGET) $(OBJS_VPMPDM) -lgcc
+		$(LD) $(CPUFLAGS) -nostdlib -fPIC -shared -o $(VPMPDM_S_TARGET) $(OBJS_VPMPDM) -lgcc
 
 #*********************************************************************************************************
 # link xinput.ko object files
 #*********************************************************************************************************
 $(XINPUT_TARGET): $(OBJS_XINPUT)
-		$(LD) -mcpu=$(CPU) -nostdlib -r -o $(XINPUT_TARGET) $(OBJS_XINPUT) -lm -lgcc
+		$(LD) $(CPUFLAGS) -nostdlib -r -o $(XINPUT_TARGET) $(OBJS_XINPUT) -lm -lgcc
 
 #*********************************************************************************************************
 # link xsiipc.ko object files
 #*********************************************************************************************************
 $(XSIIPC_TARGET): $(OBJS_XSIIPC)
-		$(LD) -mcpu=$(CPU) -nostdlib -r -o $(XSIIPC_TARGET) $(OBJS_XSIIPC) -lm -lgcc
+		$(LD) $(CPUFLAGS) -nostdlib -r -o $(XSIIPC_TARGET) $(OBJS_XSIIPC) -lm -lgcc
 
 #*********************************************************************************************************
 # clean
@@ -1405,19 +1451,19 @@ $(XSIIPC_TARGET): $(OBJS_XSIIPC)
 # clean objects
 #*********************************************************************************************************
 clean:
-		-rm -rdf $(TARGET)
-		-rm -rdf $(DSOH_TARGET)
-		-rm -rdf $(VPMPDM_A_TARGET)
-		-rm -rdf $(VPMPDM_S_TARGET)
-		-rm -rdf $(XINPUT_TARGET)
-		-rm -rdf $(XSIIPC_TARGET)
-		-rm -rdf $(OBJPATH)
+		-rm $(RM_PARAM) $(TARGET)
+		-rm $(RM_PARAM) $(DSOH_TARGET)
+		-rm $(RM_PARAM) $(VPMPDM_A_TARGET)
+		-rm $(RM_PARAM) $(VPMPDM_S_TARGET)
+		-rm $(RM_PARAM) $(XINPUT_TARGET)
+		-rm $(RM_PARAM) $(XSIIPC_TARGET)
+		-rm $(RM_PARAM) $(OBJPATH)
 
 #*********************************************************************************************************
 # clean project
 #*********************************************************************************************************
 clean_project:
-		-rm -rdf $(OUTPATH)
+		-rm $(RM_PARAM) $(OUTPATH)
 
 #*********************************************************************************************************
 # END

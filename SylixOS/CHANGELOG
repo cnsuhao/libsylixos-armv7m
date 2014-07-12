@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-07-10: han.hui
+    shell 使用新型颜色系统, 增加对 LS_COLORS 环境变量的支持.
+
     2014-07-03: han.hui
     heap 内存管理加入内存添加功能.
     增加一些 posix 定义的一些函数, 其中包括支持 adjtime 微调系统时钟.
@@ -530,6 +533,12 @@ HISTORY
     SylixOS 根目录中加入 CHANGELOG 文件.
     
 ++ Bugfixes:.
+
+    2014-07-11: han.hui
+    修正内存对齐分配回收对伪段首判断的错误.
+
+    2014-07-10: han.hui
+    密码验证时间从 0 秒, 改为默认 1 秒.
 
     2014-07-02: han.hui
     修正 ip_route() 针对 ppp /slip 连接的路由问题.

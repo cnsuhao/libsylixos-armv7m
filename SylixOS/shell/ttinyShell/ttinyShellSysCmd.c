@@ -58,6 +58,7 @@
 2013.06.13  加入 renice 命令.
 2013.08.27  加入 monitor 命令.
 2013.09.30  加入 lspci 命令.
+2014.07.11  加入 color 命令.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -145,11 +146,9 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
             for (i = 0; i < ulGetNum; i++) {
                 printf("%-20s", pskwNode[i]->SK_pcKeyword);             /*  打印关键字队列              */
                 if (pskwNode[i]->SK_pcFormatString) {
-                    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                          __LW_VT100_COLOR_PURPLE);     /*  设置品红前景                */
+                    API_TShellColorStart("", "", S_IFREG | S_IEXEC, STD_OUT);
                     printf("%s", pskwNode[i]->SK_pcFormatString);       /*  打印格式信息                */
-                    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                          __LW_VT100_COLOR_GREEN);      /*  设置绿色前景                */
+                    API_TShellColorEnd(STD_OUT);
                 }
                 printf("\n");
             }
@@ -188,11 +187,9 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
                 printf("%s", pskwNode[0]->SK_pcHelpString);             /*  打印帮助信息                */
                 printf("%s", pskwNode[0]->SK_pcKeyword);                /*  打印关键字队列              */
                 if (pskwNode[0]->SK_pcFormatString) {
-                    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                          __LW_VT100_COLOR_PURPLE);     /*  设置品红前景                */
+                    API_TShellColorStart("", "", S_IFREG | S_IEXEC, STD_OUT);
                     printf("%s", pskwNode[0]->SK_pcFormatString);       /*  打印格式信息                */
-                    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                          __LW_VT100_COLOR_GREEN);      /*  设置绿色前景                */
+                    API_TShellColorEnd(STD_OUT);
                 }
                 printf("\n");
             } else {
@@ -910,9 +907,7 @@ static INT  __tshellSysCmdPms (INT  iArgC, PCHAR  ppcArgV[])
 *********************************************************************************************************/
 static INT  __tshellSysCmdClear (INT  iArgC, PCHAR  ppcArgV[])
 {
-    API_TShellCtlCharSend(1, LW_NULL);                                  /*  发送清屏指令                */
-    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                          __LW_VT100_COLOR_GREEN);                      /*  设置前景为绿色              */
+    API_TShellScrClear(STD_OUT);
     
     return  (ERROR_NONE);
 }
@@ -997,6 +992,7 @@ static INT  __tshellSysCmdVarload (INT  iArgC, PCHAR  ppcArgV[])
     iError = __tshellVarLoad(pcFile);
     
     if (iError == ERROR_NONE) {
+        API_TShellColorRefresh();                                       /*  更新颜色方案                */
         printf("envionment variables load from %s success.\n", pcFile);
     } else {
         printf("envionment variables load from %s fail, error : %s\n", pcFile, lib_strerror(errno));
@@ -1033,6 +1029,21 @@ static INT  __tshellSysCmdVarsave (INT  iArgC, PCHAR  ppcArgV[])
     }
     
     return  (iError);
+}
+/*********************************************************************************************************
+** 函数名称: __tshellSysCmdColor
+** 功能描述: 系统命令 "color"
+** 输　入  : iArgC         参数个数
+**           ppcArgV       参数表
+** 输　出  : 0
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __tshellSysCmdColor (INT  iArgC, PCHAR  ppcArgV[])
+{
+    API_TShellColorRefresh();                                           /*  更新颜色方案                */
+
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __tshellSysCmdSync
@@ -2005,6 +2016,9 @@ VOID  __tshellSysCmdInit (VOID)
     
     API_TShellKeywordAdd("sync", __tshellSysCmdSync);
     API_TShellHelpAdd("sync", "flush all system buffer, For example: file system buffer.\n");
+    
+    API_TShellKeywordAdd("color", __tshellSysCmdColor);
+    API_TShellHelpAdd("color", "update LS_COLORS configure.\n");
 
     API_TShellKeywordAdd("tty", __tshellSysCmdTty);
     API_TShellHelpAdd("tty", "show tty name.\n");

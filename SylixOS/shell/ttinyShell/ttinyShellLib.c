@@ -699,7 +699,7 @@ static PVOID  __tshellBackground (PVOID  pvArg)
             break;
         }
         
-        API_TShellCtlCharSend(0, LW_NULL);                              /*  产生响铃                    */
+        API_TShellTermAlert(STD_OUT);                                   /*  产生响铃                    */
     }
     
     /*
@@ -957,9 +957,8 @@ PVOID   __tshellThread (PVOID  pcArg)
         }
     }
     
-    API_TShellCtlCharSend(7, "SylixOS Terminal [ttiny-shell]" "\x07");  /*  修改标题设置前景为绿色      */
-    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                          __LW_VT100_COLOR_GREEN);
+    API_TShellSetTitel(STD_OUT, "SylixOS Terminal [t-tiny-shell]");     /*  修改标题设置                */
+    API_TShellColorEnd(STD_OUT);
     
     if ((__TTINY_SHELL_GET_OPT(ptcbCur) & 
          LW_OPTION_TSHELL_NOLOGO) == 0) {                               /*  是否需要打印 logo           */
@@ -1035,7 +1034,7 @@ PVOID   __tshellThread (PVOID  pcArg)
                     break;
                 }
                 
-                API_TShellCtlCharSend(0, LW_NULL);                      /*  产生响铃                    */
+                API_TShellTermAlert(STD_OUT);                           /*  产生响铃                    */
             }
             __TTINY_SHELL_SET_ERROR(ptcbCur, iRetValue);                /*  记录当前命令产生的错误.     */
         }

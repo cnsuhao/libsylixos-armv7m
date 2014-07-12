@@ -522,8 +522,8 @@ INT  _IosInit (VOID)
                                                                         /*  unix 兼容 null 设备路径     */
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
     
-    (VOID)API_IosDevAddEx(&_G_devhdrNull, "/dev/null", iNullDrv, DT_REG); 
-    (VOID)API_IosDevAddEx(&_G_devhdrZero, "/dev/zero", iZeroDrv, DT_REG);
+    (VOID)API_IosDevAddEx(&_G_devhdrNull, "/dev/null", iNullDrv, DT_CHR); 
+    (VOID)API_IosDevAddEx(&_G_devhdrZero, "/dev/zero", iZeroDrv, DT_CHR);
     
     (VOID)API_SystemHookAdd((LW_HOOK_FUNC)_IosThreadDelete, 
                             LW_OPTION_THREAD_DELETE_HOOK);              /*  线程删除时回调              */

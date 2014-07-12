@@ -292,7 +292,7 @@ struct login_defs {
   int pass_min_days;    /* default 0  */
   int pass_min_len;     /* default 8  */
   int pass_warn_age;    /* default 7  */
-  int pass_delay;       /* default 0  */
+  int pass_delay;       /* default 1  */
   int fail_delay;       /* default 5  */
   int faillog_enab;     /* default 0  */
   int syslog_su_enab;   /* default 0  */
@@ -300,7 +300,7 @@ struct login_defs {
   int md5_crypt_enab;   /* default 1  */
 };
 
-static struct login_defs login_defines = {90, 0, 8, 7, 0, 5, 0, 0, 0, 1};
+static struct login_defs login_defines = {90, 0, 8, 7, 1, 5, 0, 0, 0, 1};
  
 /*
  * get yes or no value

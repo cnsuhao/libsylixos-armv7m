@@ -10,7 +10,7 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: _HeapUnitLib.c
+** 文   件   名: _HeapLib.c
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
@@ -755,7 +755,11 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
     
     if ((bLeftNewFree == LW_FALSE) && stAddedSize) {                    /*  左端有些内存没有使用        */
         size_t  *pstLeft = (((size_t *)pcAlign) - 1);
-        *pstLeft = (size_t)psegmentAlloc;                               /*  记录分段位置                */
+        *pstLeft = (size_t)psegmentAlloc;                               /*  记录真正分段控制块位置      */
+        if (__HEAP_SEGMENT_DATA_PTR(psegmentAlloc) < (UINT8 *)pstLeft) {
+            pstLeft--;                                                  /*  模拟伪段首在 freelist 中    */
+            *pstLeft = 1;                                               /*  确保 free 时找到正确的段首  */
+        }
     }
     
     __HEAP_UPDATA_MAX_USED(pheap);                                      /*  更新统计变量                */

@@ -607,16 +607,7 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
                 statGet.st_mode = DTTOIF(pdirent->d_type);
             }
             
-            if (S_ISDIR(statGet.st_mode)) {
-                API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                      __LW_VT100_COLOR_LIGHT_BLUE);     /*  设置前景淡蓝色              */
-            } else if (S_ISLNK(statGet.st_mode)) {
-                API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                      __LW_VT100_COLOR_PURPLE);         /*  紫色字体                    */
-            } else if (S_IXUSR & statGet.st_mode) {
-                API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                      __LW_VT100_COLOR_RED);            /*  红色字体                    */
-            }
+            API_TShellColorStart(pdirent->d_name, "", statGet.st_mode, STD_OUT);
             stPrintLen = printf("%-15s ", pdirent->d_name);             /*  打印文件名                  */
             if (stPrintLen > __TSHELL_BYTES_PERFILE) {
                 stPad = ROUND_UP(stPrintLen, __TSHELL_BYTES_PERFILE)
@@ -626,8 +617,7 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
                 stPad = 0;
             }
             stTotalLen += stPrintLen + stPad;
-            API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                  __LW_VT100_COLOR_GREEN);              /*  回复正常                    */
+            API_TShellColorEnd(STD_OUT);
             
             if (stTotalLen >= __TSHELL_BYTES_PERLINE) {
                 printf("\n");                                           /*  换行                        */
@@ -1154,11 +1144,9 @@ static INT  __tshellFsCmdLl (INT  iArgC, PCHAR  ppcArgV[])
             printf(" %s", cTimeBuf);                                    /*  打印修改时间                */
             
             if (S_ISDIR(statGet.st_mode)) {
-                API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                      __LW_VT100_COLOR_LIGHT_BLUE);     /*  设置前景淡蓝色              */
+                API_TShellColorStart(pdirent->d_name, "", statGet.st_mode, STD_OUT);
                 printf("           %s/\n", pdirent->d_name);
-                API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                      __LW_VT100_COLOR_GREEN);          /*  设置前景为绿色              */
+                API_TShellColorEnd(STD_OUT);
                                       
             } else if (S_ISLNK(statGet.st_mode)) {                      /*  链接文件                    */
                 CHAR            cDstName[MAX_FILENAME_LENGTH] = "<unknown>";
@@ -1171,15 +1159,11 @@ static INT  __tshellFsCmdLl (INT  iArgC, PCHAR  ppcArgV[])
                     cDstName[sstLen] = PX_EOS;                          /*  加入结束符                  */
                 }
                 stat(cDstName, &statDst);
-                if (S_ISDIR(statDst.st_mode)) {
-                    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                      __LW_VT100_COLOR_LIGHT_BLUE);     /*  设置前景淡蓝色              */
-                    printf("           %s/ -> %s\n", pdirent->d_name, cDstName);
-                    API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                      __LW_VT100_COLOR_GREEN);          /*  设置前景为绿色              */
-                } else {
-                    printf("           %s -> %s\n", pdirent->d_name, cDstName);
-                }
+                API_TShellColorStart(pdirent->d_name, cDstName, statGet.st_mode, STD_OUT);
+                printf("           %s/ -> ", pdirent->d_name);
+                API_TShellColorStart(cDstName, "", statDst.st_mode, STD_OUT);
+                printf("%s\n", cDstName);
+                API_TShellColorEnd(STD_OUT);
             
             } else {
                 if (statGet.st_size > (10 * LW_CFG_MB_SIZE)) {
@@ -1189,32 +1173,10 @@ static INT  __tshellFsCmdLl (INT  iArgC, PCHAR  ppcArgV[])
                 } else {
                     printf(" %6zd B, ", (size_t)(statGet.st_size));
                 }
-                {
-                    /*
-                     *  通过扩展名显示不同的色彩
-                     */
-                    REGISTER PCHAR      pcExtName = lib_index(pdirent->d_name, '.');
-                    
-                    if (pcExtName) {
-                        if ((lib_strcmp(pcExtName, ".lua") == 0) ||
-                            (lib_strcmp(pcExtName, ".LUA") == 0) ||
-                            (lib_strcmp(pcExtName, ".sh") == 0)  ||
-                            (lib_strcmp(pcExtName, ".SH") == 0)) {
-                            
-                            API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                                  __LW_VT100_COLOR_RED);/*  红色字体                    */
-                            printf(pdirent->d_name);     
-                            API_TShellCtlCharSend(__LW_VT100_FUNC_COLOR, 
-                                                  __LW_VT100_COLOR_GREEN);
-                            
-                        } else {
-                            printf(pdirent->d_name);
-                        }
-                    } else {
-                        printf(pdirent->d_name);                        /*  显示文件名                  */
-                    }
-                    printf("\n");                                       /*  换行                        */
-                }
+                
+                API_TShellColorStart(pdirent->d_name, "", statGet.st_mode, STD_OUT);
+                printf("%s\n", pdirent->d_name);
+                API_TShellColorEnd(STD_OUT);
             }
             
             iItemNum++;

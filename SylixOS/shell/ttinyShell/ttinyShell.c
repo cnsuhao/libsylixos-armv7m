@@ -38,6 +38,8 @@
 2013.01.21  加入用户 CACHE 功能.
 2013.07.18  使用新的获取 TCB 的方法, 确保 SMP 系统安全.
 2013.08.26  shell 系统命令添加 format 和 help 第二个参数为 const char *.
+2014.07.10  shell 系统加入对新的颜色系统的初始化.
+            shell 去除老式色彩控制函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -73,56 +75,63 @@ static BOOL             _G_bIsInstallSysCmd = LW_FALSE;
 *********************************************************************************************************/
 size_t                  _G_stShellStackSize = LW_CFG_SHELL_THREAD_STK_SIZE;
 /*********************************************************************************************************
-  TTY 控制转义字符
-*********************************************************************************************************/
-static  const PCHAR     _G_pcTShellTransCharTbl[] =
-{
-    "\a",                                                               /*  警报                        */
-    "\x1B" "c",                                                         /*  清屏                        */
-    "\x1B" "[",                                                         /*  开始转义序列                */
-    "\x1B",
-    "",
-    "",
-    "",
-    "\x1B" "]0;"                                                        /*  将图标名和窗口标题设为文本  */
-};
-#define  __TTNIYSHELL_MAX_TRANSFUNC     7
-/*********************************************************************************************************
-** 函数名称: API_TShellCtlCharSend
-** 功能描述: 发送指定的转义字符序列
-** 输　入  : ulFunc        选择的转义功能
-**           pcArg         参数序列
-** 输　出  : ERROR_NONE 表示没有错误, -1 表示错误,
+** 函数名称: API_TShellTermAlert
+** 功能描述: tty 终端响铃
+** 输　入  : iFd       输出目标
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-INT  API_TShellCtlCharSend (ULONG  ulFunc, PCHAR  pcArg)
+VOID  API_TShellTermAlert (INT  iFd)
 {
-    CHAR            cSendBuffer[128];
     PLW_CLASS_TCB   ptcbCur;
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
     if (!(__TTINY_SHELL_GET_OPT(ptcbCur) & LW_OPTION_TSHELL_VT100)) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+        return;
     }
     
-    if (ulFunc > __TTNIYSHELL_MAX_TRANSFUNC) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+    fdprintf(iFd, "\a");
+}
+/*********************************************************************************************************
+** 函数名称: API_TShellSetTitel
+** 功能描述: tty 终端设置标题
+** 输　入  : iFd       输出目标
+**           pcTitel   标题
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+VOID  API_TShellSetTitel (INT  iFd, CPCHAR  pcTitel)
+{
+    PLW_CLASS_TCB   ptcbCur;
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);
+    
+    if (!(__TTINY_SHELL_GET_OPT(ptcbCur) & LW_OPTION_TSHELL_VT100)) {
+        return;
     }
     
-    lib_strlcpy(cSendBuffer, _G_pcTShellTransCharTbl[ulFunc], 128);
-    if (pcArg) {
-        lib_strlcat(cSendBuffer, pcArg, 128);
-    }
-    printf("%s", cSendBuffer);
-    fflush(stdout);                                                     /*  立即输出                    */
-    
-    return  (ERROR_NONE);
+    fdprintf(iFd, "\x1B]0;%s\x07", pcTitel);
+}
+/*********************************************************************************************************
+** 函数名称: API_TShellScrClear
+** 功能描述: tty 终端清屏
+** 输　入  : iFd       输出目标
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+VOID  API_TShellScrClear (INT  iFd)
+{
+    fdprintf(iFd, "\x1B" "c");
 }
 /*********************************************************************************************************
 ** 函数名称: API_TShellSetStackSize
@@ -173,6 +182,8 @@ VOID  API_TShellInit (VOID)
                           LW_OPTION_THREAD_DELETE_HOOK);                /*  安装回调函数                */
         API_SystemHookAdd(__tshellReadlineClean, 
                           LW_OPTION_THREAD_DELETE_HOOK);                /*  readline 历史删除           */
+                          
+        __tshellColorInit();                                            /*  初始化 shell 颜色系统       */
     }
     
     if (_G_bIsInstallSysCmd == LW_FALSE) {
