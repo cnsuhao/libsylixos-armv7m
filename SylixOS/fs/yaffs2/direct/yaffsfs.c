@@ -3077,6 +3077,7 @@ struct yaffs_dirent *yaffsfs_readdir_no_lock(yaffs_DIR * dirp)
 			    yaffs_get_equivalent_obj(dsc->nextReturn)->obj_id;
 			dsc->de.d_dont_use = (unsigned)dsc->nextReturn;
 			dsc->de.d_off = dsc->offset++;
+			dsc->de.d_type = yaffs_get_obj_type(dsc->nextReturn);
 			yaffs_get_obj_name(dsc->nextReturn,
 					   dsc->de.d_name, NAME_MAX);
 			if (yaffs_strnlen(dsc->de.d_name, NAME_MAX + 1) == 0) {

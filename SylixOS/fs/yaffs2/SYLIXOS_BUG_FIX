@@ -29,4 +29,9 @@ HISTORY
     so if openDenied is true, yaffsfs_PutHandle() must call yaffsfs_closedir_no_lock();
 	
 7:  yaffs_symlink() mode must 0754
+
+    2014-07-15 han.hui
+8:  yaffsfs_readdir_no_lock() add :
+    dsc->de.d_type = yaffs_get_obj_type(dsc->nextReturn);
+
     

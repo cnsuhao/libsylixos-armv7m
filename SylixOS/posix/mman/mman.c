@@ -48,6 +48,7 @@
 2014.04.30  加入对 mremap() 的支持.
             存在 VMM 时不在使用 HEAP 进行分配, 保持算法一致性.
 2014.05.01  修正 mremap() 错误时的 errno.
+2014.07.15  编写独立的 mmap 资源释放函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -503,6 +504,40 @@ static VOID  __mmapFree (__PX_MAP_NODE  *pmapnode, PVOID  pvAddr)
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 }
 /*********************************************************************************************************
+** 函数名称: __mmapReclaim
+** 功能描述: mmap 回收
+** 输　入  : pmapnode      mmap node
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_MODULELOADER_EN > 0
+
+static VOID  __mmapReclaim (__PX_MAP_NODE  *pmapnode)
+{
+#if LW_CFG_MONITOR_EN > 0
+    PVOID   pvAddr = pmapnode->PMAPN_pvAddr;
+    size_t  stLen  = pmapnode->PMAPN_stLen;
+#endif                                                                  /*  LW_CFG_MONITOR_EN > 0       */
+    
+    __PX_LOCK();
+    _List_Line_Del(&pmapnode->PMAPN_lineManage, 
+                   &_G_plineMMapHeader);                                /*  从管理链表中删除            */
+    __PX_UNLOCK();
+    
+    __mmapNodeAreaFree(pmapnode);                                       /*  释放区域管理内存            */
+    __mmapFree(pmapnode, pmapnode->PMAPN_pvAddr);                       /*  释放内存                    */
+    
+    __resDelRawHook(&pmapnode->PMAPN_resraw);
+    
+    __SHEAP_FREE(pmapnode);
+        
+    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_MUNMAP,
+                      pvAddr, stLen, LW_NULL);
+}
+
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+/*********************************************************************************************************
 ** 函数名称: mmapfd
 ** 功能描述: 获得 mmap 区域的文件描述符
 ** 输　入  : pvAddr        地址
@@ -672,8 +707,8 @@ void  *mmap (void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, off
     __PX_UNLOCK();
     
     pmapnode->PMAPN_pid = getpid();                                     /*  获得当前进程 pid            */
-    __resAddRawHook(&pmapnode->PMAPN_resraw, (VOIDFUNCPTR)munmap, 
-                    pmapnode->PMAPN_pvAddr, (PVOID)stLen, 0, 0, 0, 0);  /*  加入资源管理器              */
+    __resAddRawHook(&pmapnode->PMAPN_resraw, __mmapReclaim, 
+                    pmapnode, 0, 0, 0, 0, 0);                           /*  加入资源管理器              */
 
     MONITOR_EVT_LONG5(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_MMAP,
                       pmapnode->PMAPN_pvAddr, 
@@ -852,7 +887,6 @@ int  munmap (void  *pvAddr, size_t  stLen)
     LW_DEV_MMAP_AREA     dmap;
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
     
-    
     if (!ALIGNED(pvAddr, LW_CFG_VMM_PAGE_SIZE) || (stLen == 0)) {       /*  pvAddr 必须页对齐           */
         errno = EINVAL;
         return  (PX_ERROR);
@@ -872,7 +906,7 @@ int  munmap (void  *pvAddr, size_t  stLen)
         errno = EINVAL;
         return  (PX_ERROR);
     }
-    if (pmapnode->PMAPN_bBusy) {
+    if (pmapnode->PMAPN_bBusy) {                                        /*  忙状态                      */
         __PX_UNLOCK();
         __SHEAP_FREE(pmaparea);
         errno = EBUSY;

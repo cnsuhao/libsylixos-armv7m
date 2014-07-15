@@ -589,7 +589,8 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
             break;
         } else {
             
-            if (pdirent->d_type == DT_UNKNOWN) {
+            if ((pdirent->d_type == DT_UNKNOWN) ||
+                (pdirent->d_type == DT_REG)) {
                 if ((stDirLen > 1) || 
                     ((stDirLen == 1) && (cDirName[0] == PX_ROOT))) {
                     lib_strcpy(&cDirName[stDirLen], pdirent->d_name);   /*  链接指定目录                */
@@ -597,10 +598,7 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
                 } else {
                     iError = stat(pdirent->d_name, &statGet);           /*  使用当前目录                */
                 }
-                if (iError < 0) {
-                    /*
-                     *  设备文件默认使用下面的属性.
-                     */
+                if (iError < 0) {                                       /*  设备文件默认使用下面的属性  */
                     statGet.st_mode = S_IRUSR | S_IFREG;                /*  默认属性                    */
                 }
             } else {
@@ -1103,10 +1101,7 @@ static INT  __tshellFsCmdLl (INT  iArgC, PCHAR  ppcArgV[])
                 pcStat = pdirent->d_name;
                 iError = lstat(pdirent->d_name, &statGet);              /*  使用当前目录                */
             }
-            if (iError < 0) {
-                /*
-                 *  设备文件默认使用下面的属性.
-                 */
+            if (iError < 0) {                                           /*  设备文件默认使用下面的属性  */
                 statGet.st_dev     = 0;
                 statGet.st_ino     = 0;
                 statGet.st_mode    = 0666 | S_IFCHR;                    /*  默认属性                    */
