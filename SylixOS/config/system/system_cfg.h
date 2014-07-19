@@ -36,7 +36,7 @@
 #define LW_CFG_MAX_DMA_CHANNELS                 64      /*  系统的 DMA 通道数量                 < 65535 */
 #define LW_CFG_MAX_DMA_LISTNODES                64      /*  系统 DMA 请求作业队列的数量, 超过此数量,    */
                                                         /*  系统将使用动态内存分配节点                  */
-#define LW_CFG_MAX_POWERM_NODES                 5       /*  系统功耗控制点的个数                        */
+
 #define LW_CFG_MAX_SIGQUEUE_NODES               100     /*  系统所有信号等待队列最大节点数              */
 
 #define LW_CFG_MAX_GPIOS                        256     /*  系统总 GPIO 数量                            */

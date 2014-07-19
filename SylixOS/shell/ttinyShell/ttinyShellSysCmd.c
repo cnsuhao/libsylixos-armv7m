@@ -877,26 +877,6 @@ static INT  __tshellSysCmdClose (INT  iArgC, PCHAR  ppcArgV[])
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __tshellSysCmdPms
-** 功能描述: 系统命令 "pms"
-** 输　入  : iArgC         参数个数
-**           ppcArgV       参数表
-** 输　出  : 0
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
-
-static INT  __tshellSysCmdPms (INT  iArgC, PCHAR  ppcArgV[])
-{
-    API_PowerMShow();
-    
-    return  (ERROR_NONE);
-}
-
-#endif                                                                  /*  LW_CFG_POWERM_EN            */
-                                                                        /*  LW_CFG_MAX_POWERM_NODES     */
-/*********************************************************************************************************
 ** 函数名称: __tshellSysCmdClear
 ** 功能描述: 系统命令 "clear"
 ** 输　入  : iArgC         参数个数
@@ -2023,11 +2003,6 @@ VOID  __tshellSysCmdInit (VOID)
     API_TShellKeywordAdd("tty", __tshellSysCmdTty);
     API_TShellHelpAdd("tty", "show tty name.\n");
 
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
-    API_TShellKeywordAdd("pms", __tshellSysCmdPms);
-    API_TShellHelpAdd("pms", "show system power management node information.\n");
-#endif                                                                  /*  LW_CFG_POWERM_EN            */
-                                                                        /*  LW_CFG_MAX_POWERM_NODES     */
     API_TShellKeywordAdd("clear", __tshellSysCmdClear);
     API_TShellHelpAdd("clear", "clear the current screen.\n");
     

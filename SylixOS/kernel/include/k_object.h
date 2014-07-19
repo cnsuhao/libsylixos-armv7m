@@ -20,6 +20,7 @@
 
 ** BUG
 2007.04.10  去掉了 _OBJECT_KERNEL  _OBJECT_SCHED  _OBJECT_INTERRUPT  _OBJECT_ERR 几种类型
+2014.07.19  去掉老的电源管理节点类型.
 *********************************************************************************************************/
 
 #ifndef  __K_OBJECT_H
@@ -49,7 +50,6 @@
 #define _OBJECT_MSGQUEUE        7                                       /*  消息队列                    */
 #define _OBJECT_EVENT_SET       8                                       /*  事件集                      */
 #define _OBJECT_SIGNAL          9                                       /*  信号                        */
-#define _OBJECT_POWERM         10                                       /*  功耗管理器                  */
 #define _OBJECT_STDFILE        11                                       /*  stdio 标准文件              */
 #define _OBJECT_TIME           13                                       /*  时间                        */
 #define _OBJECT_TIMER          14                                       /*  定时器                      */

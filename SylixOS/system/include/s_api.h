@@ -68,50 +68,19 @@ LW_API VOID           API_IosDevDelete(PLW_DEV_HDR    pdevhdrHdr);      /*  删除
 
 LW_API PLW_DEV_HDR    API_IosDevFind(CPCHAR  pcName, 
                                      PCHAR  *ppcNameTail);              /*  查找设备                    */
+
+LW_API INT            API_IoFullFileNameGet(CPCHAR         pcPathName,
+                                            PLW_DEV_HDR   *ppdevhdr,
+                                            PCHAR          pcFullFileName);
+                                                                        /*  获得完整文件名              */
 #endif
 
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
-/*********************************************************************************************************
-  DEVICE POWER MANAGE
-*********************************************************************************************************/
-
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
-#if LW_CFG_DEVICE_EN > 0
-LW_API INT            API_IosDevPowerMAdd(CPCHAR        pcName,
-                                          ULONG         ulMaxIdleTime,
-                                          FUNCPTR       pfuncPowerOff,
-                                          PVOID         pvArgPowerOff,
-                                          FUNCPTR       pfuncPowerSignal,
-                                          PVOID         pvArgPowerSignal,
-                                          FUNCPTR       pfuncRemove,
-                                          PVOID         pvArgRemove,
-                                          PVOID        *ppvPowerM);     /*  创建设备电源管理节点        */
-                                          
-LW_API INT            API_IosDevPowerMDeleteAll(CPCHAR  pcName);        /*  删除设备所有电源管理节点    */
-                                          
-LW_API INT            API_IosDevPowerMMaxIdleTimeSet(PVOID  pvPowerM, 
-                                                     ULONG  ulMaxIdleTime);
-                                                                        /*  设置指定节点的最大空闲时间  */
-LW_API INT            API_IosDevPowerMMaxIdleTimeGet(PVOID  pvPowerM, 
-                                                     ULONG  *pulMaxIdleTime);
-                                                                        /*  获取指定节点的最大空闲时间  */
-LW_API INT            API_IosDevPowerMCancel(PVOID  pvPowerM);          /*  停止设备电源管理节点计时    */
-
-LW_API VOID           API_IosDevPowerMSignal(PVOID  pvPowerM);          /*  激活设备状态 (复位定时器)   */
-
-#endif
-#endif                                                                  /*  LW_CFG_POWERM_EN            */
-                                                                        /*  LW_CFG_MAX_POWERM_NODES     */
 /*********************************************************************************************************
   POSIX & ANSI
 *********************************************************************************************************/
 
 #if LW_CFG_DEVICE_EN > 0
-LW_API INT            API_IoFullFileNameGet(CPCHAR         pcPathName,
-                                            PLW_DEV_HDR   *ppdevhdr,
-                                            PCHAR          pcFullFileName);
-                                                                        /*  获得完整文件名              */
-
 LW_API INT            API_IoPathCondense(CPCHAR  pcPath, 
                                          PCHAR   pcPathCondense, 
                                          size_t  stSize);               /*  目录压缩                    */
@@ -119,7 +88,7 @@ LW_API INT            API_IoPathCondense(CPCHAR  pcPath,
 LW_API INT            API_IoPrivateEnv(VOID);                           /*  线程进入私有 IO 环境        */
                                                                         /*  例如: 独立的相对路径        */
 
-LW_API INT            API_IoDefPathSet(CPCHAR       pcName);            /*  设置系统默认目录            */
+LW_API INT            API_IoDefPathSet(CPCHAR  pcName);                 /*  设置系统默认目录            */
 
 LW_API VOID           API_IoDefPathGet(PCHAR  pcName);
 
@@ -139,7 +108,7 @@ LW_API VOID           API_IoTaskStdSet(LW_OBJECT_HANDLE  ulId,
 
 LW_API INT            API_IoTaskStdGet(LW_OBJECT_HANDLE  ulId,
                                        INT               iStdFd);
-#endif
+#endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
 
 /*********************************************************************************************************
   VxWorks SHOW
@@ -179,8 +148,6 @@ LW_API PCHAR                 API_IoGetDrvDescription(INT  iDrvNum);
   API
 *********************************************************************************************************/
 
-typedef LW_DEV_HDR                               DEV_HDR;
-
 #define iosDrvInstall                            API_IosDrvInstall
 #define iosDrvInstallEx                          API_IosDrvInstallEx
 #define iosDrvInstallEx2                         API_IosDrvInstallEx2
@@ -196,13 +163,6 @@ typedef LW_DEV_HDR                               DEV_HDR;
 /*********************************************************************************************************
   DEVICE POWER MANAGE
 *********************************************************************************************************/
-
-#define iosDevPowerMAdd                          API_IosDevPowerMAdd
-#define iosDevPowerMDeleteAll                    API_IosDevPowerMDeleteAll
-#define iosDevPowerMMaxIdleTimeSet               API_IosDevPowerMMaxIdleTimeSet
-#define iosDevPowerMMaxIdleTimeGet               API_IosDevPowerMMaxIdleTimeGet
-#define iosDevPowerMCancel                       API_IosDevPowerMCancel
-#define iosDevPowerMSignal                       API_IosDevPowerMSignal
 
 /*********************************************************************************************************
   IO system kernel FILE
@@ -426,41 +386,6 @@ LW_API ULONG             API_SystemHookAdd(LW_HOOK_FUNC  hookfuncPtr, ULONG  ulO
 
 LW_API ULONG             API_SystemHookDelete(LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
-
-/*********************************************************************************************************
-  POWER MANAGEMENT
-*********************************************************************************************************/
-
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
-LW_API LW_OBJECT_HANDLE API_PowerMCreate(PCHAR            pcName,
-                                         ULONG            ulOption,
-                                         LW_OBJECT_ID    *pulId);
-
-LW_API ULONG            API_PowerMDelete(LW_OBJECT_HANDLE   *pulId);
-
-LW_API ULONG            API_PowerMStart(LW_OBJECT_HANDLE    ulId,
-                                        ULONG               ulMaxIdleTime,
-                                        LW_HOOK_FUNC        pfuncCallback,
-                                        PVOID               pvArg);
-
-LW_API ULONG            API_PowerMCancel(LW_OBJECT_HANDLE    ulId);
-
-LW_API ULONG            API_PowerMConnect(LW_OBJECT_HANDLE    ulId,
-                                          LW_HOOK_FUNC        pfuncCallback,
-                                          PVOID               pvArg);
-
-LW_API ULONG            API_PowerMSignal(LW_OBJECT_HANDLE    ulId);
-
-LW_API ULONG            API_PowerMSignalFast(LW_OBJECT_HANDLE    ulId);
-
-LW_API ULONG            API_PowerMStatus(LW_OBJECT_HANDLE    ulId,
-                                         ULONG              *pulCounter,
-                                         ULONG              *pulMaxIdleTime,
-                                         LW_HOOK_FUNC       *ppfuncCallback,
-                                         PVOID              *ppvArg);
-
-LW_API VOID             API_PowerMShow(VOID);
-#endif
 
 #endif                                                                  /*  __S_API_H                   */
 /*********************************************************************************************************

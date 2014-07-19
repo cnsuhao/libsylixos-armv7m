@@ -523,7 +523,6 @@ ULONG  API_IosDevAddEx (PLW_DEV_HDR    pdevhdrHdr,
     pdevhdrHdr->DEVHDR_usDrvNum = (UINT16)iDrvNum;
     pdevhdrHdr->DEVHDR_ucType   = ucType;                               /*  设备 d_type                 */
     pdevhdrHdr->DEVHDR_atomicOpenNum.counter = 0;                       /*  没有被打开过                */
-    pdevhdrHdr->DEVHDR_plinePowerMHeader = LW_NULL;                     /*  没有任何功耗管理节点        */
     
 #if LW_CFG_PATH_VXWORKS == 0                                            /*  是否分级目录管理            */
     if (rootFsMakeDev(pcName, pdevhdrHdr) < ERROR_NONE) {               /*  创建根目录节点              */
@@ -578,10 +577,6 @@ VOID  API_IosDevDelete (PLW_DEV_HDR    pdevhdrHdr)
     rootFsRemoveNode(pdevhdrHdr->DEVHDR_pcName);                        /*  从根文件系统删除            */
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
 
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
-    API_IosDevPowerMDeleteAll(pdevhdrHdr->DEVHDR_pcName);               /*  释放功耗控制点              */
-#endif                                                                  /*  LW_CFG_POWERM_EN            */
-                                                                        /*  LW_CFG_MAX_POWERM_NODES     */
     _IosLock();                                                         /*  进入 IO 临界区              */
                                                                         /*  从设备头链表中删除          */
     _List_Line_Del(&pdevhdrHdr->DEVHDR_lineManage, &_S_plineDevHdrHeader);

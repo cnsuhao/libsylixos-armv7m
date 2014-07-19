@@ -32,7 +32,9 @@
 #include "../SylixOS/system/include/s_option.h"
 #include "../SylixOS/system/include/s_error.h"
 #include "../SylixOS/system/include/s_const.h"
+#ifdef   __SYLIXOS_KERNEL
 #include "../SylixOS/system/include/s_class.h"
+#endif
 #include "../SylixOS/system/include/s_stat.h"
 #include "../SylixOS/system/include/s_fcntl.h"
 #include "../SylixOS/system/include/s_dirent.h"
@@ -67,6 +69,14 @@
 #include "../SylixOS/system/select/selectDrv.h"
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 /*********************************************************************************************************
+  电源管理
+*********************************************************************************************************/
+#ifdef   __SYLIXOS_KERNEL
+#include "../SylixOS/system/pm/pmAdapter.h"
+#include "../SylixOS/system/pm/pmDev.h"
+#include "../SylixOS/system/pm/pmIdle.h"
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
+/*********************************************************************************************************
   总线系统层
 *********************************************************************************************************/
 #include "../SylixOS/system/bus/busSystem.h"
@@ -81,12 +91,12 @@
 #include "../SylixOS/system/device/dma/dma.h"                           /*  DMA device                  */
 #include "../SylixOS/system/device/dma/dmaLib.h"
 #include "../SylixOS/system/device/block/blockIo.h"                     /*  block device                */
-#include "../SylixOS/system/device/graph/gmemDev.h"                     /*  graph memory device         */
 #include "../SylixOS/system/device/block/ramDisk.h"                     /*  RAM disk                    */
 #include "../SylixOS/system/device/can/can.h"                           /*  CAN bus device              */
 #include "../SylixOS/system/device/ata/ata.h"                           /*  ATA device                  */
 
 #ifdef   __SYLIXOS_KERNEL
+#include "../SylixOS/system/device/graph/gmemDev.h"                     /*  graph memory device         */
 #include "../SylixOS/system/device/gpio/gpioLib.h"                      /*  GPIO 驱动框架               */
 #include "../SylixOS/system/device/gpio/gpioDev.h"                      /*  GPIO 用空态操作设备接口     */
 #include "../SylixOS/system/device/hstimerfd/hstimerfdDev.h"            /*  高速定时器设备              */
@@ -107,8 +117,6 @@
 /*********************************************************************************************************
   应用接口
 *********************************************************************************************************/
-#include "../SylixOS/system/threadpool/threadpool.h"
-#include "../SylixOS/system/powerM/powerM.h"
 #include "../SylixOS/system/signal/signal.h"
 
 #ifdef   __SYLIXOS_KERNEL

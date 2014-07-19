@@ -81,7 +81,7 @@ __SYSTEM_EXT  LW_OBJECT_ID          _S_ulThreadSignalId;                /*  信号
 __SYSTEM_EXT  LW_OBJECT_ID          _S_ulThreadLogId;                   /*  日志服务线程                */
 #endif
 
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
+#if LW_CFG_POWERM_EN > 0
 __SYSTEM_EXT  LW_OBJECT_ID          _S_ulPowerMId;                      /*  功耗管理线程                */
 #endif
 

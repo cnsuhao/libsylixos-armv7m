@@ -410,6 +410,7 @@ INT  API_YaffsDevCreate (PCHAR   pcName)
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
+    lib_bzero(pyaffs, sizeof(YAFFS_FSLIB));
     
     pyaffs->YAFFS_bForceDelete      = LW_FALSE;
     pyaffs->YAFFS_plineFdNodeHeader = LW_NULL;

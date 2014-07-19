@@ -4,6 +4,12 @@ HISTORY
 
 ++ New features:
 
+    2014-07-19: han.hui
+    淘汰老的电源管理模块, 加入新电源管理模型.
+
+    2014-07-16: han.hui
+    ARM 平台移植中加入对 DMA 标准控制器的驱动.
+
     2014-07-10: han.hui
     shell 使用新型颜色系统, 增加对 LS_COLORS 环境变量的支持.
 

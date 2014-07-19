@@ -74,6 +74,7 @@
 
 #define LW_DMA_STATUS_IDLE     0                                        /*  DMA 处于空闲模式            */
 #define LW_DMA_STATUS_BUSY     1                                        /*  DMA 处于正在工作            */
+#define LW_DMA_STATUS_ERROR    2                                        /*  DMA 处于错误状态            */
 
 /*********************************************************************************************************
   DMA 地址方向控制
@@ -89,6 +90,8 @@
   DMA 操作的为物理地址, 所以 Src 和 Dest 地址均为物理地址.
   有些系统 CPU 体系构架的 CACHE 是使用虚拟地址作为索引的, 有些是使用物理地址做索引的.
   所以 DMA 软件层不处理任何 CACHE 相关的操作, 将这些操作留给驱动程序或应用程序完成.
+  
+  注意: 回调函数将可能会在中断上下文中执行.
 *********************************************************************************************************/
 
 typedef struct {
@@ -100,17 +103,14 @@ typedef struct {
     INT                        DMAT_iSrcAddrCtl;                        /*  源端地址方向控制            */
     INT                        DMAT_iDestAddrCtl;                       /*  目的地址方向控制            */
     
-    INT                        DMAT_iHwReqNum;                          /*  硬件请求端编号              */
-    BOOL                       DMAT_bHwReqEn;                           /*  是否使用硬件启动 DMA        */
+    INT                        DMAT_iHwReqNum;                          /*  外设请求端编号              */
+    BOOL                       DMAT_bHwReqEn;                           /*  是否为外设启动 DMA 传输     */
     BOOL                       DMAT_bHwHandshakeEn;                     /*  是否使用硬件握手            */
     
     INT                        DMAT_iTransMode;                         /*  传输模式, 自定义            */
     PVOID                      DMAT_pvTransParam;                       /*  传输参数, 自定义            */
     ULONG                      DMAT_ulOption;                           /*  体系结构相关参数            */
     
-    /*
-     *  以下回调函数将可能会在中断上下文中执行.
-     */
     PVOID                      DMAT_pvArgStart;                         /*  启动回调参数                */
     VOID                     (*DMAT_pfuncStart)(UINT     uiChannel,
                                                 PVOID    pvArg);        /*  启动本次传输之前的回调函数  */

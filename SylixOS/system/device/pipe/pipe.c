@@ -105,6 +105,7 @@ INT  API_PipeDevCreate (PCHAR  pcName,
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
+    lib_bzero(p_pipedev, sizeof(LW_PIPE_DEV));
     
     p_pipedev->PIPEDEV_iAbortFlag = 0;
     p_pipedev->PIPEDEV_ulRTimeOut = LW_OPTION_WAIT_INFINITE;             /*  初始化为永久等待           */

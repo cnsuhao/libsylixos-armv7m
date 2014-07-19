@@ -22,6 +22,7 @@
 2014.05.31  使用 LW_VPROC_EXIT_FORCE 删除进程.
 2014.06.03  使用 posix_spawnp 创建进程.
 *********************************************************************************************************/
+#define  __SYLIXOS_GDB
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"

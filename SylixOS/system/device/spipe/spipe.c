@@ -115,6 +115,7 @@ INT  API_SpipeDevCreate (PCHAR  pcName, size_t  stBufferByteSize)
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
+    lib_bzero(pspipedev, sizeof(LW_SPIPE_DEV));
     
     pspipedev->SPIPEDEV_uiReadCnt  = 0;
     pspipedev->SPIPEDEV_uiWriteCnt = 0;

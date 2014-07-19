@@ -39,6 +39,7 @@
             这个新的机制事遍历文件解构表时, 不再锁定 IO 系统.
 2013.01.09  LW_IO_ENV 中加入 umask 参数.
 2013.05.27  fd entry 加入去除符号连接以外的真实文件名.
+2014.07.19  加入新的电源管理机制.
 *********************************************************************************************************/
 
 #ifndef __S_CLASS_H
@@ -65,38 +66,68 @@ typedef struct {
 typedef LW_IO_USR       *PLW_IO_USR;
 
 /*********************************************************************************************************
-  功耗管理节点 (每个设备可以建立多个功耗控制点, 每个功耗控制点可以有不同的功耗控制等级, 例如显示器背光
-                可以在根据空闲时间选择不同的亮度. 绝大多数情况下一个设备仅一个电源管理节点即可, 仅仅需要
-                控制睡眠与唤醒即可.)
-  注意         每次操作设备时(读, 写, 控制等等), 都需要调用 iosDevPowerMSignal(), 以便通知操作系统相关设备
-               处于活动状态, 操作系统会复位相关功耗定时器.
-               当长时间不使用此设备时(功耗定时器移溢出), 系统将会调用相关回调来使此设备进入低功耗状态.
+  电源管理
 *********************************************************************************************************/
+#if LW_CFG_POWERM_EN > 0
 
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
+struct lw_pma_funcs;
+struct lw_pmd_funcs;
 
 typedef struct {
-    LW_LIST_LINE              DEVPM_lineManage;                         /*  电源管理节点链表            */
-    LW_OBJECT_HANDLE          DEVPM_ulPowerM;                           /*  电源管理节点对象            */
+    LW_LIST_LINE         PMA_lineManage;                                /*  管理链表                    */
+    UINT                 PMA_uiMaxChan;                                 /*  电源管理通道总数            */
+    struct lw_pma_funcs *PMA_pmafunc;                                   /*  电源管理适配器操作函数      */
+    CHAR                 PMA_cName[1];                                  /*  电源管理适配器名称          */
+} LW_PM_ADAPTER;
+typedef LW_PM_ADAPTER   *PLW_PM_ADAPTER;
+
+typedef struct {
+    PLW_PM_ADAPTER       PMD_pmadapter;                                 /*  电源管理适配器              */
+    UINT                 PMD_uiChannel;                                 /*  对应电源管理适配器通道号    */
+
+    PVOID                PMD_pvBus;                                     /*  总线信息 (驱动程序自行使用) */
+    PVOID                PMD_pvDev;                                     /*  设备信息 (驱动程序自行使用) */
     
-    FUNCPTR                   DEVPM_pfuncPowerOff;                      /*  将设备至于低功耗模式        */
-    PVOID                     DEVPM_pvArgPowerOff;                      /*  低功耗模式参数              */
-    FUNCPTR                   DEVPM_pfuncPowerSignal;                   /*  激活设备                    */
-                                                                        /*  会被 iosDevPowerMSignal 调用*/
-    PVOID                     DEVPM_pvArgPowerSignal;                   /*  激活设备参数                */
-    FUNCPTR                   DEVPM_pfuncRemove;                        /*  移除设备时系统会调用此函数  */
-                                                                        /*  用来清除用户需要清除的结构  */
-    PVOID                     DEVPM_pvArgRemove;                        /*  移除设备参数                */
-} LW_DEV_PM;
-typedef LW_DEV_PM            *PLW_DEV_PM;
+    UINT                 PMD_uiStatus;                                  /*  初始为 0                    */
+#define LW_PMD_STAT_NOR     0
+#define LW_PMD_STAT_IDLE    1
+
+    LW_CLASS_WAKEUP_NODE PMD_wunTimer;                                  /*  空闲时间计算                */
+#define PMD_bInQ         PMD_wunTimer.WUN_bInQ
+#define PMD_ulCounter    PMD_wunTimer.WUN_ulCounter
+    
+    struct lw_pmd_funcs *PMD_pmdfunc;                                   /*  电源管理适配器操作函数      */
+} LW_PM_DEV;
+typedef LW_PM_DEV       *PLW_PM_DEV;
+
+/*********************************************************************************************************
+  电源管理函数组
+*********************************************************************************************************/
+
+typedef struct lw_pma_funcs {
+    INT                (*PMAF_pfuncOn)(PLW_PM_ADAPTER  pmadapter, 
+                                       PLW_PM_DEV      pmdev);          /*  打开设备电源与时钟          */
+    INT                (*PMAF_pfuncOff)(PLW_PM_ADAPTER  pmadapter, 
+                                        PLW_PM_DEV      pmdev);         /*  关闭设备电源与时钟          */
+                                        
+    PVOID                PMAF_pvReserve[16];                            /*  保留                        */
+} LW_PMA_FUNCS;
+typedef LW_PMA_FUNCS    *PLW_PMA_FUNCS;
+
+typedef struct lw_pmd_funcs {
+    INT                (*PMDF_pfuncSuspend)(PLW_PM_DEV  pmdev);         /*  CPU 休眠                    */
+    INT                (*PMDF_pfuncResume)(PLW_PM_DEV  pmdev);          /*  CPU 恢复                    */
+    
+    INT                (*PMDF_pfuncIdleEnter)(PLW_PM_DEV  pmdev);       /*  设备进入空闲                */
+    INT                (*PMDF_pfuncIdleExit)(PLW_PM_DEV  pmdev);        /*  设备退出空闲                */
+    
+    PVOID                PMDF_pvReserve[16];                            /*  保留                        */
+} LW_PMD_FUNCS;
+typedef LW_PMD_FUNCS    *PLW_PMD_FUNCS;
+
 #endif                                                                  /*  LW_CFG_POWERM_EN            */
-                                                                        /*  LW_CFG_MAX_POWERM_NODES     */
 /*********************************************************************************************************
   设备头
-  
-  这里使用的是普通的双向链表, 考虑到只有打开设备可能需要检索设备链, 其余操作几乎都是 O(1) 时间复杂度.
-  所以这里避免使用了 hash 哈希散列表做检索.
-  如果设备很多, 又对嵌入式系统的启动有特殊要求, 可以使用以霍纳(horner)多项式作为哈希函数的哈希检索表.
 *********************************************************************************************************/
 
 typedef struct {
@@ -105,7 +136,7 @@ typedef struct {
     PCHAR                      DEVHDR_pcName;                           /*  设备名称                    */
     UCHAR                      DEVHDR_ucType;                           /*  设备 dirent d_type          */
     atomic_t                   DEVHDR_atomicOpenNum;                    /*  打开的次数                  */
-    LW_LIST_LINE_HEADER        DEVHDR_plinePowerMHeader;                /*  设备功耗管理节点链          */
+    PVOID                      DEVHDR_pvReserve;                        /*  保留                        */
 } LW_DEV_HDR;
 typedef LW_DEV_HDR            *PLW_DEV_HDR;
 
@@ -123,6 +154,8 @@ static LW_INLINE INT  LW_DEV_GET_USE_COUNT(PLW_DEV_HDR  pdevhdrHdr)
 {
     return  ((pdevhdrHdr) ? (API_AtomicGet(&pdevhdrHdr->DEVHDR_atomicOpenNum)) : (PX_ERROR));
 }
+
+typedef LW_DEV_HDR             DEV_HDR;
 
 /*********************************************************************************************************
   驱动程序许可证
@@ -324,12 +357,10 @@ typedef struct __fd_lockf {
 } LW_FD_LOCKF;
 typedef LW_FD_LOCKF           *PLW_FD_LOCKF;
 
-#ifdef __SYLIXOS_KERNEL
 #define F_WAIT                 0x10                                     /* wait until lock is granted   */
 #define F_FLOCK                0x20                                     /* BSD semantics for lock       */
 #define F_POSIX                0x40                                     /* POSIX semantics for lock     */
 #define F_ABORT                0x80                                     /* lock wait abort!             */
-#endif                                                                  /* __SYLIXOS_KERNEL             */
 
 /*********************************************************************************************************
   文件节点 
@@ -415,23 +446,22 @@ typedef LW_FD_DESC            *PLW_FD_DESC;
 *********************************************************************************************************/
 
 typedef struct {
-    LW_LIST_MONO               TPCB_monoResrcList;                       /*  资源链表                   */
-    PTHREAD_START_ROUTINE      TPCB_pthreadStartAddress;                 /*  线程代码入口点             */
-    PLW_LIST_RING              TPCB_pringFirstThread;                    /*  第一个线程                 */
-    LW_CLASS_THREADATTR        TPCB_threakattrAttr;                      /*  线程建立属性块             */
+    LW_LIST_MONO               TPCB_monoResrcList;                      /*  资源链表                    */
+    PTHREAD_START_ROUTINE      TPCB_pthreadStartAddress;                /*  线程代码入口点              */
+    PLW_LIST_RING              TPCB_pringFirstThread;                   /*  第一个线程                  */
+    LW_CLASS_THREADATTR        TPCB_threakattrAttr;                     /*  线程建立属性块              */
     
-    UINT16                     TPCB_usMaxThreadCounter;                  /*  最多线程数量               */
-    UINT16                     TPCB_usThreadCounter;                     /*  当前线程数量               */
+    UINT16                     TPCB_usMaxThreadCounter;                 /*  最多线程数量                */
+    UINT16                     TPCB_usThreadCounter;                    /*  当前线程数量                */
     
-    LW_OBJECT_HANDLE           TPCB_hMutexLock;                          /*  操作锁                     */
-    
-    UINT16                     TPCB_usIndex;                             /*  索引下标                   */
-                                                                         /*  名字                       */
+    LW_OBJECT_HANDLE           TPCB_hMutexLock;                         /*  操作锁                      */
+    UINT16                     TPCB_usIndex;                            /*  索引下标                    */
+                                                                        /*  名字                        */
     CHAR                       TPCB_cThreadPoolName[LW_CFG_OBJECT_NAME_SIZE];
 } LW_CLASS_THREADPOOL;
 typedef LW_CLASS_THREADPOOL   *PLW_CLASS_THREADPOOL;
 
-#endif                                                                   /*  __S_CLASS_H                */
+#endif                                                                  /*  __S_CLASS_H                 */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

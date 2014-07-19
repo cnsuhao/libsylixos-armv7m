@@ -29,6 +29,11 @@
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
 /*********************************************************************************************************
+  裁剪支持
+*********************************************************************************************************/
+#if (LW_CFG_THREAD_POOL_EN > 0) && (LW_CFG_MAX_THREAD_POOLS > 0)
+#include "threadpoolLib.h"
+/*********************************************************************************************************
   MACRO
 *********************************************************************************************************/
 #define __OPT_MUTEX_LOCK   (LW_OPTION_WAIT_PRIORITY | LW_OPTION_DELETE_SAFE | LW_OPTION_INHERIT_PRIORITY)
@@ -52,8 +57,6 @@
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
-#if LW_CFG_THREAD_POOL_EN > 0 && LW_CFG_MAX_THREAD_POOLS > 0
-
 LW_API  
 LW_OBJECT_HANDLE  API_ThreadPoolCreate (PCHAR                    pcName,
                                         PTHREAD_START_ROUTINE    pfuncThread,

@@ -87,6 +87,7 @@ INT  API_RandDevCreate (VOID)
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
+    lib_bzero(pranddev[0], sizeof(LW_RAND_DEV) * 2);
     
     pranddev[1] = pranddev[0] + 1;
     

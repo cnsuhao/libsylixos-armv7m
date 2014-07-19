@@ -183,6 +183,7 @@ INT  API_PtyDevCreate (PCHAR   pcName,
     }
     
     p_ptyddev = &p_ptydev->PTYDEV_ptyddev;
+    lib_bzero(&p_ptyddev->PTYDDEV_devhdrDevice, sizeof(LW_DEV_HDR));
     
     p_ptyddev->PTYDDEV_iAbortFlag = 0;
     p_ptyddev->PTYDDEV_ulRTimeOut = LW_OPTION_WAIT_INFINITE;            /*  初始化为永久等待            */

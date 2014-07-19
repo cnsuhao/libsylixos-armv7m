@@ -81,7 +81,7 @@ INT   _logInit(VOID);
   POWER MANAGEMENT 
 *********************************************************************************************************/
 
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
+#if LW_CFG_POWERM_EN > 0
 VOID  _PowerMInit(VOID);
 #endif
 

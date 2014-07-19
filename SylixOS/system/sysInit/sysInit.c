@@ -75,7 +75,7 @@ INT  _SysInit (VOID)
     _ThreadPoolInit();                                                  /*  线程池管理初始化            */
 #endif
 
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
+#if LW_CFG_POWERM_EN > 0
     _PowerMInit();                                                      /*  功耗管理器初始化            */
 #endif
 

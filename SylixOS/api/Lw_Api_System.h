@@ -144,23 +144,6 @@
 #define Lw_ThreadPool_Info                       API_ThreadPoolStatus
 
 /*********************************************************************************************************
-  POWER MANAGEMENT
-*********************************************************************************************************/
-
-#define Lw_PowerM_Create                         API_PowerMCreate
-#define Lw_PowerM_Delete                         API_PowerMDelete
-
-#define Lw_PowerM_Start                          API_PowerMStart
-#define Lw_PowerM_Cancel                         API_PowerMCancel
-
-#define Lw_PowerM_Connect                        API_PowerMConnect
-#define Lw_PowerM_Signal                         API_PowerMSignal
-#define Lw_PowerM_SignalFast                     API_PowerMSignalFast
-
-#define Lw_PowerM_Status                         API_PowerMStatus
-#define Lw_PowerM_Show                           API_PowerMShow
-
-/*********************************************************************************************************
   HWRTC system
 *********************************************************************************************************/
 

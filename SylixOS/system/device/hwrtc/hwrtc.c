@@ -116,6 +116,7 @@ INT  API_RtcDevCreate (PLW_RTC_FUNCS    prtcfuncs)
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
+    lib_bzero(prtcdev, sizeof(LW_RTC_DEV));
     
     prtcdev->RTCDEV_prtcfuncs = prtcfuncs;
     

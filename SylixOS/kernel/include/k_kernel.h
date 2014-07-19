@@ -262,8 +262,11 @@ __attribute__((weak)) char              __sylixos_version[] = __SYLIXOS_VERSTR;
 #ifdef   __SYLIXOS_KERNEL
 #include "../SylixOS/arch/arch_support.h"                               /*  体系架构支持                */
 #ifdef   __SYLIXOS_IO
-#include "../SylixOS/arch/arch_support.h"                               /*  体系架构 I/O 访问           */
+#include "../SylixOS/arch/arch_io.h"                                    /*  体系架构 I/O 访问           */
 #endif                                                                  /*  __SYLIXOS_IO                */
+#ifdef   __SYLIXOS_GDB
+#include "../SylixOS/arch/arch_gdb.h"                                   /*  体系架构 GDB 支持           */
+#endif                                                                  /*  __SYLIXOS_GDB               */
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  __K_KERNEL_H                */

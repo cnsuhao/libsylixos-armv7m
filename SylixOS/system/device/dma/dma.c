@@ -257,7 +257,6 @@ INT     API_DmaMaxNodeNumSet (UINT   uiChannel, INT  iMaxNodeNum)
     /*
      *  注意, 这里并没有判断 iMaxNodeNum 有效性, 可能设置为 0 或者负数停止工作队列执行.
      */
-     
     LW_SPIN_LOCK_QUICK(&_G_slDmaManage, &iregInterLevel);               /*  关闭中断同时锁住 spinlock   */
     pdmacChannel->DMAC_iMaxNode = iMaxNodeNum;
     LW_SPIN_UNLOCK_QUICK(&_G_slDmaManage, iregInterLevel);              /*  打开中断同时解锁 spinlock   */
@@ -537,12 +536,9 @@ INT     API_DmaContext (UINT   uiChannel)
     
     return  (ERROR_NONE);
 }
-/*********************************************************************************************************
-  DMA 功能裁剪控制
-*********************************************************************************************************/
+
 #endif                                                                  /*  LW_CFG_MAX_DMA_CHANNELS > 0 */
                                                                         /*  LW_CFG_DMA_EN   > 0         */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/
-

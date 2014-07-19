@@ -325,15 +325,7 @@ static ssize_t  __procFsKernelObjectsRead (PLW_PROCFS_NODE  p_pfsn,
                               "%-12s%-9d%-9d%d\n",
                               "threadpool", LW_CFG_MAX_THREAD_POOLS, uiUsed, uiMaxUsed);
 #endif
-        
-#if (LW_CFG_POWERM_EN > 0) && (LW_CFG_MAX_POWERM_NODES > 0)
-        uiUsed     = _G_resrcPower.RESRC_uiUsed;
-        uiMaxUsed  = _G_resrcPower.RESRC_uiMaxUsed;
-        stRealSize = bnprintf(pcFileBuffer, __PROCFS_BUFFER_SIZE_OBJECTS, stRealSize,
-                              "%-12s%-9d%-9d%d\n",
-                              "powerm", LW_CFG_MAX_POWERM_NODES, uiUsed, uiMaxUsed);
-#endif
-                               
+
         API_ProcFsNodeSetRealFileSize(p_pfsn, stRealSize);
     }
     if (oft >= stRealSize) {

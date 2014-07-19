@@ -48,7 +48,6 @@ typedef LW_RESOURCE_H      *PLW_RESOURCE_H;                             /*  ÄÚºË
 *********************************************************************************************************/                                   
 static LW_RESOURCE_H        _G_reshEventBuffer[LW_CFG_MAX_EVENTS];
 static LW_RESOURCE_H        _G_reshEventsetBuffer[LW_CFG_MAX_EVENTSETS];
-static LW_RESOURCE_H        _G_reshPowerMBuffer[LW_CFG_MAX_POWERM_NODES];
 static LW_RESOURCE_H        _G_reshPartitionBuffer[LW_CFG_MAX_PARTITIONS];
 static LW_RESOURCE_H        _G_reshRegionBuffer[LW_CFG_MAX_REGIONS];
 static LW_RESOURCE_H        _G_reshTimerBuffer[LW_CFG_MAX_TIMERS];
@@ -110,12 +109,6 @@ static LW_INLINE PLW_RESOURCE_H  __resGetHandleBuffer (LW_OBJECT_HANDLE  ulHandl
     case _OBJECT_EVENT_SET:
         if (usIndex < LW_CFG_MAX_EVENTSETS) {
             presh = &_G_reshEventsetBuffer[usIndex];
-        }
-        break;
-        
-    case _OBJECT_POWERM:
-        if (usIndex < LW_CFG_MAX_POWERM_NODES) {
-            presh = &_G_reshPowerMBuffer[usIndex];
         }
         break;
     
@@ -343,13 +336,6 @@ INT  __resPidReclaim (pid_t  pid)
         presh = &_G_reshEventsetBuffer[i];
         if ((presh->RESH_pid == pid) && !presh->RESH_bIsGlobal) {
             API_EventSetDelete(&presh->RESH_ulHandle);
-        }
-    }
-    
-    for (i = 0; i < LW_CFG_MAX_POWERM_NODES; i++) {                     /*  PowerM                      */
-        presh = &_G_reshPowerMBuffer[i];
-        if ((presh->RESH_pid == pid) && !presh->RESH_bIsGlobal) {
-            API_PowerMDelete(&presh->RESH_ulHandle);
         }
     }
     
