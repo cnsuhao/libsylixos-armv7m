@@ -27,6 +27,10 @@
 *********************************************************************************************************/
 #if LW_CFG_POWERM_EN > 0
 
+/*********************************************************************************************************
+  驱动程序调用接口
+*********************************************************************************************************/
+
 LW_API INT  API_PowerMDevInit(PLW_PM_DEV  pmdev,  PLW_PM_ADAPTER  pmadapter, 
                               UINT        uiChan, PLW_PMD_FUNCS   pmdfunc);
 LW_API INT  API_PowerMDevTerm(PLW_PM_DEV  pmdev);
@@ -37,6 +41,13 @@ LW_API INT  API_PowerMDevOff(PLW_PM_DEV  pmdev);
 #define pmDevTerm       API_PowerMDevTerm
 #define pmDevOn         API_PowerMDevOn
 #define pmDevOff        API_PowerMDevOff
+
+/*********************************************************************************************************
+  以下函数内核使用
+*********************************************************************************************************/
+
+VOID  pmDevSuspend(VOID);
+VOID  pmDevResume(VOID);
 
 #endif                                                                  /*  LW_CFG_POWERM_EN            */
 #endif                                                                  /*  __PMDEV_H                   */

@@ -77,13 +77,16 @@ typedef struct {
     LW_LIST_LINE         PMA_lineManage;                                /*  管理链表                    */
     UINT                 PMA_uiMaxChan;                                 /*  电源管理通道总数            */
     struct lw_pma_funcs *PMA_pmafunc;                                   /*  电源管理适配器操作函数      */
+    PVOID                PMA_pvReserve[8];
     CHAR                 PMA_cName[1];                                  /*  电源管理适配器名称          */
 } LW_PM_ADAPTER;
 typedef LW_PM_ADAPTER   *PLW_PM_ADAPTER;
 
 typedef struct {
+    LW_LIST_LINE         PMD_lineManage;                                /*  管理链表                    */
     PLW_PM_ADAPTER       PMD_pmadapter;                                 /*  电源管理适配器              */
     UINT                 PMD_uiChannel;                                 /*  对应电源管理适配器通道号    */
+    PVOID                PMD_pvReserve[8];
 
     PVOID                PMD_pvBus;                                     /*  总线信息 (驱动程序自行使用) */
     PVOID                PMD_pvDev;                                     /*  设备信息 (驱动程序自行使用) */

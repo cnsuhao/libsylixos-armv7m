@@ -26,6 +26,62 @@
 *********************************************************************************************************/
 #if LW_CFG_POWERM_EN > 0
 /*********************************************************************************************************
+  控制链表
+*********************************************************************************************************/
+static LW_LIST_LINE_HEADER  _G_plinePMDev;
+/*********************************************************************************************************
+** 函数名称: powermDevSuspend
+** 功能描述: 所有设备电源管理进入 suspend 节电模式.
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  pmDevSuspend (VOID)
+{
+    PLW_LIST_LINE   plineTemp;
+    PLW_PM_DEV      pmdev;
+    
+    __POWERM_LOCK();
+    for (plineTemp  = _G_plinePMDev;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {
+         
+        pmdev = _LIST_ENTRY(plineTemp, LW_PM_DEV, PMD_lineManage);
+        if (pmdev->PMD_pmdfunc && 
+            pmdev->PMD_pmdfunc->PMDF_pfuncSuspend) {
+            pmdev->PMD_pmdfunc->PMDF_pfuncSuspend(pmdev);
+        }
+    }
+    __POWERM_UNLOCK();
+}
+/*********************************************************************************************************
+** 函数名称: powermDevResume
+** 功能描述: 所有设备电源管理退出 suspend 节电模式.
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  pmDevResume (VOID)
+{
+    PLW_LIST_LINE   plineTemp;
+    PLW_PM_DEV      pmdev;
+    
+    __POWERM_LOCK();
+    for (plineTemp  = _G_plinePMDev;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {
+         
+        pmdev = _LIST_ENTRY(plineTemp, LW_PM_DEV, PMD_lineManage);
+        if (pmdev->PMD_pmdfunc && 
+            pmdev->PMD_pmdfunc->PMDF_pfuncResume) {
+            pmdev->PMD_pmdfunc->PMDF_pfuncResume(pmdev);
+        }
+    }
+    __POWERM_UNLOCK();
+}
+/*********************************************************************************************************
 ** 函数名称: API_PowerMDevInit
 ** 功能描述: 初始化电源管理设备节点
 ** 输　入  : pmdev         电源管理, 设备节点
@@ -41,7 +97,7 @@ LW_API
 INT  API_PowerMDevInit (PLW_PM_DEV  pmdev,  PLW_PM_ADAPTER  pmadapter, 
                         UINT        uiChan, PLW_PMD_FUNCS   pmdfunc)
 {
-    if (!pmdev || !pmadapter || !pmdfunc) {
+    if (!pmdev || !pmadapter) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
@@ -56,6 +112,10 @@ INT  API_PowerMDevInit (PLW_PM_DEV  pmdev,  PLW_PM_ADAPTER  pmadapter,
     pmdev->PMD_uiStatus  = LW_PMD_STAT_NOR;
     pmdev->PMD_pmdfunc   = pmdfunc;
     lib_bzero(&pmdev->PMD_wunTimer, sizeof(LW_CLASS_WAKEUP_NODE));
+    
+    __POWERM_LOCK();
+    _List_Line_Add_Ahead(&pmdev->PMD_lineManage, &_G_plinePMDev);
+    __POWERM_UNLOCK();
     
     return  (ERROR_NONE);
 }
@@ -75,6 +135,10 @@ INT  API_PowerMDevTerm (PLW_PM_DEV  pmdev)
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
+    
+    __POWERM_LOCK();
+    _List_Line_Del(&pmdev->PMD_lineManage, &_G_plinePMDev);
+    __POWERM_UNLOCK();
 
     return  (API_PowerMDevWatchDogOff(pmdev));
 }

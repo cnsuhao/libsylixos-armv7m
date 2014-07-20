@@ -114,6 +114,9 @@ PLW_PM_ADAPTER  API_PowerMAdapterFind (CPCHAR  pcName)
          plineTemp  = _list_line_get_next(plineTemp)) {
          
         pmadapter = _LIST_ENTRY(plineTemp, LW_PM_ADAPTER, PMA_lineManage);
+        if (lib_strcmp(pmadapter->PMA_cName, pcName) == 0) {
+            break;
+        }
     }
     __POWERM_UNLOCK();
     

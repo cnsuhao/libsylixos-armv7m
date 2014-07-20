@@ -38,6 +38,10 @@ extern LW_LIST_LINE_HEADER  _G_plinePMAdapter;
 #define __POWERM_LOCK()     API_SemaphoreMPend(_G_ulPowerMLock, LW_OPTION_WAIT_INFINITE)
 #define __POWERM_UNLOCK()   API_SemaphoreMPost(_G_ulPowerMLock)
 
+/*********************************************************************************************************
+  驱动程序调用接口
+*********************************************************************************************************/
+
 LW_API PLW_PM_ADAPTER  API_PowerMAdapterCreate(CPCHAR  pcName, UINT  uiMaxChan, PLW_PMA_FUNCS  pmafuncs);
 LW_API INT             API_PowerMAdapterDelete(PLW_PM_ADAPTER  pmadapter);
 LW_API PLW_PM_ADAPTER  API_PowerMAdapterFind(CPCHAR  pcName);
