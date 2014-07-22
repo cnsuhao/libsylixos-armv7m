@@ -28,6 +28,7 @@
 2012.11.09  加入系统重新启动类型定义, 当遇到严重错误时不调用回调并立即重新启动.
 2013.12.03  多核系统重启时, 需要将 LW_NCPUS - 1 个 idle 线程优先级提到最高, 抢占其他核的 CPU 然后实际上
             成为单核系统执行复位重启的操作.
+2014.07.21  重启时, 自动关闭其他 CPU.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -49,8 +50,8 @@ VOID _cppRtUninit(VOID);
 *********************************************************************************************************/
 static addr_t   _K_ulRebootStartAddress;                                /*  重新引导地址                */
 /*********************************************************************************************************
-** 函数名称: __makeOtherIdle
-** 功能描述: 将其他 CPU 设置为 idle 任务. (LW_NCPUS 必须大于 1)
+** 函数名称: __makeOtherDown
+** 功能描述: 关闭其他 CPU. (LW_NCPUS 必须大于 1)
 ** 输　入  : NONE
 ** 输　出  : NONE
 ** 全局变量: 
@@ -58,52 +59,13 @@ static addr_t   _K_ulRebootStartAddress;                                /*  重新
 *********************************************************************************************************/
 #if LW_CFG_SMP_EN > 0
 
-static VOID  __makeOtherIdle (VOID)
+static VOID  __makeOtherDown (VOID)
 {
-#define LW_CPU_TCB_ID(pcpu)  (pcpu->CPU_ptcbTCBCur->TCB_ulId)
-
-    ULONG           i;
-    ULONG           ulCPUCurId;
-    BOOL            bSetIdlePrio = LW_FALSE;
-    BOOL            bOk = LW_FALSE;
-    PLW_CLASS_CPU   pcpu;
+    ULONG   i;
     
-    do {
-        __KERNEL_ENTER();                                               /*  进入内核                    */
-        ulCPUCurId = LW_CPU_GET_CUR_ID();
-        
-        if (bSetIdlePrio == LW_FALSE) {
-            for (i = 0; i < LW_NCPUS; i++) {
-                pcpu = LW_CPU_GET(i);
-                if (LW_CPU_IS_ACTIVE(pcpu) && 
-                    (pcpu->CPU_ulCPUId != ulCPUCurId)) {
-                    _SchedSetPrio(_K_ptcbIdle[i], LW_PRIO_HIGHEST);     /*  idle 优先级最高优先级       */
-                }
-            }
-            bSetIdlePrio = LW_TRUE;
-        
-        } else {
-            for (i = 0; i < LW_NCPUS; i++) {
-                pcpu = LW_CPU_GET(i);
-                if (LW_CPU_IS_ACTIVE(pcpu) && 
-                    (pcpu->CPU_ulCPUId != ulCPUCurId)) {
-                    if (_ObjectGetIndex(LW_CPU_TCB_ID(pcpu)) >= LW_NCPUS) {  
-                        break;                                          /*  是否为 idle 线程            */
-                    }
-                }
-            }
-            if (i >= LW_NCPUS) {                                        /*  其他 CPU 已经都为 idle 线程 */
-                bOk = LW_TRUE;
-            }
-        }
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        
-        if (bOk) {                                                      /*  一切准备就绪                */
-            break;
-        }
-        
-        LW_SPINLOCK_DELAY();
-    } while (1);
+    for (i = 1; i < LW_NCPUS; i++) {                                    /*  除 0 以外的其他 CPU         */
+        API_CpuDown(i);
+    }
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
@@ -160,7 +122,7 @@ VOID   API_KernelRebootEx (INT  iRebootType, addr_t  ulStartAddress)
     
 #if LW_CFG_SMP_EN > 0
     if (LW_NCPUS > 1) {
-        __makeOtherIdle();                                              /*  将其他 CPU 设置为 idle 模式 */
+        __makeOtherDown();                                              /*  将其他 CPU 设置为 idle 模式 */
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     

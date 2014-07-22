@@ -78,6 +78,26 @@ LW_API VOID             API_AtomicLock(INTREG  *piregInterLevel);
 LW_API VOID             API_AtomicUnlock(INTREG  iregInterLevel);
 
 /*********************************************************************************************************
+  CPU
+*********************************************************************************************************/
+
+#ifdef __SYLIXOS_KERNEL
+#if LW_CFG_SMP_EN > 0
+LW_API ULONG            API_CpuUp(ULONG  ulCPUId);
+
+LW_API ULONG            API_CpuDown(ULONG  ulCPUId);
+
+LW_API BOOL             API_CpuIsUp(ULONG  ulCPUId);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+
+#if LW_CFG_POWERM_EN > 0
+LW_API ULONG            API_CpuPowerSet(UINT  uiPowerLevel);
+
+LW_API ULONG            API_CpuPowerGet(UINT  *puiPowerLevel);
+#endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
+
+/*********************************************************************************************************
   SPINLOCK
 *********************************************************************************************************/
 
@@ -988,6 +1008,12 @@ LW_API ULONG            API_KernelHeapInfoEx(ULONG                ulOption,
                                                                         /*  检察系统堆状态高级接口      */
                                            
 #ifdef __SYLIXOS_KERNEL
+#if LW_CFG_POWERM_EN > 0
+LW_API VOID             API_KernelSuspend(VOID);                        /*  内核休眠                    */
+
+LW_API VOID             API_KernelResume(VOID);                         /*  内核从休眠状态唤醒          */
+#endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
+
 LW_API ULONG            API_KernelHookSet(LW_HOOK_FUNC   hookfuncPtr, ULONG  ulOpt);     
                                                                         /*  设置系统钩子函数            */
 

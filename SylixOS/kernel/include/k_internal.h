@@ -350,8 +350,8 @@ LW_OBJECT_ID   _MakeObjectId(UINT8  ucCls, UINT16  usNode, UINT16  usIndex);
   CPU
 *********************************************************************************************************/
 
-VOID           _CpuActive(PLW_CLASS_CPU   pcpu);
-VOID           _CpuInactive(PLW_CLASS_CPU   pcpu);
+INT            _CpuActive(PLW_CLASS_CPU   pcpu);
+INT            _CpuInactiveNoLock(PLW_CLASS_CPU   pcpu);
 
 /*********************************************************************************************************
   µ÷¶ÈÆ÷
@@ -521,8 +521,9 @@ VOID           _StackCheckGuard(PLW_CLASS_TCB  ptcb);
 *********************************************************************************************************/
 
 #if (LW_CFG_THREAD_PRIVATE_VARS_EN > 0) && (LW_CFG_MAX_THREAD_GLB_VARS > 0)
-VOID           _ThreadVarSwith(PLW_CLASS_TCB  ptcbOld, PLW_CLASS_TCB  ptcbNew);
 VOID           _ThreadVarDelete(PLW_CLASS_TCB  ptcb);
+VOID           _ThreadVarSwith(PLW_CLASS_TCB  ptcbOld, PLW_CLASS_TCB  ptcbNew);
+VOID           _ThreadVarSave(PLW_CLASS_TCB  ptcbCur);
 #endif                                                                  /*  (LW_CFG_THREAD_PRIVATE_VA...*/
                                                                         /*  (LW_CFG_MAX_THREAD_GLB...   */
 /*********************************************************************************************************
@@ -530,7 +531,8 @@ VOID           _ThreadVarDelete(PLW_CLASS_TCB  ptcb);
 *********************************************************************************************************/
 
 #if LW_CFG_CPU_FPU_EN > 0
-VOID            _ThreadFpuSwith(BOOL bIntSwitch);
+VOID           _ThreadFpuSwith(BOOL bIntSwitch);
+VOID           _ThreadFpuSave(PLW_CLASS_TCB   ptcbCur, BOOL bIntSwitch);
 #endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
 
 /*********************************************************************************************************

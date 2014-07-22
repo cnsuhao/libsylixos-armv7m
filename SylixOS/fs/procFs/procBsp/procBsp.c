@@ -167,15 +167,53 @@ static ssize_t  __procFsBspCpuRead (PLW_PROCFS_NODE  p_pfsn,
     
     stRealSize = API_ProcFsNodeGetRealFileSize(p_pfsn);
     if (stRealSize == 0) {                                              /*  需要生成文件                */
+        PCHAR   pcPowerLevel;
+        UINT    uiPowerLevel;
+        ULONG   ulActive;
+        
+#if LW_CFG_POWERM_EN > 0
+        API_PowerMCpuGet(&ulActive, &uiPowerLevel);
+#else
+        ulActive     = 1;
+        uiPowerLevel = LW_CPU_POWERLEVEL_TOP;
+#endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
+        
+        switch (uiPowerLevel) {
+        
+        case LW_CPU_POWERLEVEL_TOP:
+            pcPowerLevel = "Top level";
+            break;
+            
+        case LW_CPU_POWERLEVEL_FAST:
+            pcPowerLevel = "Fast level";
+            break;
+        
+        case LW_CPU_POWERLEVEL_NORMAL:
+            pcPowerLevel = "Normal level";
+            break;
+        
+        case LW_CPU_POWERLEVEL_SLOW:
+            pcPowerLevel = "Slow level";
+            break;
+            
+        default:
+            pcPowerLevel = "<unknown> level";
+            break;
+        }
+        
         stRealSize = bnprintf(pcFileBuffer, __PROCFS_BUFFER_SIZE_CPUINFO, 0,
-                 "CPU     : %s\n"
-                 "WORDLEN : %d\n"
-                 "NCPU    : %d\n"
-                 "CACHE   : %s\n"
-                 "PACKET  : %s\n",
+                 "CPU      : %s\n"
+                 "WORDLEN  : %d\n"
+                 "NCPU     : %d\n"
+                 "ACTIVE   : %d\n"
+                 "PWRLevel : %s\n"
+                 "CACHE    : %s\n"
+                 "PACKET   : %s\n",
                  bspInfoCpu(),
                  LW_CFG_CPU_WORD_LENGHT,
                  (INT)LW_NCPUS,
+                 (INT)ulActive,
+                 pcPowerLevel,
                  bspInfoCache(),
                  bspInfoPacket());                                      /*  将信息打印到缓冲            */
         API_ProcFsNodeSetRealFileSize(p_pfsn, stRealSize);

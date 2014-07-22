@@ -33,6 +33,7 @@
 2013.12.02  _SchedGetCandidate() 允许抢占锁定层数为 1.
 2014.01.05  将调度器 BUG 跟踪放在此处.
 2014.01.07  加入 _SchedCrSwp, 统一任务与协程移植的格式.
+2014.07.21  加入 CPU 停止功能.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -64,16 +65,20 @@
 *********************************************************************************************************/
 #if (LW_CFG_THREAD_PRIVATE_VARS_EN > 0) && (LW_CFG_MAX_THREAD_GLB_VARS > 0)
 #define __LW_TASK_SWITCH_VAR(ptcbCur, ptcbHigh)     _ThreadVarSwith(ptcbCur, ptcbHigh)
+#define __LW_TASK_SAVE_VAR(ptcbCur)                 _ThreadVarSave(ptcbCur)
 #else
 #define __LW_TASK_SWITCH_VAR(ptcbCur, ptcbHigh)
+#define __LW_TASK_SAVE_VAR(ptcbCur)
 #endif
 /*********************************************************************************************************
   任务 FPU 上下文切换
 *********************************************************************************************************/
 #if LW_CFG_CPU_FPU_EN > 0
 #define __LW_TASK_SWITCH_FPU(bIntSwitch)            _ThreadFpuSwith(bIntSwitch)
+#define __LW_TASK_SAVE_FPU(ptcbCur, bIntSwitch)     _ThreadFpuSave(ptcbCur, bIntSwitch)
 #else
 #define __LW_TASK_SWITCH_FPU(bIntSwitch)
+#define __LW_TASK_SAVE_FPU(ptcbCur, bIntSwitch)
 #endif
 /*********************************************************************************************************
 ** 函数名称: _SchedSmpNotify
@@ -101,6 +106,35 @@ static VOID  _SchedSmpNotify (ULONG  ulCPUIdCur)
         }
     }
 }
+/*********************************************************************************************************
+** 函数名称: _SchedCpuDown
+** 功能描述: CPU 停止工作
+** 输　入  : pcpuCur       当前 CPU 控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich)
+{
+    REGISTER PLW_CLASS_TCB  ptcbCur = pcpuCur->CPU_ptcbTCBCur;
+    REGISTER ULONG          ulCPUId = pcpuCur->CPU_ulCPUId;
+
+    _CpuInactiveNoLock(pcpuCur);                                        /*  停止 CPU                    */
+    
+    __LW_TASK_SAVE_VAR(ptcbCur);
+    __LW_TASK_SAVE_FPU(ptcbCur, bIsIntSwtich);
+    
+    _SchedSmpNotify(ulCPUId);                                           /*  请求其他 CPU 调度           */
+    
+    LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_DOWN_MSK);                      /*  清除 CPU DOWN 中断标志      */
+    
+    LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);                             /*  解锁调度器 spinlock         */
+
+    bspCpuDown(ulCPUId);                                                /*  BSP 停止 CPU                */
+    
+    bspDebugMsg("CPU Down error!\r\n");                                 /*  不会运行到这里              */
+    for (;;);
+}
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 /*********************************************************************************************************
@@ -122,6 +156,12 @@ VOID _SchedSwp (PLW_CLASS_CPU pcpuCur)
 
     _StackCheckGuard(ptcbCur);                                          /*  堆栈警戒检查                */
     
+#if LW_CFG_SMP_EN > 0
+    if (LW_CPU_GET_IPI_PEND(pcpuCur->CPU_ulCPUId) & LW_IPI_DOWN_MSK) {  /*  当前 CPU 需要停止           */
+        _SchedCpuDown(pcpuCur, bIsIntSwtich);
+    }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+    
     __LW_TASK_SWITCH_VAR(ptcbCur, ptcbHigh);                            /*  线程私有化变量切换          */
     __LW_TASK_SWITCH_FPU(bIsIntSwtich);
     
@@ -133,7 +173,7 @@ VOID _SchedSwp (PLW_CLASS_CPU pcpuCur)
     }
     
 #if LW_CFG_SMP_EN > 0
-    _SchedSmpNotify(pcpuCur->CPU_ulCPUId);                              /*  SMP 调度                    */
+    _SchedSmpNotify(pcpuCur->CPU_ulCPUId);                              /*  SMP 调度通知                */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
     pcpuCur->CPU_ptcbTCBCur = ptcbHigh;                                 /*  切换任务                    */
@@ -219,7 +259,7 @@ __status_change:
     }
 #if LW_CFG_SMP_EN > 0                                                   /*  SMP 系统                    */
       else {
-        _SchedSmpNotify(ulCPUId);                                       /*  SMP 调度                    */
+        _SchedSmpNotify(ulCPUId);                                       /*  SMP 调度通知                */
         LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);          /*  解锁调度器 spinlock 打开中断*/
         return  (iRetVal);
     }
@@ -275,6 +315,10 @@ __status_change:
         }
     }
     LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_SCHED_MSK);                     /*  清除核间调度中断标志        */
+    
+    if (LW_CPU_GET_IPI_PEND(pcpuCur->CPU_ulCPUId) & LW_IPI_DOWN_MSK) {  /*  当前 CPU 需要停止           */
+        _SchedCpuDown(pcpuCur, LW_TRUE);
+    }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     
     ptcbCand = _SchedGetCand(pcpuCur, 1ul);                             /*  获得需要运行的线程          */
@@ -287,7 +331,7 @@ __status_change:
     }
 #if LW_CFG_SMP_EN > 0                                                   /*  SMP 系统                    */
       else {
-        _SchedSmpNotify(ulCPUId);                                       /*  SMP 调度                    */
+        _SchedSmpNotify(ulCPUId);                                       /*  SMP 调度通知                */
         LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);          /*  解锁调度器 spinlock 打开中断*/
         return  (iRetVal);
     }

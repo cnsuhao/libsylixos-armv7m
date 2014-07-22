@@ -67,6 +67,29 @@ typedef LW_IO_USR       *PLW_IO_USR;
 
 /*********************************************************************************************************
   电源管理
+  
+  SylixOS 电源管理分为两大部分:
+  
+  1: CPU 功耗管理
+  2: 外设功耗管理
+  
+  CPU 功耗分为三个能级: 1: 正常运行   2: 省电模式 (PowerSaving) 3: 休眠模式(Sleep)
+  
+  正常运行: CPU 正常执行指令
+  省电模式: 所有具有电源管理功能的设备进入 PowerSaving 模式, 同时 CPU 降速, 多核 CPU 仅保留一个 CPU 运行.
+  休眠模式: 系统休眠, 所有具有电源管理功能的设备进入 Suspend 模式, 系统需要通过指定事件唤醒. 
+            休眠模式系统将从复位向量处恢复, 需要 bootloader/BIOS 程序配合.
+
+  
+  外设功耗管理分为三个状态: 1: 正常运行 2: 设备关闭 3: 省电模式 4: 打开的设备长时间不使用
+  
+  正常运行: 设备被打开, 驱动程序调用 pmDevOn() 请求电源管理适配器连通设备电源与时钟, 开始工作.
+  设备关闭: 设备被关闭, 驱动程序调用 pmDevOff() 请求电源管理适配器断开设备电源与时钟, 停止工作.
+  省电模式: 系统进入省电模式, 请求高能耗设备进入省电模式, PMDF_pfuncPowerSavingEnter 将会被调用.
+  
+  打开的设备长时间不使用: 设备功耗管理单元具有看门狗功能呢, 一旦空闲时间超过设置, 系统会自动调用 
+                          PMDF_pfuncIdleEnter 请求将设备变为 idle 状态.
+                          应用程序可以通过 FIOSETWATCHDOG 来设置 idle 时间并激活此功能.
 *********************************************************************************************************/
 #if LW_CFG_POWERM_EN > 0
 
@@ -88,6 +111,7 @@ typedef struct {
     UINT                 PMD_uiChannel;                                 /*  对应电源管理适配器通道号    */
     PVOID                PMD_pvReserve[8];
 
+    PCHAR                PMD_pcName;                                    /*  管理节点名                  */
     PVOID                PMD_pvBus;                                     /*  总线信息 (驱动程序自行使用) */
     PVOID                PMD_pvDev;                                     /*  设备信息 (驱动程序自行使用) */
     
@@ -112,7 +136,9 @@ typedef struct lw_pma_funcs {
                                        PLW_PM_DEV      pmdev);          /*  打开设备电源与时钟          */
     INT                (*PMAF_pfuncOff)(PLW_PM_ADAPTER  pmadapter, 
                                         PLW_PM_DEV      pmdev);         /*  关闭设备电源与时钟          */
-                                        
+    INT                (*PMAF_pfuncIsOn)(PLW_PM_ADAPTER  pmadapter, 
+                                         PLW_PM_DEV      pmdev,
+                                         BOOL           *pbIsOn);       /*  是否打开                    */
     PVOID                PMAF_pvReserve[16];                            /*  保留                        */
 } LW_PMA_FUNCS;
 typedef LW_PMA_FUNCS    *PLW_PMA_FUNCS;
@@ -121,9 +147,13 @@ typedef struct lw_pmd_funcs {
     INT                (*PMDF_pfuncSuspend)(PLW_PM_DEV  pmdev);         /*  CPU 休眠                    */
     INT                (*PMDF_pfuncResume)(PLW_PM_DEV  pmdev);          /*  CPU 恢复                    */
     
-    INT                (*PMDF_pfuncIdleEnter)(PLW_PM_DEV  pmdev);       /*  设备进入空闲                */
+    INT                (*PMDF_pfuncPowerSavingEnter)(PLW_PM_DEV  pmdev);/*  系统进入省电模式            */
+    INT                (*PMDF_pfuncPowerSavingExit)(PLW_PM_DEV  pmdev); /*  系统退出省电模式            */
+    
+    INT                (*PMDF_pfuncIdleEnter)(PLW_PM_DEV  pmdev);       /*  设备长时间不使用进入空闲    */
     INT                (*PMDF_pfuncIdleExit)(PLW_PM_DEV  pmdev);        /*  设备退出空闲                */
     
+    INT                (*PMDF_pfuncCpuPower)(PLW_PM_DEV  pmdev);        /*  CPU 改变主频能级            */
     PVOID                PMDF_pvReserve[16];                            /*  保留                        */
 } LW_PMD_FUNCS;
 typedef LW_PMD_FUNCS    *PLW_PMD_FUNCS;

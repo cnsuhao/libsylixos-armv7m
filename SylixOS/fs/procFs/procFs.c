@@ -52,6 +52,9 @@ extern  VOID  __procFsKernelInfoInit(VOID);
 extern  VOID  __procFsBspInfoInit(VOID);
 #endif                                                                  /*  LW_CFG_PROCFS_BSP_INFO      */
 extern  VOID  __procFssupInit(VOID);
+#if LW_CFG_POWERM_EN > 0
+extern  VOID  __procFsPowerInit(VOID);
+#endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
 /*********************************************************************************************************
   procfs 文件控制块及时间表
 *********************************************************************************************************/
@@ -186,6 +189,10 @@ INT  API_ProcFsDevCreate (VOID)
 #endif                                                                  /*  LW_CFG_PROCFS_KERNEL_INFO   */
 
     __procFssupInit();
+    
+#if LW_CFG_POWERM_EN > 0
+    __procFsPowerInit();
+#endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
 
     lib_time(&_G_timeProcFs);                                           /*  以 UTC 作为时间基准         */
     

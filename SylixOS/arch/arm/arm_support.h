@@ -377,7 +377,19 @@ ULONG   bspMmuPteMaxNum(VOID);
 
 #if LW_CFG_SMP_EN > 0
 VOID    bspMpInt(ULONG  ulCPUId);
+VOID    bspCpuUp(ULONG  ulCPUId);                                       /*  启动一个 CPU                */
+VOID    bspCpuDown(ULONG  ulCPUId);                                     /*  停止一个 CPU                */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
+
+/*********************************************************************************************************
+  ARM 处理器 CPU 功耗 (升降主频)
+*********************************************************************************************************/
+
+#if LW_CFG_POWERM_EN > 0
+VOID    bspSuspend(VOID);                                               /*  系统休眠                    */
+VOID    bspCpuPowerSet(UINT  uiPowerLevel);                             /*  设置 CPU 主频等级           */
+VOID    bspCpuPowerGet(UINT *puiPowerLevel);                            /*  获取 CPU 主频等级           */
+#endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
 
 #endif                                                                  /*  __ARCH_ARM_SUPPORT_H        */
 /*********************************************************************************************************

@@ -10,46 +10,38 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: pmDev.h
+** 文   件   名: pmSystem.h
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
 ** 文件创建日期: 2014 年 07 月 19 日
 **
-** 描        述: 电源管理设备接口.
+** 描        述: 电源管理系统接口.
 *********************************************************************************************************/
 
-#ifndef __PMDEV_H
-#define __PMDEV_H
+#ifndef __PMSYSTEM_H
+#define __PMSYSTEM_H
 
 /*********************************************************************************************************
   裁减控制
 *********************************************************************************************************/
 #if LW_CFG_POWERM_EN > 0
 
-#ifdef  __POWERM_MAIN_FILE
-        LW_LIST_LINE_HEADER  _G_plinePMDev;
-#else
-extern  LW_LIST_LINE_HEADER  _G_plinePMDev;
-#endif                                                                  /*  __POWERM_MAIN_FILE          */
-
 /*********************************************************************************************************
-  驱动程序调用接口
+  注意: 以下 API 不可重入, 需要单线程顺序化管理. 可以在系统中专门建立一个管理线程进行功耗管理.
 *********************************************************************************************************/
 
-LW_API INT  API_PowerMDevInit(PLW_PM_DEV  pmdev,  PLW_PM_ADAPTER  pmadapter, 
-                              UINT        uiChan, PLW_PMD_FUNCS   pmdfunc);
-LW_API INT  API_PowerMDevTerm(PLW_PM_DEV  pmdev);
-LW_API INT  API_PowerMDevOn(PLW_PM_DEV  pmdev);
-LW_API INT  API_PowerMDevOff(PLW_PM_DEV  pmdev);
+VOID  API_PowerMSuspend(VOID);                                          /*  系统休眠                    */
+VOID  API_PowerMResume(VOID);                                           /*  系统恢复 (系统休眠恢复调用) */
 
-#define pmDevInit       API_PowerMDevInit
-#define pmDevTerm       API_PowerMDevTerm
-#define pmDevOn         API_PowerMDevOn
-#define pmDevOff        API_PowerMDevOff
+VOID  API_PowerMCpuSet(ULONG  ulNCpus, UINT  uiPowerLevel);             /*  设置 CPU 节电参数           */
+VOID  API_PowerMCpuGet(ULONG  *pulNCpus, UINT  *puiPowerLevel);         /*  获取 CPU 节电参数           */
+
+VOID  API_PowerMSavingEnter(ULONG  ulNCpus, UINT  uiPowerLevel);        /*  系统进入省电模式            */
+VOID  API_PowerMSavingExit(ULONG  ulNCpus, UINT  uiPowerLevel);         /*  系统退出省电模式            */
 
 #endif                                                                  /*  LW_CFG_POWERM_EN            */
-#endif                                                                  /*  __PMDEV_H                   */
+#endif                                                                  /*  __PMSYSTEM_H                */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

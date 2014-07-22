@@ -218,6 +218,7 @@ SylixOS/fs/procFs/procFsLib.c \
 SylixOS/fs/procFs/procBsp/procBsp.c \
 SylixOS/fs/procFs/procFssup/procFssup.c \
 SylixOS/fs/procFs/procKernel/procKernel.c \
+SylixOS/fs/procFs/procPower/procPower.c \
 SylixOS/fs/ramFs/ramFs.c \
 SylixOS/fs/ramFs/ramFsLib.c \
 SylixOS/fs/romFs/romFs.c \
@@ -317,6 +318,8 @@ SylixOS/kernel/interface/CoroutineDelete.c \
 SylixOS/kernel/interface/CoroutineResume.c \
 SylixOS/kernel/interface/CoroutineStackCheck.c \
 SylixOS/kernel/interface/CoroutineYield.c \
+SylixOS/kernel/interface/CpuActive.c \
+SylixOS/kernel/interface/CpuPower.c \
 SylixOS/kernel/interface/EventSetCreate.c \
 SylixOS/kernel/interface/EventSetDelete.c \
 SylixOS/kernel/interface/EventSetGet.c \
@@ -346,8 +349,10 @@ SylixOS/kernel/interface/KernelIsRunning.c \
 SylixOS/kernel/interface/KernelMisc.c \
 SylixOS/kernel/interface/KernelObject.c \
 SylixOS/kernel/interface/KernelReboot.c \
+SylixOS/kernel/interface/KernelResume.c \
 SylixOS/kernel/interface/KernelSpinlock.c \
 SylixOS/kernel/interface/KernelStart.c \
+SylixOS/kernel/interface/KernelSuspend.c \
 SylixOS/kernel/interface/KernelTicks.c \
 SylixOS/kernel/interface/KernelUuid.c \
 SylixOS/kernel/interface/KernelVersion.c \
@@ -1031,6 +1036,7 @@ SylixOS/system/logLib/logLib.c \
 SylixOS/system/pm/pmAdapter.c \
 SylixOS/system/pm/pmDev.c \
 SylixOS/system/pm/pmIdle.c \
+SylixOS/system/pm/pmSystem.c \
 SylixOS/system/ptimer/ptimer.c \
 SylixOS/system/ptimer/ptimerDev.c \
 SylixOS/system/select/selectCtl.c \

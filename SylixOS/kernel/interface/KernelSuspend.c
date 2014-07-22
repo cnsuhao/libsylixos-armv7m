@@ -10,46 +10,40 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: pmDev.h
+** 文   件   名: KernelSuspend.c
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2014 年 07 月 19 日
+** 文件创建日期: 2014 年 07 月 21 日
 **
-** 描        述: 电源管理设备接口.
+** 描        述: 内核进入休眠模式.
+**
+** 注        意: 本文件 API 仅提供给 system/pm 电源管理使用.
 *********************************************************************************************************/
-
-#ifndef __PMDEV_H
-#define __PMDEV_H
-
+#define  __SYLIXOS_KERNEL
+#include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-  裁减控制
+  裁剪控制
 *********************************************************************************************************/
 #if LW_CFG_POWERM_EN > 0
-
-#ifdef  __POWERM_MAIN_FILE
-        LW_LIST_LINE_HEADER  _G_plinePMDev;
-#else
-extern  LW_LIST_LINE_HEADER  _G_plinePMDev;
-#endif                                                                  /*  __POWERM_MAIN_FILE          */
-
 /*********************************************************************************************************
-  驱动程序调用接口
+** 函数名称: API_KernelSuspend
+** 功能描述: 内核进入休眠模式
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
 *********************************************************************************************************/
+LW_API  
+VOID  API_KernelSuspend (VOID)
+{
+    /*
+     *  TODO: 未来将会支持休眠操作.
+     */
+}
 
-LW_API INT  API_PowerMDevInit(PLW_PM_DEV  pmdev,  PLW_PM_ADAPTER  pmadapter, 
-                              UINT        uiChan, PLW_PMD_FUNCS   pmdfunc);
-LW_API INT  API_PowerMDevTerm(PLW_PM_DEV  pmdev);
-LW_API INT  API_PowerMDevOn(PLW_PM_DEV  pmdev);
-LW_API INT  API_PowerMDevOff(PLW_PM_DEV  pmdev);
-
-#define pmDevInit       API_PowerMDevInit
-#define pmDevTerm       API_PowerMDevTerm
-#define pmDevOn         API_PowerMDevOn
-#define pmDevOff        API_PowerMDevOff
-
-#endif                                                                  /*  LW_CFG_POWERM_EN            */
-#endif                                                                  /*  __PMDEV_H                   */
+#endif                                                                  /*  LW_CFG_POWERM_EN > 0        */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

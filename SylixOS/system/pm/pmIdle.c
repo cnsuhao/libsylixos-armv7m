@@ -105,7 +105,7 @@ VOID  _PowerMInit (VOID)
 	                                 LW_NULL);                          /*  建立管理线程                */
 }
 /*********************************************************************************************************
-** 函数名称: API_PowerMDevWatchDog
+** 函数名称: API_PowerMDevSetWatchDog
 ** 功能描述: 设备电源空闲时间管理激活
 ** 输　入  : pmdev         电源管理, 设备节点
 **           ulSecs        经过指定的秒数, 设备将进入 idle 模式.
@@ -115,7 +115,7 @@ VOID  _PowerMInit (VOID)
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-INT  API_PowerMDevWatchDog (PLW_PM_DEV  pmdev, ULONG  ulSecs)
+INT  API_PowerMDevSetWatchDog (PLW_PM_DEV  pmdev, ULONG  ulSecs)
 {
     BOOL    bBecomeNor = LW_FALSE;
 
@@ -150,6 +150,41 @@ INT  API_PowerMDevWatchDog (PLW_PM_DEV  pmdev, ULONG  ulSecs)
         pmdev->PMD_pmdfunc->PMDF_pfuncIdleExit) {
         pmdev->PMD_pmdfunc->PMDF_pfuncIdleExit(pmdev);                  /*  退出 idle                   */
     }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_PowerMDevGetWatchDog
+** 功能描述: 设备电源空闲剩余时间
+** 输　入  : pmdev         电源管理, 设备节点
+**           pulSecs       设备进入 idle 模式剩余的时间.
+** 输　出  : ERROR ok OK
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  API_PowerMDevGetWatchDog (PLW_PM_DEV  pmdev, ULONG  *pulSecs)
+{
+    if (LW_CPU_GET_CUR_NESTING()) {
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "called from ISR.\r\n");
+        _ErrorHandle(ERROR_KERNEL_IN_ISR);
+        return  (PX_ERROR);
+    }
+    
+    if (!pmdev || !pulSecs) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    __POWERM_LOCK();                                                    /*  上锁                        */
+    if (pmdev->PMD_bInQ) {
+        _WakeupStatus(&_G_wuPowerM, &pmdev->PMD_wunTimer, pulSecs);
+    
+    } else {
+        *pulSecs = 0ul;
+    }
+    __POWERM_UNLOCK();                                                  /*  解锁                        */
     
     return  (ERROR_NONE);
 }

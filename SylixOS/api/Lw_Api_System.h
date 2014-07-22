@@ -177,6 +177,17 @@
 #define Lw_Hotplug_GetLost                       API_HotplugGetLost
 #define Lw_Hotplug_Context                       API_HotplugContext
 
+/*********************************************************************************************************
+  power manager
+*********************************************************************************************************/
+
+#define Lw_PowerM_Suspend                        API_PowerMSuspend
+#define Lw_PowerM_Resume                         API_PowerMResume
+#define Lw_PowerM_CpuSet                         API_PowerMCpuSet
+#define Lw_PowerM_CpuGet                         API_PowerMCpuGet
+#define Lw_PowerM_SavingEnter                    API_PowerMSavingEnter
+#define Lw_PowerM_SavingExit                     API_PowerMSavingExit
+
 #endif                                                                  /*  __LW_API_SYSTEM_H           */
 /*********************************************************************************************************
   END

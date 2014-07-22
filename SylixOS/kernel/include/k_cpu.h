@@ -80,12 +80,14 @@ typedef struct __lw_cpu {
 #define LW_IPI_SCHED            1                                       /*  调度请求                    */
 #define LW_IPI_STATUS_REQ       2                                       /*  任务状态切换请求            */
 #define LW_IPI_FLUSH_TLB        3                                       /*  更新页表                    */
-#define LW_IPI_CALL             4                                       /*  自定义调用 (有参数可选等待) */
+#define LW_IPI_DOWN             4                                       /*  CPU 停止工作                */
+#define LW_IPI_CALL             5                                       /*  自定义调用 (有参数可选等待) */
 
 #define LW_IPI_NOP_MSK          (1 << LW_IPI_NOP)
 #define LW_IPI_SCHED_MSK        (1 << LW_IPI_SCHED)
 #define LW_IPI_STATUS_REQ_MSK   (1 << LW_IPI_STATUS_REQ)
 #define LW_IPI_FLUSH_TLB_MSK    (1 << LW_IPI_FLUSH_TLB)
+#define LW_IPI_DOWN_MSK         (1 << LW_IPI_DOWN)
 #define LW_IPI_CALL_MSK         (1 << LW_IPI_CALL)
 
     /*

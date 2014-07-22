@@ -31,10 +31,12 @@
   驱动程序调用接口
 *********************************************************************************************************/
 
-LW_API INT  API_PowerMDevWatchDog(PLW_PM_DEV  pmdev, ULONG  ulSecs);
+LW_API INT  API_PowerMDevSetWatchDog(PLW_PM_DEV  pmdev, ULONG  ulSecs);
+LW_API INT  API_PowerMDevGetWatchDog(PLW_PM_DEV  pmdev, ULONG  *pulSecs);
 LW_API INT  API_PowerMDevWatchDogOff(PLW_PM_DEV  pmdev);
 
-#define pmDevWatchDog       API_PowerMDevWatchDog
+#define pmDevSetWatchDog    API_PowerMDevSetWatchDog
+#define pmDevGetWatchDog    API_PowerMDevGetWatchDog
 #define pmDevWatchDogOff    API_PowerMDevWatchDogOff
 
 #endif                                                                  /*  LW_CFG_POWERM_EN            */
