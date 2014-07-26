@@ -542,7 +542,7 @@ static LW_PTE_TRANSENTRY  *armMmuPteAlloc (PLW_MMU_CONTEXT     pmmuctx,
                                                        COARSE_TBASE);   /*  设置二级页面基地址          */
 #if LW_CFG_CACHE_EN > 0
     iregInterLevel = KN_INT_DISABLE();
-    armDCacheFlushMVA((PVOID)p_pmdentry);
+    armDCacheFlush((PVOID)p_pmdentry, (PVOID)p_pmdentry, 32);           /*  第三个参数无影响            */
     KN_INT_ENABLE(iregInterLevel);
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 
@@ -673,7 +673,7 @@ static INT  armMmuFlagSet (PLW_MMU_CONTEXT  pmmuctx, addr_t  ulAddr, ULONG  ulFl
                                                                 ucCB,
                                                                 ucType);
 #if LW_CFG_CACHE_EN > 0
-            armDCacheFlushMVA((PVOID)p_pteentry);
+            armDCacheFlush((PVOID)p_pteentry, (PVOID)p_pteentry, 32);   /*  第三个参数无影响            */
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
             armMmuInvalidateTLBMVA((PVOID)ulAddr);
 
@@ -723,7 +723,7 @@ static VOID  armMmuMakeTrans (PLW_MMU_CONTEXT     pmmuctx,
                                                         ucType);
                                                         
 #if LW_CFG_CACHE_EN > 0
-    armDCacheFlushMVA((PVOID)p_pteentry);
+    armDCacheFlush((PVOID)p_pteentry, (PVOID)p_pteentry, 32);           /*  第三个参数无影响            */
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }
 /*********************************************************************************************************

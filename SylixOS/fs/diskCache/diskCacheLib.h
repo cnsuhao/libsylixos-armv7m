@@ -60,7 +60,7 @@ extern PLW_LIST_LINE        _G_plineDiskCacheHeader;                    /*  链表
   DISK CACHE NODE
 *********************************************************************************************************/
 typedef struct {
-    LW_LIST_RING            DISKN_ringLRU;                              /*  LRU 表节点                  */
+    LW_LIST_RING            DISKN_ringLru;                              /*  LRU 表节点                  */
     LW_LIST_LINE            DISKN_lineHash;                             /*  HASH 表节点                 */
     
     ULONG                   DISKN_ulSectorNo;                           /*  缓冲的扇区号                */
@@ -86,7 +86,7 @@ typedef struct {
     INT                     DISKC_iMaxBurstSector;                      /*  最大猝发读写扇区数量        */
     caddr_t                 DISKC_pcBurstBuffer;                        /*  猝发读写缓冲区              */
     
-    PLW_LIST_RING           DISKC_pringLRUHeader;                       /*  LRU 表头                    */
+    PLW_LIST_RING           DISKC_pringLruHeader;                       /*  LRU 表头                    */
     PLW_LIST_LINE          *DISKC_pplineHash;                           /*  HASH 表池                   */
     INT                     DISKC_iHashSize;                            /*  HASH 表大小                 */
     

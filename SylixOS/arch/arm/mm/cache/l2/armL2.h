@@ -124,8 +124,11 @@ VOID    armL2Disable(VOID);
 BOOL    armL2IsEnable(VOID);
 VOID    armL2Sync(VOID);
 VOID    armL2FlushAll(VOID);
+VOID    armL2Flush(PVOID  pvAdrs, size_t  stBytes);
 VOID    armL2InvalidateAll(VOID);
+VOID    armL2Invalidate(PVOID  pvAdrs, size_t  stBytes);
 VOID    armL2ClearAll(VOID);
+VOID    armL2Clear(PVOID  pvAdrs, size_t  stBytes);
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
                                                                         /*  LW_CFG_ARM_CACHE_L2 > 0     */

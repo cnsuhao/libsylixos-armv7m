@@ -26,6 +26,7 @@
 2009.03.25  获得设备扇区大小前需要初始化磁盘.
 2009.11.03  加入对移动设备的处理.
 2009.12.11  加入 /proc 文件初始化.
+2014.07.29  猝发读写缓冲一定使用页对其的内存操作, 否则可能造成底层 DMA 与 CACHE 一致性操作问题(invalidate)
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -245,8 +246,9 @@ ULONG  API_DiskCacheCreate (PLW_BLK_DEV   pblkdDisk,
     /*
      *  开辟猝发缓冲内存
      */
-    pdiskcDiskCache->DISKC_pcBurstBuffer = (caddr_t)__SHEAP_ALLOC((size_t)(iMaxBurstSector * 
-                                                                  ulBytesPerSector));
+    pdiskcDiskCache->DISKC_pcBurstBuffer = 
+        (caddr_t)__SHEAP_ALLOC_ALIGN((size_t)(iMaxBurstSector * ulBytesPerSector),
+        LW_CFG_VMM_PAGE_SIZE);                                          /*  SHEAP 物理虚拟地址必须一致  */
     if (pdiskcDiskCache->DISKC_pcBurstBuffer == LW_NULL) {
         iErrLevel = 2;
         goto    __error_handle;

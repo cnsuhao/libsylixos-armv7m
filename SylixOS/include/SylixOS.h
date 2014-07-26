@@ -76,8 +76,6 @@ extern "C" {
 #include "../SylixOS/api/Lw_Api_Kernel.h"                               /*  内核 API                    */
 #include "../SylixOS/api/Lw_Api_System.h"                               /*  系统 API                    */
 #include "../SylixOS/api/Lw_Api_Mp.h"                                   /*  多处理器 API                */
-#include "../SylixOS/api/Lw_Api_Cache.h"                                /*  cache                       */
-#include "../SylixOS/api/Lw_Api_Vmm.h"                                  /*  vmm                         */
 #include "../SylixOS/api/Lw_Api_Shell.h"                                /*  简易 shell 系统             */
 #include "../SylixOS/api/Lw_Api_Net.h"                                  /*  网络接口                    */
 #include "../SylixOS/api/Lw_Api_Fs.h"                                   /*  文件系统                    */

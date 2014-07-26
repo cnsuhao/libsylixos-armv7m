@@ -887,6 +887,9 @@ ULONG  API_DtraceThreadExtraInfo (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread,
     } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_DELAY) {        /*  睡眠                        */
         pcPendType = "SLP";
     
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_WSTAT) {        /*  等待状态转换                */
+        pcPendType = "WSTAT";
+    
     } else {
         pcPendType = "RDY";                                             /*  就绪态                      */
     }
@@ -909,6 +912,142 @@ ULONG  API_DtraceThreadExtraInfo (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread,
     
     return  (ERROR_NONE);
 }
+/*********************************************************************************************************
+** 函数名称: API_DtraceThreadStepSet
+** 功能描述: 设置线程单步断点地址
+** 输　入  : pvDtrace      dtrace 节点
+**           ulThread      线程句柄
+**           ulAddr        单步断点地址，PX_ERROR表示禁用单步
+** 输　出  : ERROR
+** 全局变量:
+** 调用模块:
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+ULONG API_DtraceThreadStepSet (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, addr_t  ulAddr)
+{
+    REGISTER UINT16         usIndex;
+    REGISTER PLW_CLASS_TCB  ptcb;
+
+    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+
+    if (!pdtrace) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+
+    usIndex = _ObjectGetIndex(ulThread);
+
+    if (!_ObjectClassOK(ulThread, _OBJECT_THREAD)) {                    /*  检查 ID 类型有效性          */
+        return  (ERROR_KERNEL_HANDLE_NULL);
+    }
+
+    if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
+        return  (ERROR_THREAD_NULL);
+    }
+
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (_Thread_Invalid(usIndex)) {
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+        return  (ERROR_THREAD_NULL);
+    }
+
+    ptcb = _K_ptcbTCBIdTable[usIndex];
+
+    ptcb->TCB_ulStepAddr = ulAddr;                                      /*  设置单步断点地址            */
+
+    __KERNEL_EXIT();
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceThreadStepGet
+** 功能描述: 获取线程单步断点地址
+** 输　入  : pvDtrace      dtrace 节点
+**           ulThread      线程句柄
+** 输　出  : pulAddr       单步断点地址
+** 全局变量:
+** 调用模块:
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+ULONG API_DtraceThreadStepGet (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, addr_t  *pulAddr)
+{
+    REGISTER UINT16         usIndex;
+    REGISTER PLW_CLASS_TCB  ptcb;
+
+    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+
+    if (!pdtrace || !pulAddr) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+
+    usIndex = _ObjectGetIndex(ulThread);
+
+    if (!_ObjectClassOK(ulThread, _OBJECT_THREAD)) {                    /*  检查 ID 类型有效性          */
+        return  (ERROR_KERNEL_HANDLE_NULL);
+    }
+
+    if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
+        return  (ERROR_THREAD_NULL);
+    }
+
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (_Thread_Invalid(usIndex)) {
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+        return  (ERROR_THREAD_NULL);
+    }
+
+    ptcb = _K_ptcbTCBIdTable[usIndex];
+
+    *pulAddr = ptcb->TCB_ulStepAddr;                                    /*  返回单步断点地址            */
+
+    __KERNEL_EXIT();
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceSchedHook
+** 功能描述: 线程切换HOOK函数，用于切换断点信息
+**           ulThreadOld      切出线程
+**           ulThreadNew      切入线程
+** 输　出  : ERROR
+** 全局变量:
+** 调用模块:
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+ULONG API_DtraceSchedHook (LW_OBJECT_HANDLE  ulThreadOld, LW_OBJECT_HANDLE  ulThreadNew)
+{
+    REGISTER UINT16         usIndex;
+    REGISTER PLW_CLASS_TCB  ptcb;
+
+    usIndex = _ObjectGetIndex(ulThreadOld);
+
+    if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
+        return  (ERROR_THREAD_NULL);
+    }
+
+    ptcb = _K_ptcbTCBIdTable[usIndex];
+    if (ptcb->TCB_ulStepAddr != (addr_t)PX_ERROR) {
+        archDbgBpRemove(ptcb->TCB_ulStepAddr, ptcb->TCB_ulStepInst);
+    }
+
+    usIndex = _ObjectGetIndex(ulThreadNew);
+
+    if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
+        return  (ERROR_THREAD_NULL);
+    }
+
+    ptcb = _K_ptcbTCBIdTable[usIndex];
+    if (ptcb->TCB_ulStepAddr != (addr_t)PX_ERROR) {
+        archDbgBpInsert(ptcb->TCB_ulStepAddr, &ptcb->TCB_ulStepInst);
+    }
+
+    return  (ERROR_NONE);
+}
+
 #endif                                                                  /*  LW_CFG_GDB_EN > 0           */
 /*********************************************************************************************************
   END

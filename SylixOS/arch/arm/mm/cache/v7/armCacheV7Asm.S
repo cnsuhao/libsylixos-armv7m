@@ -31,8 +31,8 @@
     FILE_BEGIN()
     
     EXPORT_LABEL(armDCacheV7Disable)
-    EXPORT_LABEL(armDCacheV7Flush)
-    EXPORT_LABEL(armDCacheV7Clear)
+    EXPORT_LABEL(armDCacheV7FlushAll)
+    EXPORT_LABEL(armDCacheV7ClearAll)
     
 ;/*********************************************************************************************************
 ;  ARMv7 关闭 DCACHE
@@ -47,7 +47,7 @@ FUNC_DEF(armDCacheV7Disable)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV7Clear
+    BL      armDCacheV7ClearAll
     LDMFD   SP!, {LR}
     
     ARM_DSB()
@@ -62,7 +62,7 @@ LINE_LABEL(dcache_not_en)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV7Invalidate
+    BL      armDCacheV7InvalidateAll
     LDMFD   SP!, {LR}
     BX      LR
     FUNC_END()
@@ -74,7 +74,7 @@ LINE_LABEL(dcache_not_en)
 #define _FLD_MAX_WAY    0x3ff
 #define _FLD_MAX_IDX    0x7fff
 
-FUNC_DEF(armDCacheV7Flush)
+FUNC_DEF(armDCacheV7FlushAll)
 #if __SYLIXOS_ARM_ARCH__ >= 7
     STMFD   SP!, {R4-R11}
     ARM_DMB()
@@ -130,7 +130,7 @@ LINE_LABEL(ffinished)
 ;  ARMv7 回写并无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV7Clear)
+FUNC_DEF(armDCacheV7ClearAll)
 #if __SYLIXOS_ARM_ARCH__ >= 7
     STMFD   SP!, {R4-R11}
     ARM_DMB()
@@ -186,7 +186,7 @@ LINE_LABEL(cfinished)
 ;  ARMv7 无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV7Invalidate)
+FUNC_DEF(armDCacheV7InvalidateAll)
 #if __SYLIXOS_ARM_ARCH__ >= 7
     STMFD   SP!, {R4-R11}
     ARM_DMB()

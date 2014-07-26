@@ -31,8 +31,8 @@
     FILE_BEGIN()
     
     EXPORT_LABEL(armDCacheV6Disable)
-    EXPORT_LABEL(armDCacheV6Flush)
-    EXPORT_LABEL(armDCacheV6Clear)
+    EXPORT_LABEL(armDCacheV6FlushAll)
+    EXPORT_LABEL(armDCacheV6ClearAll)
     
 ;/*********************************************************************************************************
 ;  ARMv6 关闭 DCACHE
@@ -47,7 +47,7 @@ FUNC_DEF(armDCacheV6Disable)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV6Clear
+    BL      armDCacheV6ClearAll
     LDMFD   SP!, {LR}
     
     MOV     R0, #0
@@ -62,7 +62,7 @@ LINE_LABEL(dcache_not_en)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV6Invalidate
+    BL      armDCacheV6InvalidateAll
     LDMFD   SP!, {LR}
     BX      LR
     FUNC_END()
@@ -71,7 +71,7 @@ LINE_LABEL(dcache_not_en)
 ;  ARMv6 回写 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV6Flush)
+FUNC_DEF(armDCacheV6FlushAll)
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c10, 0
     MCR     p15, 0, R0, c7, c10, 4                                      ;/* Drain write-buffer           */
@@ -82,7 +82,7 @@ FUNC_DEF(armDCacheV6Flush)
 ;  ARMv6 回写并无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV6Clear)
+FUNC_DEF(armDCacheV6ClearAll)
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c14, 0
     MCR     p15, 0, R0, c7, c10, 4                                      ;/* Drain write-buffer           */
@@ -93,7 +93,7 @@ FUNC_DEF(armDCacheV6Clear)
 ;  ARMv6 无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV6Invalidate)
+FUNC_DEF(armDCacheV6InvalidateAll)
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c6, 0
     BX      LR

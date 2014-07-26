@@ -99,21 +99,24 @@ static VOID __vmmAbortCacheRefresh (BOOL    bSwapNeedLoad,
                                     ULONG   ulAllocPageNum)
 {
 #if LW_CFG_CACHE_EN > 0
-    size_t  stSize = 0;
+    BOOL    bFlush = LW_FALSE;
+    size_t  stSize = (size_t)(ulAllocPageNum * LW_CFG_VMM_PAGE_SIZE);
     
     if (API_CacheLocation(DATA_CACHE) == CACHE_LOCATION_VIVT) {         /*  如果是虚拟地址 cache        */
-        stSize = (size_t)(ulAllocPageNum * LW_CFG_VMM_PAGE_SIZE);
         API_CacheClear(DATA_CACHE, (PVOID)LW_CFG_VMM_VIRTUAL_SWITCH,
                        stSize);                                         /*  将数据写入内存并不再命中    */
         API_CacheInvalidate(DATA_CACHE, (PVOID)ulVirtualPageAlign, 
                             stSize);                                    /*  无效新虚拟内存空间          */
+        bFlush = LW_TRUE;
     }
     
     if (bSwapNeedLoad) {                                                /*  swap load 有可能是代码      */
-        if (stSize == 0) {
-            stSize = (size_t)(ulAllocPageNum * LW_CFG_VMM_PAGE_SIZE);
+        if (bFlush) {
+            API_CacheInvalidate(INSTRUCTION_CACHE, (PVOID)ulVirtualPageAlign, stSize);
+                                                                        /*  已经回写, 只需要无效 I-CACHE*/
+        } else {
+            API_CacheTextUpdate((PVOID)ulVirtualPageAlign, stSize);     /*  无效 I-CACHE 回写 D-CACHE   */
         }
-        API_CacheTextUpdate((PVOID)ulVirtualPageAlign, stSize);         /*  无效 I-CACHE (内部已经回写) */
     }
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }

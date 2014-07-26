@@ -270,7 +270,7 @@ ULONG    API_CacheDisable (LW_CACHE_TYPE  cachetype)
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheLock (LW_CACHE_TYPE   cachetype, 
+ULONG    API_CacheLock (LW_CACHE_TYPE   cachetype, 
                        PVOID           pvAdrs, 
                        size_t          stBytes)
 {
@@ -296,7 +296,7 @@ ULONG	API_CacheLock (LW_CACHE_TYPE   cachetype,
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheUnlock (LW_CACHE_TYPE   cachetype, 
+ULONG    API_CacheUnlock (LW_CACHE_TYPE   cachetype, 
                          PVOID           pvAdrs, 
                          size_t          stBytes)
 {
@@ -322,7 +322,7 @@ ULONG	API_CacheUnlock (LW_CACHE_TYPE   cachetype,
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheFlush (LW_CACHE_TYPE   cachetype, 
+ULONG    API_CacheFlush (LW_CACHE_TYPE   cachetype, 
                         PVOID           pvAdrs, 
                         size_t          stBytes)
 {
@@ -349,7 +349,7 @@ ULONG	API_CacheFlush (LW_CACHE_TYPE   cachetype,
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheInvalidate (LW_CACHE_TYPE   cachetype, 
+ULONG    API_CacheInvalidate (LW_CACHE_TYPE   cachetype, 
                              PVOID           pvAdrs, 
                              size_t          stBytes)
 {
@@ -375,7 +375,7 @@ ULONG	API_CacheInvalidate (LW_CACHE_TYPE   cachetype,
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheClear (LW_CACHE_TYPE   cachetype, 
+ULONG    API_CacheClear (LW_CACHE_TYPE   cachetype, 
                         PVOID           pvAdrs, 
                         size_t          stBytes)
 {
@@ -424,7 +424,7 @@ static INT __cacheTextUpdate (LW_CACHE_TU_ARG *ptuarg)
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheTextUpdate (PVOID  pvAdrs, size_t  stBytes)
+ULONG    API_CacheTextUpdate (PVOID  pvAdrs, size_t  stBytes)
 {
     INTREG          iregInterLevel;
     ULONG           ulError;
@@ -449,6 +449,34 @@ ULONG	API_CacheTextUpdate (PVOID  pvAdrs, size_t  stBytes)
     KN_INT_ENABLE(iregInterLevel);
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
+    return  (ulError);
+}
+/*********************************************************************************************************
+** 函数名称: API_CacheVmmAreaInv
+** 功能描述: 指定类型的 CACHE 使部分或全部清空(回写内存)并无效(访问不命中)
+** 输　入  : cachetype                     CACHE 类型
+**           pvAdrs                        虚拟地址
+**           stBytes                       长度
+** 输　出  : BSP 函数返回值
+** 全局变量: 
+** 调用模块: 
+** 注  意  : 此函数指定的内存区域中, 可能不存在或者不完全存在对应的物理页面.
+
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG    API_CacheVmmAreaInv (LW_CACHE_TYPE   cachetype, 
+                             PVOID           pvAdrs, 
+                             size_t          stBytes)
+{
+    INTREG  iregInterLevel;
+    ULONG   ulError;
+
+    __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
+    ulError = ((_G_cacheopLib.CACHEOP_pfuncVmmAreaInv == LW_NULL) ? ERROR_NONE : 
+               (_G_cacheopLib.CACHEOP_pfuncVmmAreaInv)(cachetype, pvAdrs, stBytes));
+    __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
+    
     return  (ulError);
 }
 /*********************************************************************************************************
@@ -522,14 +550,14 @@ VOID    API_CacheDmaFree (PVOID  pvBuf)
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheDmaFlush (PVOID  pvAdrs, size_t  stBytes)
+ULONG    API_CacheDmaFlush (PVOID  pvAdrs, size_t  stBytes)
 {
     return  ((_G_cacheopLib.CACHEOP_pfuncDmaMalloc == LW_NULL) ?
              (API_CacheFlush(DATA_CACHE, pvAdrs, stBytes)) : 
              (ERROR_NONE));
 }
 /*********************************************************************************************************
-** 函数名称: API_CacheInvalidate
+** 函数名称: API_CacheDmaInvalidate
 ** 功能描述: DMA 区域 CACHE 使部分或全部表项无效(访问不命中)
 ** 输　入  : pvAdrs                        虚拟地址
 **           stBytes                       长度
@@ -539,14 +567,14 @@ ULONG	API_CacheDmaFlush (PVOID  pvAdrs, size_t  stBytes)
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheDmaInvalidate (PVOID  pvAdrs, size_t  stBytes)
+ULONG    API_CacheDmaInvalidate (PVOID  pvAdrs, size_t  stBytes)
 {
     return  ((_G_cacheopLib.CACHEOP_pfuncDmaMalloc == LW_NULL) ?
              (API_CacheInvalidate(DATA_CACHE, pvAdrs, stBytes)) : 
              (ERROR_NONE));
 }
 /*********************************************************************************************************
-** 函数名称: API_CacheClear
+** 函数名称: API_CacheDmaClear
 ** 功能描述: DMA 区域 CACHE 使部分或全部清空(回写内存)并无效(访问不命中)
 ** 输　入  : pvAdrs                        虚拟地址
 **           stBytes                       长度
@@ -556,7 +584,7 @@ ULONG	API_CacheDmaInvalidate (PVOID  pvAdrs, size_t  stBytes)
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG	API_CacheDmaClear (PVOID  pvAdrs, size_t  stBytes)
+ULONG    API_CacheDmaClear (PVOID  pvAdrs, size_t  stBytes)
 {
     return  ((_G_cacheopLib.CACHEOP_pfuncDmaMalloc == LW_NULL) ?
              (API_CacheClear(DATA_CACHE, pvAdrs, stBytes)) : 

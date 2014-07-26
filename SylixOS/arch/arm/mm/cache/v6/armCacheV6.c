@@ -30,8 +30,13 @@
   函数声明
 *********************************************************************************************************/
 extern VOID  armDCacheV6Disable(VOID);
-extern VOID  armDCacheV6Flush(PVOID  pvAdrs, size_t  stBytes);
-extern VOID  armDCacheV6Clear(PVOID  pvAdrs, size_t  stBytes);
+extern VOID  armDCacheV6FlushAll(VOID);
+extern VOID  armDCacheV6ClearAll(VOID);
+/*********************************************************************************************************
+  CACHE 参数
+*********************************************************************************************************/
+#define ARMv6_CACHE_LINE_SIZE           32
+#define ARMv6_CACHE_LOOP_OP_MAX_SIZE    (16 * LW_CFG_KB_SIZE)
 /*********************************************************************************************************
 ** 函数名称: armCacheV6Enable
 ** 功能描述: 使能 CACHE 
@@ -82,8 +87,55 @@ static INT  armCacheV6Disable (LW_CACHE_TYPE  cachetype)
 *********************************************************************************************************/
 static INT	armCacheV6Flush (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stBytes)
 {
+    addr_t  ulEnd;
+
     if (cachetype == DATA_CACHE) {
-        armDCacheV6Flush(pvAdrs, stBytes);
+        if (stBytes >= ARMv6_CACHE_LOOP_OP_MAX_SIZE) {
+            armDCacheV6FlushAll();                                      /*  全部回写                    */
+        
+        } else {
+            if (stBytes >= sizeof(PVOID)) {
+                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
+            } else {
+                ulEnd = (addr_t)pvAdrs;
+            }
+            armDCacheFlush(pvAdrs, (PVOID)ulEnd, ARMv6_CACHE_LINE_SIZE);/*  部分回写                    */
+        }
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: armCacheV6Invalidate
+** 功能描述: 指定类型的 CACHE 使部分无效(访问不命中)
+** 输　入  : cachetype     CACHE 类型
+**           pvAdrs        虚拟地址
+**           stBytes       长度
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT	armCacheV6Invalidate (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stBytes)
+{
+    addr_t  ulEnd;
+    
+    if (cachetype == INSTRUCTION_CACHE) {
+        if (stBytes >= ARMv6_CACHE_LOOP_OP_MAX_SIZE) {
+            armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
+        
+        } else {
+            if (stBytes >= sizeof(PVOID)) {
+                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
+            } else {
+                ulEnd = (addr_t)pvAdrs;
+            }
+            armICacheInvalidate(pvAdrs, (PVOID)ulEnd, ARMv6_CACHE_LINE_SIZE);
+        }
+    } else {
+        if (stBytes >= sizeof(PVOID)) {
+            ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
+            armDCacheInvalidate(pvAdrs, (PVOID)ulEnd, ARMv6_CACHE_LINE_SIZE);
+        }
     }
     
     return  (ERROR_NONE);
@@ -100,11 +152,32 @@ static INT	armCacheV6Flush (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stB
 *********************************************************************************************************/
 static INT	armCacheV6Clear (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stBytes)
 {
-    if (cachetype == INSTRUCTION_CACHE) {
-        armICacheInvalidate(pvAdrs, stBytes);
+    addr_t  ulEnd;
     
+    if (cachetype == INSTRUCTION_CACHE) {
+        if (stBytes >= ARMv6_CACHE_LOOP_OP_MAX_SIZE) {
+            armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
+            
+        } else {
+            if (stBytes >= sizeof(PVOID)) {
+                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
+            } else {
+                ulEnd = (addr_t)pvAdrs;
+            }
+            armICacheInvalidate(pvAdrs, (PVOID)ulEnd, ARMv6_CACHE_LINE_SIZE);
+        }
     } else {
-        armDCacheV6Clear(pvAdrs, stBytes);
+        if (stBytes >= ARMv6_CACHE_LOOP_OP_MAX_SIZE) {
+            armDCacheV6ClearAll();                                      /*  全部回写并无效              */
+        
+        } else {
+            if (stBytes >= sizeof(PVOID)) {
+                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
+            } else {
+                ulEnd = (addr_t)pvAdrs;
+            }
+            armDCacheClear(pvAdrs, (PVOID)ulEnd, ARMv6_CACHE_LINE_SIZE);/*  部分回写并无效              */
+        }
     }
     
     return  (ERROR_NONE);
@@ -151,8 +224,42 @@ static INT	armCacheV6Unlock (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  st
 *********************************************************************************************************/
 static INT	armCacheV6TextUpdate (PVOID  pvAdrs, size_t  stBytes)
 {
-    armDCacheV6Flush(pvAdrs, stBytes);
-    armICacheInvalidate(pvAdrs, stBytes);
+    addr_t  ulEnd;
+    
+    if (stBytes >= ARMv6_CACHE_LOOP_OP_MAX_SIZE) {
+        armDCacheV6FlushAll();                                          /*  DCACHE 全部回写             */
+        armICacheInvalidateAll();                                       /*  ICACHE 全部无效             */
+        
+    } else {
+        if (stBytes >= sizeof(PVOID)) {
+            ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
+        } else {
+            ulEnd = (addr_t)pvAdrs;
+        }
+        armDCacheFlush(pvAdrs, (PVOID)ulEnd, ARMv6_CACHE_LINE_SIZE);    /*  部分回写                    */
+        armICacheInvalidate(pvAdrs, (PVOID)ulEnd, ARMv6_CACHE_LINE_SIZE);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: armCacheV6VmmAreaInv
+** 功能描述: 指定类型的 CACHE 使部分或全部清空(回写内存)并无效(访问不命中)
+** 输　入  : cachetype     CACHE 类型
+**           pvAdrs        虚拟地址
+**           stBytes       长度
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT	armCacheV6VmmAreaInv (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stBytes)
+{
+    if (cachetype == INSTRUCTION_CACHE) {
+        armICacheInvalidateAll();                                       /*  ICACHE 全部无效             */
+        
+    } else {
+        armDCacheV6ClearAll();                                          /*  全部回写并无效              */
+    }
     
     return  (ERROR_NONE);
 }
@@ -174,7 +281,7 @@ VOID  armCacheV6Init (LW_CACHE_OP *pcacheop,
 {
     pcacheop->CACHEOP_iILoc      = CACHE_LOCATION_VIPT;
     pcacheop->CACHEOP_iDLoc      = CACHE_LOCATION_VIPT;
-    pcacheop->CACHEOP_iCacheLine = 32;
+    pcacheop->CACHEOP_iCacheLine = ARMv6_CACHE_LINE_SIZE;
     
     pcacheop->CACHEOP_pfuncEnable  = armCacheV6Enable;
     pcacheop->CACHEOP_pfuncDisable = armCacheV6Disable;
@@ -183,9 +290,10 @@ VOID  armCacheV6Init (LW_CACHE_OP *pcacheop,
     pcacheop->CACHEOP_pfuncUnlock  = armCacheV6Unlock;
     
     pcacheop->CACHEOP_pfuncFlush      = armCacheV6Flush;
-    pcacheop->CACHEOP_pfuncInvalidate = armCacheV6Clear;
+    pcacheop->CACHEOP_pfuncInvalidate = armCacheV6Invalidate;
     pcacheop->CACHEOP_pfuncClear      = armCacheV6Clear;
     pcacheop->CACHEOP_pfuncTextUpdate = armCacheV6TextUpdate;
+    pcacheop->CACHEOP_pfuncVmmAreaInv = armCacheV6VmmAreaInv;
     
 #if LW_CFG_VMM_EN > 0
     pcacheop->CACHEOP_pfuncDmaMalloc      = API_VmmDmaAlloc;
@@ -203,7 +311,7 @@ VOID  armCacheV6Init (LW_CACHE_OP *pcacheop,
 *********************************************************************************************************/
 VOID  armCacheV6Reset (CPCHAR  pcMachineName)
 {
-    armICacheInvalidate(LW_NULL, (size_t)~0);
+    armICacheInvalidateAll();
     armDCacheV6Disable();
     armICacheDisable();
 }

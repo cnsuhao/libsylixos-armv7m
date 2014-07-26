@@ -60,6 +60,10 @@ typedef UINT    CACHE_MODE;                                             /*  CACH
 
 /*********************************************************************************************************
   CACHE OP STRUCT
+  
+  注意: 操作系统释放虚拟空间时, 会调用此函数 CACHEOP_pfuncVmmAreaInv, 在虚拟空间内可能存在物理页面, 可能
+        不存在, 所以如果 CPU 在按照虚拟地址回写并无效 CACHE 时, 遇到不存在的物理页面, 可能会报错, 例如
+        ARM 处理器, 所以这里需要整个 DCACHE 脏数据回写. 其操作与 CACHEOP_pfuncClear 类似. 
 *********************************************************************************************************/
 
 typedef struct {
@@ -81,6 +85,7 @@ typedef struct {
     FUNCPTR         CACHEOP_pfuncInvalidate;                            /*  使 CACHE 指定内容无效       */
     FUNCPTR         CACHEOP_pfuncClear;                                 /*  清空并无效所有 CACHE 内容   */
     FUNCPTR         CACHEOP_pfuncTextUpdate;                            /*  清空 D CACHE 无效 I CACHE   */
+    FUNCPTR         CACHEOP_pfuncVmmAreaInv;                            /*  释放虚拟空间会调用此函数    */
     
     PVOIDFUNCPTR    CACHEOP_pfuncDmaMalloc;                             /*  开辟一块非缓冲的内存        */
     PVOIDFUNCPTR    CACHEOP_pfuncDmaMallocAlign;                        /*  开辟一块非缓冲的内存(对齐)  */
@@ -112,21 +117,22 @@ LW_API INT          API_CacheLine(VOID);
 LW_API ULONG        API_CacheEnable(LW_CACHE_TYPE  cachetype);
 LW_API ULONG        API_CacheDisable(LW_CACHE_TYPE cachetype);
 
-LW_API ULONG	    API_CacheLock(LW_CACHE_TYPE   cachetype, PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG	    API_CacheUnlock(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheLock(LW_CACHE_TYPE   cachetype, PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheUnlock(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
 
-LW_API ULONG	    API_CacheFlush(LW_CACHE_TYPE      cachetype, PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG	    API_CacheInvalidate(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG	    API_CacheClear(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG	    API_CacheTextUpdate(PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheFlush(LW_CACHE_TYPE      cachetype, PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheInvalidate(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheClear(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheTextUpdate(PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheVmmAreaInv(LW_CACHE_TYPE   cachetype, PVOID  pvAdrs, size_t  stBytes);
 
 LW_API PVOID        API_CacheDmaMalloc(size_t   stBytes);
 LW_API PVOID        API_CacheDmaMallocAlign(size_t   stBytes, size_t  stAlign);
 LW_API VOID         API_CacheDmaFree(PVOID      pvBuf);
 
-LW_API ULONG	    API_CacheDmaFlush(PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG	    API_CacheDmaInvalidate(PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG	    API_CacheDmaClear(PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheDmaFlush(PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheDmaInvalidate(PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheDmaClear(PVOID  pvAdrs, size_t  stBytes);
 
 /*********************************************************************************************************
   根据 CACHE 类型, 优化相应的函数设置.
@@ -154,6 +160,7 @@ LW_API VOID         API_CacheFuncsSet(VOID);
 #define cacheInvalidate             API_CacheInvalidate
 #define cacheClear                  API_CacheClear
 #define cacheTextUpdate             API_CacheTextUpdate
+#define cacheVmmAreaInv             API_CacheVmmAreaInv
 
 #define cacheDmaMalloc              API_CacheDmaMalloc
 #define cacheDmaMallocAlign         API_CacheDmaMallocAlign

@@ -37,7 +37,10 @@
     EXPORT_LABEL(armDCacheEnable)
     EXPORT_LABEL(armICacheDisable)
     EXPORT_LABEL(armICacheInvalidate)
-    EXPORT_LABEL(armDCacheFlushMVA)
+    EXPORT_LABEL(armICacheInvalidateAll)
+    EXPORT_LABEL(armDCacheInvalidate)
+    EXPORT_LABEL(armDCacheFlush)
+    EXPORT_LABEL(armDCacheClear)
 
 ;/*********************************************************************************************************
 ;  获得 CP15 基本信息
@@ -106,7 +109,7 @@ LINE_LABEL(icache_not_en)
 ;  无效 CACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armICacheInvalidate)
+FUNC_DEF(armICacheInvalidateAll)
     ARM_DSB()
     ARM_ISB()
     MOV     R0, #0
@@ -121,20 +124,81 @@ FUNC_DEF(armICacheInvalidate)
     ARM_ISB()
     BX      LR
     FUNC_END()
-	
+
 ;/*********************************************************************************************************
-;  将指定虚拟地址的 DCACHE 回写
+;  无效 CACHE R0=void *start; R1=void *end; R2=cache line size
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheFlushMVA)
+FUNC_DEF(armICacheInvalidate)
     ARM_DSB()
     ARM_ISB()
-    MCR     p15, 0, R0, c7, c10, 1
+#if __SYLIXOS_ARM_ARCH__ >= 6
+    MCR     p15, 0, R0, c7, c5, 6
+#endif
+1:
+    MCR     p15, 0, R0, c7, c5, 1
+    ADD     R0, R0, R2
+    CMP     R0, R1
+    BCC     1b
+    NOP                                                                 ;/* flush the prefetch unit 3*NOP*/
+    NOP
+    NOP
     ARM_DSB()
     ARM_ISB()
     BX      LR
     FUNC_END()
-	
+
+;/*********************************************************************************************************
+;  将指定虚拟地址的 DCACHE 无效  R0=void *start; R1=void *end; R2=cache line size
+;*********************************************************************************************************/
+
+FUNC_DEF(armDCacheInvalidate)
+    ARM_DSB()
+    ARM_ISB()
+1:
+    MCR     p15, 0, R0, c7, c6, 1
+    ADD     R0, R0, R2
+    CMP     R0, R1
+    BCC     1b
+    ARM_DSB()
+    ARM_ISB()
+    BX      LR
+    FUNC_END()
+
+;/*********************************************************************************************************
+;  将指定虚拟地址的 DCACHE 回写  R0=void *start; R1=void *end; R2=cache line size
+;*********************************************************************************************************/
+
+FUNC_DEF(armDCacheFlush)
+    ARM_DSB()
+    ARM_ISB()
+1:
+    MCR     p15, 0, R0, c7, c10, 1
+    ADD     R0, R0, R2
+    CMP     R0, R1
+    BCC     1b
+    ARM_DSB()
+    ARM_ISB()
+    BX      LR
+    FUNC_END()
+
+;/*********************************************************************************************************
+;  将指定虚拟地址的 DCACHE 回写并无效  R0=void *start; R1=void *end; R2=cache line size
+;*********************************************************************************************************/
+
+FUNC_DEF(armDCacheClear)
+    ARM_DSB()
+    ARM_ISB()
+1:
+    MCR     p15, 0, R0, c7, c14, 1
+    ADD     R0, R0, R2
+    CMP     R0, R1
+    BCC     1b
+    ARM_DSB()
+    ARM_ISB()
+    BX      LR
+    FUNC_END()
+
     FILE_END()
     
 #endif

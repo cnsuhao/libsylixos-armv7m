@@ -33,8 +33,11 @@ VOID    armCacheRetireDefault(VOID);
 VOID    armICacheEnable(VOID);
 VOID    armDCacheEnable(VOID);
 VOID    armICacheDisable(VOID);
-VOID    armICacheInvalidate(PVOID  pvAdrs, size_t  stBytes);
-VOID    armDCacheFlushMVA(PVOID  pvAdrs);
+VOID    armICacheInvalidate(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
+VOID    armICacheInvalidateAll(VOID);
+VOID    armDCacheInvalidate(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
+VOID    armDCacheFlush(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
+VOID    armDCacheClear(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 #endif                                                                  /*  __ARMCACHECOMMON_H          */

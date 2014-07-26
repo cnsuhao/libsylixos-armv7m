@@ -42,6 +42,7 @@
             测试 isql -> libunixodbc.so -> libsqlite3odbc.so(LOCAL) -> libsqlite3.so 时更正. (韩辉)
 2013.05.21  module 更新符号表的保存与查找算法, 这里更新相关接口.
 2013.06.07  加入 API_ModuleShareRefresh 操作, 用来清除当前缓存的动态库或者应用的共享信息.
+2014.07.26  cache text update 操作放在每个模块加载之后.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -423,57 +424,6 @@ LW_LD_EXEC_MODULE *moduleLoadSub (LW_LD_EXEC_MODULE *pmodule, CPCHAR pcLibName, 
     return  (pmoduleNeed);
 }
 /*********************************************************************************************************
-** 函数名称: moduleTextUpdate
-** 功能描述: 遍历 module 链表, 针对 uninit module 调用 cacheTextUpdate.
-** 输　入  : pmodule      模块名称
-**           ulStatus     指定计算的模块状态
-** 输　出  : ERROR_NONE 表示没有错误, PX_ERROR 表示错误
-** 全局变量:
-** 调用模块:
-*********************************************************************************************************/
-static INT  moduleTextUpdate (LW_LD_EXEC_MODULE *pmodule, ULONG  ulStatus)
-{
-#if LW_CFG_CACHE_EN > 0
-    INT     i = 0;
-    PVOID   pvStartAddr = (PVOID)~0;
-    PVOID   pvEndAddr   = (PVOID)0;
-    
-    LW_LD_EXEC_MODULE *pmodTemp = LW_NULL;
-    LW_LIST_RING      *pringTemp;
-
-    if (!pmodule) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
-    }
-    
-    LW_VP_LOCK(pmodule->EMOD_pvproc);
-    pringTemp = &pmodule->EMOD_ringModules;
-    do {
-        pmodTemp = _LIST_ENTRY(pringTemp, LW_LD_EXEC_MODULE, EMOD_ringModules);
-        
-        if (pmodTemp->EMOD_ulStatus == ulStatus) {
-            if ((addr_t)pvStartAddr > (addr_t)pmodTemp->EMOD_pvBaseAddr) {
-                pvStartAddr = pmodTemp->EMOD_pvBaseAddr;
-            }
-            
-            if ((addr_t)pvEndAddr < (addr_t)pmodTemp->EMOD_pvBaseAddr + pmodTemp->EMOD_stLen) {
-                pvEndAddr = (PVOID)((addr_t)pmodTemp->EMOD_pvBaseAddr + pmodTemp->EMOD_stLen);
-            }
-            i++;
-        }
-        
-        pringTemp = _list_ring_get_next(pringTemp);
-    } while (pringTemp != &pmodule->EMOD_ringModules);
-    LW_VP_UNLOCK(pmodule->EMOD_pvproc);
-    
-    if (i) {
-        API_CacheTextUpdate(pvStartAddr, (size_t)((addr_t)pvEndAddr - (addr_t)pvStartAddr));
-    }
-#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
-
-    return  (ERROR_NONE);
-}
-/*********************************************************************************************************
 ** 函数名称: initArrayCall
 ** 功能描述: 调用初始化函数列表. (一般为 C++ 全局对象构造函数列表)
 ** 输　入  : pmodule       模块指针
@@ -819,8 +769,6 @@ PVOID  API_ModuleLoadEx (CPCHAR  pcFile,
     }
     LW_VP_UNLOCK(pmodule->EMOD_pvproc);
 
-    moduleTextUpdate(pmodule, LW_LD_STATUS_LOADED);                     /*  cache update cache          */
-
     if (pvproc->VP_ringModules == &pmodule->EMOD_ringModules) {         /*  如果是首个模块则初始化进程  */
         __moduleVpPatchInit(pmodule);
     }
@@ -863,8 +811,6 @@ INT  API_ModuleUnload (PVOID  pvModule)
     moduleDelRef(pmodule);
 
     finiArrayCall(pmodule);                                             /*  调用c++析构函数代码         */
-
-    moduleTextUpdate(pmodule, LW_LD_STATUS_FINIED);                     /*  cache update cache          */
 
     LW_VP_LOCK(pmodule->EMOD_pvproc);
     __elfListUnload(pmodule);
@@ -933,8 +879,6 @@ INT API_ModuleTerminal (PVOID pvVProc)
     }
 
     pmodule = _LIST_ENTRY(pvproc->VP_ringModules, LW_LD_EXEC_MODULE, EMOD_ringModules);
-
-    moduleTextUpdate(pmodule, LW_LD_STATUS_FINIED);                     /*  cache update cache          */
 
     LW_VP_LOCK(pmodule->EMOD_pvproc);
     __elfListUnload(pmodule);

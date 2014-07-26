@@ -48,6 +48,11 @@
 #include "xdev.h"
 
 /*
+ * procfs add file
+ */
+extern void xinput_proc_init(void);
+
+/*
  * device hdr
  */
 typedef struct {
@@ -461,6 +466,8 @@ void module_init (void)
     int     prio;
 
     xdev_init();
+
+    xinput_proc_init();
 
     if (xinput_drv()) {
         return;

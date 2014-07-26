@@ -17,6 +17,9 @@
 ** 文件创建日期: 2012 年 02 月 26 日
 **
 ** 描        述: 系统 tar 命令.
+**
+** BUG:
+2014.07.23  加入统计信息打印.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -104,6 +107,9 @@ static INT  __untarFile (CPCHAR  pcTarFile, CPCHAR  pcDestPath)
     unsigned long  ulSize;
     unsigned char  ucLinkflag;
     
+    ULONG          ulTotalFile = 0ul;
+    ULONG          ulTotalDir  = 0ul;
+    
     iFdTar = open(pcTarFile, O_RDONLY);
     if (iFdTar < 0) {
         printf("can not open : %s\n", pcTarFile);
@@ -165,6 +171,7 @@ static INT  __untarFile (CPCHAR  pcTarFile, CPCHAR  pcDestPath)
             printf("unpackage %s <LNK> ...\n", cOutFile);
             lib_strlcpy(cLinkname, &pcBuf[157], 100);
             symlink(cLinkname, cOutFile);
+            ulTotalFile++;
             
         } else if (ucLinkflag == REGTYPE) {
             INT     iFdOut;
@@ -182,16 +189,20 @@ static INT  __untarFile (CPCHAR  pcTarFile, CPCHAR  pcDestPath)
                     write(iFdOut, pcBuf, (size_t)sstN);
                 }
                 close(iFdOut);
+                ulTotalFile++;
             }
             
         } else if (ucLinkflag == DIRTYPE) {
             printf("unpackage %s <DIR> ...\n", cOutFile);
             mkdir(cOutFile, mode);
+            ulTotalDir++;
         }
     }
     
     __SHEAP_FREE(pcBuf);
     close(iFdTar);
+    
+    printf("unpackage total %lu files %lu directory.\n", ulTotalFile, ulTotalDir);
 
     return  (iRetVal);
 }
@@ -220,6 +231,9 @@ static INT  __untargzFile (CPCHAR  pcTargzFile, CPCHAR  pcDestPath)
     unsigned long  ulNblocks;
     unsigned long  ulSize;
     unsigned char  ucLinkflag;
+    
+    ULONG          ulTotalFile = 0ul;
+    ULONG          ulTotalDir  = 0ul;
     
     iFdTar = open(pcTargzFile, O_RDONLY);
     if (iFdTar < 0) {
@@ -290,6 +304,7 @@ static INT  __untargzFile (CPCHAR  pcTargzFile, CPCHAR  pcDestPath)
             printf("unpackage %s <LNK> ...\n", cOutFile);
             lib_strlcpy(cLinkname, &pcBuf[157], 100);
             symlink(cLinkname, cOutFile);
+            ulTotalFile++;
             
         } else if (ucLinkflag == REGTYPE) {
             INT     iFdOut;
@@ -307,16 +322,20 @@ static INT  __untargzFile (CPCHAR  pcTargzFile, CPCHAR  pcDestPath)
                     write(iFdOut, pcBuf, (size_t)sstN);
                 }
                 close(iFdOut);
+                ulTotalFile++;
             }
             
         } else if (ucLinkflag == DIRTYPE) {
             printf("unpackage %s <DIR> ...\n", cOutFile);
             mkdir(cOutFile, mode);
+            ulTotalDir++;
         }
     }
     
     __SHEAP_FREE(pcBuf);
     gzclose(gzTar);
+    
+    printf("unpackage total %lu files %lu directory.\n", ulTotalFile, ulTotalDir);
 
     return  (iRetVal);
 }

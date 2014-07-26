@@ -594,7 +594,7 @@ static INT  __ifIoctl4 (INT iLwipFd, INT  iCmd, PVOID  pvArg)
         if (psockaddrin->sin_family == AF_INET) {
             ip_addr_t ipaddr;
             ipaddr.addr = psockaddrin->sin_addr.s_addr;
-            netif_set_ipaddr(pnetif, &ipaddr);
+            netif_set_netmask(pnetif, &ipaddr);
         } else if (psockaddrin->sin_family == AF_INET6) {
             /*
              *  TODO: ipv6

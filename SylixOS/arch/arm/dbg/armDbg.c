@@ -48,8 +48,7 @@ VOID  archDbgBpInsert (addr_t  ulAddr, ULONG  *pulIns)
     *(ULONG *)ulAddr = ARM_BREAKPOINT_INS;
     
 #if LW_CFG_CACHE_EN > 0
-    armDCacheFlushMVA((PVOID)ulAddr);
-    armICacheInvalidate((PVOID)ulAddr, sizeof(ULONG));
+    API_CacheTextUpdate((PVOID)ulAddr, sizeof(ULONG));
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }
 /*********************************************************************************************************
@@ -67,8 +66,7 @@ VOID  archDbgAbInsert (addr_t  ulAddr, ULONG  *pulIns)
     *(ULONG *)ulAddr = ARM_ABORTPOINT_INS;
     
 #if LW_CFG_CACHE_EN > 0
-    armDCacheFlushMVA((PVOID)ulAddr);
-    armICacheInvalidate((PVOID)ulAddr, sizeof(ULONG));
+    API_CacheTextUpdate((PVOID)ulAddr, sizeof(ULONG));
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }
 /*********************************************************************************************************
@@ -85,8 +83,7 @@ VOID  archDbgBpRemove (addr_t  ulAddr, ULONG  ulIns)
     *(ULONG *)ulAddr = ulIns;
     
 #if LW_CFG_CACHE_EN > 0
-    armDCacheFlushMVA((PVOID)ulAddr);
-    armICacheInvalidate((PVOID)ulAddr, sizeof(ULONG));
+    API_CacheTextUpdate((PVOID)ulAddr, sizeof(ULONG));
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }
 /*********************************************************************************************************

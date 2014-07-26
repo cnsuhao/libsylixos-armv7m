@@ -31,8 +31,8 @@
     FILE_BEGIN()
     
     EXPORT_LABEL(armDCacheV4Disable)
-    EXPORT_LABEL(armDCacheV4Flush)
-    EXPORT_LABEL(armDCacheV4Clear)
+    EXPORT_LABEL(armDCacheV4FlushAll)
+    EXPORT_LABEL(armDCacheV4ClearAll)
     
 ;/*********************************************************************************************************
 ;  ARMv4 关闭 DCACHE
@@ -50,7 +50,7 @@ FUNC_DEF(armDCacheV4Disable)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV4Clear
+    BL      armDCacheV4ClearAll
     LDMFD   SP!, {LR}
     
     ;/* 
@@ -74,7 +74,7 @@ LINE_LABEL(dcache_not_en)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV4Invalidate
+    BL      armDCacheV4InvalidateAll
     LDMFD   SP!, {LR}
     BX      LR
     FUNC_END()
@@ -88,7 +88,7 @@ LINE_LABEL(dcache_not_en)
 #define CACHE_NSETS         8
 #define CACHE_NSETS_SFT     5
 
-FUNC_DEF(armDCacheV4Flush)
+FUNC_DEF(armDCacheV4FlushAll)
     STMFD   SP!, {R4-R6}
     
     MOV     R5, #0
@@ -125,7 +125,7 @@ FUNC_DEF(armDCacheV4Flush)
 ;  ARMv4 回写并无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV4Clear)
+FUNC_DEF(armDCacheV4ClearAll)
     STMFD   SP!, {R4-R6}
     
     MOV     R5, #0
@@ -162,7 +162,7 @@ FUNC_DEF(armDCacheV4Clear)
 ;  ARMv4 无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV4Invalidate)
+FUNC_DEF(armDCacheV4InvalidateAll)
     STMFD   SP!, {R4-R6}
 
     MOV     R5, #0

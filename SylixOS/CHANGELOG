@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-07-23: han.hui
+    xinput 支持 proc 文件显示当前物理设备信息.
+
     2014-07-21: han.hui
     多核系统支持 CPU 动态启停功能.
     
@@ -542,6 +545,12 @@ HISTORY
     SylixOS 根目录中加入 CHANGELOG 文件.
     
 ++ Bugfixes:.
+
+    2014-07-25: han.hui
+    修正 gdb 多线程调试一些问题.
+
+    2014-07-25: han.hui
+    升级 arm cache 底层管理, 解决 Invalidate 部分区域的问题.
 
     2014-07-11: han.hui
     修正内存对齐分配回收对伪段首判断的错误.

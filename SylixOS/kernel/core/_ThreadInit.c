@@ -49,6 +49,7 @@
 2013.08.28  _TCBBuild() 不再处理就绪队列.
             修正不合理的函数命名.
 2014.05.13  加入对进程内线程链表的支持.
+2014.07.26  加入对 GDB 变量的初始化.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -274,6 +275,11 @@ VOID  _TCBBuild (UINT8                    ucPriority,
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_FIO_LIB_EN > 0)
     lib_nlreent_init(ulId);                                             /*  init libc reent             */
 #endif
+
+#if LW_CFG_GDB_EN > 0
+    ptcb->TCB_ulStepAddr = (addr_t)PX_ERROR;
+    ptcb->TCB_ulStepInst = 0ul;
+#endif                                                                  /*  LW_CFG_GDB_EN > 0           */
 
 #if LW_CFG_THREAD_NOTE_PAD_EN > 0                                       /*  任务记事本                  */
     pulNote = &ptcb->TCB_notepadThreadNotePad.NOTEPAD_ulNotePad[0];

@@ -31,8 +31,8 @@
     FILE_BEGIN()
     
     EXPORT_LABEL(armDCacheV5Disable)
-    EXPORT_LABEL(armDCacheV5Flush)
-    EXPORT_LABEL(armDCacheV5Clear)
+    EXPORT_LABEL(armDCacheV5FlushAll)
+    EXPORT_LABEL(armDCacheV5ClearAll)
     
 ;/*********************************************************************************************************
 ;  ARMv5 关闭 DCACHE
@@ -47,7 +47,7 @@ FUNC_DEF(armDCacheV5Disable)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV5Clear
+    BL      armDCacheV5ClearAll
     LDMFD   SP!, {LR}
     
     MOV     R0, #0
@@ -62,7 +62,7 @@ LINE_LABEL(dcache_not_en)
     STMFD   SP!, {LR}
     LDR     R0, =0x0
     LDR     R1, =0xffffffff
-    BL      armDCacheV5Invalidate
+    BL      armDCacheV5InvalidateAll
     LDMFD   SP!, {LR}
     BX      LR
     FUNC_END()
@@ -71,9 +71,9 @@ LINE_LABEL(dcache_not_en)
 ;  ARMv5 回写 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV5Flush)
+FUNC_DEF(armDCacheV5FlushAll)
     MRC     p15, 0, R15, c7, c10, 3                                     ;/*  测试回写指令                */
-    BNE     armDCacheV5Flush
+    BNE     armDCacheV5FlushAll
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c10, 4                                      ;/* Drain write-buffer           */
     BX      LR
@@ -83,9 +83,9 @@ FUNC_DEF(armDCacheV5Flush)
 ;  ARMv5 回写并无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV5Clear)
+FUNC_DEF(armDCacheV5ClearAll)
     MRC     p15, 0, R15, c7, c14, 3                                     ;/*  测试回写并无效指令          */
-    BNE     armDCacheV5Clear
+    BNE     armDCacheV5ClearAll
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c10, 4                                      ;/* Drain write-buffer           */
     BX      LR
@@ -95,7 +95,7 @@ FUNC_DEF(armDCacheV5Clear)
 ;  ARMv5 无效 DCACHE
 ;*********************************************************************************************************/
 
-FUNC_DEF(armDCacheV5Invalidate)
+FUNC_DEF(armDCacheV5InvalidateAll)
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c6, 0
     BX      LR

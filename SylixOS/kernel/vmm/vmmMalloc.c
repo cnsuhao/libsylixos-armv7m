@@ -468,8 +468,8 @@ VOID  API_VmmFreeArea (PVOID  pvVirtualMem)
     }
     
 #if LW_CFG_CACHE_EN > 0
-    API_CacheClear(DATA_CACHE, (PVOID)pvmpageVirtual->PAGE_ulPageAddr,
-                   (size_t)(pvmpageVirtual->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
+    API_CacheVmmAreaInv(DATA_CACHE, (PVOID)pvmpageVirtual->PAGE_ulPageAddr,
+                        (size_t)(pvmpageVirtual->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
     
     __vmmLibPageMap(pvmpageVirtual->PAGE_ulPageAddr,
@@ -808,7 +808,7 @@ ULONG  API_VmmInvalidateArea (PVOID  pvVirtualMem, PVOID  pvSubMem, size_t  stSi
     }
     
 #if LW_CFG_CACHE_EN > 0
-    API_CacheClear(DATA_CACHE, pvSubMem, stSize);
+    API_CacheVmmAreaInv(DATA_CACHE, pvSubMem, stSize);
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
     
     __pageTraversalLink(pvmpageVirtual, 

@@ -1113,7 +1113,8 @@ SylixOS/vpmpdm/vpmpdm.c
 #*********************************************************************************************************
 XINPUT_SRCS = \
 SylixOS/xinput/xdev.c \
-SylixOS/xinput/xinput.c
+SylixOS/xinput/xinput.c \
+SylixOS/xinput/xproc.c
 
 #*********************************************************************************************************
 # libxsiipc source

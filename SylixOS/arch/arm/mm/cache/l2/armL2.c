@@ -27,6 +27,7 @@
 *********************************************************************************************************/
 #if LW_CFG_CACHE_EN > 0 && LW_CFG_ARM_CACHE_L2 > 0
 #include "armL2.h"
+#include "../../../common/cp15/armCp15.h"
 /*********************************************************************************************************
   L2 锁 (多核共享一个 L2 CACHE, 所以操作时需要加自旋锁, 由于外层已经关中断, 这里只需锁自旋锁即可)
 *********************************************************************************************************/
@@ -135,6 +136,23 @@ VOID armL2FlushAll (VOID)
     L2_OP_EXIT();
 }
 /*********************************************************************************************************
+** 函数名称: armL2Flush
+** 功能描述: L2 CACHE 回写部分脏数据
+** 输　入  : pvAdrs        起始虚拟地址
+**           stBytes       数据块大小
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID armL2Flush (PVOID  pvAdrs, size_t  stBytes)
+{
+    L2_OP_ENTER();
+    if (l2cdrv.L2CD_pfuncFlush) {
+        l2cdrv.L2CD_pfuncFlush(&l2cdrv, pvAdrs, stBytes);
+    }
+    L2_OP_EXIT();
+}
+/*********************************************************************************************************
 ** 函数名称: armL2InvalidateAll
 ** 功能描述: L2 CACHE 无效
 ** 输　入  : NONE
@@ -151,6 +169,23 @@ VOID armL2InvalidateAll (VOID)
     L2_OP_EXIT();
 }
 /*********************************************************************************************************
+** 函数名称: armL2InvalidateAll
+** 功能描述: L2 CACHE 无效
+** 输　入  : pvAdrs        起始虚拟地址
+**           stBytes       数据块大小
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID armL2Invalidate (PVOID  pvAdrs, size_t  stBytes)
+{
+    L2_OP_ENTER();
+    if (l2cdrv.L2CD_pfuncInvalidate) {
+        l2cdrv.L2CD_pfuncInvalidate(&l2cdrv, pvAdrs, stBytes);
+    }
+    L2_OP_EXIT();
+}
+/*********************************************************************************************************
 ** 函数名称: armL2ClearAll
 ** 功能描述: L2 CACHE 回写并无效
 ** 输　入  : NONE
@@ -163,6 +198,23 @@ VOID armL2ClearAll (VOID)
     L2_OP_ENTER();
     if (l2cdrv.L2CD_pfuncClearAll) {
         l2cdrv.L2CD_pfuncClearAll(&l2cdrv);
+    }
+    L2_OP_EXIT();
+}
+/*********************************************************************************************************
+** 函数名称: armL2Clear
+** 功能描述: L2 CACHE 回写并无效
+** 输　入  : pvAdrs        起始虚拟地址
+**           stBytes       数据块大小
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID armL2Clear (PVOID  pvAdrs, size_t  stBytes)
+{
+    L2_OP_ENTER();
+    if (l2cdrv.L2CD_pfuncClear) {
+        l2cdrv.L2CD_pfuncClear(&l2cdrv, pvAdrs, stBytes);
     }
     L2_OP_EXIT();
 }
@@ -263,6 +315,10 @@ VOID armL2Init (CACHE_MODE   uiInstruction,
         
         _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
         _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");
+        
+        if (lib_strcmp(pcMachineName, ARM_MACHINE_A9)  == 0) {
+            armAuxControlFeatureEnable(AUX_CONTROL_L2_PREFETCH);        /*  L2: Prefetch Enable         */
+        }
         
         armL2x0Init(&l2cdrv, uiInstruction, uiData, pcMachineName);
         

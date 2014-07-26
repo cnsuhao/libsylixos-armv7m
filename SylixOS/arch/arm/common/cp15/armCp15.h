@@ -55,9 +55,10 @@ VOID    armBranchPredictionEnable(VOID);
 #define AUX_CONTROL_ALLOC_IN_ONE_WAY                (1 << 8)
 #define AUX_CONTROL_EXECLUSIVE_CACHE                (1 << 7)
 #define AUX_CONTROL_SMP                             (1 << 6)
-#define AUX_CONTROL_WRITE_FULL_LINE                 (1 << 3)
-#define AUX_CONTROL_L1_PREFETCH                     (1 << 2)
-#define AUX_CONTROL_L2_PREFETCH                     (1 << 1)
+
+#define AUX_CONTROL_WRITE_FULL_LINE                 (1 << 3)            /*  [0...5] in A5 A7 A15 not use*/
+#define AUX_CONTROL_L1_PREFETCH                     (1 << 2)            /*  A9:L1-Prefetch A8:Reserved  */
+#define AUX_CONTROL_L2_PREFETCH                     (1 << 1)            /*  A9:L2-Prefetch A8 L2EN      */
 #define AUX_CONTROL_MAINTENANCE_BROADCAST           (1 << 0)
 
 VOID    armAuxControlFeatureDisable(UINT32  uiFeature);

@@ -733,8 +733,8 @@ ULONG  API_VmmSetFlag (PVOID  pvVirtualAddr, ULONG  ulFlag)
     }
     
 #if LW_CFG_CACHE_EN > 0
-    API_CacheClear(DATA_CACHE, (PVOID)pvmpageVirtual->PAGE_ulPageAddr,
-                   (size_t)(pvmpageVirtual->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
+    API_CacheVmmAreaInv(DATA_CACHE, (PVOID)pvmpageVirtual->PAGE_ulPageAddr,
+                        (size_t)(pvmpageVirtual->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
     
     for (i = 0; i < pvmpageVirtual->PAGE_ulCount; i++) {                /*  重新映射这些页面            */

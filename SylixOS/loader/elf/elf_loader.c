@@ -1803,6 +1803,9 @@ INT __elfListLoad (LW_LD_EXEC_MODULE *pmodule, CPCHAR pcPath)
                 goto    __out;
             }
         }
+#if LW_CFG_CACHE_EN > 0
+        API_CacheTextUpdate(pmodTemp->EMOD_pvBaseAddr, pmodTemp->EMOD_stLen);
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
         pringTemp = _list_ring_get_next(pringTemp);
     } while (pringTemp != &pmodule->EMOD_ringModules);
 

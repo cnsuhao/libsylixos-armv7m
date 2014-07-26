@@ -61,6 +61,7 @@
 2012.12.24  shell 支持退出清除文件功能.
 2012.12.25  __tshellBgCreateEx() 将自身返回值和命令返回值隔离开.
 2013.01.23  shell 当系统命令和可执行文件名重复时, 优先运行文件. 
+2014.07.23  shell 加入标准文件重定向支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -210,6 +211,100 @@ ULONG  __tshellUndef (PCHAR  pcCmd, PCHAR  pcKeyword, PCHAR  *ppcParam)
     return  (__tshellVarDefine(pcCmd));
 }
 /*********************************************************************************************************
+** 函数名称: __tshellRedir
+** 功能描述: 分析重定向字串并打卡相关的文件
+** 输　入  : pcString     重定向字串
+**           pcRedir      重定向点
+**           ulMe         当前线程
+**           piPopCnt     POP 操作的个数
+** 输　出  : 是否分析成功
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __tshellRedir (PCHAR  pcString, PCHAR  pcRedir, LW_OBJECT_HANDLE ulMe, INT *piPopCnt)
+{
+    INT         iFd;
+    INT         iFlag = O_CREAT | O_WRONLY;
+    INT         iOutOpt;
+    PCHAR       pcFile;
+    
+    if (*pcRedir == *(pcRedir + 1)) {                                   /*  追加打开                    */
+        iFlag |= O_APPEND;
+        pcFile = pcRedir + 2;                                           /*  定位文件                    */
+        
+    } else {
+        iFlag |= O_TRUNC;
+        pcFile = pcRedir + 1;
+    }
+    
+    if (*pcFile == '&') {
+        pcFile++;
+    }
+    
+    if (*pcFile == PX_EOS) {                                            /*  定位文件错误                */
+        return  (PX_ERROR);
+    }
+    
+    if (*pcRedir == '>') {                                              /*  标准输出或标准错误          */
+        *pcRedir =  PX_EOS;
+        
+        if (pcString == pcRedir) {
+            iOutOpt  =  STD_OUT;
+            
+        } else if (*pcString == '&') {
+            iOutOpt  =  STD_OUT | STD_ERR;
+        
+        } else if (*pcString == '1') {
+            iOutOpt  =  STD_OUT;
+        
+        } else if (*pcString == '2') {
+            iOutOpt  =  STD_ERR;
+        
+        } else {
+            iOutOpt  =  STD_OUT;
+        }
+        
+        if ((lib_strlen(pcFile) == 1) && (*pcFile >= '0') && (*pcFile <= '2')) {
+            iFd = API_IoTaskStdGet(ulMe, (*pcFile - '0'));
+            if (iOutOpt & STD_OUT) {
+                API_IoTaskStdSet(ulMe, STD_OUT, iFd);
+            }
+            if (iOutOpt & STD_ERR) {
+                API_IoTaskStdSet(ulMe, STD_ERR, iFd);
+            }
+        
+        } else {
+            iFd = open(pcFile, iFlag, DEFAULT_FILE_PERM);
+            if (iFd < 0) {
+                return  (PX_ERROR);
+            }
+            
+            API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);
+            (*piPopCnt)++;
+            
+            if (iOutOpt & STD_OUT) {
+                API_IoTaskStdSet(ulMe, STD_OUT, iFd);
+            }
+            if (iOutOpt & STD_ERR) {
+                API_IoTaskStdSet(ulMe, STD_ERR, iFd);
+            }
+        }
+    } else {                                                            /*  标准输入定位                */
+        iFlag &= ~O_TRUNC;                                              /*  输入没有 O_TRUNC 操作       */
+        iFd = open(pcFile, iFlag, DEFAULT_FILE_PERM);
+        if (iFd < 0) {
+            return  (PX_ERROR);
+        }
+        
+        API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);
+        (*piPopCnt)++;
+        
+        API_IoTaskStdSet(ulMe, STD_IN, iFd);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: __tshellWrapper
 ** 功能描述: 运行 shell 命令的外壳
 ** 输　入  : pfuncCommand 系统命令指针
@@ -221,44 +316,53 @@ ULONG  __tshellUndef (PCHAR  pcCmd, PCHAR  pcKeyword, PCHAR  *ppcParam)
 *********************************************************************************************************/
 static INT  __tshellWrapper (FUNCPTR  pfuncCommand, INT  iArgC, PCHAR  ppcArgV[])
 {
-    INT         iFd;
-    INT         iOldStdOut;
-    INT         iFlag = O_CREAT | O_WRONLY;
-    INT         iRet  = PX_ERROR;
+    INT         i;
+    INT         iPopCnt    = 0;
+    INT         iOldStd[3] = {PX_ERROR, PX_ERROR, PX_ERROR};
+    INT         iRealArgc  = iArgC;
+    INT         iRet       = PX_ERROR;
+    
+    LW_OBJECT_HANDLE  ulMe = API_ThreadIdSelf();
 
-    if (iArgC < 3) {
-        return  pfuncCommand(iArgC, ppcArgV);
-    }
-        
-    if (lib_strcmp(ppcArgV[iArgC - 2], ">") == 0) {
-        iFlag |= O_TRUNC;
-        
-    } else if (lib_strcmp(ppcArgV[iArgC - 2], ">>") == 0) {
-        iFlag |= O_APPEND;
-    
-    } else {
+    if (iArgC < 2) {                                                    /*  不包含重定向                */
         return  pfuncCommand(iArgC, ppcArgV);
     }
     
-    iFd = open(ppcArgV[iArgC - 1], iFlag, DEFAULT_FILE_PERM);           /*  创建或打开重定向输出文件    */
-    if (iFd >= 0) {
-        LW_OBJECT_HANDLE  ulMe = API_ThreadIdSelf();
-        
-        API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);          /*  本任务出现异常时, 关闭文件  */
-        
-        iOldStdOut = API_IoTaskStdGet(ulMe, STD_OUT);
-        API_IoTaskStdSet(ulMe, STD_OUT, iFd);
-        ppcArgV[iArgC - 2][0] = PX_EOS;                                 /*  修正参数列表                */
-        iRet = pfuncCommand(iArgC - 2, ppcArgV);
-        API_IoTaskStdSet(ulMe, STD_OUT, iOldStdOut);
-        
-        API_ThreadCleanupPop(LW_TRUE);                                  /*  关闭文件                    */
+    for (i = 0; i < 3; i++) {                                           /*  保存旧的                    */
+        iOldStd[i] = API_IoTaskStdGet(ulMe, i);
+    }
     
-    } else {
-        printf("can not open redirect output file : %s\n", ppcArgV[iArgC - 1]);
+    for (i = 1; i < iArgC; i++) {                                       /*  遍历参数                    */
+        PCHAR   pcRedir = lib_strchr(ppcArgV[i], '<');
+        if (pcRedir == LW_NULL) {
+            pcRedir = lib_strchr(ppcArgV[i], '>');
+            if (pcRedir == LW_NULL) {
+                continue;
+            }
+        }
+        if (__tshellRedir(ppcArgV[i], pcRedir, ulMe, &iPopCnt)) {       /*  分析并执行重定位操作        */
+            printf("can not process redirect.\n");
+            goto    __ret;
+        
+        } else if (iRealArgc > i) {
+            iRealArgc = i;                                              /*  重定位分析成功              */
+        }
+    }
+    
+    ppcArgV[iRealArgc] = LW_NULL;
+    iRet = pfuncCommand(iRealArgc, ppcArgV);                            /*  执行命令                    */
+    
+__ret:
+    for (i = 0; i < 3; i++) {                                           /*  还原旧的                    */
+        API_IoTaskStdSet(ulMe, i, iOldStd[i]);
+    }
+
+    for (i = 0; i < iPopCnt; i++) {
+        API_ThreadCleanupPop(LW_TRUE);
     }
     
     return  (iRet);
+    
 }
 /*********************************************************************************************************
 ** 函数名称: __tshellExec

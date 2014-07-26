@@ -764,9 +764,18 @@ static INT  __tshellArp (INT  iArgC, PCHAR  *ppcArgV)
         ip_addr_t       ipaddr;
         err_t           err;
         
-        if (iArgC != 3) {
-            printf("argments error!\n");
-            return  (-ERROR_TSHELL_EPARAM);
+        if (iArgC != 3) {                                               /*  删除全部转换关系            */
+            struct netif *netif;
+            
+            LWIP_NETIF_LOCK();
+            for (netif = netif_list; netif != LW_NULL; netif = netif->next) {
+                if (netif->flags & NETIF_FLAG_ETHARP) {
+                    netifapi_netif_common(netif, etharp_cleanup_netif, LW_NULL);
+                }
+            }
+            LWIP_NETIF_UNLOCK();
+            
+            return  (ERROR_NONE);
         }
         
         ipaddr.addr = ipaddr_addr(ppcArgV[2]);
