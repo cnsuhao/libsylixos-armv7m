@@ -238,6 +238,7 @@ static LONG  __procFsOpen (PLW_DEV_HDR     pdevhdr,
     if (p_pfsn == LW_NULL) {                                            /*  为找到节点                  */
         __LW_PROCFS_UNLOCK();                                           /*  解锁 procfs                 */
         if (bIsRoot) {
+            LW_DEV_INC_USE_COUNT(&_G_devhdrProc);                       /*  更新计数器                  */
             return  ((LONG)LW_NULL);
         } else {
             _ErrorHandle(ENOENT);

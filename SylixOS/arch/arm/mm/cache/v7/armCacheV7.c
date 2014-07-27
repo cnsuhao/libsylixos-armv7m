@@ -47,8 +47,6 @@ static INT      iCacheStatus = 0;
 #define ARMV7_CSSELR_IND_DATA_UNIFIED   0
 #define ARMV7_CSSELR_IND_INSTRUCTION    1
 
-extern VOID     armSetCSSelReg(UINT32 uiLevel, UINT32 uiType);
-extern UINT32   armGetCCSidReg(VOID);
 extern VOID     armDCacheV7Disable(VOID);
 extern VOID     armDCacheV7FlushAll(VOID);
 extern VOID     armDCacheV7ClearAll(VOID);
