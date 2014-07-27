@@ -27,6 +27,7 @@
 2011.05.19  加入物理页面链遍历功能 __vmmPhysicalPageTraversalList().
 2011.08.11  物理页面分配优先使用属相相同的分区, 这样可以避免 DMA 分区被其他分配浪费.
 2013.05.30  加入物理页面引用功能.
+2014.07.27  加入物理页面 CACHE 操作功能.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -342,6 +343,102 @@ VOID  __vmmPhysicalPageSetFlagAll (PLW_VMM_PAGE  pvmpageVirtual, ULONG  ulFlag)
     __pageTraversalLink(pvmpageVirtual, __vmmPhysicalPageSetFlag, (PVOID)ulFlag,
                         LW_NULL, LW_NULL, LW_NULL, LW_NULL, LW_NULL);
 }
+/*********************************************************************************************************
+** 函数名称: __vmmPhysicalPageFlush
+** 功能描述: 设置物理页面所有 CACHE 回写
+** 输　入  : pvmpage       页面控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_CACHE_EN > 0
+
+VOID  __vmmPhysicalPageFlush (PLW_VMM_PAGE  pvmpage)
+{
+    if (pvmpage->PAGE_ulMapPageAddr != PAGE_MAP_ADDR_INV) {
+        API_CacheFlushPage(DATA_CACHE, 
+                           (PVOID)pvmpage->PAGE_ulMapPageAddr, 
+                           (PVOID)pvmpage->PAGE_ulPageAddr,
+                           (size_t)(pvmpage->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
+    }
+}
+/*********************************************************************************************************
+** 函数名称: __vmmPhysicalPageFlushAll
+** 功能描述: 使虚拟空间内所有物理页面回写
+** 输　入  : pvmpageVirtual 虚拟空间
+**           ulFlag         flag 标志
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  __vmmPhysicalPageFlushAll (PLW_VMM_PAGE  pvmpageVirtual)
+{
+    __pageTraversalLink(pvmpageVirtual, __vmmPhysicalPageFlush,
+                        LW_NULL, LW_NULL, LW_NULL, LW_NULL, LW_NULL, LW_NULL);
+}
+/*********************************************************************************************************
+** 函数名称: __vmmPhysicalPageInvalidate
+** 功能描述: 设置物理页面所有 CACHE 无效
+** 输　入  : pvmpage       页面控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  __vmmPhysicalPageInvalidate (PLW_VMM_PAGE  pvmpage)
+{
+    if (pvmpage->PAGE_ulMapPageAddr != PAGE_MAP_ADDR_INV) {
+        API_CacheInvalidatePage(DATA_CACHE, 
+                                (PVOID)pvmpage->PAGE_ulMapPageAddr, 
+                                (PVOID)pvmpage->PAGE_ulPageAddr,
+                                (size_t)(pvmpage->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
+    }
+}
+/*********************************************************************************************************
+** 函数名称: __vmmPhysicalPageInvalidateAll
+** 功能描述: 使虚拟空间内所有物理页面无效
+** 输　入  : pvmpageVirtual 虚拟空间
+**           ulFlag         flag 标志
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  __vmmPhysicalPageInvalidateAll (PLW_VMM_PAGE  pvmpageVirtual)
+{
+    __pageTraversalLink(pvmpageVirtual, __vmmPhysicalPageInvalidate,
+                        LW_NULL, LW_NULL, LW_NULL, LW_NULL, LW_NULL, LW_NULL);
+}
+/*********************************************************************************************************
+** 函数名称: __vmmPhysicalPageClear
+** 功能描述: 设置物理页面所有 CACHE 回写并无效
+** 输　入  : pvmpage       页面控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  __vmmPhysicalPageClear (PLW_VMM_PAGE  pvmpage)
+{
+    if (pvmpage->PAGE_ulMapPageAddr != PAGE_MAP_ADDR_INV) {
+        API_CacheClearPage(DATA_CACHE, 
+                           (PVOID)pvmpage->PAGE_ulMapPageAddr, 
+                           (PVOID)pvmpage->PAGE_ulPageAddr,
+                           (size_t)(pvmpage->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
+    }
+}
+/*********************************************************************************************************
+** 函数名称: __vmmPhysicalPageClearAll
+** 功能描述: 使虚拟空间内所有物理页面回写并无效
+** 输　入  : pvmpageVirtual 虚拟空间
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  __vmmPhysicalPageClearAll (PLW_VMM_PAGE  pvmpageVirtual)
+{
+    __pageTraversalLink(pvmpageVirtual, __vmmPhysicalPageClear,
+                        LW_NULL, LW_NULL, LW_NULL, LW_NULL, LW_NULL, LW_NULL);
+}
+
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 /*********************************************************************************************************
 ** 函数名称: __vmmPhysicalGetZone
 ** 功能描述: 根据物理地址, 确定有效的 zone

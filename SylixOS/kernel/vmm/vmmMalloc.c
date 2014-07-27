@@ -104,6 +104,10 @@ static VOID  __vmmInvalidateAreaHook (PLW_VMM_PAGE  pvmpagePhysical,
 {
     if ((pvmpagePhysical->PAGE_ulMapPageAddr >= ulSubMem) &&
         (pvmpagePhysical->PAGE_ulMapPageAddr < (ulSubMem + stSize))) {  /*  判断对应的虚拟内存范围      */
+        
+#if LW_CFG_CACHE_EN > 0
+        __vmmPhysicalPageClear(pvmpagePhysical);
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
         __vmmLibPageMap(pvmpagePhysical->PAGE_ulMapPageAddr,
                         pvmpagePhysical->PAGE_ulMapPageAddr,
                         pvmpagePhysical->PAGE_ulCount,                  /*  一定是 1                    */
@@ -468,8 +472,7 @@ VOID  API_VmmFreeArea (PVOID  pvVirtualMem)
     }
     
 #if LW_CFG_CACHE_EN > 0
-    API_CacheVmmAreaInv(DATA_CACHE, (PVOID)pvmpageVirtual->PAGE_ulPageAddr,
-                        (size_t)(pvmpageVirtual->PAGE_ulCount * LW_CFG_VMM_PAGE_SIZE));
+    __vmmPhysicalPageClearAll(pvmpageVirtual);
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
     
     __vmmLibPageMap(pvmpageVirtual->PAGE_ulPageAddr,
@@ -806,10 +809,6 @@ ULONG  API_VmmInvalidateArea (PVOID  pvVirtualMem, PVOID  pvSubMem, size_t  stSi
         _ErrorHandle(ERROR_VMM_VIRTUAL_PAGE);                           /*  无法反向查询虚拟页面控制块  */
         return  (ERROR_VMM_VIRTUAL_PAGE);
     }
-    
-#if LW_CFG_CACHE_EN > 0
-    API_CacheVmmAreaInv(DATA_CACHE, pvSubMem, stSize);
-#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
     
     __pageTraversalLink(pvmpageVirtual, 
                         __vmmInvalidateAreaHook, 

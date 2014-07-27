@@ -82,10 +82,12 @@ typedef struct {
     FUNCPTR         CACHEOP_pfuncUnlock;                                /*  解锁 CACHE                  */
     
     FUNCPTR         CACHEOP_pfuncFlush;                                 /*  将 CACHE 指定内容回写内存   */
+    FUNCPTR         CACHEOP_pfuncFlushPage;                             /*  回写指定的物理页面          */
     FUNCPTR         CACHEOP_pfuncInvalidate;                            /*  使 CACHE 指定内容无效       */
+    FUNCPTR         CACHEOP_pfuncInvalidatePage;                        /*  无效指定的物理页面          */
     FUNCPTR         CACHEOP_pfuncClear;                                 /*  清空并无效所有 CACHE 内容   */
+    FUNCPTR         CACHEOP_pfuncClearPage;                             /*  清空并无效指定的物理页面    */
     FUNCPTR         CACHEOP_pfuncTextUpdate;                            /*  清空 D CACHE 无效 I CACHE   */
-    FUNCPTR         CACHEOP_pfuncVmmAreaInv;                            /*  释放虚拟空间会调用此函数    */
     
     PVOIDFUNCPTR    CACHEOP_pfuncDmaMalloc;                             /*  开辟一块非缓冲的内存        */
     PVOIDFUNCPTR    CACHEOP_pfuncDmaMallocAlign;                        /*  开辟一块非缓冲的内存(对齐)  */
@@ -95,6 +97,7 @@ typedef struct {
 /*********************************************************************************************************
   通用 CACHE 库初始化操作, 如果是 SMP 系统, 则只需要主核在 API_KernelStart 回调中调用即可
 *********************************************************************************************************/
+#ifdef __SYLIXOS_KERNEL
 
 LW_API ULONG        API_CacheLibPrimaryInit(CACHE_MODE  uiInstruction, 
                                             CACHE_MODE  uiData, 
@@ -120,11 +123,13 @@ LW_API ULONG        API_CacheDisable(LW_CACHE_TYPE cachetype);
 LW_API ULONG        API_CacheLock(LW_CACHE_TYPE   cachetype, PVOID  pvAdrs, size_t  stBytes);
 LW_API ULONG        API_CacheUnlock(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
 
-LW_API ULONG        API_CacheFlush(LW_CACHE_TYPE      cachetype, PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG        API_CacheInvalidate(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheFlush(LW_CACHE_TYPE      cachetype, PVOID pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheFlushPage(LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOID pvPdrs,size_t stBytes);
+LW_API ULONG        API_CacheInvalidate(LW_CACHE_TYPE cachetype, PVOID pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheInvalidatePage(LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOID pvPdrs, size_t stBytes);
 LW_API ULONG        API_CacheClear(LW_CACHE_TYPE cachetype, PVOID  pvAdrs, size_t  stBytes);
+LW_API ULONG        API_CacheClearPage(LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOID pvPdrs, size_t stBytes);
 LW_API ULONG        API_CacheTextUpdate(PVOID  pvAdrs, size_t  stBytes);
-LW_API ULONG        API_CacheVmmAreaInv(LW_CACHE_TYPE   cachetype, PVOID  pvAdrs, size_t  stBytes);
 
 LW_API PVOID        API_CacheDmaMalloc(size_t   stBytes);
 LW_API PVOID        API_CacheDmaMallocAlign(size_t   stBytes, size_t  stAlign);
@@ -144,8 +149,6 @@ LW_API VOID         API_CacheFuncsSet(VOID);
   VxWorks 兼容 CACHE 函数库
 *********************************************************************************************************/
 
-#ifdef __SYLIXOS_KERNEL
-
 #define cacheGetLibBlock            API_CacheGetLibBlock
 #define cacheLocation               API_CacheLocation
 #define cacheLine                   API_CacheLine
@@ -157,10 +160,12 @@ LW_API VOID         API_CacheFuncsSet(VOID);
 #define cacheUnlock                 API_CacheUnlock
 
 #define cacheFlush                  API_CacheFlush
+#define cacheFlushPage              API_CacheFlushPage
 #define cacheInvalidate             API_CacheInvalidate
+#define cacheInvalidatePage         API_CacheInvalidatePage
 #define cacheClear                  API_CacheClear
+#define cacheClearPage              API_CacheClearPage
 #define cacheTextUpdate             API_CacheTextUpdate
-#define cacheVmmAreaInv             API_CacheVmmAreaInv
 
 #define cacheDmaMalloc              API_CacheDmaMalloc
 #define cacheDmaMallocAlign         API_CacheDmaMallocAlign

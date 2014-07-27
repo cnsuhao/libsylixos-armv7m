@@ -39,6 +39,19 @@ VOID    armDCacheInvalidate(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
 VOID    armDCacheFlush(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
 VOID    armDCacheClear(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
 
+/*********************************************************************************************************
+  CACHE ªÒµ√ pvEnd Œª÷√
+*********************************************************************************************************/
+
+#define ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd)                   \
+        do {                                                        \
+            if (stBytes < sizeof(PVOID)) {                          \
+                ulEnd = (addr_t)pvAdrs;                             \
+            } else {                                                \
+                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);   \
+            }                                                       \
+        } while (0)
+
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 #endif                                                                  /*  __ARMCACHECOMMON_H          */
 /*********************************************************************************************************

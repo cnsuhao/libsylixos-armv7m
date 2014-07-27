@@ -27,6 +27,7 @@
   裁减配置
 *********************************************************************************************************/
 #if LW_CFG_CACHE_EN > 0 && LW_CFG_ARM_CACHE_L2 > 0
+#include "../armCacheCommon.h"
 #include "armL2.h"
 /*********************************************************************************************************
   相关参数
@@ -139,11 +140,12 @@ static VOID armL2x0Flush (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  stByte
     addr_t  ulPhyStart = (addr_t)pvPhyAddr;
     addr_t  ulPhyEnd;
     
-    if (stBytes >= sizeof(PVOID)) {
-        ulPhyEnd = ulPhyStart + stBytes - sizeof(PVOID);
-    } else {
-        ulPhyEnd = ulPhyStart;
+    if (stBytes >= pl2cdrv->L2CD_stSize) {
+        armL2x0FlushAll(pl2cdrv);
+        return;
     }
+    
+    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd);
 
     ulPhyStart &= ~(L2C_CACHE_LINE_SIZE - 1);
     while (ulPhyStart < ulPhyEnd) {
@@ -195,11 +197,7 @@ static VOID armL2x0Invalidate (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  s
     addr_t  ulPhyStart = (addr_t)pvPhyAddr;
     addr_t  ulPhyEnd;
     
-    if (stBytes >= sizeof(PVOID)) {
-        ulPhyEnd = ulPhyStart + stBytes - sizeof(PVOID);
-    } else {
-        ulPhyEnd = ulPhyStart;
-    }
+    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd);
     
     if (ulPhyStart & (L2C_CACHE_LINE_SIZE - 1)) {
         ulPhyStart &= ~(L2C_CACHE_LINE_SIZE - 1);
@@ -261,11 +259,12 @@ static VOID armL2x0Clear (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  stByte
     addr_t  ulPhyStart = (addr_t)pvPhyAddr;
     addr_t  ulPhyEnd;
     
-    if (stBytes >= sizeof(PVOID)) {
-        ulPhyEnd = ulPhyStart + stBytes - sizeof(PVOID);
-    } else {
-        ulPhyEnd = ulPhyStart;
+    if (stBytes >= pl2cdrv->L2CD_stSize) {
+        armL2x0ClearAll(pl2cdrv);
+        return;
     }
+    
+    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd);
 
     ulPhyStart &= ~(L2C_CACHE_LINE_SIZE - 1);
     while (ulPhyStart < ulPhyEnd) {

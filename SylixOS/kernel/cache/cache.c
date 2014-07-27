@@ -33,6 +33,7 @@
 2013.07.20 TextUpdate 支持 SMP 系统.
 2013.12.19 API_CacheLibPrimaryInit() 加入 CACHE 名称字串, arch 程序通过此字串提供相应的 CACHE 驱动程序.
 2014.01.03 简化 cache api 设计.
+2014.07.27 加入物理页面操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -97,8 +98,11 @@ LW_CACHE_OP     _G_cacheopLib = {                                       /*  the 
     LW_NULL,                                                            /*  cacheLock()                 */
     LW_NULL,                                                            /*  cacheUnlock()               */
     LW_NULL,                                                            /*  cacheFlush()                */
+    LW_NULL,                                                            /*  cacheFlushPage()            */
     LW_NULL,                                                            /*  cacheInvalidate()           */
+    LW_NULL,                                                            /*  cacheInvalidatePage()       */
     LW_NULL,                                                            /*  cacheClear()                */
+    LW_NULL,                                                            /*  cacheClearPage()            */
     LW_NULL,                                                            /*  cacheTextUpdate()           */
     LW_NULL,                                                            /*  cacheDmaMalloc()            */
     LW_NULL,                                                            /*  cacheDmaMallocAlign()       */
@@ -271,8 +275,8 @@ ULONG    API_CacheDisable (LW_CACHE_TYPE  cachetype)
 *********************************************************************************************************/
 LW_API  
 ULONG    API_CacheLock (LW_CACHE_TYPE   cachetype, 
-                       PVOID           pvAdrs, 
-                       size_t          stBytes)
+                        PVOID           pvAdrs, 
+                        size_t          stBytes)
 {
     INTREG  iregInterLevel;
     ULONG   ulError;
@@ -297,8 +301,8 @@ ULONG    API_CacheLock (LW_CACHE_TYPE   cachetype,
 *********************************************************************************************************/
 LW_API  
 ULONG    API_CacheUnlock (LW_CACHE_TYPE   cachetype, 
-                         PVOID           pvAdrs, 
-                         size_t          stBytes)
+                          PVOID           pvAdrs, 
+                          size_t          stBytes)
 {
     INTREG  iregInterLevel;
     ULONG   ulError;
@@ -323,8 +327,8 @@ ULONG    API_CacheUnlock (LW_CACHE_TYPE   cachetype,
 *********************************************************************************************************/
 LW_API  
 ULONG    API_CacheFlush (LW_CACHE_TYPE   cachetype, 
-                        PVOID           pvAdrs, 
-                        size_t          stBytes)
+                         PVOID           pvAdrs, 
+                         size_t          stBytes)
 {
     INTREG  iregInterLevel;
     ULONG   ulError;
@@ -332,6 +336,34 @@ ULONG    API_CacheFlush (LW_CACHE_TYPE   cachetype,
     __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
     ulError = ((_G_cacheopLib.CACHEOP_pfuncFlush == LW_NULL) ? ERROR_NONE : 
                (_G_cacheopLib.CACHEOP_pfuncFlush)(cachetype, pvAdrs, stBytes));
+    __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
+    
+    return  (ulError);
+}
+/*********************************************************************************************************
+** 函数名称: API_CacheFlushPage
+** 功能描述: 指定类型的 CACHE 使指定的页面回写
+** 输　入  : cachetype                     CACHE 类型
+**           pvAdrs                        虚拟地址
+**           pvPdrs                        物理地址
+**           stBytes                       长度 (页面长度整数倍)
+** 输　出  : BSP 函数返回值
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG    API_CacheFlushPage (LW_CACHE_TYPE   cachetype, 
+                             PVOID           pvAdrs, 
+                             PVOID           pvPdrs,
+                             size_t          stBytes)
+{
+    INTREG  iregInterLevel;
+    ULONG   ulError;
+    
+    __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
+    ulError = ((_G_cacheopLib.CACHEOP_pfuncFlushPage == LW_NULL) ? ERROR_NONE : 
+               (_G_cacheopLib.CACHEOP_pfuncFlushPage)(cachetype, pvAdrs, pvPdrs, stBytes));
     __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
     
     return  (ulError);
@@ -345,13 +377,14 @@ ULONG    API_CacheFlush (LW_CACHE_TYPE   cachetype,
 ** 输　出  : BSP 函数返回值
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : arch 代码应该首先回写 DCACHE 然后在无效, 或者使用回写与无效原子操作指令.
+** 注  意  : invalidate 操作必须确保相关的回写与 cache 行对齐.
+
                                            API 函数
 *********************************************************************************************************/
 LW_API  
 ULONG    API_CacheInvalidate (LW_CACHE_TYPE   cachetype, 
-                             PVOID           pvAdrs, 
-                             size_t          stBytes)
+                              PVOID           pvAdrs, 
+                              size_t          stBytes)
 {
     INTREG  iregInterLevel;
     ULONG   ulError;
@@ -359,6 +392,36 @@ ULONG    API_CacheInvalidate (LW_CACHE_TYPE   cachetype,
     __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
     ulError = ((_G_cacheopLib.CACHEOP_pfuncInvalidate == LW_NULL) ? ERROR_NONE : 
                (_G_cacheopLib.CACHEOP_pfuncInvalidate)(cachetype, pvAdrs, stBytes));
+    __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
+    
+    return  (ulError);
+}
+/*********************************************************************************************************
+** 函数名称: API_CacheInvalidatePage
+** 功能描述: 指定类型的 CACHE 使指定的页面无效(访问不命中)
+** 输　入  : cachetype                     CACHE 类型
+**           pvAdrs                        虚拟地址
+**           pvPdrs                        物理地址
+**           stBytes                       长度 (页面长度整数倍)
+** 输　出  : BSP 函数返回值
+** 全局变量: 
+** 调用模块: 
+** 注  意  : invalidate 操作必须确保相关的回写与 cache 行对齐.
+
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG    API_CacheInvalidatePage (LW_CACHE_TYPE   cachetype, 
+                                  PVOID           pvAdrs, 
+                                  PVOID           pvPdrs,
+                                  size_t          stBytes)
+{
+    INTREG  iregInterLevel;
+    ULONG   ulError;
+    
+    __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
+    ulError = ((_G_cacheopLib.CACHEOP_pfuncInvalidatePage == LW_NULL) ? ERROR_NONE : 
+               (_G_cacheopLib.CACHEOP_pfuncInvalidatePage)(cachetype, pvAdrs, pvPdrs, stBytes));
     __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
     
     return  (ulError);
@@ -376,8 +439,8 @@ ULONG    API_CacheInvalidate (LW_CACHE_TYPE   cachetype,
 *********************************************************************************************************/
 LW_API  
 ULONG    API_CacheClear (LW_CACHE_TYPE   cachetype, 
-                        PVOID           pvAdrs, 
-                        size_t          stBytes)
+                         PVOID           pvAdrs, 
+                         size_t          stBytes)
 {
     INTREG  iregInterLevel;
     ULONG   ulError;
@@ -385,6 +448,34 @@ ULONG    API_CacheClear (LW_CACHE_TYPE   cachetype,
     __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
     ulError = ((_G_cacheopLib.CACHEOP_pfuncClear == LW_NULL) ? ERROR_NONE : 
                (_G_cacheopLib.CACHEOP_pfuncClear)(cachetype, pvAdrs, stBytes));
+    __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
+    
+    return  (ulError);
+}
+/*********************************************************************************************************
+** 函数名称: API_CacheClearPage
+** 功能描述: 指定类型的 CACHE 使指定的页面回写并无效
+** 输　入  : cachetype                     CACHE 类型
+**           pvAdrs                        虚拟地址
+**           pvPdrs                        物理地址
+**           stBytes                       长度 (页面长度整数倍)
+** 输　出  : BSP 函数返回值
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG    API_CacheClearPage (LW_CACHE_TYPE   cachetype, 
+                             PVOID           pvAdrs, 
+                             PVOID           pvPdrs,
+                             size_t          stBytes)
+{
+    INTREG  iregInterLevel;
+    ULONG   ulError;
+
+    __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
+    ulError = ((_G_cacheopLib.CACHEOP_pfuncClearPage == LW_NULL) ? ERROR_NONE : 
+               (_G_cacheopLib.CACHEOP_pfuncClearPage)(cachetype, pvAdrs, pvPdrs, stBytes));
     __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
     
     return  (ulError);
@@ -449,34 +540,6 @@ ULONG    API_CacheTextUpdate (PVOID  pvAdrs, size_t  stBytes)
     KN_INT_ENABLE(iregInterLevel);
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
-    return  (ulError);
-}
-/*********************************************************************************************************
-** 函数名称: API_CacheVmmAreaInv
-** 功能描述: 指定类型的 CACHE 使部分或全部清空(回写内存)并无效(访问不命中)
-** 输　入  : cachetype                     CACHE 类型
-**           pvAdrs                        虚拟地址
-**           stBytes                       长度
-** 输　出  : BSP 函数返回值
-** 全局变量: 
-** 调用模块: 
-** 注  意  : 此函数指定的内存区域中, 可能不存在或者不完全存在对应的物理页面.
-
-                                           API 函数
-*********************************************************************************************************/
-LW_API  
-ULONG    API_CacheVmmAreaInv (LW_CACHE_TYPE   cachetype, 
-                             PVOID           pvAdrs, 
-                             size_t          stBytes)
-{
-    INTREG  iregInterLevel;
-    ULONG   ulError;
-
-    __CACHE_OP_ENTER(iregInterLevel);                                   /*  开始操作 cache              */
-    ulError = ((_G_cacheopLib.CACHEOP_pfuncVmmAreaInv == LW_NULL) ? ERROR_NONE : 
-               (_G_cacheopLib.CACHEOP_pfuncVmmAreaInv)(cachetype, pvAdrs, stBytes));
-    __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
-    
     return  (ulError);
 }
 /*********************************************************************************************************
@@ -604,11 +667,13 @@ VOID    API_CacheFuncsSet (VOID)
 {
     if (_G_uiDCacheMode & CACHE_SNOOP_ENABLE) {                         /*  D CACHE 始终与内存一致      */
         _G_cacheopLib.CACHEOP_pfuncFlush      = LW_NULL;
+        _G_cacheopLib.CACHEOP_pfuncFlushPage  = LW_NULL;
         _G_cacheopLib.CACHEOP_pfuncTextUpdate = LW_NULL;
     }
     
     if (_G_uiDCacheMode & CACHE_WRITETHROUGH) {                         /*  属于写通模式 D CACHE        */
         _G_cacheopLib.CACHEOP_pfuncFlush      = LW_NULL;
+        _G_cacheopLib.CACHEOP_pfuncFlushPage  = LW_NULL;
     }
 }
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */

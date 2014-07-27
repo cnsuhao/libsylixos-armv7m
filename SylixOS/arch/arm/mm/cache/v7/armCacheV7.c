@@ -131,16 +131,43 @@ static INT	armCacheV7Flush (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stB
             armDCacheV7FlushAll();                                      /*  全部回写                    */
         
         } else {
-            if (stBytes >= sizeof(PVOID)) {
-                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
-            } else {
-                ulEnd = (addr_t)pvAdrs;
-            }
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
             armDCacheFlush(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写                    */
         }
         
 #if LW_CFG_ARM_CACHE_L2 > 0
         armL2FlushAll();
+#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: armCacheV7FlushPage
+** 功能描述: CACHE 脏数据回写
+** 输　入  : cachetype     CACHE 类型
+**           pvAdrs        虚拟地址
+**           pvPdrs        物理地址
+**           stBytes       长度
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT	armCacheV7FlushPage (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, PVOID  pvPdrs, size_t  stBytes)
+{
+    addr_t  ulEnd;
+    
+    if (cachetype == DATA_CACHE) {
+        if (stBytes >= ARMv7_CACHE_LOOP_OP_MAX_SIZE) {
+            armDCacheV7FlushAll();                                      /*  全部回写                    */
+        
+        } else {
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            armDCacheFlush(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写                    */
+        }
+        
+#if LW_CFG_ARM_CACHE_L2 > 0
+        armL2Flush(pvPdrs, stBytes);
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
     }
     
@@ -166,23 +193,59 @@ static INT	armCacheV7Invalidate (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t
             armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
         
         } else {
-            if (stBytes >= sizeof(PVOID)) {
-                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
-            } else {
-                ulEnd = (addr_t)pvAdrs;
-            }
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
             armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
         }
     } else {
-        if (stBytes >= sizeof(PVOID)) {
+        if (stBytes > 0) {                                              /*  必须 > 0                    */
             ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
             armDCacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
+            
+#if LW_CFG_ARM_CACHE_L2 > 0
+            armL2Invalidate(pvAdrs, stBytes);                           /*  虚拟与物理地址必须相同      */
+#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
+        } else {
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "stBytes == 0.\r\n");
         }
     }
     
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: armCacheV7InvalidatePage
+** 功能描述: 指定类型的 CACHE 使部分无效(访问不命中)
+** 输　入  : cachetype     CACHE 类型
+**           pvAdrs        虚拟地址
+**           pvPdrs        物理地址
+**           stBytes       长度
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT	armCacheV7InvalidatePage (LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOID pvPdrs, size_t stBytes)
+{
+    addr_t  ulEnd;
+    
+    if (cachetype == INSTRUCTION_CACHE) {
+        if (stBytes >= ARMv7_CACHE_LOOP_OP_MAX_SIZE) {
+            armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
+        
+        } else {
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
+        }
+    } else {
+        if (stBytes > 0) {                                              /*  必须 > 0                    */
+            ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
+            armDCacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
+            
 #if LW_CFG_ARM_CACHE_L2 > 0
-    armL2Invalidate(pvAdrs, stBytes);                                   /*  虚拟与物理地址必须相同      */
+            armL2Invalidate(pvPdrs, stBytes);                           /*  虚拟与物理地址必须相同      */
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
+        } else {
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "stBytes == 0.\r\n");
+        }
+    }
     
     return  (ERROR_NONE);
 }
@@ -206,11 +269,7 @@ static INT	armCacheV7Clear (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stB
             armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
             
         } else {
-            if (stBytes >= sizeof(PVOID)) {
-                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
-            } else {
-                ulEnd = (addr_t)pvAdrs;
-            }
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
             armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
         }
     } else {
@@ -218,18 +277,53 @@ static INT	armCacheV7Clear (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stB
             armDCacheV7ClearAll();                                      /*  全部回写并无效              */
         
         } else {
-            if (stBytes >= sizeof(PVOID)) {
-                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
-            } else {
-                ulEnd = (addr_t)pvAdrs;
-            }
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
             armDCacheClear(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写并无效              */
         }
+        
+#if LW_CFG_ARM_CACHE_L2 > 0
+        armL2ClearAll();
+#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
     }
     
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: armCacheV7ClearPage
+** 功能描述: 指定类型的 CACHE 使部分或全部清空(回写内存)并无效(访问不命中)
+** 输　入  : cachetype     CACHE 类型
+**           pvAdrs        虚拟地址
+**           pvPdrs        物理地址
+**           stBytes       长度
+** 输　出  : ERROR or OK
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT	armCacheV7ClearPage (LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOID pvPdrs, size_t stBytes)
+{
+    addr_t  ulEnd;
+    
+    if (cachetype == INSTRUCTION_CACHE) {
+        if (stBytes >= ARMv7_CACHE_LOOP_OP_MAX_SIZE) {
+            armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
+            
+        } else {
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
+        }
+    } else {
+        if (stBytes >= ARMv7_CACHE_LOOP_OP_MAX_SIZE) {
+            armDCacheV7ClearAll();                                      /*  全部回写并无效              */
+        
+        } else {
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            armDCacheClear(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写并无效              */
+        }
+        
 #if LW_CFG_ARM_CACHE_L2 > 0
-    armL2ClearAll();
+        armL2Clear(pvPdrs, stBytes);
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
+    }
     
     return  (ERROR_NONE);
 }
@@ -282,39 +376,10 @@ static INT	armCacheV7TextUpdate (PVOID  pvAdrs, size_t  stBytes)
         armICacheInvalidateAll();                                       /*  ICACHE 全部无效             */
         
     } else {
-        if (stBytes >= sizeof(PVOID)) {
-            ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
-        } else {
-            ulEnd = (addr_t)pvAdrs;
-        }
+        ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
         armDCacheFlush(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);     /*  部分回写                    */
         armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
     }
-    
-    return  (ERROR_NONE);
-}
-/*********************************************************************************************************
-** 函数名称: armCacheV7VmmAreaInv
-** 功能描述: 指定类型的 CACHE 使部分或全部清空(回写内存)并无效(访问不命中)
-** 输　入  : cachetype     CACHE 类型
-**           pvAdrs        虚拟地址
-**           stBytes       长度
-** 输　出  : ERROR or OK
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-static INT	armCacheV7VmmAreaInv (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stBytes)
-{
-    if (cachetype == INSTRUCTION_CACHE) {
-        armICacheInvalidateAll();                                       /*  ICACHE 全部无效             */
-        
-    } else {
-        armDCacheV7ClearAll();                                          /*  全部回写并无效              */
-    }
-    
-#if LW_CFG_ARM_CACHE_L2 > 0
-    armL2ClearAll();
-#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
     
     return  (ERROR_NONE);
 }
@@ -372,11 +437,13 @@ VOID  armCacheV7Init (LW_CACHE_OP *pcacheop,
     pcacheop->CACHEOP_pfuncLock    = armCacheV7Lock;                    /*  暂时不支持锁定操作          */
     pcacheop->CACHEOP_pfuncUnlock  = armCacheV7Unlock;
     
-    pcacheop->CACHEOP_pfuncFlush      = armCacheV7Flush;
-    pcacheop->CACHEOP_pfuncInvalidate = armCacheV7Invalidate;
-    pcacheop->CACHEOP_pfuncClear      = armCacheV7Clear;
-    pcacheop->CACHEOP_pfuncTextUpdate = armCacheV7TextUpdate;
-    pcacheop->CACHEOP_pfuncVmmAreaInv = armCacheV7VmmAreaInv;
+    pcacheop->CACHEOP_pfuncFlush          = armCacheV7Flush;
+    pcacheop->CACHEOP_pfuncFlushPage      = armCacheV7FlushPage;
+    pcacheop->CACHEOP_pfuncInvalidate     = armCacheV7Invalidate;
+    pcacheop->CACHEOP_pfuncInvalidatePage = armCacheV7InvalidatePage;
+    pcacheop->CACHEOP_pfuncClear          = armCacheV7Clear;
+    pcacheop->CACHEOP_pfuncClearPage      = armCacheV7ClearPage;
+    pcacheop->CACHEOP_pfuncTextUpdate     = armCacheV7TextUpdate;
     
 #if LW_CFG_VMM_EN > 0
     pcacheop->CACHEOP_pfuncDmaMalloc      = API_VmmDmaAlloc;

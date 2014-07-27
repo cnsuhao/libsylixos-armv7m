@@ -138,17 +138,17 @@ VOID armL2FlushAll (VOID)
 /*********************************************************************************************************
 ** 函数名称: armL2Flush
 ** 功能描述: L2 CACHE 回写部分脏数据
-** 输　入  : pvAdrs        起始虚拟地址
+** 输　入  : pvPdrs        起始虚拟地址
 **           stBytes       数据块大小
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID armL2Flush (PVOID  pvAdrs, size_t  stBytes)
+VOID armL2Flush (PVOID  pvPdrs, size_t  stBytes)
 {
     L2_OP_ENTER();
     if (l2cdrv.L2CD_pfuncFlush) {
-        l2cdrv.L2CD_pfuncFlush(&l2cdrv, pvAdrs, stBytes);
+        l2cdrv.L2CD_pfuncFlush(&l2cdrv, pvPdrs, stBytes);
     }
     L2_OP_EXIT();
 }
@@ -171,17 +171,17 @@ VOID armL2InvalidateAll (VOID)
 /*********************************************************************************************************
 ** 函数名称: armL2InvalidateAll
 ** 功能描述: L2 CACHE 无效
-** 输　入  : pvAdrs        起始虚拟地址
+** 输　入  : pvPdrs        起始虚拟地址
 **           stBytes       数据块大小
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID armL2Invalidate (PVOID  pvAdrs, size_t  stBytes)
+VOID armL2Invalidate (PVOID  pvPdrs, size_t  stBytes)
 {
     L2_OP_ENTER();
     if (l2cdrv.L2CD_pfuncInvalidate) {
-        l2cdrv.L2CD_pfuncInvalidate(&l2cdrv, pvAdrs, stBytes);
+        l2cdrv.L2CD_pfuncInvalidate(&l2cdrv, pvPdrs, stBytes);
     }
     L2_OP_EXIT();
 }
@@ -204,17 +204,17 @@ VOID armL2ClearAll (VOID)
 /*********************************************************************************************************
 ** 函数名称: armL2Clear
 ** 功能描述: L2 CACHE 回写并无效
-** 输　入  : pvAdrs        起始虚拟地址
+** 输　入  : pvPdrs        起始虚拟地址
 **           stBytes       数据块大小
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID armL2Clear (PVOID  pvAdrs, size_t  stBytes)
+VOID armL2Clear (PVOID  pvPdrs, size_t  stBytes)
 {
     L2_OP_ENTER();
     if (l2cdrv.L2CD_pfuncClear) {
-        l2cdrv.L2CD_pfuncClear(&l2cdrv, pvAdrs, stBytes);
+        l2cdrv.L2CD_pfuncClear(&l2cdrv, pvPdrs, stBytes);
     }
     L2_OP_EXIT();
 }
@@ -249,6 +249,8 @@ VOID armL2Init (CACHE_MODE   uiInstruction,
     UINT32  uiAuxVal;
     UINT32  uiAuxMask;
     UINT32  uiWays;
+    UINT32  uiWaySize;
+    UINT32  uiWaySizeShift = L2C_WAY_SIZE_SHIFT;
 
     LW_SPIN_INIT(&l2sl);
     
@@ -312,6 +314,11 @@ VOID armL2Init (CACHE_MODE   uiInstruction,
     
         L2C_AUX(&l2cdrv)     = uiAux;
         L2C_WAYMASK(&l2cdrv) = (1 << uiWays) - 1;
+        
+        uiWaySize = (uiAux & L2C_AUX_CTRL_WAY_SIZE_MASK) >> 17;
+        uiWaySize = 1 << (uiWaySize + uiWaySizeShift);
+        
+        l2cdrv.L2CD_stSize = uiWays * uiWaySize * LW_CFG_KB_SIZE;
         
         _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
         _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");

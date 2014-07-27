@@ -83,6 +83,27 @@
 #define L2C_PREFETCH_CTL        0xf60
 #define L2C_POWER_CTL           0xf80
 
+#define L2C_WAY_SIZE_SHIFT      3
+
+#define L2C_AUX_CTRL_MASK                   0xc0000fff
+#define L2C_AUX_CTRL_DATA_RD_LATENCY_SHIFT  0
+#define L2C_AUX_CTRL_DATA_RD_LATENCY_MASK   0x7
+#define L2C_AUX_CTRL_DATA_WR_LATENCY_SHIFT  3
+#define L2C_AUX_CTRL_DATA_WR_LATENCY_MASK   (0x7 << 3)
+#define L2C_AUX_CTRL_TAG_LATENCY_SHIFT      6
+#define L2C_AUX_CTRL_TAG_LATENCY_MASK       (0x7 << 6)
+#define L2C_AUX_CTRL_DIRTY_LATENCY_SHIFT    9
+#define L2C_AUX_CTRL_DIRTY_LATENCY_MASK     (0x7 << 9)
+#define L2C_AUX_CTRL_ASSOCIATIVITY_SHIFT    16
+#define L2C_AUX_CTRL_WAY_SIZE_SHIFT         17
+#define L2C_AUX_CTRL_WAY_SIZE_MASK          (0x7 << 17)
+#define L2C_AUX_CTRL_SHARE_OVERRIDE_SHIFT   22
+#define L2C_AUX_CTRL_NS_LOCKDOWN_SHIFT      26
+#define L2C_AUX_CTRL_NS_INT_CTRL_SHIFT      27
+#define L2C_AUX_CTRL_DATA_PREFETCH_SHIFT    28
+#define L2C_AUX_CTRL_INSTR_PREFETCH_SHIFT   29
+#define L2C_AUX_CTRL_EARLY_BRESP_SHIFT      30
+
 /*********************************************************************************************************
   L2 cache driver struct
 *********************************************************************************************************/
@@ -94,6 +115,7 @@ typedef struct {
     UINT32          L2CD_uiAux;
     UINT32          L2CD_uiType;                                        /*  L2 CACHE 控制器类型         */
     UINT32          L2CD_uiRelease;                                     /*  L2 CACHE 控制器子版本       */
+    size_t          L2CD_stSize;                                        /*  L2 CACHE 大小               */
     
     VOIDFUNCPTR     L2CD_pfuncEnable;
     VOIDFUNCPTR     L2CD_pfuncDisable;
@@ -124,11 +146,11 @@ VOID    armL2Disable(VOID);
 BOOL    armL2IsEnable(VOID);
 VOID    armL2Sync(VOID);
 VOID    armL2FlushAll(VOID);
-VOID    armL2Flush(PVOID  pvAdrs, size_t  stBytes);
+VOID    armL2Flush(PVOID  pvPdrs, size_t  stBytes);
 VOID    armL2InvalidateAll(VOID);
-VOID    armL2Invalidate(PVOID  pvAdrs, size_t  stBytes);
+VOID    armL2Invalidate(PVOID  pvPdrs, size_t  stBytes);
 VOID    armL2ClearAll(VOID);
-VOID    armL2Clear(PVOID  pvAdrs, size_t  stBytes);
+VOID    armL2Clear(PVOID  pvPdrs, size_t  stBytes);
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
                                                                         /*  LW_CFG_ARM_CACHE_L2 > 0     */

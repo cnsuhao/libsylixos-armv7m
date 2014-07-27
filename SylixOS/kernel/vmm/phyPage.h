@@ -35,6 +35,16 @@ VOID            __vmmPhysicalPageFree(PLW_VMM_PAGE  pvmpage);
 VOID            __vmmPhysicalPageFreeAll(PLW_VMM_PAGE  pvmpageVirtual);
 VOID            __vmmPhysicalPageSetFlag(PLW_VMM_PAGE  pvmpage, ULONG  ulFlag);
 VOID            __vmmPhysicalPageSetFlagAll(PLW_VMM_PAGE  pvmpageVirtual, ULONG  ulFlag);
+
+#if LW_CFG_CACHE_EN > 0
+VOID            __vmmPhysicalPageFlush(PLW_VMM_PAGE  pvmpage);
+VOID            __vmmPhysicalPageFlushAll(PLW_VMM_PAGE  pvmpageVirtual);
+VOID            __vmmPhysicalPageInvalidate(PLW_VMM_PAGE  pvmpage);
+VOID            __vmmPhysicalPageInvalidateAll(PLW_VMM_PAGE  pvmpageVirtual);
+VOID            __vmmPhysicalPageClear(PLW_VMM_PAGE  pvmpage);
+VOID            __vmmPhysicalPageClearAll(PLW_VMM_PAGE  pvmpageVirtual);
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
+
 ULONG           __vmmPhysicalGetZone(addr_t  ulAddr);
 ULONG           __vmmPhysicalPageGetMinContinue(ULONG  *pulZoneIndex, UINT  uiAttr);
 
