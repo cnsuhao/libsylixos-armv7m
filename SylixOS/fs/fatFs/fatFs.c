@@ -181,6 +181,7 @@ VOID            __filInfoToStat(FILINFO     *filinfo,
                                 struct stat *pstat, 
                                 ino_t        ino);
 INT             __fsInfoToStatfs(FATFS         *fatfs,
+                                 INT            iFlag,
                                  struct statfs *pstatfs, 
                                  INT            iDrv);
 mode_t          __fsAttrToMode(BYTE  ucAttr);
@@ -1830,6 +1831,7 @@ static INT  __fatFsStatfsGet (PLW_FD_ENTRY  pfdentry, struct statfs *pstatfs)
         return  (PX_ERROR);
     }
     if (__fsInfoToStatfs(&pfatfile->FATFIL_pfatvol->FATVOL_fatfsVol,
+                         pfatfile->FATFIL_pfatvol->FATVOL_iFlag,
                          pstatfs,
                          pfatfile->FATFIL_pfatvol->FATVOL_iDrv) < 0) {
         iError = PX_ERROR;

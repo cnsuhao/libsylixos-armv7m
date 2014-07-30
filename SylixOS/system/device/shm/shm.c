@@ -847,8 +847,8 @@ static INT  __shmStatfsGet (PLW_SHM_NODE  pshmn, struct statfs *pstatfs)
         pstatfs->f_bfree  = 0;
         pstatfs->f_bavail = 1;
         
-        pstatfs->f_files  = -1;
-        pstatfs->f_ffree  = -1;
+        pstatfs->f_files  = 0;
+        pstatfs->f_ffree  = 0;
         
         pstatfs->f_fsid.val[0] = (int32_t)&_G_devhdrShm;
         pstatfs->f_fsid.val[1] = 0;

@@ -739,7 +739,7 @@ static INT  __rootFsStatfsGet (LW_DEV_HDR *pdevhdr, struct statfs *pstatfs)
         pstatfs->f_bavail = 1;
         
         pstatfs->f_files  = (long)_G_rfsrRoot.RFSR_ulFiles;             /*  文件总数                    */
-        pstatfs->f_ffree  = -1;
+        pstatfs->f_ffree  = 0;
         
         pstatfs->f_fsid.val[0] = (int32_t)pdevhdr;
         pstatfs->f_fsid.val[1] = 0;
@@ -774,8 +774,8 @@ static INT  __rootFsStatfsGet (LW_DEV_HDR *pdevhdr, struct statfs *pstatfs)
         pstatfs->f_bfree  = 0;
         pstatfs->f_bavail = 1;
         
-        pstatfs->f_files  = -1;
-        pstatfs->f_ffree  = -1;
+        pstatfs->f_files  = 0;
+        pstatfs->f_ffree  = 0;
         
         pstatfs->f_fsid.val[0] = (int32_t)pdevhdr;
         pstatfs->f_fsid.val[1] = 0;

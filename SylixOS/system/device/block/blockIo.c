@@ -207,7 +207,6 @@ INT  __blockIoDevRead (INT     iIndex,
         }
     }
     
-    
     if (i >= pblkd->BLKD_iRetry) {
         if (pblkd->BLKD_bRemovable) {
             pblkd->BLKD_pfuncBlkIoctl(pblkd, FIOCANCEL, 0);

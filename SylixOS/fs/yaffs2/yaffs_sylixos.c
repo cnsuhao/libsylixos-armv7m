@@ -1381,9 +1381,9 @@ static INT  __yaffsStatfsGet (PLW_FD_ENTRY  pfdentry, struct statfs *pstatfs)
         pstatfs->f_bfree  = (long)(oftFreeBytes / yaffsstat.st_blksize);/* free block in fs             */
         pstatfs->f_bavail = (long)(oftFreeBytes / yaffsstat.st_blksize);/* free blocks avail to         */
                                                                         /* non-superuser                */
-        pstatfs->f_files = -1;                                          /* total file nodes in file     */
+        pstatfs->f_files = 0;                                           /* total file nodes in file     */
                                                                         /* system                       */
-        pstatfs->f_ffree = -1;                                          /* free file nodes in fs        */
+        pstatfs->f_ffree = 0;                                           /* free file nodes in fs        */
         pstatfs->f_fsid.val[0] = (int32_t)pyaffile->YAFFIL_pyaffs;      /* file system sid              */
         pstatfs->f_fsid.val[1] = 0;
         

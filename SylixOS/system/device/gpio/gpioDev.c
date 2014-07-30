@@ -713,7 +713,7 @@ static INT  _gpiofdIoctl (PLW_GPIOFD_FILE pgpiofdfil,
             pstatfsGet->f_bavail = 1;
             
             pstatfsGet->f_files  = LW_CFG_MAX_GPIOS;
-            pstatfsGet->f_ffree  = -1;
+            pstatfsGet->f_ffree  = 0;
             
             pstatfsGet->f_fsid.val[0] = (int32_t)&_G_gpiofddev;
             pstatfsGet->f_fsid.val[1] = 0;

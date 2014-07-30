@@ -64,7 +64,7 @@ mode_t  __fsAttrToMode (BYTE  ucAttr)
         mode |= S_IFDIR;
     } else {
         mode |= S_IFREG;
-        mode |= S_IXUSR | S_IXGRP | S_IXOTH;                            /*  默认拥有可执行权限          */
+        mode |= S_IXUSR | S_IXGRP;                                      /*  owner gourp 拥有可执行权限  */
     }
     
     return  (mode);
@@ -122,7 +122,7 @@ VOID  __filInfoToStat (FILINFO     *filinfo,
     pstat->st_dev   = (dev_t)fatfs;
     pstat->st_ino   = ino;
     
-    pstat->st_nlink = 0;
+    pstat->st_nlink = 1;
     pstat->st_uid   = 0;                                                /*  不支持                      */
     pstat->st_gid   = 0;                                                /*  不支持                      */
     pstat->st_rdev  = 1;                                                /*  不支持                      */
@@ -152,6 +152,7 @@ VOID  __filInfoToStat (FILINFO     *filinfo,
 ** 函数名称: __fsInfoToStatfs
 ** 功能描述: 将 FATFS 结构体转换为 statfs 结构
 ** 输　入  : fatfs       文件系统结构
+**           iFlag       文件系统 flags
 **           pstatfs     statfs 结构
 **           iDrv        驱动号
 ** 输　出  : ERROR
@@ -159,6 +160,7 @@ VOID  __filInfoToStat (FILINFO     *filinfo,
 ** 调用模块: 
 *********************************************************************************************************/
 INT   __fsInfoToStatfs (FATFS         *fatfs,
+                        INT            iFlag,
                         struct statfs *pstatfs, 
                         INT            iDrv)
 {
@@ -186,13 +188,16 @@ INT   __fsInfoToStatfs (FATFS         *fatfs,
     pstatfs->f_bfree  = (long)dwFree;
     pstatfs->f_bavail = (long)dwFree;
     
-    pstatfs->f_files  = -1;
-    pstatfs->f_ffree  = -1;
+    pstatfs->f_files  = 0;
+    pstatfs->f_ffree  = 0;
     
     pstatfs->f_fsid.val[0] = (int32_t)fatfs->id;
     pstatfs->f_fsid.val[1] = 0;
     
-    pstatfs->f_flag    = ST_NOSUID;
+    pstatfs->f_flag = ST_NOSUID;
+    if ((iFlag & O_ACCMODE) == O_RDONLY) {
+        pstatfs->f_flag |= ST_RDONLY;
+    }
     pstatfs->f_namelen = _MAX_LFN;                                      /*  最长的文件名                */
     
     return  (ERROR_NONE);

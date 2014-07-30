@@ -616,7 +616,7 @@ static INT  __procFsStatfsGet (PLW_PROCFS_NODE  p_pfsn, struct statfs *pstatfs)
         pstatfs->f_bavail = 1;
         
         pstatfs->f_files  = (long)_G_pfsrRoot.PFSR_ulFiles;
-        pstatfs->f_ffree  = -1;
+        pstatfs->f_ffree  = 0;
         
         pstatfs->f_fsid.val[0] = (int32_t)&_G_pfsrRoot;
         pstatfs->f_fsid.val[1] = 0;
