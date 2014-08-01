@@ -1025,6 +1025,8 @@ PVOID   __tshellThread (PVOID  pcArg)
         if (__tshellUserAuthen(iTtyFd)) {                               /*  进行认证                    */
             exit(-1);
         }
+    } else {
+        printf("\n");
     }
     
     if (__TTINY_SHELL_GET_OPT(ptcbCur) & LW_OPTION_TSHELL_NOECHO) {     /*  不需要回显                  */

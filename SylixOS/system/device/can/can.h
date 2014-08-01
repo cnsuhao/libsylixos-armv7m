@@ -88,6 +88,8 @@ typedef CAN_FRAME  *PCAN_FRAME;                                         /*  CANÖ
 /*********************************************************************************************************
   CAN Çý¶¯º¯Êý½á¹¹
 *********************************************************************************************************/
+#ifdef  __SYLIXOS_KERNEL
+
 #ifdef  __cplusplus
 typedef INT     (*CAN_CALLBACK)(...);
 #else
@@ -97,9 +99,7 @@ typedef INT     (*CAN_CALLBACK)();
 typedef struct __can_drv_funcs                       CAN_DRV_FUNCS;
 
 typedef struct __can_chan {
-
     CAN_DRV_FUNCS    *pDrvFuncs;
-
 } CAN_CHAN;                                                             /*  CAN Çý¶¯½á¹¹Ìå              */
 
 struct __can_drv_funcs {
@@ -138,6 +138,7 @@ LW_API INT  API_CanDevRemove(PCHAR     pcName, BOOL  bForce);
 #define canDevCreate    API_CanDevCreate
 #define canDevRemove    API_CanDevRemove
 
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0)      */
                                                                         /*  (LW_CFG_CAN_EN > 0)         */
 #endif                                                                  /*  __CAN_H                     */

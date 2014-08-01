@@ -73,9 +73,7 @@ typedef INT     (*ATA_CALLBACK)();
 typedef struct __ata_drv_funcs              ATA_DRV_FUNCS;
 
 typedef struct __ata_chan {
-
     ATA_DRV_FUNCS    *pDrvFuncs;
-
 } ATA_CHAN;                                                             /*  ATA 驱动结构体              */
 
 struct __ata_drv_funcs {

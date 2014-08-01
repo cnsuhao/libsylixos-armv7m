@@ -836,7 +836,7 @@ INT  API_GpioSetupIrq (UINT uiGpio, BOOL bIsLevel, UINT uiType)
     
     if (pgchip->GC_pfuncSetupIrq) {
         iError = pgchip->GC_pfuncSetupIrq(pgchip, GPIO_CHIP_HWGPIO(pgdesc), bIsLevel, uiType);
-        if (iError == ERROR_NONE) {
+        if (iError >= 0) {                                              /*  外部中断设置成功            */
             if (bIsLevel) {
                 pgdesc->GD_ulFlags |= LW_GPIODF_TRIG_LEVEL;
             }

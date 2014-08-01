@@ -65,7 +65,7 @@
   GPIO 为外部中断输入模式时, 发生中断后, 在中断上下文中清除中断请求操作.
   
   GC_pfuncSvrIrq
-  GPIO 产生外部中断时会调用次函数, 如果是本 GPIO 产生的中断, 则返回 LW_IRQ_HANDLED
+  GPIO 产生外部中断时会调用此函数, 如果是本 GPIO 产生的中断, 则返回 LW_IRQ_HANDLED
   如果不是, 则返回 LW_IRQ_NONE.
   
   以上函数 uiOffset 参数为针对 GC_uiBase 的偏移量, GPIO 驱动程序需要通过此数值确定对应的硬件寄存器.
