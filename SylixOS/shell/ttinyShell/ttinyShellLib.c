@@ -1019,6 +1019,7 @@ PVOID   __tshellThread (PVOID  pcArg)
         exit(-1);
     }
     
+    ioctl(iTtyFd, FIOSYNC);                                             /*  等待之前所有数据发送完毕    */
     ioctl(iTtyFd, FIORTIMEOUT, LW_NULL);                                /*  读取无超时时间              */
     
     if (__TTINY_SHELL_GET_OPT(ptcbCur) & LW_OPTION_TSHELL_AUTHEN) {     /*  是否需要明文用户认证        */

@@ -27,8 +27,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet/ipv4}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet/ipv6}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${GCC_INCDIR}/arm-none-eabi/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${GCC_INCDIR}/lib/gcc/arm-none-eabi/4.8.3/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${SYLIXOS_ARM_TOOLCHAIN}/arm-none-eabi/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${SYLIXOS_ARM_TOOLCHAIN}/lib/gcc/arm-none-eabi/${SYLIXOS_ARM_TOOLCHAIN_VERSION}/include&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1072217198" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GNUC__=4"/>
@@ -43,8 +43,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet/ipv4}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet/ipv6}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${GCC_INCDIR}/arm-none-eabi/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${GCC_INCDIR}/lib/gcc/arm-none-eabi/4.8.3/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${SYLIXOS_ARM_TOOLCHAIN}/arm-none-eabi/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${SYLIXOS_ARM_TOOLCHAIN}/lib/gcc/arm-none-eabi/${SYLIXOS_ARM_TOOLCHAIN_VERSION}/include&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.1971648416" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GNUC__=4"/>
@@ -59,8 +59,8 @@
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet/ipv4}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/libsylixos/SylixOS/include/inet/ipv6}&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${GCC_INCDIR}/arm-none-eabi/include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;${GCC_INCDIR}/lib/gcc/arm-none-eabi/4.8.3/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${SYLIXOS_ARM_TOOLCHAIN}/arm-none-eabi/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${SYLIXOS_ARM_TOOLCHAIN}/lib/gcc/arm-none-eabi/${SYLIXOS_ARM_TOOLCHAIN_VERSION}/include&quot;"/>
 								</option>
 								<option id="org.eclipse.cdt.build.core.settings.holder.symbols.451507123" name="Symbols" superClass="org.eclipse.cdt.build.core.settings.holder.symbols" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="__GNUC__=4"/>
@@ -805,4 +805,9 @@
 		</scannerConfigBuildInfo>
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="Default">
+			<resource resourceType="PROJECT" workspacePath="/libsylixos"/>
+		</configuration>
+	</storageModule>
 </cproject>

@@ -51,6 +51,7 @@
             对于一些标志, 加入 SMP 内存屏障操作.
 2014.03.03  优化代码.
 2014.05.20  tty 设备删除更加安全.
+2014.08.03  FIOWBUFSET 时需要激活等待写的线程.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -634,6 +635,9 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
         KN_SMP_WMB();
 #endif                                                                  /*  LW_CFG_SMP_EN               */
         ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_FALSE;
+        
+        API_SemaphoreBPost(ptyDev->TYDEV_hWrtSyncSemB);                 /*  释放信号量                  */
+        SEL_WAKE_UP_ALL(&ptyDev->TYDEV_selwulList, SELWRITE);           /*  释放所有等待写的线程        */
         TYDEV_UNLOCK(ptyDev);                                           /*  释放设备使用权              */
         break;
         
