@@ -133,6 +133,7 @@ resend:
   pbufq = csma_mac_get_pkt_queue(lowpanif); /* There MUST have at least one packet in this queue */
   while (pbufq) {
     ret = RDC_DRIVER(lowpanif)->send(lowpanif, pbufq->p);
+    mac_send_callback(lowpanif, pbufq->p, ret, pbufq->nb);
     if (ret == RADIO_TX_OK) {
       pbufq = csma_mac_del_pkt_queue(lowpanif); /* detele this packet buffer and get next */
     
@@ -205,6 +206,7 @@ static radio_ret_t csma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
       ret = RADIO_TX_COLLISION;
 #else
       ret = RDC_DRIVER(lowpanif)->send(lowpanif, p); /* the first try send */
+      mac_send_callback(lowpanif, p, ret, 1);
 #endif /* CSMA_DEBUG */
       if ((ret == RADIO_TX_COLLISION) || (ret == RADIO_TX_NOACK)) {
         pbufq = csma_mac_put_pkt_queue(lowpanif, p); /* put this packet into send queue */
@@ -218,6 +220,7 @@ static radio_ret_t csma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
     }
   } else {
     ret = RDC_DRIVER(lowpanif)->send(lowpanif, p);
+    mac_send_callback(lowpanif, p, ret, 1);
     if (ret != RADIO_TX_OK) {
       LWIP_DEBUGF(NETIF_DEBUG, ("csma_mac_send: send packet fail!\n"));
     }
@@ -229,6 +232,7 @@ static radio_ret_t csma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
 /** Callback for getting notified of incoming packet. */
 static void csma_mac_input (struct lowpanif *lowpanif, struct pbuf *p)
 {
+  mac_input_callback(lowpanif, p);
   lowpan_input(p, &lowpanif->netif);
 }
 

@@ -367,5 +367,4 @@ void ieee802154_seqno_set (struct pbuf *p, u16_t seqno)
 {
   ((u8_t *)p->payload)[2] = seqno;
 }
-
 /* end */

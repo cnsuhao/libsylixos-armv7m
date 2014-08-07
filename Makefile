@@ -859,6 +859,7 @@ SylixOS/net/lwip/src/netif/radio/ieee802154_frame.c \
 SylixOS/net/lwip/src/netif/radio/lowpan_compress.c \
 SylixOS/net/lwip/src/netif/radio/lowpan_frag.c \
 SylixOS/net/lwip/src/netif/radio/lowpan_if.c \
+SylixOS/net/lwip/src/netif/radio/mac_driver.c \
 SylixOS/net/lwip/src/netif/radio/null_mac.c \
 SylixOS/net/lwip/src/netif/radio/null_rdc.c \
 SylixOS/net/lwip/src/netif/radio/tdma_mac.c \

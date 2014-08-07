@@ -855,7 +855,7 @@ struct pbuf *aodv_mact_create (u8_t flags, u8_t hcnt, struct in_addr *src_addr, 
     mact->orig_addr = src_addr->s_addr;
     mact->orig_seqno = host_seqno;
   } else {
-    LWIP_DEBUGF(AODV_DEBUG, ("aodv_grph_create: can not allocate grph packet!\n"));
+    LWIP_DEBUGF(AODV_DEBUG, ("aodv_mact_create: can not allocate grph packet!\n"));
   }
   
   return p;

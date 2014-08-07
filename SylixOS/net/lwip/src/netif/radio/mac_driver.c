@@ -37,65 +37,33 @@
 
 #include "lowpan_if.h"
 
-#if LOWPAN_NULL_MAC /* don't build if not configured for use in radio_param.h */
-
-/* lowpan interface ieee802.15.4 input */
-extern err_t lowpan_input(struct pbuf *p, struct netif *inp);
-
-/* Initialize the MAC driver return 0 is ok */
-static void null_mac_init (struct lowpanif *lowpanif)
+/**
+ * The mac callback function when send a frame.
+ *
+ * @param lowpanif netif
+ * @param p The frame to send.
+ * @param status The mac status after send the frame.
+ * @param numtx The time to send this frame.
+ * @return none
+ */
+void mac_send_callback (struct lowpanif *lowpanif, struct pbuf *p, radio_ret_t ret, u8_t numtx)
 {
-  RDC_DRIVER(lowpanif)->init(lowpanif);
-}
-
-/** Send a packet from the Rime buffer  */
-static radio_ret_t null_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
-{
-  radio_ret_t ret = RDC_DRIVER(lowpanif)->send(lowpanif, p);
-  
-  mac_send_callback(lowpanif, p, ret, 1);
-  
-  return ret;
-}
-
-/** Callback for getting notified of incoming packet. */
-static void null_mac_input (struct lowpanif *lowpanif, struct pbuf *p)
-{
-  mac_input_callback(lowpanif, p);
-  lowpan_input(p, &lowpanif->netif);
-}
-
-/** Turn the MAC layer on. */
-static int null_mac_on (struct lowpanif *lowpanif)
-{
-  return RDC_DRIVER(lowpanif)->on(lowpanif);
-}
-
-/** Turn the MAC layer off. */
-static int null_mac_off (struct lowpanif *lowpanif, int keep_radio_on)
-{
-  return RDC_DRIVER(lowpanif)->off(lowpanif, keep_radio_on);
-}
-
-/** Returns the channel check interval, expressed in ms. */
-static u32_t null_mac_channel_check_interval (struct lowpanif *lowpanif)
-{
-  if (RDC_DRIVER(lowpanif)->channel_check_interval) {
-    return RDC_DRIVER(lowpanif)->channel_check_interval(lowpanif);
+  if (lowpanif->mcallback.send_callback) {
+    lowpanif->mcallback.send_callback(lowpanif, p, ret, numtx);
   }
-  return 0;
 }
 
-/** NULL MAC driver */
-struct mac_driver null_mac_driver = {
-  "NULL",
-  null_mac_init,
-  null_mac_send,
-  null_mac_input,
-  null_mac_on,
-  null_mac_off,
-  null_mac_channel_check_interval
-};
-
-#endif /* LOWPAN_NULL_MAC */
+/**
+ * The mac callback function when input a frame.
+ *
+ * @param lowpanif netif
+ * @param p The frame to send.
+ * @return none
+ */
+void mac_input_callback (struct lowpanif *lowpanif, struct pbuf *p)
+{
+  if (lowpanif->mcallback.input_callback) {
+    lowpanif->mcallback.input_callback(lowpanif, p);
+  }
+}
 /* end */

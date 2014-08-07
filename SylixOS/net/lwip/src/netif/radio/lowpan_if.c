@@ -221,6 +221,28 @@ lowpan_level_init (struct netif *netif)
   LWIP_ERROR("lowpanif->addr[4] == 0xfe", (lowpanif->addr[4] == 0xfe), return;);
 }
 
+
+/**
+ * Should be called if the interface not support to IPv4
+ *
+ *
+ * @param netif The lwIP network interface which the IP packet will be sent on.
+ * @param p The pbuf(s) containing the IP packet to be sent.
+ * @param ipaddr The IP address of the packet destination.
+ *
+ * @return
+ * - ERR_IF Error interface of this packet
+ */
+static err_t
+netif_null_output_ip4(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr)
+{
+    (void)netif;
+    (void)p;
+    (void)ipaddr;
+
+    return ERR_IF;
+}
+
 /**
  * Should be called at the beginning of the program to set up the
  * network interface. It calls the function low_level_init() to do the
@@ -255,16 +277,16 @@ lowpan_init (struct netif *netif)
 
   netif->name[0] = 'l';
   netif->name[1] = 'p';
-  /* We directly use etharp_output() here to save a function call.
-   * You can instead declare your own function an call etharp_output()
+  /* We directly use netif_null_output_ip4() here to save a function call.
+   * You can instead declare your own function an call aodv_netif_output() for IPv4 Ad-hoc
    * from it if you have to do some checks before sending (e.g. if link
    * is available...) */
   if (netif->output == NULL) {
-    netif->output = etharp_output;
+    netif->output = netif_null_output_ip4;
   }
-    
+  
 #if LWIP_IPV6
-  if (netif->output_ip6 == NULL) {
+  if (netif->output == NULL) {
     netif->output_ip6 = ethip6_output;
   }
 #endif /* LWIP_IPV6 */
@@ -290,6 +312,7 @@ lowpan_init (struct netif *netif)
   
 #if LWIP_IPV6
   netif_create_ip6_linklocal_address(netif, 1);
+  netif_ip6_addr_set_state(netif, 0, IP6_ADDR_PREFERRED);
 #endif
 
   return ERR_OK;

@@ -39,6 +39,7 @@
  */
 
 #include "lwip/opt.h"
+#include "lwip/mem.h"
 #include "lwip/pbuf.h"
 #include "lwip/inet.h"
 #include "lwip/inet6.h"
@@ -50,6 +51,16 @@
 #include "string.h"
 
 #if LWIP_IPV6
+/**
+ * An address context for IPHC address compression
+ * each context can have upto 8 bytes
+ */
+struct lowpan_addr_context {
+  struct lowpan_addr_context *next;
+  u8_t number;
+  u8_t prefix[8];
+}lowpan_addr_context_t;
+
 /* TTL uncompression values */
 static const u8_t lowpan_ttl_values[] = {0, 1, 64, 255};
 
@@ -85,6 +96,9 @@ static const u8_t lowpan_unc_mxconf[] = {0x0f, 0x25, 0x23, 0x21};
 
 /* Link local prefix */
 static const u8_t lowpan_llprefix[] = {0xfe, 0x80};
+
+/* Addresses contexts for IPHC. */
+static struct lowpan_addr_context *unc_ctx_addr = NULL;
 
 /**
  * Compress the 64 bit address
@@ -164,6 +178,103 @@ lowpan_uncompress_addr (u8_t **hc06_ptr, struct in6_addr *ipaddr,
     lowpan_ip_ds6_set_addr_iid(ipaddr, mac_addr);
   }
 }
+
+/*
+ * find the context corresponding to prefix ipaddr
+ * 
+ * @param ipaddr The ipaddr to find
+ *
+ */
+static struct lowpan_addr_context *
+lowpan_context_addr_lookup_by_prefix(u8_t *prefix)
+{
+  struct lowpan_addr_context *p_ctx;
+  
+  p_ctx = unc_ctx_addr;
+  while(p_ctx != NULL) {
+    if(memcmp(p_ctx->prefix, prefix, 8) == 0) {
+      return p_ctx;
+    }
+    p_ctx = p_ctx->next;
+  }
+  
+  return NULL;
+}
+
+/*
+ * find the context with the given number 
+ * 
+ * @param number The given number to find
+ *
+ */
+static struct lowpan_addr_context*
+lowpan_context_addr_lookup_by_number(u8_t number)
+{
+  struct lowpan_addr_context *p_ctx;
+  
+  p_ctx = unc_ctx_addr;
+  while(p_ctx != NULL) {
+    if(p_ctx->number == number) {
+      return p_ctx;
+    }
+    p_ctx = p_ctx->next;
+  }
+  
+  return NULL;
+}
+
+/*
+ * Add an Ipv6 prefix to support context base Compress
+ * 
+ * @param prefix The prefix to support
+ * @param number The number of this prefix
+ */
+void 
+lowpan_context_addr_add(u8_t *prefix, u8_t number)
+{
+  struct lowpan_addr_context *p_ctx;
+  
+  p_ctx = lowpan_context_addr_lookup_by_prefix(prefix);
+  if(p_ctx == NULL) {
+    p_ctx = mem_malloc(sizeof(struct lowpan_addr_context));
+    if(p_ctx != NULL) {
+      p_ctx->number = number;
+      SMEMCPY(p_ctx->prefix, prefix, 8);
+      p_ctx->next = unc_ctx_addr;
+      unc_ctx_addr = p_ctx; 
+    }
+  }
+}
+
+/*
+ * Delete an Ipv6 prefix to not support context base Compress
+ * 
+ * @param prefix The prefix to delete
+ *
+ */
+void 
+lowpan_context_addr_delete(u8_t *prefix)
+{
+  struct lowpan_addr_context *p_ctx;
+  struct lowpan_addr_context *p_ctx_prev = NULL;
+  
+  p_ctx = lowpan_context_addr_lookup_by_prefix(prefix);
+  if(p_ctx != NULL) {
+    /* If it is the list head */
+     if(p_ctx == unc_ctx_addr) {
+        unc_ctx_addr = p_ctx->next;
+     } else {
+       p_ctx_prev = unc_ctx_addr;
+       while(p_ctx_prev != NULL) {
+         if(p_ctx_prev->next == p_ctx) {
+           p_ctx_prev->next = p_ctx->next;
+           break;
+         }
+       }
+     }
+     mem_free(p_ctx);
+  }
+}
 #endif  /* LWIP_IPV6 */
 
 /**
@@ -204,6 +315,7 @@ lowpan_header_create (struct pbuf *p, u8_t *head, u16_t *len)
   u8_t nexth;
   struct ip6_hdr *ip6hdr;
   struct udp_hdr *udphdr;
+  struct lowpan_addr_context *p_ctx;
 #endif  /* LWIP_IPV6 */
   struct eth_hdr ethhdr;
 
@@ -255,7 +367,23 @@ lowpan_header_create (struct pbuf *p, u8_t *head, u16_t *len)
    */
   iphc0 = LOWPAN_DISPATCH_IPHC;
   iphc1 = 0;
+  
+  /*
+   * Address handling needs to be made first since it might
+   * cause an extra byte with [ SCI | DCI ]
+   *
+   */
 
+  /* check if dest context exists (for allocating third byte) */
+  /* TODO: fix this so that it remembers the looked up values for
+     avoiding two lookups - or set the lookup values immediately */
+  if(lowpan_context_addr_lookup_by_prefix((u8_t *)ip6hdr->dest.addr) != NULL ||
+     lowpan_context_addr_lookup_by_prefix((u8_t *)ip6hdr->src.addr) != NULL) {
+    /* set context flag and increase hc06_ptr */
+    iphc1 |= LOWPAN_IPHC_CID;
+    head[2] = 0;
+    hc06_ptr++;
+  }
   /**
    * Traffic class, flow label
    * If flow label is 0, compress it. If traffic class is 0, compress it
@@ -338,7 +466,17 @@ lowpan_header_create (struct pbuf *p, u8_t *head, u16_t *len)
   /* source address compression */
   if (is_addr_unspecified(&ip6hdr->src)) {
     iphc1 |= LOWPAN_IPHC_SAC;
-    /* TODO: context lookup */
+    iphc1 |= LOWPAN_IPHC_SAM_00;
+  } else if((p_ctx = lowpan_context_addr_lookup_by_prefix((u8_t *)ip6hdr->src.addr))
+     != NULL) {
+    /* elide the prefix - indicate by CID and set context + SAC */
+    iphc1 |= LOWPAN_IPHC_CID | LOWPAN_IPHC_SAC;
+    head[2] |= p_ctx->number << 4;
+    /* compession compare with this nodes address (source) */
+
+    iphc1 |= lowpan_compress_addr_64(&hc06_ptr,
+                 LOWPAN_IPHC_SAM_BIT, (struct in6_addr *)&ip6hdr->src, ethhdr.src.addr);
+    /* No context found for this address */
   } else if (is_addr_link_local((struct in6_addr *)&ip6hdr->src)) {
     iphc1 |= lowpan_compress_addr_64(&hc06_ptr,
                  LOWPAN_IPHC_SAM_BIT, (struct in6_addr *)&ip6hdr->src, ethhdr.src.addr);
@@ -374,7 +512,16 @@ lowpan_header_create (struct pbuf *p, u8_t *head, u16_t *len)
     }
   } else {
     /* TODO: context lookup */
-    if (is_addr_link_local((struct in6_addr *)&ip6hdr->dest)) {
+    if((p_ctx = lowpan_context_addr_lookup_by_prefix((u8_t *)ip6hdr->dest.addr)) != NULL) {
+      /* elide the prefix */
+      iphc1 |= LOWPAN_IPHC_DAC;
+      head[2] |= p_ctx->number;
+      /* compession compare with link adress (destination) */
+
+      iphc1 |= lowpan_compress_addr_64(&hc06_ptr,
+                   LOWPAN_IPHC_DAM_BIT, (struct in6_addr *)&ip6hdr->dest, ethhdr.dest.addr);
+      /* No context found for this address */
+    } else if (is_addr_link_local((struct in6_addr *)&ip6hdr->dest)) {
       iphc1 |= lowpan_compress_addr_64(&hc06_ptr,
                    LOWPAN_IPHC_DAM_BIT, (struct in6_addr *)&ip6hdr->dest, ethhdr.dest.addr);
     } else {
@@ -462,6 +609,7 @@ lowpan_header_prase (struct pbuf *p, struct eth_hdr *ethhdr)
   u32_t flags;
   struct ip6_hdr ip6hdr;
   struct udp_hdr udphdr;
+  struct lowpan_addr_context *p_ctx;
 #endif /* LWIP_IPV6 */
   struct pbuf *pfw;
 
@@ -514,27 +662,26 @@ lowpan_header_prase (struct pbuf *p, struct eth_hdr *ethhdr)
     IP6H_VTCFL_SET(&ip6hdr, 6, tmp, flags);
     hc06_ptr += 4;
     break;
-  
-  /**
-   * Traffic class carried in-line
-   * ECN + DSCP (1 byte), Flow Label is elided
-   */
-  case 1: /* 10b */
-    tmp = *hc06_ptr;
-    tmp = ((tmp >> 6) & 0x03) | (tmp << 2);
-    IP6H_VTCFL_SET(&ip6hdr, 6, tmp, 0);
-    hc06_ptr += 1;
-    break;
-  
+    
   /**
    * Flow Label carried in-line
    * ECN + 2-bit Pad + Flow Label (3 bytes), DSCP is elided
    */
-  case 2: /* 01b */
+  case 1: /* 01b */
     MEMCPY(&flags, hc06_ptr, 4);
     flags = ntohl(flags) & 0x000fffff;
     IP6H_VTCFL_SET(&ip6hdr, 6, 0, flags);
     hc06_ptr += 3;
+    break;
+  /**
+   * Traffic class carried in-line
+   * ECN + DSCP (1 byte), Flow Label is elided
+   */
+  case 2: /* 10b */
+    tmp = *hc06_ptr;
+    tmp = ((tmp >> 6) & 0x03) | (tmp << 2);
+    IP6H_VTCFL_SET(&ip6hdr, 6, tmp, 0);
+    hc06_ptr += 1;
     break;
   
   /* Traffic Class and Flow Label are elided */
@@ -561,27 +708,26 @@ lowpan_header_prase (struct pbuf *p, struct eth_hdr *ethhdr)
     hc06_ptr += 1;
   }
 
-  /* Extract SAM to the tmp variable */
+  /* put the source address compression mode SAM in the tmp var */
   tmp = ((iphc1 & LOWPAN_IPHC_SAM) >> LOWPAN_IPHC_SAM_BIT) & 0x03;
   
   /* context based compression */
-  if (iphc1 & LOWPAN_IPHC_DAC) {
-    /*
-     * u8_t sci = (iphc1 & SICSLOWPAN_IPHC_CID) ?
-     * RIME_IPHC_BUF[2] >> 4 : 0;
-     */
+  if (iphc1 & LOWPAN_IPHC_SAC) {
+    u8_t sci = (iphc1 & LOWPAN_IPHC_CID) ?
+      ((u8_t *)p->payload)[2] >> 4 : 0;
+
     /* Source address - check context != NULL only if SAM bits are != 0*/
-    /* 
-     * if (tmp != 0) {
-     * context = addr_context_lookup_by_number(sci);
-     * if (context == NULL) {
-     *   PRINTF("sicslowpan uncompress_hdr: error context not found\n");
-     *   return;
-     * }
-     */
+    if (tmp != 0) {
+      p_ctx = lowpan_context_addr_lookup_by_number(sci);
+      if(p_ctx == NULL) {
+        pbuf_free(p);
+        return NULL;
+      }
+    }
     /* if tmp == 0 we do not have a context and therefore no prefix */
     lowpan_uncompress_addr(&hc06_ptr, (struct in6_addr *)&(ip6hdr.src),
-                    NULL, lowpan_unc_ctxconf[tmp],ethhdr->src.addr);
+                    tmp != 0 ? p_ctx->prefix : NULL, lowpan_unc_ctxconf[tmp],
+                    ethhdr->src.addr);
   } else {
     /* no compression and link local */
     /* Source address uncompression */
@@ -589,7 +735,8 @@ lowpan_header_prase (struct pbuf *p, struct eth_hdr *ethhdr)
                         lowpan_llprefix, lowpan_unc_llconf[tmp], ethhdr->src.addr);
   }
 
-  /* Extract DAM to the tmp variable */
+  /* Destination address */
+  /* put the destination address compression mode into tmp */
   tmp = ((iphc1 & LOWPAN_IPHC_DAM_11) >> LOWPAN_IPHC_DAM_BIT) & 0x03;
 
   /* check for Multicast Compression */
@@ -612,8 +759,24 @@ lowpan_header_prase (struct pbuf *p, struct eth_hdr *ethhdr)
                              lowpan_unc_mxconf[tmp], NULL);
     }
   } else {
-    lowpan_uncompress_addr(&hc06_ptr, (struct in6_addr *)&(ip6hdr.dest), lowpan_llprefix,
-                           lowpan_unc_llconf[tmp], ethhdr->dest.addr);
+    /* no multicast */
+    /* Context based */
+    if(iphc1 & LOWPAN_IPHC_DAC) {
+      u8_t dci = (iphc1 & LOWPAN_IPHC_CID) ?
+	((u8_t *)p->payload)[2] & 0x0f : 0;
+      p_ctx = lowpan_context_addr_lookup_by_number(dci);
+
+      /* all valid cases below need the context! */
+      if(p_ctx == NULL) {
+        pbuf_free(p);
+        return NULL;
+      }
+      lowpan_uncompress_addr(&hc06_ptr, (struct in6_addr *)&(ip6hdr.dest), 
+                             p_ctx->prefix, lowpan_unc_llconf[tmp], ethhdr->dest.addr);
+    } else {
+      lowpan_uncompress_addr(&hc06_ptr, (struct in6_addr *)&(ip6hdr.dest), 
+                             lowpan_llprefix, lowpan_unc_llconf[tmp], ethhdr->dest.addr);
+    }
   }
 
   tmp_len = (hc06_ptr - (u8_t *)p->payload);
@@ -682,6 +845,9 @@ lowpan_header_prase (struct pbuf *p, struct eth_hdr *ethhdr)
       pbuf_free(p);
       pbuf_header(pfw, UDP_HLEN);
       MEMCPY(pfw->payload, &udphdr, UDP_HLEN);
+    } else {
+      pbuf_free(p);
+      return NULL;
     }
   } else {
     IP6H_PLEN_SET(&ip6hdr, p->tot_len);

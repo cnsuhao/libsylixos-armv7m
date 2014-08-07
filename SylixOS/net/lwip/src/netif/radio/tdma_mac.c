@@ -118,6 +118,7 @@ static void tdma_mac_timer (struct lowpanif *lowpanif)
   pbufq = tdma_mac_get_pkt_queue(lowpanif); /* get the first packet in this queue */
   while (pbufq) {
     ret = RDC_DRIVER(lowpanif)->send(lowpanif, pbufq->p);
+    mac_send_callback(lowpanif, pbufq->p, ret, 1);
     pbufq = tdma_mac_del_pkt_queue(lowpanif); /* detele this packet buffer and get next */
     if (ret != RADIO_TX_OK) {
       LWIP_DEBUGF(NETIF_DEBUG, ("tdma_mac_timer: tdma transmit packet fail!\n"));
@@ -161,6 +162,7 @@ static radio_ret_t tdma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
 /** Callback for getting notified of incoming packet. */
 static void tdma_mac_input (struct lowpanif *lowpanif, struct pbuf *p)
 {
+  mac_input_callback(lowpanif, p);
   lowpan_input(p, &lowpanif->netif);
 }
 

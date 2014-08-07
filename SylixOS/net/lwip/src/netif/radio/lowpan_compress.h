@@ -215,7 +215,10 @@ extern "C" {
      ((((u16_t *)((a)->s6_addr))[6]) == 0) &&   \
      ((((u8_t *)((a)->s6_addr))[14]) == 0))
 
-
+#if LWIP_IPV6
+void lowpan_context_addr_add(u8_t *prefix, u8_t number);
+void lowpan_context_addr_delete(u8_t *prefix);
+#endif  /* LWIP_IPV6 */ 
 struct pbuf * lowpan_header_create(struct pbuf *p, u8_t *head, u16_t *len);
 struct pbuf * lowpan_header_prase(struct pbuf *p, struct eth_hdr *ethhdr);
 

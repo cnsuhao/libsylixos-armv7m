@@ -73,6 +73,24 @@ struct mac_driver {
   u32_t (* channel_check_interval)(struct lowpanif *lowpanif);
 };
 
+/**
+ * The structure of a MAC driver callback.
+ */
+struct mac_callback {
+  /** The following is mac callback functions is used to some analysis tools or some route algorithm */
+  /* mac send callback */
+  void (* send_callback)(struct lowpanif *lowpanif, struct pbuf *p, radio_ret_t ret, u8_t numtx);
+  
+  /* mac input callback */
+  void (* input_callback)(struct lowpanif *lowpanif, struct pbuf *p);
+};
+
+/*
+ * Mac driver call this when send / receive a packet.
+ */
+void mac_send_callback(struct lowpanif *lowpanif, struct pbuf *p, radio_ret_t ret, u8_t numtx);
+void mac_input_callback(struct lowpanif *lowpanif, struct pbuf *p);
+
 #ifdef __cplusplus
 }
 #endif

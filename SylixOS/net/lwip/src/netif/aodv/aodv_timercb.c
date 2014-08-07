@@ -38,6 +38,10 @@
 /*
  * These are timeout functions which are called when timers expire...
  */
+#ifdef SYLIXOS
+#define  __SYLIXOS_KERNEL
+#endif
+ 
 #include "lwip/opt.h"
 
 #include "aodv_list.h"
@@ -299,7 +303,20 @@ void aodv_rrep_ack_timeout (void *arg)
  */
 void aodv_wait_on_reboot_timeout (void *arg)
 {
+  int i;
+
+#ifdef SYLIXOS
+  KN_SMP_MB();
+#endif
   *((int *)arg) = 0;
+  for (i = 0; i < AODV_MAX_NETIF; i++) {
+    if (aodv_netif[i]) {
+      netif_set_link_up(aodv_netif[i]); /* net link up */
+    }
+  }
+#ifdef SYLIXOS
+  KN_SMP_MB();
+#endif
 
   LWIP_DEBUGF(AODV_DEBUG, ("aodv_wait_on_reboot_timeout: Wait on reboot over.\n"));
 }

@@ -349,7 +349,7 @@ void aodv_hello_process (struct pbuf *p, struct netif *netif)
  */
 void aodv_hello_update_timeout (struct aodv_rtnode *rt, long time)
 {
-    aodv_timer_set_timeout(&rt->hello_timer, (u32_t)(time + HELLO_DELAY));
-    rt->last_hello_time = sys_now();
+  aodv_timer_set_timeout(&rt->hello_timer, (u32_t)(time + HELLO_DELAY));
+  rt->last_hello_time = sys_now();
 }
 /* end */

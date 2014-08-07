@@ -73,7 +73,7 @@ struct tdma_parameter {
 /** X-MAC RDC Parameter
  */
 struct xmac_parameter {
-  /** radio on time, recommended 5 ~ 10ms (on time + off time is one rdc channel check period)*/
+  /** radio on time, recommended 5 ~ 10ms (on time + off time is one rdc channel check period) */
   u16_t xmac_param_ontime_ms;
   
   /** radio off time, recommended 50 ~ 100ms */
@@ -150,6 +150,9 @@ struct lowpanif {
 #define xmac_strobe_ms      rdc_parameter.xmac.xmac_param_strobe_ms
 #define xmac_strobe_wait_ms rdc_parameter.xmac.xmac_param_strobe_wait_ms
   
+  /** The following is mac callback functions is used to some analysis tools or some route algorithm */
+  struct mac_callback mcallback;
+  
   /** The mac driver struct. 
    *  CSMA Driver recommended (&csma_mac_driver) */
   struct mac_driver *mac_driver;
@@ -163,7 +166,7 @@ struct lowpanif {
   struct rdc_driver *rdc_driver;
   
   /* driver MUST set this with a null ptr */
-  void *rdc_driver_priv; 
+  void *rdc_driver_priv;
   
   /** The radio driver struct 
    *  user specified radio chip driver */

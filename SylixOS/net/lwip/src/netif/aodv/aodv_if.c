@@ -38,7 +38,10 @@
 /* 
  * This is an arch independent AODV netif.
  */
- 
+#ifdef SYLIXOS
+#define  __SYLIXOS_KERNEL
+#endif
+
 #include "lwip/opt.h"
 #include "lwip/pbuf.h"
 #include "lwip/netif.h"
@@ -92,12 +95,24 @@ int aodv_wait_on_reboot_get (void)
  */
 void aodv_gw_set (int enable)
 {
+#ifdef SYLIXOS
+  KN_SMP_MB();
+#endif
   aodv_gw = enable;
+#ifdef SYLIXOS
+  KN_SMP_MB();
+#endif
 }
 
 int aodv_gw_get (void)
 {
+#ifdef SYLIXOS
+  KN_SMP_MB();
+#endif
   return (aodv_gw);
+#ifdef SYLIXOS
+  KN_SMP_MB();
+#endif
 }
 
 
@@ -156,6 +171,8 @@ struct netif *aodv_netif_add (struct netif *netif, ip_addr_t *ipaddr, ip_addr_t 
   aodv_mtunnel_new(i); /* create multicast tunnel */
   aodv_igmp_new(i); /* create a igmp pcb */
 #endif
+  
+  netif_set_link_down(netif); /* wait on reboot */
   
   return ERR_OK;
 }
