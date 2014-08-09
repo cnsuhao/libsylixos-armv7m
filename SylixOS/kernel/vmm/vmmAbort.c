@@ -50,6 +50,7 @@
 #if LW_CFG_VMM_EN > 0
 #include "vmmSwap.h"
 #include "phyPage.h"
+#include "virPage.h"
 /*********************************************************************************************************
   内核信息打印与其他内核函数
 *********************************************************************************************************/
@@ -99,11 +100,12 @@ static VOID __vmmAbortCacheRefresh (BOOL    bSwapNeedLoad,
                                     ULONG   ulAllocPageNum)
 {
 #if LW_CFG_CACHE_EN > 0
-    BOOL    bFlush = LW_FALSE;
-    size_t  stSize = (size_t)(ulAllocPageNum * LW_CFG_VMM_PAGE_SIZE);
+    PLW_MMU_VIRTUAL_DESC    pvirdesc = __vmmVirtualDesc();
+    BOOL                    bFlush   = LW_FALSE;
+    size_t                  stSize   = (size_t)(ulAllocPageNum * LW_CFG_VMM_PAGE_SIZE);
     
     if (API_CacheLocation(DATA_CACHE) == CACHE_LOCATION_VIVT) {         /*  如果是虚拟地址 cache        */
-        API_CacheClear(DATA_CACHE, (PVOID)LW_CFG_VMM_VIRTUAL_SWITCH,
+        API_CacheClear(DATA_CACHE, (PVOID)pvirdesc->ulVirtualSwitch,
                        stSize);                                         /*  将数据写入内存并不再命中    */
         API_CacheInvalidate(DATA_CACHE, (PVOID)ulVirtualPageAlign, 
                             stSize);                                    /*  无效新虚拟内存空间          */
@@ -275,11 +277,12 @@ static INT  __vmmAbortNoPage (PLW_VMM_PAGE           pvmpagePhysical,
                               addr_t                 ulVirtualPageAlign, 
                               ULONG                  ulAllocPageNum)
 {
-    ULONG   ulError;
+    PLW_MMU_VIRTUAL_DESC    pvirdesc = __vmmVirtualDesc();
+    ULONG                   ulError;
 
     if (pvmpagep->PAGEP_pfuncFiller) {                                  /*  需要填充                    */
         ulError = __vmmLibPageMap(pvmpagePhysical->PAGE_ulPageAddr,     /*  使用 CACHE 操作             */
-                                  LW_CFG_VMM_VIRTUAL_SWITCH,            /*  缓冲区虚拟地址              */
+                                  pvirdesc->ulVirtualSwitch,            /*  缓冲区虚拟地址              */
                                   ulAllocPageNum, 
                                   LW_VMM_FLAG_RDWR);                    /*  映射指定的虚拟地址          */
         if (ulError) {
@@ -290,14 +293,14 @@ static INT  __vmmAbortNoPage (PLW_VMM_PAGE           pvmpagePhysical,
         
         if (pvmpagep->PAGEP_pfuncFiller) {                              /*  新页面需要填充              */
             pvmpagep->PAGEP_pfuncFiller(pvmpagep->PAGEP_pvArg,          
-                                        LW_CFG_VMM_VIRTUAL_SWITCH,      /*  需要拷贝的缓存目标虚拟地址  */
+                                        pvirdesc->ulVirtualSwitch,      /*  需要拷贝的缓存目标虚拟地址  */
                                         ulVirtualPageAlign,             /*  缓存最后切换的目标虚拟地址  */
                                         ulAllocPageNum);                /*  拷贝的页面个数              */
         }
                                                                         /*  cache 刷新                  */
         __vmmAbortCacheRefresh(LW_FALSE, ulVirtualPageAlign, ulAllocPageNum);
     
-        __vmmLibSetFlag(LW_CFG_VMM_VIRTUAL_SWITCH, LW_VMM_FLAG_FAIL);   /*  VIRTUAL_SWITCH 不允许访问   */
+        __vmmLibSetFlag(pvirdesc->ulVirtualSwitch, LW_VMM_FLAG_FAIL);   /*  VIRTUAL_SWITCH 不允许访问   */
     }
     
     return  (ERROR_NONE);
@@ -320,13 +323,14 @@ static INT  __vmmAbortSwapPage (PLW_VMM_PAGE  pvmpagePhysical,
                                 addr_t        ulVirtualPageAlign, 
                                 ULONG         ulAllocPageNum)
 {
-    PLW_CLASS_TCB   ptcbCur;                                            /*  当前任务控制块              */
-    ULONG           ulError;
+    PLW_MMU_VIRTUAL_DESC    pvirdesc = __vmmVirtualDesc();
+    PLW_CLASS_TCB           ptcbCur;                                    /*  当前任务控制块              */
+    ULONG                   ulError;
 
     LW_TCB_GET_CUR_SAFE(ptcbCur);
 
     ulError = __vmmLibPageMap(pvmpagePhysical->PAGE_ulPageAddr,         /*  使用 CACHE 操作             */
-                              LW_CFG_VMM_VIRTUAL_SWITCH,                /*  缓冲区虚拟地址              */
+                              pvirdesc->ulVirtualSwitch,                /*  缓冲区虚拟地址              */
                               ulAllocPageNum, 
                               LW_VMM_FLAG_RDWR);                        /*  映射指定的虚拟地址          */
     if (ulError) {
@@ -336,7 +340,7 @@ static INT  __vmmAbortSwapPage (PLW_VMM_PAGE  pvmpagePhysical,
     }
     
     ulError = __vmmPageSwapLoad(__PAGEFAIL_CUR_PID,
-                                LW_CFG_VMM_VIRTUAL_SWITCH, 
+                                pvirdesc->ulVirtualSwitch, 
                                 ulVirtualPageAlign);                    /*  从交换区中读取页面原始内容  */
     if (ulError) {
         printk(KERN_CRIT "kernel swap load page error.\n");             /*  系统无法读出 swap 页面      */
@@ -345,7 +349,7 @@ static INT  __vmmAbortSwapPage (PLW_VMM_PAGE  pvmpagePhysical,
     
     __vmmAbortCacheRefresh(LW_TRUE, ulVirtualPageAlign, ulAllocPageNum);/*  cache 刷新                  */
     
-    __vmmLibSetFlag(LW_CFG_VMM_VIRTUAL_SWITCH, LW_VMM_FLAG_FAIL);       /*  VIRTUAL_SWITCH 不允许访问   */
+    __vmmLibSetFlag(pvirdesc->ulVirtualSwitch, LW_VMM_FLAG_FAIL);       /*  VIRTUAL_SWITCH 不允许访问   */
     
     return  (ERROR_NONE);
 }

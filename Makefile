@@ -348,6 +348,7 @@ SylixOS/kernel/interface/KernelHookDelete.c \
 SylixOS/kernel/interface/KernelIsRunning.c \
 SylixOS/kernel/interface/KernelMisc.c \
 SylixOS/kernel/interface/KernelObject.c \
+SylixOS/kernel/interface/KernelParam.c \
 SylixOS/kernel/interface/KernelReboot.c \
 SylixOS/kernel/interface/KernelResume.c \
 SylixOS/kernel/interface/KernelSpinlock.c \

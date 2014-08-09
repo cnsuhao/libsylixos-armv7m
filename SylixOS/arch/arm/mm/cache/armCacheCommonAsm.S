@@ -132,14 +132,15 @@ FUNC_DEF(armICacheInvalidateAll)
 FUNC_DEF(armICacheInvalidate)
     ARM_DSB()
     ARM_ISB()
-#if __SYLIXOS_ARM_ARCH__ >= 6
-    MCR     p15, 0, R0, c7, c5, 6
-#endif
 1:
     MCR     p15, 0, R0, c7, c5, 1
     ADD     R0, R0, R2
     CMP     R0, R1
     BCC     1b
+#if __SYLIXOS_ARM_ARCH__ >= 6
+    MOV     R0, #0
+    MCR     p15, 0, R0, c7, c5, 6
+#endif
     NOP                                                                 ;/* flush the prefetch unit 3*NOP*/
     NOP
     NOP

@@ -87,10 +87,7 @@ PVOID  __ldMallocAlign (size_t  stLen, size_t  stAlign)
 VOID   __ldFree (PVOID  pvAddr)
 {
 #if LW_CFG_VMM_EN > 0
-    REGISTER caddr_t    pcAddr = (caddr_t)pvAddr;
-
-    if ((pcAddr >= (caddr_t)LW_CFG_VMM_VIRTUAL_START) &&
-        ((pcAddr - LW_CFG_VMM_VIRTUAL_START) < (caddr_t)LW_CFG_VMM_VIRTUAL_SIZE)) {
+    if (API_VmmVirtualIsInside((addr_t)pvAddr)) {
         API_VmmFree(pvAddr);
     } else {
         __SHEAP_FREE(pvAddr);

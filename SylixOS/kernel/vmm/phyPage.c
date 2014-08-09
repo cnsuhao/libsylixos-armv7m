@@ -36,6 +36,7 @@
 *********************************************************************************************************/
 #if LW_CFG_VMM_EN > 0
 #include "phyPage.h"
+#include "virPage.h"
 /*********************************************************************************************************
   物理 zone 控制块数组
 *********************************************************************************************************/
@@ -198,9 +199,10 @@ PLW_VMM_PAGE  __vmmPhysicalPageAllocAlign (ULONG   ulPageNum,
 *********************************************************************************************************/
 PLW_VMM_PAGE  __vmmPhysicalPageClone (PLW_VMM_PAGE  pvmpage)
 {
-    PLW_VMM_PAGE    pvmpageNew;
-    ULONG           ulZoneIndex;
-    ULONG           ulError;
+    PLW_VMM_PAGE            pvmpageNew;
+    PLW_MMU_VIRTUAL_DESC    pvirdesc = __vmmVirtualDesc();
+    ULONG                   ulZoneIndex;
+    ULONG                   ulError;
     
     if ((pvmpage->PAGE_ulCount != 1) ||
         (pvmpage->PAGE_iPageType != __VMM_PAGE_TYPE_PHYSICAL) ||
@@ -216,22 +218,22 @@ PLW_VMM_PAGE  __vmmPhysicalPageClone (PLW_VMM_PAGE  pvmpage)
     }
     
     ulError = __vmmLibPageMap(pvmpageNew->PAGE_ulPageAddr,              /*  使用 CACHE 操作             */
-                              LW_CFG_VMM_VIRTUAL_SWITCH, 1,             /*  缓冲区虚拟地址              */
+                              pvirdesc->ulVirtualSwitch, 1,             /*  缓冲区虚拟地址              */
                               LW_VMM_FLAG_RDWR);                        /*  映射指定的虚拟地址          */
     if (ulError) {
         __vmmPhysicalPageFree(pvmpageNew);
         return  (LW_NULL);
     }
     
-    KN_COPY_PAGE((PVOID)LW_CFG_VMM_VIRTUAL_SWITCH, 
+    KN_COPY_PAGE((PVOID)pvirdesc->ulVirtualSwitch, 
                  (PVOID)pvmpage->PAGE_ulMapPageAddr);                   /*  拷贝页面内容                */
                
     if (API_CacheLocation(DATA_CACHE) == CACHE_LOCATION_VIVT) {         /*  如果是虚拟地址 cache        */
-        API_CacheClear(DATA_CACHE, (PVOID)LW_CFG_VMM_VIRTUAL_SWITCH,
+        API_CacheClear(DATA_CACHE, (PVOID)pvirdesc->ulVirtualSwitch,
                        LW_CFG_VMM_PAGE_SIZE);                           /*  将数据写入内存并不再命中    */
     }
     
-    __vmmLibSetFlag(LW_CFG_VMM_VIRTUAL_SWITCH, LW_VMM_FLAG_FAIL);       /*  VIRTUAL_SWITCH 不允许访问   */
+    __vmmLibSetFlag(pvirdesc->ulVirtualSwitch, LW_VMM_FLAG_FAIL);       /*  VIRTUAL_SWITCH 不允许访问   */
     
     return  (pvmpageNew);
 }

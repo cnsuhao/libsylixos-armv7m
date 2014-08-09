@@ -22,6 +22,10 @@
 #ifndef __PHYPAGE_H
 #define __PHYPAGE_H
 
+/*********************************************************************************************************
+  物理空间操作
+*********************************************************************************************************/
+
 ULONG           __vmmPhysicalCreate(ULONG  ulZoneIndex, addr_t  ulAddr, size_t  stSize, UINT  uiAttr);
 PLW_VMM_PAGE    __vmmPhysicalPageAlloc(ULONG  ulPageNum, UINT  uiAttr, ULONG  *pulZoneIndex);
 PLW_VMM_PAGE    __vmmPhysicalPageAllocZone(ULONG  ulZoneIndex, ULONG  ulPageNum, UINT  uiAttr);

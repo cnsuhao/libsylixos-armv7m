@@ -114,11 +114,11 @@ ULONG  API_VmmLibPrimaryInit (LW_VMM_ZONE_DESC       vmzone[],
                               LW_MMU_GLOBAL_DESC     mmugdesc[],
                               CPCHAR                 pcMachineName)
 {
-    static BOOL     bIsInit = LW_FALSE;
-
-           INT      i;
-           ULONG    ulError;
-           ULONG    ulPageNum = 0;
+    static BOOL                 bIsInit  = LW_FALSE;
+           PLW_MMU_VIRTUAL_DESC pvirdesc = __vmmVirtualDesc();
+           INT                  i;
+           ULONG                ulError;
+           ULONG                ulPageNum = 0;
     
     if (bIsInit) {
         return  (ERROR_NONE);
@@ -156,15 +156,15 @@ ULONG  API_VmmLibPrimaryInit (LW_VMM_ZONE_DESC       vmzone[],
         }
     }
     
-    ulError = __vmmVirtualCreate(LW_CFG_VMM_VIRTUAL_START, 
-                                 LW_CFG_VMM_VIRTUAL_SIZE);              /*  初始化逻辑空间              */
+    ulError = __vmmVirtualCreate(pvirdesc->ulVirtualStart, 
+                                 pvirdesc->stSize);                     /*  初始化逻辑空间              */
     if (ulError) {
         _ErrorHandle(ulError);
         return  (ulError);
     }
     
-    ulError = __areaVirtualSpaceInit(LW_CFG_VMM_VIRTUAL_START, 
-                                     LW_CFG_VMM_VIRTUAL_SIZE);
+    ulError = __areaVirtualSpaceInit(pvirdesc->ulVirtualStart, 
+                                     pvirdesc->stSize);
     if (ulError) {
         _ErrorHandle(ulError);
         return  (ulError);
@@ -816,6 +816,20 @@ ULONG  API_VmmPhysicalToVirtual (addr_t  ulPhysicalAddr, addr_t  *pulVirtualAddr
 {
     _ErrorHandle(ENOSYS);
     return  (ENOSYS);
+}
+/*********************************************************************************************************
+** 函数名称: API_VmmVirtualIsInside
+** 功能描述: 查询指定的地址是否在虚拟空间中
+** 输　入  : ulAddr             地址
+** 输　出  : 是否在虚拟地址空间中
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+BOOL  API_VmmVirtualIsInside (addr_t  ulAddr)
+{
+    return  (__vmmVirtualIsInside(ulAddr));                             /*  不需要使用 VMM LOCK         */
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmZoneStatus

@@ -45,7 +45,7 @@ VOID    armDCacheClear(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
 
 #define ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd)                   \
         do {                                                        \
-            if (stBytes < sizeof(PVOID)) {                          \
+            if (stBytes <= sizeof(PVOID)) {                         \
                 ulEnd = (addr_t)pvAdrs;                             \
             } else {                                                \
                 ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);   \

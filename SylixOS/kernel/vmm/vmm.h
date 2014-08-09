@@ -50,7 +50,7 @@
   
   这里只是举例, 内存的顺序没有要求, 例如, 内核内存可以不必要在最前面, VMM 分配管理器也可以不在最后面.
   但是, SylixOS 对 BSP 有以下要求: "内核内存"和具有"ATTR_DMA"属性的 DMA 内存编址, 不能与"虚拟空间"有重叠!
-  这里所说的"虚拟空间"就是 LW_CFG_VMM_VIRTUAL_START(or VIRTUAL_SWITCH) ~ LW_CFG_VMM_VIRTUAL_SIZE 这段空间
+  这里所说的"虚拟空间"就是 LW_MMU_VIRTUAL_DESC 描述的这段空间, 默认 3GB~4GB 之间, 可以通过内核启动参数修改
   而且, 内核内存与 ATTR_DMA 物理地址和虚拟地址初始化成相同. 
   (因为很多驱动程度使用 sys_malloc() 开辟 DMA 内存, 通过 cacheFlush 与 cacheInvalidate 与主存保持一致, 
    而且有些内存算法使用物理地址索引, 所以内核内存与 ATTR_DMA 物理地址和虚拟地址初始化成相同)
@@ -88,6 +88,17 @@ typedef struct __lw_mmu_global_desc {
     ULONG                    ulFlag;                                    /*  标志                        */
 } LW_MMU_GLOBAL_DESC;
 typedef LW_MMU_GLOBAL_DESC  *PLW_MMU_GLOBAL_DESC;
+
+/*********************************************************************************************************
+  mmu 虚拟地址空间
+*********************************************************************************************************/
+
+typedef struct __lw_mmu_virtual_desc {
+    addr_t                   ulVirtualSwitch;                           /*  内部页面交换空间地址(自动)  */
+    addr_t                   ulVirtualStart;                            /*  虚拟空间起始地址            */
+    size_t                   stSize;                                    /*  虚拟空间长度                */
+} LW_MMU_VIRTUAL_DESC;
+typedef LW_MMU_VIRTUAL_DESC *PLW_MMU_VIRTUAL_DESC;
 
 /*********************************************************************************************************
   vmm 当前状态
@@ -134,6 +145,8 @@ LW_API VOID         API_VmmFree(PVOID  pvVirtualMem);                   /*  回收
 
 LW_API ULONG        API_VmmVirtualToPhysical(addr_t  ulVirtualAddr, 
                                              addr_t *pulPhysicalAddr);  /*  通过虚拟地址获取物理地址    */
+                                             
+LW_API BOOL         API_VmmVirtualIsInside(addr_t  ulAddr);             /*  指定地址是否在管理的虚拟空间*/
                                              
 LW_API ULONG        API_VmmZoneStatus(ULONG     ulZoneIndex,
                                       addr_t   *pulPhysicalAddr,
@@ -345,6 +358,7 @@ LW_API VOID         API_VmmAbortIsr(addr_t          ulRetAddr,
 #define vmmMap                  API_VmmMap
 #define vmmVirtualToPhysical    API_VmmVirtualToPhysical
 #define vmmPhysicalToVirtual    API_VmmPhysicalToVirtual                /*  仅支持VMM管理的物理内存查询 */
+#define vmmVirtualIsInside      API_VmmVirtualIsInside
 
 #define vmmSetFlag              API_VmmSetFlag
 #define vmmGetFlag              API_VmmGetFlag

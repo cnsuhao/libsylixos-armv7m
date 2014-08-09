@@ -623,11 +623,12 @@ ULONG  API_DtraceBreakpointInsert (PVOID  pvDtrace, addr_t  ulAddr, ULONG  *pulI
     PLW_DTRACE    pdtrace = (PLW_DTRACE)pvDtrace;
     
     if (!(pdtrace->DTRACE_uiFlag & LW_DTRACE_F_KBP)) {                  /*  ÄÚºË¶Ïµã½ûÄÜ                */
-        if ((ulAddr < (LW_CFG_VMM_VIRTUAL_START)) ||
-            (ulAddr > (LW_CFG_VMM_VIRTUAL_START + LW_CFG_VMM_VIRTUAL_SIZE))) {
+#if LW_CFG_VMM_EN > 0
+        if (!API_VmmVirtualIsInside(ulAddr)) {
             _ErrorHandle(ERROR_KERNEL_MEMORY);
             return  (ERROR_KERNEL_MEMORY);
         }
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
     }
     
     archDbgBpInsert(ulAddr, pulIns);

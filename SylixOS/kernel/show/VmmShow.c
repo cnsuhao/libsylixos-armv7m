@@ -34,6 +34,7 @@
 *********************************************************************************************************/
 #if LW_CFG_FIO_LIB_EN > 0
 #if LW_CFG_VMM_EN > 0
+#include "../SylixOS/kernel/vmm/virPage.h"
 /*********************************************************************************************************
   全局变量
 *********************************************************************************************************/
@@ -132,10 +133,12 @@ static VOID  __vmmVirtualPrint (PLW_VMM_PAGE  pvmpage)
 LW_API  
 VOID  API_VmmVirtualShow (VOID)
 {
+    PLW_MMU_VIRTUAL_DESC pvirdesc = __vmmVirtualDesc();
+    
     printf("vmm virtual area show >>\n");
     printf("vmm virtual area from : 0x%08lx, size : 0x%08lx\n", 
-                  (addr_t)LW_CFG_VMM_VIRTUAL_START,
-                  (addr_t)LW_CFG_VMM_VIRTUAL_SIZE);
+                  (addr_t)pvirdesc->ulVirtualStart,
+                  (addr_t)pvirdesc->stSize);
     printf("vmm virtual area usage as follow :\n");
                   
     printf(_G_cAreaInfoHdr);                                            /*  打印欢迎信息                */

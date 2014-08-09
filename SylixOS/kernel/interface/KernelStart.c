@@ -33,8 +33,8 @@
 2012.09.12  OSStartHighRdy() 启动多任务前, 需要初始化被运行任务的 FPU 环境.
 2013.05.01  内核启动参数加入堆内存越界的相关检查.
 2013.07.17  引入新的多核初始化机制.
+2014.08.08  将内核启动参数调整放在独立的文件中.
 *********************************************************************************************************/
-#define  __KERNEL_NCPUS_SET
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
@@ -163,75 +163,6 @@ static VOID  _KernelBootSecondary (VOID)
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-/*********************************************************************************************************
-** 函数名称: API_KernelStartParam
-** 功能描述: 系统内核启动参数
-** 输　入  : pcParam       启动参数, 是以空格分开的一个字符串列表，通常具有如下形式:
-                           ncpus=1 dlog=no derror=yes ... 
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-                                       API 函数
-*********************************************************************************************************/
-LW_API
-ULONG  API_KernelStartParam (CPCHAR  pcParam)
-{
-    CHAR        cParamBuffer[512];                                      /*  参数长度不得超过 512 字节   */
-    PCHAR       pcDelim = " ";
-    PCHAR       pcLast;
-    PCHAR       pcTok;
-    
-    if (LW_SYS_STATUS_IS_RUNNING()) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "kernel is already start.\r\n");
-        _ErrorHandle(ERROR_KERNEL_RUNNING);
-        return  (ERROR_KERNEL_RUNNING);
-    }
-    
-    lib_strlcpy(cParamBuffer, pcParam, 512);
-
-    pcTok = lib_strtok_r(cParamBuffer, pcDelim, &pcLast);
-    while (pcTok) {
-    
-        if (lib_strncmp(pcTok, "ncpus=", 6) == 0) {                     /*  CPU 数量                    */
-            INT     iCpus = lib_atoi(&pcTok[6]);
-            if (iCpus > 0 && iCpus < LW_CFG_MAX_PROCESSORS) {
-                _K_ulNCpus = (ULONG)iCpus;
-            }
-            
-        } else if (lib_strncmp(pcTok, "kdlog=", 6) == 0) {              /*  是否使能内核 log 打印       */
-            if (pcTok[6] == 'n') {
-                _K_pfuncKernelDebugLog = LW_NULL;
-            } else {
-                _K_pfuncKernelDebugLog = bspDebugMsg;
-            }
-            
-        } else if (lib_strncmp(pcTok, "kderror=", 8) == 0) {            /*  是否使能内核错误打印        */
-            if (pcTok[8] == 'n') {
-                _K_pfuncKernelDebugError = LW_NULL;
-            } else {
-                _K_pfuncKernelDebugError = bspDebugMsg;
-            }
-        
-        } else if (lib_strncmp(pcTok, "kfpu=", 5) == 0) {               /*  是否使能内核浮点支持        */
-            if (pcTok[5] == 'n') {
-                _K_bInterFpuEn = LW_FALSE;
-            } else {
-                _K_bInterFpuEn = LW_TRUE;
-            }
-        
-        } else if (lib_strncmp(pcTok, "heapchk=", 5) == 0) {            /*  是否进行堆内存越界检查      */
-            if (pcTok[8] == 'n') {
-                _K_bHeapCrossBorderEn = LW_FALSE;
-            } else {
-                _K_bHeapCrossBorderEn = LW_TRUE;
-            }
-        }
-        
-        pcTok = lib_strtok_r(LW_NULL, pcDelim, &pcLast);
-    }
-    
-    return  (ERROR_NONE);
-}
 /*********************************************************************************************************
 ** 函数名称: API_KernelPrimaryStart
 ** 功能描述: 系统内核入口 (只允许系统逻辑主核调用, 一般为 CPU 0, 当前为关中断状态)

@@ -25,11 +25,17 @@
 #ifndef __VIRPAGE_H
 #define __VIRPAGE_H
 
-ULONG           __vmmVirtualCreate(addr_t  ulAddr, size_t  stSize);
-PLW_VMM_PAGE    __vmmVirtualPageAlloc(ULONG  ulPageNum);
-PLW_VMM_PAGE    __vmmVirtualPageAllocAlign(ULONG  ulPageNum, size_t  stAlign);
-VOID            __vmmVirtualPageFree(PLW_VMM_PAGE  pvmpage);
-ULONG           __vmmVirtualPageGetMinContinue(VOID);
+/*********************************************************************************************************
+  ÐéÄâ¿Õ¼ä²Ù×÷
+*********************************************************************************************************/
+
+PLW_MMU_VIRTUAL_DESC    __vmmVirtualDesc(VOID);
+BOOL                    __vmmVirtualIsInside(addr_t  ulAddr);
+ULONG                   __vmmVirtualCreate(addr_t  ulAddr, size_t  stSize);
+PLW_VMM_PAGE            __vmmVirtualPageAlloc(ULONG  ulPageNum);
+PLW_VMM_PAGE            __vmmVirtualPageAllocAlign(ULONG  ulPageNum, size_t  stAlign);
+VOID                    __vmmVirtualPageFree(PLW_VMM_PAGE  pvmpage);
+ULONG                   __vmmVirtualPageGetMinContinue(VOID);
 
 #endif                                                                  /*  __VIRPAGE_H                 */
 /*********************************************************************************************************
