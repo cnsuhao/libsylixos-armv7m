@@ -74,10 +74,11 @@ VOID        archSigCtxLoad(PVOID  pvStack);
 *********************************************************************************************************/
 
 #if LW_CFG_GDB_EN > 0
-VOID    archDbgBpInsert(addr_t  ulAddr, ULONG  *pulIns);
-VOID    archDbgAbInsert(addr_t  ulAddr, ULONG  *pulIns);
-VOID    archDbgBpRemove(addr_t  ulAddr, ULONG  ulIns);
-UINT    archDbgTrapType(addr_t  ulAddr);
+VOID    archDbgBpInsert(addr_t   ulAddr, ULONG  *pulIns);
+VOID    archDbgAbInsert(addr_t   ulAddr, ULONG  *pulIns);
+VOID    archDbgBpRemove(addr_t   ulAddr, ULONG   ulIns);
+VOID    archDbgBpPrefetch(addr_t ulAddr);
+UINT    archDbgTrapType(addr_t   ulAddr);
 #endif                                                                  /*  LW_CFG_GDB_EN > 0           */
 
 /*********************************************************************************************************

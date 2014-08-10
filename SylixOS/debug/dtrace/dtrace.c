@@ -21,6 +21,7 @@
 ** BUG:
 2012.09.05  今天凌晨, 重新设计 dtrace 的等待与接口机制, 开始为 GDB server 的编写扫平一切障碍.
 2014.05.23  内存操作时, 需要首先检测内存访问权限.
+2014.08.10  API_DtraceThreadStepSet() 首先对单步断点地址产生一次页面中断.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -929,12 +930,15 @@ ULONG API_DtraceThreadStepSet (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, addr
 {
     REGISTER UINT16         usIndex;
     REGISTER PLW_CLASS_TCB  ptcb;
-
-    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+             PLW_DTRACE     pdtrace = (PLW_DTRACE)pvDtrace;
 
     if (!pdtrace) {
         _ErrorHandle(EINVAL);
         return  (EINVAL);
+    }
+
+    if (ulAddr != (addr_t)PX_ERROR) {
+        archDbgBpPrefetch(ulAddr);                                      /*  预先产生相关页面中断        */
     }
 
     usIndex = _ObjectGetIndex(ulThread);
@@ -976,8 +980,7 @@ ULONG API_DtraceThreadStepGet (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, addr
 {
     REGISTER UINT16         usIndex;
     REGISTER PLW_CLASS_TCB  ptcb;
-
-    PLW_DTRACE  pdtrace = (PLW_DTRACE)pvDtrace;
+             PLW_DTRACE     pdtrace = (PLW_DTRACE)pvDtrace;
 
     if (!pdtrace || !pulAddr) {
         _ErrorHandle(EINVAL);
@@ -1025,23 +1028,21 @@ ULONG API_DtraceSchedHook (LW_OBJECT_HANDLE  ulThreadOld, LW_OBJECT_HANDLE  ulTh
     REGISTER PLW_CLASS_TCB  ptcb;
 
     usIndex = _ObjectGetIndex(ulThreadOld);
-
     if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
         return  (ERROR_THREAD_NULL);
     }
 
-    ptcb = _K_ptcbTCBIdTable[usIndex];
-    if (ptcb->TCB_ulStepAddr != (addr_t)PX_ERROR) {
+    ptcb = __GET_TCB_FROM_INDEX(usIndex);
+    if (ptcb && (ptcb->TCB_ulStepAddr != (addr_t)PX_ERROR)) {           /*  确保切出线程有效            */
         archDbgBpRemove(ptcb->TCB_ulStepAddr, ptcb->TCB_ulStepInst);
     }
 
     usIndex = _ObjectGetIndex(ulThreadNew);
-
     if (_Thread_Index_Invalid(usIndex)) {                               /*  检查线程有效性              */
         return  (ERROR_THREAD_NULL);
     }
 
-    ptcb = _K_ptcbTCBIdTable[usIndex];
+    ptcb = __GET_TCB_FROM_INDEX(usIndex);
     if (ptcb->TCB_ulStepAddr != (addr_t)PX_ERROR) {
         archDbgBpInsert(ptcb->TCB_ulStepAddr, &ptcb->TCB_ulStepInst);
     }

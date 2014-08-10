@@ -35,6 +35,10 @@
  *
  */
 
+#ifdef SYLIXOS
+#define  __SYLIXOS_KERNEL
+#endif
+
 #include "lwip/sys.h"
 #include "lwip/mem.h"
 
@@ -203,6 +207,9 @@ static void null_rdc_input (struct lowpanif *lowpanif, struct pbuf *p)
       lack->seqno = SEQ_NO(p);
       lack->valid = 1;
     }
+#ifdef SYLIXOS
+    KN_SMP_WMB();
+#endif
     pbuf_free(p);
     return;
   }
