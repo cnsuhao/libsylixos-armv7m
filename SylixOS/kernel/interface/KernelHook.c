@@ -24,6 +24,7 @@
 2012.07.04  合并 API_KernelHookSet() 到这里
 2012.09.22  加入诸多电源管理的 HOOK.
 2013.03.16  加入进程回调.
+2014.08.10  加入系统错误回调.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -123,6 +124,14 @@ ULONG  API_KernelHookGet (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
     
     case LW_OPTION_CPU_INT_EXIT:                                        /*  CPU 退出中断(异常)模式      */
         hookfuncPtr = _K_hookKernel.HOOK_CpuIntExit;
+        break;
+        
+    case LW_OPTION_STACK_OVERFLOW_HOOK:                                 /*  堆栈溢出                    */
+        hookfuncPtr = _K_hookKernel.HOOK_StkOverflow;
+        break;
+    
+    case LW_OPTION_FATAL_ERROR_HOOK:                                    /*  致命错误                    */
+        hookfuncPtr = _K_hookKernel.HOOK_FatalError;
         break;
         
     case LW_OPTION_VPROC_CREATE_HOOK:                                   /*  进程建立钩子                */
@@ -238,6 +247,14 @@ ULONG  API_KernelHookSet (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
     
     case LW_OPTION_CPU_INT_EXIT:                                        /*  CPU 退出中断(异常)模式      */
         _K_hookKernel.HOOK_CpuIntExit = hookfuncPtr;
+        break;
+        
+    case LW_OPTION_STACK_OVERFLOW_HOOK:                                 /*  堆栈溢出                    */
+        _K_hookKernel.HOOK_StkOverflow = hookfuncPtr;
+        break;
+    
+    case LW_OPTION_FATAL_ERROR_HOOK:                                    /*  致命错误                    */
+        _K_hookKernel.HOOK_FatalError = hookfuncPtr;
         break;
         
     case LW_OPTION_VPROC_CREATE_HOOK:                                   /*  进程建立钩子                */

@@ -736,6 +736,20 @@ INT            _doSigEventEx(LW_OBJECT_HANDLE  ulId,
         }
 
 /*********************************************************************************************************
+  系统错误相关 HOOK
+*********************************************************************************************************/
+
+#define __LW_STACK_OVERFLOW_HOOK(pid, ulId) \
+        if (_K_hookKernel.HOOK_StkOverflow) {  \
+            _K_hookKernel.HOOK_StkOverflow(pid, ulId); \
+        }
+        
+#define __LW_FATAL_ERROR_HOOK(pid, ulId, psiginfo) \
+        if (_K_hookKernel.HOOK_FatalError) {  \
+            _K_hookKernel.HOOK_FatalError(pid, ulId, psiginfo); \
+        }
+
+/*********************************************************************************************************
   进程回调
 *********************************************************************************************************/
 

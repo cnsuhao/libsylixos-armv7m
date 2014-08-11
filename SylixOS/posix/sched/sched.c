@@ -393,12 +393,12 @@ int  sched_getaffinity (pid_t pid, size_t setsize, cpu_set_t *set)
 {
     ULONG   i;
     
-    if (!set) {
+    if (!set || (setsize < sizeof(cpu_set_t))) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
     
-    for (i = 0; (i < setsize) && (i < LW_NCPUS); i++) {
+    for (i = 0; i < LW_NCPUS; i++) {
         CPU_SET(i, set);
     }
     

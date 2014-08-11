@@ -38,8 +38,5 @@ networks
 protocols
 services
 
-内置GDB调试参数配置
-debug/gdbserver.ini
-
 term转义字符放在 (http://rpmfind.net/linux/rpm2html/search.php?query=%2Fetc%2Ftermcap)
 termcap

@@ -33,8 +33,9 @@
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
-#define  __SYSHOOKLIST_MAIN_FILE
 #include "../SylixOS/system/include/s_system.h"
+#define  __SYSHOOKLIST_MAIN_FILE
+#include "sysHookList.h"
 /*********************************************************************************************************
   hook 服务函数模板
 *********************************************************************************************************/
@@ -99,6 +100,9 @@ VOID _HookListInit (VOID)
     _HookCbInit(&_G_hookcbCpuIdleExit);
     _HookCbInit(&_G_hookcbCpuIntEnter);
     _HookCbInit(&_G_hookcbCpuIntExit);
+    
+    _HookCbInit(&_G_hookcbStkOverflow);
+    _HookCbInit(&_G_hookcbFatalError);
     
     _HookCbInit(&_G_hookcbVpCreate);
     _HookCbInit(&_G_hookcbVpDelete);
@@ -369,6 +373,33 @@ VOID  _SysIntEnterHook (ULONG  ulVector, ULONG  ulNesting)
 VOID  _SysIntExitHook (ULONG  ulVector, ULONG  ulNesting)
 {
     __HOOK_TEMPLATE(_G_hookcbCpuIntExit, (ulVector, ulNesting));
+}
+/*********************************************************************************************************
+** 函数名称: _SysStkOverflowHook
+** 功能描述: 系统堆栈溢出回调
+** 输　入  : pid                       进程 id
+**           ulId                      线程 id
+** 输　出  : 
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  _SysStkOverflowHook (pid_t  pid, LW_OBJECT_HANDLE  ulId)
+{
+    __HOOK_TEMPLATE(_G_hookcbStkOverflow, (pid, ulId));
+}
+/*********************************************************************************************************
+** 函数名称: _SysFatalErrorHook
+** 功能描述: 系统致命错误
+** 输　入  : pid                       进程 id
+**           ulId                      线程 id
+**           pinfo                     信号信息
+** 输　出  : 
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  _SysFatalErrorHook (pid_t  pid, LW_OBJECT_HANDLE  ulId, struct siginfo *psiginfo)
+{
+    __HOOK_TEMPLATE(_G_hookcbFatalError, (pid, ulId, psiginfo));
 }
 /*********************************************************************************************************
 ** 函数名称: _SysVpCreateHook

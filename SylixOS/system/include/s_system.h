@@ -59,8 +59,6 @@
 #include "../SylixOS/system/excLib/excLib.h"
 #include "../SylixOS/system/logLib/logLib.h"
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
-
-#include "../SylixOS/system/sysHookList/sysHookList.h"
 /*********************************************************************************************************
   select
 *********************************************************************************************************/

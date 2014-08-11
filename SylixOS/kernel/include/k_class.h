@@ -98,6 +98,9 @@ typedef struct {
     LW_HOOK_FUNC          HOOK_VpCreate;                                /*  进程创建钩子                */
     LW_HOOK_FUNC          HOOK_VpDelete;                                /*  进程删除钩子                */
     
+    LW_HOOK_FUNC          HOOK_StkOverflow;                             /*  线程堆栈溢出                */
+    LW_HOOK_FUNC          HOOK_FatalError;                              /*  段错误                      */
+    
     LW_SPINLOCK_DEFINE   (HOOK_slLock);                                 /*  自旋锁                      */
 } LW_CLASS_HOOK;
 

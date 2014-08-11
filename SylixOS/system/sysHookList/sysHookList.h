@@ -65,6 +65,9 @@ VOID  _SysCpuIdleExitHook(LW_OBJECT_HANDLE  ulIdExitTo);
 VOID  _SysIntEnterHook(ULONG  ulVector, ULONG  ulNesting);
 VOID  _SysIntExitHook(ULONG  ulVector, ULONG  ulNesting);
 
+VOID  _SysStkOverflowHook(pid_t  pid, LW_OBJECT_HANDLE  ulId);
+VOID  _SysFatalErrorHook(pid_t  pid, LW_OBJECT_HANDLE  ulId, struct siginfo *psiginfo);
+
 VOID  _SysVpCreateHook(pid_t pid);
 VOID  _SysVpDeleteHook(pid_t pid, INT iExitCode);
 
@@ -114,10 +117,13 @@ __SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCpuIdleExit;                  /*  CPU 
 __SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCpuIntEnter;                  /*  CPU 进入中断(异常)模式      */
 __SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCpuIntExit;                   /*  CPU 退出中断(异常)模式      */
 
+__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbStkOverflow;                  /*  堆栈溢出                    */
+__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbFatalError;                   /*  致命错误                    */
+
 __SYSHOOK_EXT LW_HOOK_CB         _G_hookcbVpCreate;                     /*  进程建立钩子                */
 __SYSHOOK_EXT LW_HOOK_CB         _G_hookcbVpDelete;                     /*  进程删除钩子                */
 
-#endif                                                                  /*  __HOOKLIST_H                */
+#endif                                                                  /*  __SYSHOOKLIST_H             */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

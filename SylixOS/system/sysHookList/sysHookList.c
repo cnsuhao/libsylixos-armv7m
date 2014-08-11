@@ -34,6 +34,7 @@
 2012.12.08  加入资源回收的功能.
 2013.03.16  加入进程回调.
 2013.05.02  这里已经加入资源管理, 进程允许安装回调.
+2014.08.10  加入系统错误回调.
 *********************************************************************************************************/
 /*********************************************************************************************************
 注意：
@@ -45,6 +46,7 @@
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
+#include "sysHookList.h"
 /*********************************************************************************************************
   进程相关
 *********************************************************************************************************/
@@ -261,6 +263,24 @@ ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         LW_SPIN_UNLOCK_QUICK(&_G_hookcbCpuIntExit.HOOKCB_slHook, iregInterLevel);
         break;
         
+    case LW_OPTION_STACK_OVERFLOW_HOOK:                                 /*  堆栈溢出                    */
+        LW_SPIN_LOCK_QUICK(&_G_hookcbStkOverflow.HOOKCB_slHook, &iregInterLevel);
+        if (_G_hookcbStkOverflow.HOOKCB_plineHookHeader == LW_NULL) {
+            _K_hookKernel.HOOK_StkOverflow = _SysStkOverflowHook;
+        }
+        _List_Line_Add_Ahead(pline, &_G_hookcbStkOverflow.HOOKCB_plineHookHeader);
+        LW_SPIN_UNLOCK_QUICK(&_G_hookcbStkOverflow.HOOKCB_slHook, iregInterLevel);
+        break;
+        
+    case LW_OPTION_FATAL_ERROR_HOOK:                                    /*  致命错误                    */
+        LW_SPIN_LOCK_QUICK(&_G_hookcbFatalError.HOOKCB_slHook, &iregInterLevel);
+        if (_G_hookcbFatalError.HOOKCB_plineHookHeader == LW_NULL) {
+            _K_hookKernel.HOOK_FatalError = _SysFatalErrorHook;
+        }
+        _List_Line_Add_Ahead(pline, &_G_hookcbFatalError.HOOKCB_plineHookHeader);
+        LW_SPIN_UNLOCK_QUICK(&_G_hookcbFatalError.HOOKCB_slHook, iregInterLevel);
+        break;
+        
     case LW_OPTION_VPROC_CREATE_HOOK:                                   /*  进程建立钩子                */
         LW_SPIN_LOCK_QUICK(&_G_hookcbVpCreate.HOOKCB_slHook, &iregInterLevel);
         if (_G_hookcbVpCreate.HOOKCB_plineHookHeader == LW_NULL) {
@@ -408,6 +428,14 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         phookcb = &_G_hookcbCpuIntExit;
         break;
         
+    case LW_OPTION_STACK_OVERFLOW_HOOK:                                 /*  堆栈溢出                    */
+        phookcb = &_G_hookcbStkOverflow;
+        break;
+    
+    case LW_OPTION_FATAL_ERROR_HOOK:                                    /*  致命错误                    */
+        phookcb = &_G_hookcbFatalError;
+        break;
+            
     case LW_OPTION_VPROC_CREATE_HOOK:                                   /*  进程建立钩子                */
         phookcb = &_G_hookcbVpCreate;
         break;

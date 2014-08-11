@@ -6,7 +6,7 @@
  */
 
 /*
- * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+ * Copyright (c) 2006-2014 SylixOS Group.
  * All rights reserved. 
  * 
  * Redistribution and use in source and binary forms, with or without modification, 
@@ -131,29 +131,28 @@ static void tdma_mac_init (struct lowpanif *lowpanif)
 {
   RDC_DRIVER(lowpanif)->init(lowpanif);
   
-  if (lowpanif->csma_type != LOWPAN_CSMA_HW) {
-    LWIP_DEBUGF(NETIF_DEBUG, ("tdma_mac_init: very dangerous to use TDMA Mac but without hardware CSMA!\n"));
-  }
-  
-#if LWIP_TCPIP_TIMEOUT 
-  /* May be not in tcpip thread, so we use tcpip_timeout() for safety */
-  tcpip_timeout(lowpanif->tdma_period, (sys_timeout_handler)tdma_mac_timer, lowpanif);
-#else
-  sys_timeout(lowpanif->tdma_period, (sys_timeout_handler)tdma_mac_timer, lowpanif);
-#endif
+  /* radio driver MUST use hardware CSMA */
+  LWIP_ASSERT("Very dangerous to use TDMA Mac but without hardware CSMA!\n",
+              (lowpanif->csma_type == LOWPAN_CSMA_HW));
 }
 
 /** Send a packet from the Rime buffer  */
 static radio_ret_t tdma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
 {
   radio_ret_t ret;
+  struct pbuf_q *first;
   struct pbuf_q *pbufq;
   
+  first = tdma_mac_get_pkt_queue(lowpanif);
   pbufq = tdma_mac_put_pkt_queue(lowpanif, p); /* put this packet into send queue */
   if (pbufq) {
     ret = RADIO_TX_OK;
   } else {
     ret = RADIO_TX_ERR;
+  }
+  
+  if (!first) {
+    sys_timeout(lowpanif->tdma_period, (sys_timeout_handler)tdma_mac_timer, lowpanif);
   }
 
   return ret;

@@ -140,6 +140,12 @@ static VOID  __signalCnclHandle (INT  iSigNo, struct siginfo *psiginfo)
 *********************************************************************************************************/
 static VOID  __signalExitHandle (INT  iSigNo, struct siginfo *psiginfo)
 {
+#if LW_CFG_MODULELOADER_EN > 0
+    pid_t   pid = getpid();
+#else
+    pid_t   pid = 0;
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+
 #if LW_CFG_LOG_LIB_EN > 0
     PCHAR   pcSigMsg = LW_NULL;
 
@@ -178,11 +184,12 @@ static VOID  __signalExitHandle (INT  iSigNo, struct siginfo *psiginfo)
     }
 #endif                                                                  /*  LW_CFG_LOG_LIB_EN > 0       */
     
-    if ((iSigNo == SIGSEGV) || 
-        (iSigNo == SIGABRT) || 
-        (iSigNo == SIGKILL)) {                                          /*  强制信号                    */
+    if ((iSigNo == SIGSEGV) || (iSigNo == SIGILL)) {
+        __LW_FATAL_ERROR_HOOK(pid, API_ThreadIdSelf(), psiginfo);
+    }
+                                                                        /*  强制信号                    */
+    if ((iSigNo == SIGSEGV) || (iSigNo == SIGABRT) || (iSigNo == SIGKILL)) {    
 #if LW_CFG_MODULELOADER_EN > 0
-        pid_t   pid = getpid();
         if (pid > 0) {
             vprocExitModeSet(pid, LW_VPROC_EXIT_FORCE);                 /*  强制进程退出                */
         }

@@ -7,7 +7,7 @@
  */
 
 /*
- * Copyright (c) 2001-2004 Swedish Institute of Computer Science.
+ * Copyright (c) 2006-2014 SylixOS Group.
  * All rights reserved. 
  * 
  * Redistribution and use in source and binary forms, with or without modification, 

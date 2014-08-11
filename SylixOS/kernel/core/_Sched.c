@@ -154,8 +154,6 @@ VOID _SchedSwp (PLW_CLASS_CPU pcpuCur)
     REGISTER LW_OBJECT_HANDLE   ulHighId     = ptcbHigh->TCB_ulId;
              BOOL               bIsIntSwtich = pcpuCur->CPU_bIsIntSwtich;
 
-    _StackCheckGuard(ptcbCur);                                          /*  ¶ÑÕ»¾¯½ä¼ì²é                */
-    
 #if LW_CFG_SMP_EN > 0
     if (LW_CPU_GET_IPI_PEND(pcpuCur->CPU_ulCPUId) & LW_IPI_DOWN_MSK) {  /*  µ±Ç° CPU ÐèÒªÍ£Ö¹           */
         _SchedCpuDown(pcpuCur, bIsIntSwtich);
@@ -222,11 +220,15 @@ INT  _Sched (VOID)
              PLW_CLASS_CPU    pcpuCur;
              PLW_CLASS_TCB    ptcbCur;
              PLW_CLASS_TCB    ptcbCand;
-    REGISTER INT              iRetVal = ERROR_NONE;
-    
 #if LW_CFG_SMP_EN > 0
              BOOL             bStatusReq = LW_FALSE;
+#endif                                                                  /*  LW_CFG_SMP_EN               */
+    REGISTER INT              iRetVal = ERROR_NONE;
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);
+    _StackCheckGuard(ptcbCur);                                          /*  ¶ÑÕ»¾¯½ä¼ì²é                */
 
+#if LW_CFG_SMP_EN > 0
 __status_change:
     if (bStatusReq) {
         _ThreadStatusChangeCur(ptcbCur);
@@ -289,11 +291,15 @@ INT  _SchedInt (VOID)
              PLW_CLASS_CPU    pcpuCur;
              PLW_CLASS_TCB    ptcbCur;
              PLW_CLASS_TCB    ptcbCand;
-    REGISTER INT              iRetVal = ERROR_NONE;
-    
 #if LW_CFG_SMP_EN > 0
              BOOL             bStatusReq = LW_FALSE;
+#endif                                                                  /*  LW_CFG_SMP_EN               */
+    REGISTER INT              iRetVal = ERROR_NONE;
     
+    LW_TCB_GET_CUR_SAFE(ptcbCur);
+    _StackCheckGuard(ptcbCur);                                          /*  ¶ÑÕ»¾¯½ä¼ì²é                */
+
+#if LW_CFG_SMP_EN > 0
 __status_change:
     if (bStatusReq) {
         _ThreadStatusChangeCur(ptcbCur);

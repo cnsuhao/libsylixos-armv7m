@@ -20,10 +20,17 @@
 
 ** BUG:
 2013.09.17  加入线程堆栈警戒检查功能.
+2014.08.10  堆栈溢出调用相关 hook.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
+/*********************************************************************************************************
+  进程相关
+*********************************************************************************************************/
+#if LW_CFG_MODULELOADER_EN > 0
+#include "../SylixOS/loader/include/loader_vppatch.h"
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 /*********************************************************************************************************
 ** 函数名称: _StackCheckInit
 ** 功能描述: 初始化堆栈检查相关数据
@@ -52,9 +59,16 @@ VOID  _StackCheckInit (VOID)
 VOID  _StackCheckGuard (PLW_CLASS_TCB  ptcb)
 {
     CHAR    cBuffer[128];
+    pid_t   pid;
 
     if ((ptcb->TCB_ulOption & LW_OPTION_THREAD_STK_CLR) &&
         (*ptcb->TCB_pstkStackGuard != _K_stkFreeFlag)) {
+#if LW_CFG_MODULELOADER_EN > 0
+        pid = __lw_vp_get_tcb_pid(ptcb);
+#else
+        pid = 0;
+#endif
+        __LW_STACK_OVERFLOW_HOOK(pid, ptcb->TCB_ulId);
         snprintf(cBuffer, sizeof(cBuffer), "thread %s id 0x%08lx stack may overflow.\r\n",
                  ptcb->TCB_cThreadName, ptcb->TCB_ulId);
         _DebugHandle(__ERRORMESSAGE_LEVEL, cBuffer);

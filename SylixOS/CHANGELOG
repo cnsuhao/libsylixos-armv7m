@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-08-11: han.hui
+    系统支持堆栈溢出与致命错误安装钩子函数.
+    
     2014-07-23: han.hui
     xinput 支持 proc 文件显示当前物理设备信息.
 
