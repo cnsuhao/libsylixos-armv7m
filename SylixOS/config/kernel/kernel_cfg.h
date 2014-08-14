@@ -43,7 +43,7 @@
 #define LW_CFG_MAX_TIMERS                       100     /*  系统使用总定时器最大个数            < 65535 */
 #define LW_CFG_MAX_THREADS                      100     /*  系统管理的最大线程数量，            < 65535 */
 #define LW_CFG_MAX_RMSS                         30      /*  系统管理的最大精度单调调度器数量    < 65535 */
-#define LW_CFG_MAX_INTER_SRC                    64      /*  系统使用中断向量表大小,中断源数量   <  9999 */
+#define LW_CFG_MAX_INTER_SRC                    128     /*  系统使用中断向量表大小,中断源数量   <  9999 */
 #define LW_CFG_MAX_NOTEPADS                     4       /*  系统每个线程使用的记事本数量        <   255 */
 #define LW_CFG_MAX_THREAD_GLB_VARS              20      /*  系统总共需要使用的全局变量私有化个数< 65535 */
 

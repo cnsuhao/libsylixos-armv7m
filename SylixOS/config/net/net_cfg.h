@@ -121,7 +121,7 @@
 #define LW_CFG_LWIP_NUM_PPP             0                               /*  lwip ppp 最大会话数         */
 #endif                                                                  /*  __GNUC__                    */
 
-#define LW_CFG_LWIP_JOBQUEUE_SIZE       50                              /*  sylixos job queue size      */
+#define LW_CFG_LWIP_JOBQUEUE_SIZE       256                             /*  sylixos job queue size      */
 #define LW_CFG_LWIP_STK_SIZE            4096                            /*  lwip thread default stksize */
 
 #define LW_CFG_LWIP_TCP_PCB             100                             /*  允许同时的 TCP 连接数       */

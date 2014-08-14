@@ -1643,6 +1643,9 @@ static INT elfLoadExec (LW_LD_EXEC_MODULE *pmodule, Elf_Ehdr *pehdr, INT iFd)
         }
         pchLibName = pdyndir->pcStrTable + pdyndir->wdNeededArr[pdyndir->ulNeededCnt - i - 1];
         ppmodUseArr[i] = moduleLoadSub(pmodule, pchLibName, LW_TRUE);
+        if (ppmodUseArr[i] == LW_NULL) {
+            goto    __out;
+        }
         ppmodUseArr[i]->EMOD_ulRefs++;
     }
 
