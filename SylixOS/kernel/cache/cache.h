@@ -108,7 +108,7 @@ LW_API ULONG        API_CacheLibPrimaryInit(CACHE_MODE  uiInstruction,
 #if LW_CFG_SMP_EN > 0
 LW_API ULONG        API_CacheLibSecondaryInit(CPCHAR  pcMachineName);
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
 /*********************************************************************************************************
   通用 CACHE 库 API 操作
 *********************************************************************************************************/
@@ -148,6 +148,7 @@ LW_API VOID         API_CacheFuncsSet(VOID);
 /*********************************************************************************************************
   VxWorks 兼容 CACHE 函数库
 *********************************************************************************************************/
+#ifdef __SYLIXOS_KERNEL
 
 #define cacheGetLibBlock            API_CacheGetLibBlock
 #define cacheLocation               API_CacheLocation

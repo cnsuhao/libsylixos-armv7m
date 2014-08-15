@@ -16,7 +16,10 @@
 **
 ** 文件创建日期: 2011 年 12 月 10 日
 **
-** 描        述: 兼容 posix sysconf 库. 获取当前系统配置信息
+** 描        述: 兼容 posix sysconf 库. 获取当前系统配置信息.
+**
+** BUG:
+2014.08.15  _SC_NPROCESSORS_ONLN 返回为当前激活 CPU 个数.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "unistd.h"
@@ -117,7 +120,20 @@ long  sysconf (int name)
         return  (LW_NCPUS);
         
     case _SC_NPROCESSORS_ONLN:
+#if LW_CFG_SMP_EN > 0
+        {
+            ULONG   i;
+            int     iCnt = 0;
+            for (i = 0; i < LW_NCPUS; i++) {
+                if (API_CpuIsUp(i)) {
+                    iCnt++;
+                }
+            }
+            return  (iCnt);
+        }
+#else
         return  (LW_NCPUS);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
         
     case _SC_THREAD_DESTRUCTOR_ITERATIONS:
         return  (__ARCH_LONG_MAX);

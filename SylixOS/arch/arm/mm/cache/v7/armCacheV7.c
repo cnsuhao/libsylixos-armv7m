@@ -129,7 +129,7 @@ static INT	armCacheV7Flush (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stB
             armDCacheV7FlushAll();                                      /*  全部回写                    */
         
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armDCacheFlush(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写                    */
         }
         
@@ -160,7 +160,7 @@ static INT	armCacheV7FlushPage (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, PVOID  
             armDCacheV7FlushAll();                                      /*  全部回写                    */
         
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armDCacheFlush(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写                    */
         }
         
@@ -191,13 +191,26 @@ static INT	armCacheV7Invalidate (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t
             armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
         
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
         }
     } else {
         if (stBytes > 0) {                                              /*  必须 > 0                    */
-            ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
-            armDCacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
+            addr_t  ulStart = (addr_t)pvAdrs;
+            
+            if (ulStart & ((addr_t)uiArmV7CacheLineSize - 1)) {         /*  起始地址非 cache line 对齐  */
+                ulStart &= ~((addr_t)uiArmV7CacheLineSize - 1);
+                armDCacheClear(ulStart, ulStart, uiArmV7CacheLineSize);
+                ulStart += uiArmV7CacheLineSize;
+            }
+            
+            ulEnd = ulStart + stBytes;
+            if (ulEnd & ((addr_t)uiArmV7CacheLineSize - 1)) {           /*  结束地址非 cache line 对齐  */
+                ulEnd &= ~((addr_t)uiArmV7CacheLineSize - 1);
+                armDCacheClear(ulEnd, ulEnd, uiArmV7CacheLineSize);
+            }
+                                                                        /*  仅无效对齐部分              */
+            armDCacheInvalidate((PVOID)ulStart, (PVOID)ulEnd, uiArmV7CacheLineSize);
             
 #if LW_CFG_ARM_CACHE_L2 > 0
             armL2Invalidate(pvAdrs, stBytes);                           /*  虚拟与物理地址必须相同      */
@@ -229,13 +242,26 @@ static INT	armCacheV7InvalidatePage (LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOI
             armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
         
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
         }
     } else {
         if (stBytes > 0) {                                              /*  必须 > 0                    */
-            ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);
-            armDCacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
+            addr_t  ulStart = (addr_t)pvAdrs;
+            
+            if (ulStart & ((addr_t)uiArmV7CacheLineSize - 1)) {         /*  起始地址非 cache line 对齐  */
+                ulStart &= ~((addr_t)uiArmV7CacheLineSize - 1);
+                armDCacheClear(ulStart, ulStart, uiArmV7CacheLineSize);
+                ulStart += uiArmV7CacheLineSize;
+            }
+            
+            ulEnd = ulStart + stBytes;
+            if (ulEnd & ((addr_t)uiArmV7CacheLineSize - 1)) {           /*  结束地址非 cache line 对齐  */
+                ulEnd &= ~((addr_t)uiArmV7CacheLineSize - 1);
+                armDCacheClear(ulEnd, ulEnd, uiArmV7CacheLineSize);
+            }
+                                                                        /*  仅无效对齐部分              */
+            armDCacheInvalidate((PVOID)ulStart, (PVOID)ulEnd, uiArmV7CacheLineSize);
             
 #if LW_CFG_ARM_CACHE_L2 > 0
             armL2Invalidate(pvPdrs, stBytes);                           /*  虚拟与物理地址必须相同      */
@@ -267,7 +293,7 @@ static INT	armCacheV7Clear (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stB
             armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
             
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
         }
     } else {
@@ -275,7 +301,7 @@ static INT	armCacheV7Clear (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t  stB
             armDCacheV7ClearAll();                                      /*  全部回写并无效              */
         
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armDCacheClear(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写并无效              */
         }
         
@@ -306,7 +332,7 @@ static INT	armCacheV7ClearPage (LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOID pvP
             armICacheInvalidateAll();                                   /*  ICACHE 全部无效             */
             
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
         }
     } else {
@@ -314,7 +340,7 @@ static INT	armCacheV7ClearPage (LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOID pvP
             armDCacheV7ClearAll();                                      /*  全部回写并无效              */
         
         } else {
-            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+            ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
             armDCacheClear(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize); /*  部分回写并无效              */
         }
         
@@ -374,7 +400,7 @@ static INT	armCacheV7TextUpdate (PVOID  pvAdrs, size_t  stBytes)
         armICacheInvalidateAll();                                       /*  ICACHE 全部无效             */
         
     } else {
-        ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd);
+        ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiArmV7CacheLineSize);
         armDCacheFlush(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);     /*  部分回写                    */
         armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
     }
@@ -427,7 +453,7 @@ VOID  armCacheV7Init (LW_CACHE_OP *pcacheop,
         pcacheop->CACHEOP_iCacheLine = 64;
     }
     
-    uiArmV7CacheLineSize           = (UINT32)pcacheop->CACHEOP_iCacheLine;
+    uiArmV7CacheLineSize = (UINT32)pcacheop->CACHEOP_iCacheLine;
     
     pcacheop->CACHEOP_pfuncEnable  = armCacheV7Enable;
     pcacheop->CACHEOP_pfuncDisable = armCacheV7Disable;

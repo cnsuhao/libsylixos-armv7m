@@ -40,16 +40,13 @@ VOID    armDCacheFlush(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
 VOID    armDCacheClear(PVOID  pvStart, PVOID  pvEnd, UINT32  uiStep);
 
 /*********************************************************************************************************
-  CACHE 获得 pvEnd 位置
+  CACHE 获得 pvAdrs 与 pvEnd 位置
 *********************************************************************************************************/
 
-#define ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd)                   \
-        do {                                                        \
-            if (stBytes <= sizeof(PVOID)) {                         \
-                ulEnd = (addr_t)pvAdrs;                             \
-            } else {                                                \
-                ulEnd = (addr_t)pvAdrs + stBytes - sizeof(PVOID);   \
-            }                                                       \
+#define ARM_CACHE_GET_END(pvAdrs, stBytes, ulEnd, uiLineSize)               \
+        do {                                                                \
+            ulEnd  = (addr_t)((size_t)pvAdrs + stBytes);                    \
+            pvAdrs = (PVOID)((addr_t)pvAdrs & ~((addr_t)uiLineSize - 1));   \
         } while (0)
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */

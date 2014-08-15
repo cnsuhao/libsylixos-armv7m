@@ -145,13 +145,13 @@ static VOID armL2x0Flush (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  stByte
         return;
     }
     
-    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd);
-
-    ulPhyStart &= ~(L2C_CACHE_LINE_SIZE - 1);
+    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd, L2C_CACHE_LINE_SIZE);
+    
     while (ulPhyStart < ulPhyEnd) {
         armL2x0FlushLine(pl2cdrv, ulPhyStart);
         ulPhyStart += L2C_CACHE_LINE_SIZE;
     }
+    
     armL2x0Sync(pl2cdrv);
 }
 /*********************************************************************************************************
@@ -195,9 +195,7 @@ static VOID armL2x0InvalidateAll (L2C_DRVIER  *pl2cdrv)
 static VOID armL2x0Invalidate (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  stBytes)
 {
     addr_t  ulPhyStart = (addr_t)pvPhyAddr;
-    addr_t  ulPhyEnd;
-    
-    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd);
+    addr_t  ulPhyEnd   = ulPhyStart + stBytes;
     
     if (ulPhyStart & (L2C_CACHE_LINE_SIZE - 1)) {
         ulPhyStart &= ~(L2C_CACHE_LINE_SIZE - 1);
@@ -214,6 +212,7 @@ static VOID armL2x0Invalidate (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  s
         armL2x0InvalidateLine(pl2cdrv, ulPhyStart);
         ulPhyStart += L2C_CACHE_LINE_SIZE;
     }
+    
     armL2x0Sync(pl2cdrv);
 }
 /*********************************************************************************************************
@@ -264,13 +263,13 @@ static VOID armL2x0Clear (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  stByte
         return;
     }
     
-    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd);
+    ARM_CACHE_GET_END(pvPhyAddr, stBytes, ulPhyEnd, L2C_CACHE_LINE_SIZE);
 
-    ulPhyStart &= ~(L2C_CACHE_LINE_SIZE - 1);
     while (ulPhyStart < ulPhyEnd) {
         armL2x0ClearLine(pl2cdrv, ulPhyStart);
         ulPhyStart += L2C_CACHE_LINE_SIZE;
     }
+    
     armL2x0Sync(pl2cdrv);
 }
 /*********************************************************************************************************

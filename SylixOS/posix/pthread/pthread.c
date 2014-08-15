@@ -786,7 +786,13 @@ int  pthread_getaffinity_np (pthread_t  thread, size_t setsize, cpu_set_t *set)
     }
     
     for (i = 0; i < LW_NCPUS; i++) {
+#if LW_CFG_SMP_EN > 0
+        if (API_CpuIsUp(i)) {
+            CPU_SET(i, set);
+        }
+#else
         CPU_SET(i, set);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     }
     
     return  (ERROR_NONE);
