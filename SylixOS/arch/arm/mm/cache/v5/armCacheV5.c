@@ -156,14 +156,14 @@ static INT	armCacheV5Invalidate (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t
             
             if (ulStart & (ARMv5_CACHE_LINE_SIZE - 1)) {                /*  起始地址非 cache line 对齐  */
                 ulStart &= ~(ARMv5_CACHE_LINE_SIZE - 1);
-                armDCacheClear(ulStart, ulStart, ARMv5_CACHE_LINE_SIZE);
+                armDCacheClear((PVOID)ulStart, (PVOID)ulStart, ARMv5_CACHE_LINE_SIZE);
                 ulStart += ARMv5_CACHE_LINE_SIZE;
             }
             
             ulEnd = ulStart + stBytes;
             if (ulEnd & (ARMv5_CACHE_LINE_SIZE - 1)) {                  /*  结束地址非 cache line 对齐  */
                 ulEnd &= ~(ARMv5_CACHE_LINE_SIZE - 1);
-                armDCacheClear(ulEnd, ulEnd, ARMv5_CACHE_LINE_SIZE);
+                armDCacheClear((PVOID)ulEnd, (PVOID)ulEnd, ARMv5_CACHE_LINE_SIZE);
             }
                                                                         /*  仅无效对齐部分              */
             armDCacheInvalidate((PVOID)ulStart, (PVOID)ulEnd, ARMv5_CACHE_LINE_SIZE);
@@ -203,14 +203,14 @@ static INT	armCacheV5InvalidatePage (LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOI
             
             if (ulStart & (ARMv5_CACHE_LINE_SIZE - 1)) {                /*  起始地址非 cache line 对齐  */
                 ulStart &= ~(ARMv5_CACHE_LINE_SIZE - 1);
-                armDCacheClear(ulStart, ulStart, ARMv5_CACHE_LINE_SIZE);
+                armDCacheClear((PVOID)ulStart, (PVOID)ulStart, ARMv5_CACHE_LINE_SIZE);
                 ulStart += ARMv5_CACHE_LINE_SIZE;
             }
             
             ulEnd = ulStart + stBytes;
             if (ulEnd & (ARMv5_CACHE_LINE_SIZE - 1)) {                  /*  结束地址非 cache line 对齐  */
                 ulEnd &= ~(ARMv5_CACHE_LINE_SIZE - 1);
-                armDCacheClear(ulEnd, ulEnd, ARMv5_CACHE_LINE_SIZE);
+                armDCacheClear((PVOID)ulEnd, (PVOID)ulEnd, ARMv5_CACHE_LINE_SIZE);
             }
                                                                         /*  仅无效对齐部分              */
             armDCacheInvalidate((PVOID)ulStart, (PVOID)ulEnd, ARMv5_CACHE_LINE_SIZE);

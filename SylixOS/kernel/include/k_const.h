@@ -33,10 +33,10 @@
 #define __RDY_TBL_SIZE              8                                   /*  就续表位图大小              */
 
 /*********************************************************************************************************
-  TCB的字节数定义，相对于字对齐的字节数
+  TCB 的字节数定义，相对于字对齐的字节数
 *********************************************************************************************************/
 
-#define __SEGMENT_BLOCK_SIZE_ALIGN  ROUND_UP(sizeof(LW_CLASS_SEGMENT), sizeof(LW_STACK))
+#define __SEGMENT_BLOCK_SIZE_ALIGN  ROUND_UP(sizeof(LW_CLASS_SEGMENT), LW_CFG_HEAP_ALIGNMENT)
 
 #if LW_CFG_COROUTINE_EN > 0
 #define __CRCB_SIZE_ALIGN           ROUND_UP(sizeof(LW_CLASS_COROUTINE), sizeof(LW_STACK))

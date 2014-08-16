@@ -200,14 +200,14 @@ static INT	armCacheV7Invalidate (LW_CACHE_TYPE  cachetype, PVOID  pvAdrs, size_t
             
             if (ulStart & ((addr_t)uiArmV7CacheLineSize - 1)) {         /*  起始地址非 cache line 对齐  */
                 ulStart &= ~((addr_t)uiArmV7CacheLineSize - 1);
-                armDCacheClear(ulStart, ulStart, uiArmV7CacheLineSize);
+                armDCacheClear((PVOID)ulStart, (PVOID)ulStart, uiArmV7CacheLineSize);
                 ulStart += uiArmV7CacheLineSize;
             }
             
             ulEnd = ulStart + stBytes;
             if (ulEnd & ((addr_t)uiArmV7CacheLineSize - 1)) {           /*  结束地址非 cache line 对齐  */
                 ulEnd &= ~((addr_t)uiArmV7CacheLineSize - 1);
-                armDCacheClear(ulEnd, ulEnd, uiArmV7CacheLineSize);
+                armDCacheClear((PVOID)ulEnd, (PVOID)ulEnd, uiArmV7CacheLineSize);
             }
                                                                         /*  仅无效对齐部分              */
             armDCacheInvalidate((PVOID)ulStart, (PVOID)ulEnd, uiArmV7CacheLineSize);
@@ -251,14 +251,14 @@ static INT	armCacheV7InvalidatePage (LW_CACHE_TYPE cachetype, PVOID pvAdrs, PVOI
             
             if (ulStart & ((addr_t)uiArmV7CacheLineSize - 1)) {         /*  起始地址非 cache line 对齐  */
                 ulStart &= ~((addr_t)uiArmV7CacheLineSize - 1);
-                armDCacheClear(ulStart, ulStart, uiArmV7CacheLineSize);
+                armDCacheClear((PVOID)ulStart, (PVOID)ulStart, uiArmV7CacheLineSize);
                 ulStart += uiArmV7CacheLineSize;
             }
             
             ulEnd = ulStart + stBytes;
             if (ulEnd & ((addr_t)uiArmV7CacheLineSize - 1)) {           /*  结束地址非 cache line 对齐  */
                 ulEnd &= ~((addr_t)uiArmV7CacheLineSize - 1);
-                armDCacheClear(ulEnd, ulEnd, uiArmV7CacheLineSize);
+                armDCacheClear((PVOID)ulEnd, (PVOID)ulEnd, uiArmV7CacheLineSize);
             }
                                                                         /*  仅无效对齐部分              */
             armDCacheInvalidate((PVOID)ulStart, (PVOID)ulEnd, uiArmV7CacheLineSize);

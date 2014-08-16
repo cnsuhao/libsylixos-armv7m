@@ -368,7 +368,7 @@ static BOOL  __npfMacRuleCheck (__PNPF_NETIF_CB  pnpfni, struct eth_hdr *pethhdr
         pnpfrm = _LIST_ENTRY(plineTemp, __NPF_RULE_MAC, NPFRM_lineManage);
         if (lib_memcmp(pnpfrm->NPFRM_ucMac,
                        pethhdr->src.addr,
-                       NETIF_MAX_HWADDR_LEN) == 0) {
+                       ETHARP_HWADDR_LEN) == 0) {                       /*  比较 6 个字节               */
             return  (LW_FALSE);                                         /*  禁止通过                    */
         }
     }
@@ -617,7 +617,7 @@ PVOID  API_INetNpfRuleAdd (CPCHAR  pcNetifName,
             return  (LW_NULL);
         }
         pnpfrm->NPFRM_iRule = iRule;
-        lib_memcpy(&pnpfrm->NPFRM_ucMac, pucMac, NETIF_MAX_HWADDR_LEN);
+        lib_memcpy(&pnpfrm->NPFRM_ucMac, pucMac, ETHARP_HWADDR_LEN);    /*  拷贝 6 字节                 */
 
         __NPF_LOCK();                                                   /*  锁定 NPF 表                 */
         pnpfni = __npfNetifCreate(pcNetifName);                         /*  创建控制块                  */
@@ -1099,7 +1099,7 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
             printf("mac argment error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
-        for (i = 0; i < NETIF_MAX_HWADDR_LEN; i++) {
+        for (i = 0; i < ETHARP_HWADDR_LEN; i++) {
             ucMac[i] = (UINT8)iMac[i];
         }
         pvRule = API_INetNpfRuleAdd(ppcArgV[__NPF_TSHELL_RADD_ARG_NETIF],

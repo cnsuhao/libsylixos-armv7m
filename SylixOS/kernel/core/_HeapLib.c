@@ -57,6 +57,7 @@
 2014.05.03  内存错误时, 打印堆的名字.
 2014.07.03  可以给 heap 中添加内存.
             free 操作确保最右侧分段应该在 freelist 的最后, 为最不推荐分配的段.
+2014.08.15  采用新的判断对齐内存释放算法.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -121,14 +122,23 @@ VOIDFUNCPTR _K_pfuncHeapTraceFree;
 *********************************************************************************************************/
 #define __HEAP_SEGMENT_IS_USED(psegment)    (!_list_ring_get_prev(&((psegment)->SEGMENT_ringFreeList)))
 /*********************************************************************************************************
+  分段是否有效
+*********************************************************************************************************/
+#define __HEAP_SEGMENT_IS_REAL(psegment)    ((psegment)->SEGMENT_stMagic == LW_SEG_MAGIC_REAL)
+/*********************************************************************************************************
   分段数据指针
 *********************************************************************************************************/
 #define __HEAP_SEGMENT_DATA_PTR(psegment)   ((UINT8 *)(psegment) + __SEGMENT_BLOCK_SIZE_ALIGN)
 /*********************************************************************************************************
+  通过数据指针返回分段指针
+*********************************************************************************************************/
+#define __HEAP_SEGMENT_SEG_PTR(pvData)      ((PLW_CLASS_SEGMENT)((UINT8 *)(pvData) - \
+                                                                 __SEGMENT_BLOCK_SIZE_ALIGN))
+/*********************************************************************************************************
   理论上下一个分段地址
 *********************************************************************************************************/
 #define __HEAP_SEGMENT_NEXT_PTR(psegment)   ((PLW_CLASS_SEGMENT)(__HEAP_SEGMENT_DATA_PTR(psegment) + \
-                                                                 psegment->SEGMENT_stSegmentByteSize))
+                                                                 psegment->SEGMENT_stByteSize))
 /*********************************************************************************************************
   是否可以合并分段判断
 *********************************************************************************************************/
@@ -166,7 +176,7 @@ static LW_INLINE VOID __heap_crossbord_mark (PLW_CLASS_SEGMENT psegment)
     
     if (_K_bHeapCrossBorderEn) {
         pstMark = (size_t *)(__HEAP_SEGMENT_DATA_PTR(psegment)
-                + (psegment->SEGMENT_stSegmentByteSize - sizeof(size_t)));
+                + (psegment->SEGMENT_stByteSize - sizeof(size_t)));
         *pstMark = __HEAP_SEGMENT_MARK_FLAG;
     }
 }
@@ -177,7 +187,7 @@ static LW_INLINE BOOL __heap_crossbord_check (PLW_CLASS_SEGMENT psegment)
     
     if (_K_bHeapCrossBorderEn) {
         pstMark = (size_t *)(__HEAP_SEGMENT_DATA_PTR(psegment)
-                + (psegment->SEGMENT_stSegmentByteSize - sizeof(size_t)));
+                + (psegment->SEGMENT_stByteSize - sizeof(size_t)));
         if (*pstMark != __HEAP_SEGMENT_MARK_FLAG) {
             return  (LW_FALSE);
         }
@@ -251,20 +261,28 @@ PLW_CLASS_HEAP  _HeapCtor (PLW_CLASS_HEAP    pheapToBuild,
                            size_t            stByteSize)
 {
     REGISTER PLW_CLASS_SEGMENT  psegment;
+    REGISTER addr_t             ulStart      = (addr_t)pvStartAddress;
+    REGISTER addr_t             ulStartAlign = ROUND_UP(ulStart, LW_CFG_HEAP_ALIGNMENT);
     
-    psegment = (PLW_CLASS_SEGMENT)pvStartAddress;                       /*  第一个分段起始地址          */
+    if (ulStartAlign > ulStart) {
+        stByteSize -= (size_t)(ulStartAlign - ulStart);                 /*  去掉前面的不对齐长度        */
+    }
+    
+    stByteSize = ROUND_DOWN(stByteSize, LW_CFG_HEAP_ALIGNMENT);         /*  分段大小对其                */
+    psegment   = (PLW_CLASS_SEGMENT)ulStartAlign;                       /*  第一个分段起始地址          */
     
     _LIST_LINE_INIT_IN_CODE(psegment->SEGMENT_lineManage);              /*  初始化第一个分段            */
     _LIST_RING_INIT_IN_CODE(psegment->SEGMENT_ringFreeList);
     
-    psegment->SEGMENT_stSegmentByteSize  = stByteSize
-                                         - __SEGMENT_BLOCK_SIZE_ALIGN;  /*  第一个分段的大小            */
+    psegment->SEGMENT_stByteSize = stByteSize
+                                 - __SEGMENT_BLOCK_SIZE_ALIGN;          /*  第一个分段的大小            */
+    psegment->SEGMENT_stMagic    = LW_SEG_MAGIC_REAL;
                                          
     pheapToBuild->HEAP_pringFreeSegment  = LW_NULL;
     _List_Ring_Add_Ahead(&psegment->SEGMENT_ringFreeList, 
                          &pheapToBuild->HEAP_pringFreeSegment);         /*  加入空闲表                  */
     
-    pheapToBuild->HEAP_pvStartAddress    = pvStartAddress;
+    pheapToBuild->HEAP_pvStartAddress    = (PVOID)ulStartAlign;
     pheapToBuild->HEAP_ulSegmentCounter  = 1;                           /*  当前的分段数                */
     
     pheapToBuild->HEAP_stTotalByteSize   = stByteSize;                  /*  分区总大小                  */
@@ -387,8 +405,14 @@ VOID  _HeapAddMemory (PLW_CLASS_HEAP  pheap, PVOID  pvMemory, size_t  stSize)
     REGISTER PLW_CLASS_SEGMENT  psegmentLast;
     REGISTER PLW_CLASS_SEGMENT  psegmentNew;
     REGISTER ULONG              ulLockErr;
+    REGISTER addr_t             ulStart      = (addr_t)pvMemory;
+    REGISTER addr_t             ulStartAlign = ROUND_UP(ulStart, LW_CFG_HEAP_ALIGNMENT);
     
-    stSize = ROUND_DOWN(stSize, sizeof(LW_STACK));                      /*  分段大小对其                */
+    if (ulStartAlign > ulStart) {
+        stSize -= (size_t)(ulStartAlign - ulStart);                     /*  去掉前面的不对齐长度        */
+    }
+    
+    stSize = ROUND_DOWN(stSize, LW_CFG_HEAP_ALIGNMENT);                 /*  分段大小对其                */
 
     ulLockErr = __heap_lock(pheap);
     if (ulLockErr) {                                                    /*  出现锁错误                  */
@@ -407,8 +431,9 @@ VOID  _HeapAddMemory (PLW_CLASS_HEAP  pheap, PVOID  pvMemory, size_t  stSize)
     
     psegmentLast = _LIST_ENTRY(plineTemp, LW_CLASS_SEGMENT, SEGMENT_lineManage);
     
-    psegmentNew = (PLW_CLASS_SEGMENT)pvMemory;
-    psegmentNew->SEGMENT_stSegmentByteSize = stSize - __SEGMENT_BLOCK_SIZE_ALIGN;
+    psegmentNew = (PLW_CLASS_SEGMENT)ulStartAlign;
+    psegmentNew->SEGMENT_stByteSize = stSize - __SEGMENT_BLOCK_SIZE_ALIGN;
+    psegmentNew->SEGMENT_stMagic    = LW_SEG_MAGIC_REAL;
     
     _List_Line_Add_Right(&psegmentNew->SEGMENT_lineManage,
                          &psegmentLast->SEGMENT_lineManage);
@@ -418,7 +443,7 @@ VOID  _HeapAddMemory (PLW_CLASS_HEAP  pheap, PVOID  pvMemory, size_t  stSize)
     pheap->HEAP_ulSegmentCounter++;
     pheap->HEAP_stTotalByteSize += stSize;
     pheap->HEAP_stUsedByteSize  += __SEGMENT_BLOCK_SIZE_ALIGN;
-    pheap->HEAP_stFreeByteSize  += psegmentNew->SEGMENT_stSegmentByteSize;
+    pheap->HEAP_stFreeByteSize  += psegmentNew->SEGMENT_stByteSize;
     
     __heap_unlock(pheap);
 }
@@ -502,7 +527,7 @@ BOOL    _HeapVerify (PLW_CLASS_HEAP     pheap,
         
         if ((pvStartAddress >  (PVOID)psegment) &&
             (pvStartAddress <= (PVOID)(__HEAP_SEGMENT_DATA_PTR(psegment)
-                             + psegment->SEGMENT_stSegmentByteSize))) {
+                             + psegment->SEGMENT_stByteSize))) {        /*  遍历分段                    */
             
             if (__HEAP_SEGMENT_IS_USED(psegment)) {
                 *ppsegmentUsed = psegment;                              /*  找到分段                    */
@@ -541,7 +566,7 @@ PVOID  _HeapAllocate (PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurpo
     
     stByteSize = __heap_crossbord_size(stByteSize);                     /*  越界检查调整                */
     
-    stSize = ROUND_UP(stByteSize, LW_CFG_MEMORY_PAGE_SIZE_BYTE);        /*  获得页对齐内存大小          */
+    stSize = ROUND_UP(stByteSize, LW_CFG_HEAP_SEG_MIN_SIZE);            /*  获得页对齐内存大小          */
     
     if (pheap->HEAP_stFreeByteSize < stSize) {                          /*  没有空间                    */
         return  (LW_NULL);
@@ -562,7 +587,7 @@ PVOID  _HeapAllocate (PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurpo
         psegment = _LIST_ENTRY(pringFreeSegment, 
                                LW_CLASS_SEGMENT, 
                                SEGMENT_ringFreeList);
-        if (psegment->SEGMENT_stSegmentByteSize >=  stSize) {
+        if (psegment->SEGMENT_stByteSize >=  stSize) {
             break;                                                      /*  找到分段                    */
         }
         
@@ -577,17 +602,18 @@ PVOID  _HeapAllocate (PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurpo
     _List_Ring_Del(&psegment->SEGMENT_ringFreeList, 
                    &pheap->HEAP_pringFreeSegment);                      /*  将当前分段从空闲段链中删除  */
     
-    if ((psegment->SEGMENT_stSegmentByteSize - stSize) > 
-        (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_MEMORY_PAGE_SIZE_BYTE)) {  /*  是否可以分出新段            */
+    if ((psegment->SEGMENT_stByteSize - stSize) > 
+        (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_HEAP_SEG_MIN_SIZE)) {      /*  是否可以分出新段            */
                      
-        stNewSegSize = psegment->SEGMENT_stSegmentByteSize - stSize;    /*  计算新分段的总大小          */
+        stNewSegSize = psegment->SEGMENT_stByteSize - stSize;           /*  计算新分段的总大小          */
         
-        psegment->SEGMENT_stSegmentByteSize = stSize;                   /*  重新确定当前分段大小        */
+        psegment->SEGMENT_stByteSize = stSize;                          /*  重新确定当前分段大小        */
         
         psegmentNew = (PLW_CLASS_SEGMENT)(__HEAP_SEGMENT_DATA_PTR(psegment)
                     + stSize);                                          /*  填写新分段的诸多信息        */
-        psegmentNew->SEGMENT_stSegmentByteSize = stNewSegSize
-                                               - __SEGMENT_BLOCK_SIZE_ALIGN;
+        psegmentNew->SEGMENT_stByteSize = stNewSegSize
+                                        - __SEGMENT_BLOCK_SIZE_ALIGN;
+        psegmentNew->SEGMENT_stMagic    = LW_SEG_MAGIC_REAL;
         
         plineHeader = &psegment->SEGMENT_lineManage;
         _List_Line_Add_Tail(&psegmentNew->SEGMENT_lineManage,
@@ -600,8 +626,8 @@ PVOID  _HeapAllocate (PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurpo
         pheap->HEAP_stFreeByteSize -= (stSize + __SEGMENT_BLOCK_SIZE_ALIGN);
         
     } else {
-        pheap->HEAP_stUsedByteSize += psegment->SEGMENT_stSegmentByteSize;
-        pheap->HEAP_stFreeByteSize -= psegment->SEGMENT_stSegmentByteSize;
+        pheap->HEAP_stUsedByteSize += psegment->SEGMENT_stByteSize;
+        pheap->HEAP_stFreeByteSize -= psegment->SEGMENT_stByteSize;
     }
     
     __HEAP_UPDATA_MAX_USED(pheap);                                      /*  更新统计变量                */
@@ -609,14 +635,14 @@ PVOID  _HeapAllocate (PLW_CLASS_HEAP  pheap, size_t  stByteSize, CPCHAR  pcPurpo
     
     __HEAP_TRACE_ALLOC(pheap, 
                        (PVOID)__HEAP_SEGMENT_DATA_PTR(psegment),
-                       psegment->SEGMENT_stSegmentByteSize,
+                       psegment->SEGMENT_stByteSize,
                        pcPurpose);                                      /*  打印跟踪信息                */
     
     __heap_crossbord_mark(psegment);                                    /*  加入内存越界标志            */
     
     MONITOR_EVT_LONG4(MONITOR_EVENT_ID_REGION, MONITOR_EVENT_REGION_ALLOC,
                       pheap, __HEAP_SEGMENT_DATA_PTR(psegment), 
-                      psegment->SEGMENT_stSegmentByteSize, sizeof(LW_STACK), pcPurpose);
+                      psegment->SEGMENT_stByteSize, sizeof(LW_STACK), pcPurpose);
     
     return  ((PVOID)__HEAP_SEGMENT_DATA_PTR(psegment));                 /*  返回分配的内存首地址        */
 }
@@ -651,7 +677,7 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
     
     stByteSize = __heap_crossbord_size(stByteSize);                     /*  越界检查调整                */
     
-    stSize = ROUND_UP(stByteSize, LW_CFG_MEMORY_PAGE_SIZE_BYTE);        /*  获得页对齐内存大小          */
+    stSize = ROUND_UP(stByteSize, LW_CFG_HEAP_SEG_MIN_SIZE);            /*  获得页对齐内存大小          */
     
     if (pheap->HEAP_stFreeByteSize < stSize) {                          /*  没有空间                    */
         return  (LW_NULL);
@@ -681,10 +707,9 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
             stAddedSize = (size_t)(pcAlign - __HEAP_SEGMENT_DATA_PTR(psegment));
         }
         
-        if (psegment->SEGMENT_stSegmentByteSize >=
-            (stSize + stAddedSize)) {
+        if (psegment->SEGMENT_stByteSize >= (stSize + stAddedSize)) {
             if (stAddedSize >= 
-                (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_MEMORY_PAGE_SIZE_BYTE)) {
+                (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_HEAP_SEG_MIN_SIZE)) {
                 bLeftNewFree = LW_TRUE;                                 /*  左端可以开辟新段            */
             } else {
                 bLeftNewFree = LW_FALSE;
@@ -705,8 +730,9 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
     if (bLeftNewFree) {                                                 /*  首先将这个段拆分            */
         psegmentNew = (PLW_CLASS_SEGMENT)(__HEAP_SEGMENT_DATA_PTR(psegment)
                     + stAddedSize - __SEGMENT_BLOCK_SIZE_ALIGN);
-        psegmentNew->SEGMENT_stSegmentByteSize = psegment->SEGMENT_stSegmentByteSize
-                                               - stAddedSize;
+        psegmentNew->SEGMENT_stByteSize = psegment->SEGMENT_stByteSize
+                                        - stAddedSize;
+        psegmentNew->SEGMENT_stMagic    = LW_SEG_MAGIC_REAL;
                                                
         plineHeader = &psegment->SEGMENT_lineManage;
         _List_Line_Add_Tail(&psegmentNew->SEGMENT_lineManage,
@@ -714,8 +740,8 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
                             
         __HEAP_ADD_NEW_SEG_TO_FREELIST(psegmentNew, pheap);             /*  将新分段链接入空闲分段链表  */
         
-        psegment->SEGMENT_stSegmentByteSize = stAddedSize 
-                                            - __SEGMENT_BLOCK_SIZE_ALIGN;
+        psegment->SEGMENT_stByteSize = stAddedSize 
+                                     - __SEGMENT_BLOCK_SIZE_ALIGN;
         
         psegment = psegmentNew;                                         /*  确定到分配的分区            */
         
@@ -727,17 +753,19 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
     _List_Ring_Del(&psegment->SEGMENT_ringFreeList, 
                    &pheap->HEAP_pringFreeSegment);                      /*  将当前分段从空闲段链中删除  */
     
-    if ((psegment->SEGMENT_stSegmentByteSize - stSize) > 
-        (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_MEMORY_PAGE_SIZE_BYTE)) {  /*  是否可以分出新段            */
+    if ((psegment->SEGMENT_stByteSize - stSize) > 
+        (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_HEAP_SEG_MIN_SIZE)) {      /*  是否可以分出新段            */
                      
-        stNewSegSize = psegment->SEGMENT_stSegmentByteSize - stSize;    /*  计算新分段的总大小          */
+        stNewSegSize = psegment->SEGMENT_stByteSize - stSize;           /*  计算新分段的总大小          */
         
-        psegment->SEGMENT_stSegmentByteSize = stSize;                   /*  重新确定当前分段大小        */
+        psegment->SEGMENT_stByteSize = stSize;                          /*  重新确定当前分段大小        */
         
         psegmentNew = (PLW_CLASS_SEGMENT)(__HEAP_SEGMENT_DATA_PTR(psegment)
                     + stSize);                                          /*  填写新分段的诸多信息        */
-        psegmentNew->SEGMENT_stSegmentByteSize = stNewSegSize
-                                               - __SEGMENT_BLOCK_SIZE_ALIGN;
+        psegmentNew->SEGMENT_stByteSize = stNewSegSize
+                                        - __SEGMENT_BLOCK_SIZE_ALIGN;
+        psegmentNew->SEGMENT_stMagic    = LW_SEG_MAGIC_REAL;
+                                        
         plineHeader = &psegment->SEGMENT_lineManage;
         _List_Line_Add_Tail(&psegmentNew->SEGMENT_lineManage,
                             &plineHeader);                              /*  将新分段链入邻居链表        */
@@ -749,16 +777,16 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
         pheap->HEAP_stFreeByteSize -= (stSize + __SEGMENT_BLOCK_SIZE_ALIGN);
         
     } else {
-        pheap->HEAP_stUsedByteSize += psegment->SEGMENT_stSegmentByteSize;
-        pheap->HEAP_stFreeByteSize -= psegment->SEGMENT_stSegmentByteSize;
+        pheap->HEAP_stUsedByteSize += psegment->SEGMENT_stByteSize;
+        pheap->HEAP_stFreeByteSize -= psegment->SEGMENT_stByteSize;
     }
     
     if ((bLeftNewFree == LW_FALSE) && stAddedSize) {                    /*  左端有些内存没有使用        */
-        size_t  *pstLeft = (((size_t *)pcAlign) - 1);
+        PLW_CLASS_SEGMENT    psegmentFake = __HEAP_SEGMENT_SEG_PTR(pcAlign);
+        size_t              *pstLeft      = (((size_t *)pcAlign) - 1);
         *pstLeft = (size_t)psegmentAlloc;                               /*  记录真正分段控制块位置      */
-        if (__HEAP_SEGMENT_DATA_PTR(psegmentAlloc) < (UINT8 *)pstLeft) {
-            pstLeft--;                                                  /*  模拟伪段首在 freelist 中    */
-            *pstLeft = 1;                                               /*  确保 free 时找到正确的段首  */
+        if (pstLeft != &psegmentFake->SEGMENT_stMagic) {
+            psegmentFake->SEGMENT_stMagic = ~LW_SEG_MAGIC_REAL;         /*  不能识别本分段头            */
         }
     }
     
@@ -767,13 +795,13 @@ PVOID  _HeapAllocateAlign (PLW_CLASS_HEAP  pheap, size_t  stByteSize, size_t  st
     
     __HEAP_TRACE_ALLOC_ALIGN(pheap, 
                              pcAlign, 
-                             psegment->SEGMENT_stSegmentByteSize,
+                             psegment->SEGMENT_stByteSize,
                              pcPurpose);                                /*  打印跟踪信息                */
     
     __heap_crossbord_mark(psegment);                                    /*  加入内存越界标志            */
     
     MONITOR_EVT_LONG4(MONITOR_EVENT_ID_REGION, MONITOR_EVENT_REGION_ALLOC,
-                      pheap, pcAlign, psegment->SEGMENT_stSegmentByteSize, 
+                      pheap, pcAlign, psegment->SEGMENT_stByteSize, 
 					  stAlign, pcPurpose);
     
     return  (pcAlign);                                                  /*  返回分配的内存首地址        */
@@ -841,17 +869,17 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL  bIsNeedVer
             return  (pvStartAddress);                                   /*  检查错误                    */
         }
     } else {                                                            /*  不需要安全性检查            */
-        psegment = (PLW_CLASS_SEGMENT)((UINT8 *)pvStartAddress
-                 - __SEGMENT_BLOCK_SIZE_ALIGN);                         /*  查找段控制块地址            */
-        if (!__HEAP_SEGMENT_IS_USED(psegment)) {                        /*  使用了对齐分配, 需要重新定位*/
+        psegment = __HEAP_SEGMENT_SEG_PTR(pvStartAddress);              /*  查找段控制块地址            */
+        if (!__HEAP_SEGMENT_IS_REAL(psegment)) {                        /*  控制块地址不真实            */
             psegment = (PLW_CLASS_SEGMENT)(*((size_t *)pvStartAddress - 1));
-                                                                        /*  重新定位                    */
-            if (!__HEAP_SEGMENT_IS_USED(psegment)) {                    /*  分段并没有使用              */
-                __heap_unlock(pheap);
-                __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName, 
-                                  "not in used or double free", pvStartAddress);
-                return  (pvStartAddress);
-            }
+        }
+        
+        if (!__HEAP_SEGMENT_IS_REAL(psegment) ||
+            !__HEAP_SEGMENT_IS_USED(psegment)) {                        /*  段控制块无效或已经被释放    */
+            __heap_unlock(pheap);
+            __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName, 
+                              "not in used or double free", pvStartAddress);
+            return  (pvStartAddress);
         }
     }
     
@@ -883,7 +911,7 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL  bIsNeedVer
         psegmentRight = LW_NULL;
     }
     
-    stSegmentByteSizeFree = psegment->SEGMENT_stSegmentByteSize;        /*  将要释放的分段内容大小      */
+    stSegmentByteSizeFree = psegment->SEGMENT_stByteSize;               /*  将要释放的分段内容大小      */
         
     if (psegmentLeft) {
         if (__HEAP_SEGMENT_IS_USED(psegmentLeft) ||
@@ -891,8 +919,8 @@ PVOID  _HeapFree (PLW_CLASS_HEAP  pheap, PVOID  pvStartAddress, BOOL  bIsNeedVer
             goto    __merge_right;                                      /*  进入右段聚合                */
         }
         
-        psegmentLeft->SEGMENT_stSegmentByteSize += (stSegmentByteSizeFree
-                                                 + __SEGMENT_BLOCK_SIZE_ALIGN);
+        psegmentLeft->SEGMENT_stByteSize += (stSegmentByteSizeFree
+                                          + __SEGMENT_BLOCK_SIZE_ALIGN);
         
         _List_Line_Del(&psegment->SEGMENT_lineManage, 
                        &plineDummyHeader);                              /*  从邻居链表中删除当前分段    */
@@ -920,8 +948,8 @@ __merge_right:
             goto    __right_merge_fail;                                 /*  进入右段聚合失败            */
         }
         
-        psegment->SEGMENT_stSegmentByteSize += (psegmentRight->SEGMENT_stSegmentByteSize
-                                             + __SEGMENT_BLOCK_SIZE_ALIGN);
+        psegment->SEGMENT_stByteSize += (psegmentRight->SEGMENT_stByteSize
+                                      + __SEGMENT_BLOCK_SIZE_ALIGN);
         
         _List_Ring_Del(&psegmentRight->SEGMENT_ringFreeList, 
                        &pheap->HEAP_pringFreeSegment);                  /*  将右分段从空闲表中删除      */
@@ -1008,7 +1036,7 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
     
     stNewByteSize = __heap_crossbord_size(stNewByteSize);               /*  越界检查调整                */
     
-    stSize = ROUND_UP(stNewByteSize, LW_CFG_MEMORY_PAGE_SIZE_BYTE);     /*  获得页对齐内存大小          */
+    stSize = ROUND_UP(stNewByteSize, LW_CFG_HEAP_SEG_MIN_SIZE);         /*  获得页对齐内存大小          */
     
     ulLockErr = __heap_lock(pheap);
     if (ulLockErr) {                                                    /*  出现锁错误                  */
@@ -1022,17 +1050,17 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
             return  (LW_NULL);                                          /*  检查错误                    */
         }
     } else {                                                            /*  不需要安全性检查            */
-        psegment = (PLW_CLASS_SEGMENT)((UINT8 *)pvStartAddress
-                 - __SEGMENT_BLOCK_SIZE_ALIGN);                         /*  查找段控制块地址            */
-        if (!__HEAP_SEGMENT_IS_USED(psegment)) {                        /*  使用了对齐分配, 需要重新定位*/
+        psegment = __HEAP_SEGMENT_SEG_PTR(pvStartAddress);              /*  查找段控制块地址            */
+        if (!__HEAP_SEGMENT_IS_REAL(psegment)) {                        /*  控制块地址不真实            */
             psegment = (PLW_CLASS_SEGMENT)(*((size_t *)pvStartAddress - 1));
-                                                                        /*  重新定位                    */
-            if (!__HEAP_SEGMENT_IS_USED(psegment)) {                    /*  分段并没有使用              */
-                __heap_unlock(pheap);
-                __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName,
-                                  "not in used or double free", pvStartAddress);
-                return  (LW_NULL);
-            }
+        }
+        
+        if (!__HEAP_SEGMENT_IS_REAL(psegment) ||
+            !__HEAP_SEGMENT_IS_USED(psegment)) {                        /*  段控制块无效或已经被释放    */
+            __heap_unlock(pheap);
+            __DEBUG_MEM_ERROR(pcPurpose, pheap->HEAP_cHeapName, 
+                              "not in used or double free", pvStartAddress);
+            return  (LW_NULL);
         }
     }
     
@@ -1048,12 +1076,12 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
         return  (LW_NULL);
     }
     
-    if (stSize == psegment->SEGMENT_stSegmentByteSize) {                /*  大小没有改变                */
+    if (stSize == psegment->SEGMENT_stByteSize) {                       /*  大小没有改变                */
         __heap_unlock(pheap);
         return  (pvStartAddress);
     }
     
-    if (stSize > psegment->SEGMENT_stSegmentByteSize) {                 /*  希望分配到更大的空间        */
+    if (stSize > psegment->SEGMENT_stByteSize) {                        /*  希望分配到更大的空间        */
         REGISTER PLW_LIST_LINE      plineRight;
         REGISTER PLW_CLASS_SEGMENT  psegmentRight;                      /*  右分段                      */
                  PLW_LIST_LINE      plineDummyHeader = LW_NULL;         /*  用于参数传递的头            */
@@ -1066,26 +1094,26 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
             if (!__HEAP_SEGMENT_IS_USED(psegmentRight) &&
                 __HEAP_SEGMENT_CAN_MR(psegment, psegmentRight)) {
                                                                         /*  右分段没有使用              */
-                if ((psegmentRight->SEGMENT_stSegmentByteSize + 
+                if ((psegmentRight->SEGMENT_stByteSize + 
                      __SEGMENT_BLOCK_SIZE_ALIGN) >=
-                    (stSize - psegment->SEGMENT_stSegmentByteSize)) {   /*  可以将右分段与本段合并      */
+                    (stSize - psegment->SEGMENT_stByteSize)) {          /*  可以将右分段与本段合并      */
                     
                     _List_Ring_Del(&psegmentRight->SEGMENT_ringFreeList, 
                                    &pheap->HEAP_pringFreeSegment);      /*  将右分段从空闲表中删除      */
                     _List_Line_Del(&psegmentRight->SEGMENT_lineManage, 
                                    &plineDummyHeader);                  /*  将右分段从邻居链表中删除    */
                     
-                    psegment->SEGMENT_stSegmentByteSize += 
-                        (psegmentRight->SEGMENT_stSegmentByteSize +
+                    psegment->SEGMENT_stByteSize += 
+                        (psegmentRight->SEGMENT_stByteSize +
                          __SEGMENT_BLOCK_SIZE_ALIGN);                   /*  更新本段大小                */
                                    
                     pheap->HEAP_ulSegmentCounter--;                     /*  分区分段数量--              */
-                    pheap->HEAP_stUsedByteSize += psegmentRight->SEGMENT_stSegmentByteSize;
-                    pheap->HEAP_stFreeByteSize -= psegmentRight->SEGMENT_stSegmentByteSize;
+                    pheap->HEAP_stUsedByteSize += psegmentRight->SEGMENT_stByteSize;
+                    pheap->HEAP_stFreeByteSize -= psegmentRight->SEGMENT_stByteSize;
                     
                     __HEAP_TRACE_ALLOC(pheap, 
                                        (PVOID)__HEAP_SEGMENT_DATA_PTR(psegmentRight),
-                                       psegmentRight->SEGMENT_stSegmentByteSize,
+                                       psegmentRight->SEGMENT_stByteSize,
                                        pcPurpose);
                                                                         /*  打印跟踪信息                */
                     goto    __split_segment;
@@ -1098,7 +1126,7 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
         if (pvStartAddress) {                                           /*  分配成功                    */
             lib_memcpy(pvStartAddress, 
                        __HEAP_SEGMENT_DATA_PTR(psegment), 
-                       (UINT)psegment->SEGMENT_stSegmentByteSize);      /*  复制原始信息                */
+                       (UINT)psegment->SEGMENT_stByteSize);             /*  复制原始信息                */
             _HeapFree(pheap, 
                       __HEAP_SEGMENT_DATA_PTR(psegment), 
                       LW_FALSE, pcPurpose);                             /*  释放本块空间                */
@@ -1111,10 +1139,10 @@ PVOID  _HeapRealloc (PLW_CLASS_HEAP  pheap,
     }
     
 __split_segment:
-    stNewSegSize = psegment->SEGMENT_stSegmentByteSize - stSize;        /*  获取剩余的字节数            */
+    stNewSegSize = psegment->SEGMENT_stByteSize - stSize;               /*  获取剩余的字节数            */
     
     if (stNewSegSize < 
-        (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_MEMORY_PAGE_SIZE_BYTE)) {  /*  剩余空间太小, 无法分配新段  */
+        (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_HEAP_SEG_MIN_SIZE)) {      /*  剩余空间太小, 无法分配新段  */
         __HEAP_UPDATA_MAX_USED(pheap);                                  /*  更新统计变量                */
         __heap_unlock(pheap);
         
@@ -1122,18 +1150,19 @@ __split_segment:
         
         MONITOR_EVT_LONG4(MONITOR_EVENT_ID_REGION, MONITOR_EVENT_REGION_REALLOC,
                           pheap, pvStartAddress, 
-                          pvStartAddress, psegment->SEGMENT_stSegmentByteSize, pcPurpose);
+                          pvStartAddress, psegment->SEGMENT_stByteSize, pcPurpose);
                       
         return  (pvStartAddress);
     }
     
-    psegment->SEGMENT_stSegmentByteSize = stSize;                       /*  更新原始分段的大小          */
+    psegment->SEGMENT_stByteSize = stSize;                              /*  更新原始分段的大小          */
     
     psegmentNew = (PLW_CLASS_SEGMENT)(__HEAP_SEGMENT_DATA_PTR(psegment)
                 + stSize);                                              /*  确定新分段的地点            */
                 
-    psegmentNew->SEGMENT_stSegmentByteSize = stNewSegSize 
-                                           - __SEGMENT_BLOCK_SIZE_ALIGN;
+    psegmentNew->SEGMENT_stByteSize = stNewSegSize 
+                                    - __SEGMENT_BLOCK_SIZE_ALIGN;
+    psegmentNew->SEGMENT_stMagic    = LW_SEG_MAGIC_REAL;
                                            
     _INIT_LIST_RING_HEAD(&psegmentNew->SEGMENT_ringFreeList);           /*  正在使用的分段              */
                                            

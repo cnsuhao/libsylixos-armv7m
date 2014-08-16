@@ -163,7 +163,7 @@ static LW_INLINE INT  _Heap_Index_Invalid (UINT16    usIndex)
 
 static LW_INLINE INT  _Heap_ByteSize_Invalid (ULONG    ulByteSize)
 {
-    return  (ulByteSize < (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_MEMORY_PAGE_SIZE_BYTE));
+    return  (ulByteSize < (__SEGMENT_BLOCK_SIZE_ALIGN + LW_CFG_HEAP_SEG_MIN_SIZE));
 }
 
 /*********************************************************************************************************
