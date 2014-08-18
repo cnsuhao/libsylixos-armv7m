@@ -273,6 +273,7 @@ INT __ataWait (__PATA_CTRL patactrler, INT iRequest)
                 break;
             }
         }
+        break;
 
     default:
         break;

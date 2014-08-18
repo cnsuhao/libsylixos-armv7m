@@ -7,8 +7,7 @@ NM=nm
 funcfile=func.lst
 objsfile=objs.lst
 
-echo "create $symbolc from:"
-echo "$srcfile"
+echo "create $symbolc from: $srcfile"
 
 
 rm -f $funcfile $objfile
@@ -89,6 +88,8 @@ EOF
 
 sed 's/\(.*\)/    SYMBOL_ITEM_FUNC\(\1\)/g' $funcfile   >>$symbolc;
 sed 's/\(.*\)/    SYMBOL_ITEM_OBJ\(\1\)/g' $objsfile   >>$symbolc;
+cat $funcfile >tempfilesymbol.txt
+cat $objsfile >>tempfilesymbol.txt
 
 cat << EOF >>$symbolc
 SYMBOL_TABLE_END                                                
@@ -125,7 +126,7 @@ cat << EOF > $symbolh
 #include "SylixOS.h"                                            
 #include "symboltools.h"
                                                         
-#define SYM_TABLE_SIZE      `wc $funcfile $objsfile -l | sed -n 's/\ *\([0-9]*\)\ total/\1/pg'`
+#define SYM_TABLE_SIZE      `cat tempfilesymbol.txt|wc -l`
 extern  LW_STATIC_SYMBOL     _G_symLibSylixOS[SYM_TABLE_SIZE];
                                                         
 static LW_INLINE  INT symbolAddAll (VOID)
@@ -139,6 +140,6 @@ static LW_INLINE  INT symbolAddAll (VOID)
 *********************************************************************************************************/
 EOF
 
-rm -f $funcfile $objsfile
+rm -f $funcfile $objsfile tempfilesymbol.txt
 
 exit 0
