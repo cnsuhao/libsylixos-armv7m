@@ -51,7 +51,7 @@ static void null_mac_init (struct lowpanif *lowpanif)
 /** Send a packet from the Rime buffer  */
 static radio_ret_t null_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
 {
-  radio_ret_t ret = RDC_DRIVER(lowpanif)->send(lowpanif, p);
+  radio_ret_t ret = RDC_DRIVER(lowpanif)->send(lowpanif, p, 1);
   
   mac_send_callback(lowpanif, p, ret, 1);
   

@@ -633,6 +633,12 @@ lowpan_header_prase (struct pbuf *p, struct eth_hdr *ethhdr)
       MEMCPY(p->payload, ethhdr, SIZEOF_ETH_HDR);
       return p;
     }
+  } else {
+    if ((tmp & (1 << 6)) == 0) { /* not compress ipv6 */
+      LWIP_DEBUGF(NETIF_DEBUG, ("lowpan_header_prase: lowpan dispatch unknown!\n"));
+      pbuf_free(p);
+      return NULL;
+    }
   }
 
 #if LWIP_IPV6

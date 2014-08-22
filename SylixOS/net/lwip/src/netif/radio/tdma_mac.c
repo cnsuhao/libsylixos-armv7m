@@ -117,7 +117,7 @@ static void tdma_mac_timer (struct lowpanif *lowpanif)
   
   pbufq = tdma_mac_get_pkt_queue(lowpanif); /* get the first packet in this queue */
   while (pbufq) {
-    ret = RDC_DRIVER(lowpanif)->send(lowpanif, pbufq->p);
+    ret = RDC_DRIVER(lowpanif)->send(lowpanif, pbufq->p, 1);
     mac_send_callback(lowpanif, pbufq->p, ret, 1);
     pbufq = tdma_mac_del_pkt_queue(lowpanif); /* detele this packet buffer and get next */
     if (ret != RADIO_TX_OK) {

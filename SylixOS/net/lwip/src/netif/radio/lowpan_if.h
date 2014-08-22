@@ -45,6 +45,7 @@
 
 #include "radio_param.h"
 #include "ieee802154_frame.h"
+#include "crypt_driver.h"
 #include "mac_driver.h"
 #include "rdc_driver.h"
 #include "radio_driver.h"
@@ -85,6 +86,16 @@ struct xmac_parameter {
   /** max strobe wait time recommended (5 * ontime) / 8 */
   u16_t xmac_param_strobe_wait_ms;
 };
+
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+/** crypt Parameter
+ */
+struct crypt_parameter {
+  /** crypt key */
+#define LOWPAN_CRYPT_KEY_LEN 16
+  u8_t key[LOWPAN_CRYPT_KEY_LEN];
+};
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
 
 /** Generic data structure used for all lwIP radio interfaces. 
  *  This is a virtual ethernet.
@@ -168,6 +179,20 @@ struct lowpanif {
   /* driver MUST set this with a null ptr */
   void *rdc_driver_priv;
   
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+  /** Special crypt parameter */
+  struct crypt_parameter crypt_param;
+  
+#define crypt_key   crypt_param.key
+
+  /** The ctypt driver struct
+   *  if you want use crypt, you can set a crypt driver here, if not just set NULL */
+  struct crypt_driver *crypt_driver;
+  
+  /* driver MUST set this with a null ptr */
+  void *crypt_driver_priv;
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
+  
   /** The radio driver struct 
    *  user specified radio chip driver */
   struct radio_driver *radio_driver;
@@ -179,6 +204,7 @@ struct lowpanif {
 #define RADIO_DRIVER(x) (x->radio_driver)
 #define MAC_DRIVER(x)   (x->mac_driver)
 #define RDC_DRIVER(x)   (x->rdc_driver)
+#define CRYPT_DRIVER(x) (x->crypt_driver)
 
 /*
  * Radio driver call this when receive a packet.

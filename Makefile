@@ -854,7 +854,11 @@ SylixOS/net/lwip/src/netif/ppp/pppol2tp.c \
 SylixOS/net/lwip/src/netif/ppp/upap.c \
 SylixOS/net/lwip/src/netif/ppp/utils.c \
 SylixOS/net/lwip/src/netif/ppp/vj.c \
+SylixOS/net/lwip/src/netif/radio/aes_crypt.c \
+SylixOS/net/lwip/src/netif/radio/crypt_driver.c \
 SylixOS/net/lwip/src/netif/radio/csma_mac.c \
+SylixOS/net/lwip/src/netif/radio/ieee802154_aes_ccm.c \
+SylixOS/net/lwip/src/netif/radio/ieee802154_aes.c \
 SylixOS/net/lwip/src/netif/radio/ieee802154_eth.c \
 SylixOS/net/lwip/src/netif/radio/ieee802154_frame.c \
 SylixOS/net/lwip/src/netif/radio/lowpan_compress.c \
@@ -863,6 +867,7 @@ SylixOS/net/lwip/src/netif/radio/lowpan_if.c \
 SylixOS/net/lwip/src/netif/radio/mac_driver.c \
 SylixOS/net/lwip/src/netif/radio/null_mac.c \
 SylixOS/net/lwip/src/netif/radio/null_rdc.c \
+SylixOS/net/lwip/src/netif/radio/simple_crypt.c \
 SylixOS/net/lwip/src/netif/radio/tdma_mac.c \
 SylixOS/net/lwip/src/netif/radio/xmac_rdc.c \
 SylixOS/net/lwip/tools/ftp/lwip_ftp.c \

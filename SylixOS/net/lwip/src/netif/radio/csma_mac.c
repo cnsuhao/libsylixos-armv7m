@@ -64,7 +64,7 @@ struct pbuf_q {
 };
 
 /* Put a packet into mac queue */
-static struct pbuf_q *csma_mac_put_pkt_queue (struct lowpanif *lowpanif, struct pbuf *p)
+static struct pbuf_q *csma_mac_put_pkt_queue (struct lowpanif *lowpanif, struct pbuf *p, u8_t nb)
 {
   struct pbuf *s;
   struct pbuf_q *first;
@@ -88,7 +88,7 @@ static struct pbuf_q *csma_mac_put_pkt_queue (struct lowpanif *lowpanif, struct 
   
   pbufq->next = NULL;
   pbufq->p  = s;
-  pbufq->nb = 0;
+  pbufq->nb = nb;
   pbufq->cw = MIN_CSMA_CW;
   pbufq->be = MIN_CSMA_BE;
   
@@ -132,13 +132,13 @@ static void csma_mac_timer (struct lowpanif *lowpanif)
 resend:
   pbufq = csma_mac_get_pkt_queue(lowpanif); /* There MUST have at least one packet in this queue */
   while (pbufq) {
-    ret = RDC_DRIVER(lowpanif)->send(lowpanif, pbufq->p);
+    pbufq->nb++;
+    ret = RDC_DRIVER(lowpanif)->send(lowpanif, pbufq->p, pbufq->nb);
     mac_send_callback(lowpanif, pbufq->p, ret, pbufq->nb);
     if (ret == RADIO_TX_OK) {
       pbufq = csma_mac_del_pkt_queue(lowpanif); /* detele this packet buffer and get next */
     
     } else {
-      pbufq->nb++;
       if (pbufq->nb >= lowpanif->csma_retr) { /* Max times retry ? */
         pbufq = csma_mac_del_pkt_queue(lowpanif); /* Drop this packet */
         LWIP_DEBUGF(NETIF_DEBUG, ("csma_mac_timer: csma try max times and fail!\n"));
@@ -195,7 +195,7 @@ static radio_ret_t csma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
   if (lowpanif->csma_type == LOWPAN_CSMA_SW) {
     first = csma_mac_get_pkt_queue(lowpanif);
     if (first) { /* is there has packet in send queue ? */
-      pbufq = csma_mac_put_pkt_queue(lowpanif, p); /* put this packet into send queue */
+      pbufq = csma_mac_put_pkt_queue(lowpanif, p, 0); /* put this packet into send queue */
       if (pbufq) {
         ret = RADIO_TX_OK;
       } else {
@@ -205,11 +205,11 @@ static radio_ret_t csma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
 #if CSMA_DEBUG > 0
       ret = RADIO_TX_COLLISION;
 #else
-      ret = RDC_DRIVER(lowpanif)->send(lowpanif, p); /* the first try send */
+      ret = RDC_DRIVER(lowpanif)->send(lowpanif, p, 1); /* the first try send */
       mac_send_callback(lowpanif, p, ret, 1);
 #endif /* CSMA_DEBUG */
       if ((ret == RADIO_TX_COLLISION) || (ret == RADIO_TX_NOACK)) {
-        pbufq = csma_mac_put_pkt_queue(lowpanif, p); /* put this packet into send queue */
+        pbufq = csma_mac_put_pkt_queue(lowpanif, p, 1); /* put this packet into send queue */
         if (pbufq) {
           ret = RADIO_TX_OK;
           sys_timeout(1, (sys_timeout_handler)csma_mac_timer, lowpanif); /* set CSMA timer first timeout */
@@ -219,7 +219,7 @@ static radio_ret_t csma_mac_send (struct lowpanif *lowpanif, struct pbuf *p)
       }
     }
   } else {
-    ret = RDC_DRIVER(lowpanif)->send(lowpanif, p);
+    ret = RDC_DRIVER(lowpanif)->send(lowpanif, p, 1);
     mac_send_callback(lowpanif, p, ret, 1);
     if (ret != RADIO_TX_OK) {
       LWIP_DEBUGF(NETIF_DEBUG, ("csma_mac_send: send packet fail!\n"));

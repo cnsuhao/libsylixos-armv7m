@@ -54,7 +54,7 @@ struct mac_driver {
   /* mac driver name */
   char *name;
   
-  /** Initialize the MAC driver return 0 is ok */
+  /** Initialize the MAC driver */
   void (* init)(struct lowpanif *lowpanif);
   
   /** Send a packet from the Rime buffer  */

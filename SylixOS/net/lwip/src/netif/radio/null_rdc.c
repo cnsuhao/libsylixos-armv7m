@@ -46,6 +46,10 @@
 
 #if LOWPAN_NULL_RDC /* don't build if not configured for use in radio_param.h */
 
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+#include "crypt_driver.h"
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
+
 #include "string.h"
 
 #define ACK_LEN         3
@@ -99,6 +103,10 @@ static void null_rdc_init (struct lowpanif *lowpanif)
 {
   int ret = RADIO_DRIVER(lowpanif)->init(lowpanif);
   
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+  crypt_init(lowpanif);
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
+
   if (!sys_mutex_valid(&seq_mutex)) {
     sys_mutex_new(&seq_mutex);
   }
@@ -116,7 +124,7 @@ static void null_rdc_init (struct lowpanif *lowpanif)
 }
 
 /** Send a packet from the Rime buffer  */
-static radio_ret_t null_rdc_send (struct lowpanif *lowpanif, struct pbuf *p)
+static radio_ret_t null_rdc_send (struct lowpanif *lowpanif, struct pbuf *p, u8_t numtx)
 {
   u8_t i;
   u8_t seqno;
@@ -125,6 +133,16 @@ static radio_ret_t null_rdc_send (struct lowpanif *lowpanif, struct pbuf *p)
   
   LWIP_ERROR("p != NULL", (p != NULL), return RADIO_TX_ERR;);
   LWIP_ERROR("p->len > 0", (p->len > 0), return RADIO_TX_ERR;);
+  
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+  if (numtx == 1) { /* the first time encrypt */
+    struct pbuf *pencrypt = crypt_encode(lowpanif, p);
+    if (pencrypt == NULL) {
+      return RADIO_TX_ERR;
+    }
+    p = pencrypt;
+  }
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
   
   ack_required = REQ_ACK(p);
 
@@ -183,6 +201,12 @@ static radio_ret_t null_rdc_send (struct lowpanif *lowpanif, struct pbuf *p)
     }
   }
   
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+  if (numtx == 1) {
+    pbuf_free(p); /* free crypt pbuf */
+  }
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
+  
   return ret;
 }
 
@@ -213,6 +237,17 @@ static void null_rdc_input (struct lowpanif *lowpanif, struct pbuf *p)
     pbuf_free(p);
     return;
   }
+  
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+  {
+    struct pbuf *pdecrypt = crypt_decode(lowpanif, p);
+    if (pdecrypt == NULL) {
+      return;
+    }
+    pbuf_free(p);
+    p = pdecrypt;
+  }
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
   
   /* Send ack packet */
   if (lowpanif->ack_type == LOWPAN_ACK_SW) { /* Need ack */

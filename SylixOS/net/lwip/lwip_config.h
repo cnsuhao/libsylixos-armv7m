@@ -300,7 +300,7 @@ extern  UINT32  __inetHostTableGetItem(CPCHAR  pcHost);                 /*  本地
 #define LWIP_FIONREAD_LINUXMODE         1                               /*  linux FIONREAD compatibility*/
 
 /*********************************************************************************************************
-  Network Interfaces options
+  network interfaces options
 *********************************************************************************************************/
 
 #define LWIP_NETIF_HOSTNAME             1                               /*  netif have nostname member  */
@@ -312,7 +312,13 @@ extern  UINT32  __inetHostTableGetItem(CPCHAR  pcHost);                 /*  本地
 #define LWIP_NETIF_LOOPBACK             1
 
 /*********************************************************************************************************
-  eth net options
+  network interfaces max hardware address len
+*********************************************************************************************************/
+
+#define NETIF_MAX_HWADDR_LEN            8                               /*  max 8bytes physical addr len*/
+
+/*********************************************************************************************************
+  ethernet net options
 *********************************************************************************************************/
 
 #define LWIP_ARP                        1

@@ -63,6 +63,22 @@
 #define LOWPAN_NULL_RDC 1
 #endif
 
+/** LOWPAN_AES==1: Enable IEEE 802.15.4 aes crypt */
+#ifndef LOWPAN_AES_CRYPT
+#define LOWPAN_AES_CRYPT 1
+#endif
+
+/** Control level of authentication security. Less than 4 is 
+    considered insecure. */
+#ifndef LOWPAN_AES_MIC_LEN
+#define LOWPAN_AES_MIC_LEN 4
+#endif
+
+/** LOWPAN_SIMPLE_CRYPT==1: Enable a simple crypt support */
+#ifndef LOWPAN_SIMPLE_CRYPT
+#define LOWPAN_SIMPLE_CRYPT 1
+#endif
+
 /** Setting this to 0, you can turn off checking the fragments for overlapping
  * regions. The code gets a little smaller. Only use this if you know that
  * overlapping won't occur on your network! */

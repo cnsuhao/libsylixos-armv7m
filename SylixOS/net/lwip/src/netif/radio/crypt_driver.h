@@ -1,8 +1,7 @@
 /**
  * @file
- * radio communication interface
+ * IEEE 802.15.4 frame crypt support. 
  *
- * Verification using sylixos(tm) real-time operating system
  */
 
 /*
@@ -35,8 +34,8 @@
  *
  */
 
-#ifndef __RDC_DRIVER_H__
-#define __RDC_DRIVER_H__
+#ifndef __CRYPT_DRIVER_H__
+#define __CRYPT_DRIVER_H__
 
 #include "lwip/opt.h"
 #include "lwip/pbuf.h"
@@ -45,39 +44,53 @@
 extern "C" {
 #endif
 
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
 /** 
  * Declare the lowpan_if.
  */
 struct lowpanif;
 
+/* Generic verify return values. */
+typedef enum {
+  CRYPT_OK,
+  CRYPT_FAILED,
+  CRYPT_TOOSHORT
+} verify_ret_t;
+
 /**
- * The structure of a RDC (radio duty cycling) driver in lwip radio system.
+ * The structure of a crypt driver in lwip radio system.
  */
-struct rdc_driver {
-  /* rdc driver name */
+struct crypt_driver {
+  /* crypt driver name */
   char *name;
   
-  /** Initialize the RDC driver */
+  /** Initialize the crypt driver */
   void (* init)(struct lowpanif *lowpanif);
   
-  /** Send a packet from the Rime buffer, numtx is pbuf send times */
-  radio_ret_t (* send)(struct lowpanif *lowpanif, struct pbuf *p, u8_t numtx);
-
-  /** Callback for getting notified of incoming packet. */
-  void (* input)(struct lowpanif *lowpanif, struct pbuf *p);
-
-  /** Turn the RDC layer on. */
-  int (* on)(struct lowpanif *lowpanif);
-
-  /** Turn the RDC layer off. */
-  int (* off)(struct lowpanif *lowpanif, int keep_radio_on);
-
-  /** Returns the channel check interval, expressed in ticks. */
-  u32_t (* channel_check_interval)(struct lowpanif *lowpanif);
+  /** Encrypt the packet when send it. the return p is encrypt data, 
+   *  NOTICE: rdc driver MUST free this pbuf */
+  struct pbuf *(* encrypt)(struct lowpanif *lowpanif, struct pbuf *p);
+  
+  /** Decrypt the packet when receive it. 
+   *  NOTICE: the return p is decrypt data, rdc driver MUST use this pbuf up to mac driver then free argument pbuf */
+  struct pbuf *(* decrypt)(struct lowpanif *lowpanif, struct pbuf *p);
+  
+  /** Verify the packet when receive it. */
+  verify_ret_t (* verify)(struct lowpanif *lowpanif, struct pbuf *p);
 };
+
+/*
+ * Rdc driver call this when send / receive a packet.
+ */
+void         crypt_init(struct lowpanif *lowpanif);
+struct pbuf *crypt_encode(struct lowpanif *lowpanif, struct pbuf *p);
+struct pbuf *crypt_decode(struct lowpanif *lowpanif, struct pbuf *p);
+verify_ret_t crypt_verify(struct lowpanif *lowpanif, struct pbuf *p);
+
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* __RDC_DRIVER_H__ */
+#endif /* __CRYPT_DRIVER_H__ */

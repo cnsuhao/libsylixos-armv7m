@@ -1,8 +1,7 @@
 /**
  * @file
- * radio communication interface
+ * IEEE 802.15.4 frame crypt support. 
  *
- * Verification using sylixos(tm) real-time operating system
  */
 
 /*
@@ -35,49 +34,71 @@
  *
  */
 
-#ifndef __RDC_DRIVER_H__
-#define __RDC_DRIVER_H__
+#include "lowpan_if.h"
 
-#include "lwip/opt.h"
-#include "lwip/pbuf.h"
-
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-/** 
- * Declare the lowpan_if.
+#if LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT
+/**
+ * crypt driver initialize.
+ *
+ * @param lowpanif netif
  */
-struct lowpanif;
+void crypt_init (struct lowpanif *lowpanif)
+{
+  if (CRYPT_DRIVER(lowpanif)) {
+    CRYPT_DRIVER(lowpanif)->init(lowpanif);
+  }
+}
 
 /**
- * The structure of a RDC (radio duty cycling) driver in lwip radio system.
+ * crypt driver encode data.
+ *
+ * @param lowpanif netif
+ * @param p The frame to send.
+ * @return encode pbuf
  */
-struct rdc_driver {
-  /* rdc driver name */
-  char *name;
-  
-  /** Initialize the RDC driver */
-  void (* init)(struct lowpanif *lowpanif);
-  
-  /** Send a packet from the Rime buffer, numtx is pbuf send times */
-  radio_ret_t (* send)(struct lowpanif *lowpanif, struct pbuf *p, u8_t numtx);
-
-  /** Callback for getting notified of incoming packet. */
-  void (* input)(struct lowpanif *lowpanif, struct pbuf *p);
-
-  /** Turn the RDC layer on. */
-  int (* on)(struct lowpanif *lowpanif);
-
-  /** Turn the RDC layer off. */
-  int (* off)(struct lowpanif *lowpanif, int keep_radio_on);
-
-  /** Returns the channel check interval, expressed in ticks. */
-  u32_t (* channel_check_interval)(struct lowpanif *lowpanif);
-};
-
-#ifdef __cplusplus
+struct pbuf *crypt_encode (struct lowpanif *lowpanif, struct pbuf *p)
+{
+  if (CRYPT_DRIVER(lowpanif)) {
+    return CRYPT_DRIVER(lowpanif)->encrypt(lowpanif, p);
+  } else {
+    pbuf_ref(p); /* return pbuf is same as argument, ref it */
+    return p;
+  }
 }
-#endif
 
-#endif /* __RDC_DRIVER_H__ */
+/**
+ * crypt driver decode data.
+ *
+ * @param lowpanif netif
+ * @param p The frame has recieved.
+ * @return decode pbuf
+ */
+struct pbuf *crypt_decode (struct lowpanif *lowpanif, struct pbuf *p)
+{
+  if (CRYPT_DRIVER(lowpanif)) {
+    return CRYPT_DRIVER(lowpanif)->decrypt(lowpanif, p);
+  } else {
+    pbuf_ref(p); /* return pbuf is same as argument, ref it */
+    return p;
+  }
+}
+
+/**
+ * crypt driver verify data.
+ *
+ * @param lowpanif netif
+ * @param p The frame has recieved.
+ * @return verify_ret_t
+ */
+verify_ret_t crypt_verify (struct lowpanif *lowpanif, struct pbuf *p)
+{
+  if (CRYPT_DRIVER(lowpanif)) {
+    return CRYPT_DRIVER(lowpanif)->verify(lowpanif, p);
+  } else {
+    return CRYPT_OK;
+  }
+}
+
+#endif /* LOWPAN_AES_CRYPT || LOWPAN_SIMPLE_CRYPT */
+
+/* end */
