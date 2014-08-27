@@ -501,7 +501,7 @@ static INT  __procFsStatGet (PLW_PROCFS_NODE  p_pfsn, struct stat *pstat)
     if (p_pfsn == LW_NULL) {                                            /*  procfs 根节点               */
         pstat->st_dev     = (dev_t)&_G_devhdrProc;
         pstat->st_ino     = (ino_t)0;                                   /*  根目录                      */
-        pstat->st_mode    = (0444 | S_IFDIR);                           /*  默认属性                    */
+        pstat->st_mode    = (0644 | S_IFDIR);                           /*  默认属性                    */
         pstat->st_nlink   = 1;
         pstat->st_uid     = 0;                                          /*  owner is root               */
         pstat->st_gid     = 0;

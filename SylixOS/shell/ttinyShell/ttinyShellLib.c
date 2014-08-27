@@ -62,6 +62,7 @@
 2012.12.25  __tshellBgCreateEx() 将自身返回值和命令返回值隔离开.
 2013.01.23  shell 当系统命令和可执行文件名重复时, 优先运行文件. 
 2014.07.23  shell 加入标准文件重定向支持.
+2014.08.27  __tshellRestart() 如果判断是在等待其他任务, 则使用 kill 操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -674,6 +675,9 @@ static VOID  __tshellRestart (LW_OBJECT_HANDLE  ulThread)
 {
     REGISTER ULONG            ulOption;
     REGISTER PLW_CLASS_TCB    ptcbShell;
+    REGISTER PLW_CLASS_TCB    ptcbJoin;
+             LW_OBJECT_HANDLE ulJoin = LW_OBJECT_HANDLE_INVALID;
+             INT              iMsg;
              UINT16           usIndex;
 
     if (LW_CPU_GET_CUR_NESTING()) {
@@ -690,15 +694,29 @@ static VOID  __tshellRestart (LW_OBJECT_HANDLE  ulThread)
     }
     
     ptcbShell = __GET_TCB_FROM_INDEX(usIndex);
-    ulOption  = __TTINY_SHELL_GET_OPT(ptcbShell);
-    ulOption |= LW_OPTION_TSHELL_NOLOGO;                                /*  重启时不需要显示 logo       */
-    ulOption &= ~LW_OPTION_TSHELL_AUTHEN;                               /*  重启时不需要用户认证        */
+    ptcbJoin  = ptcbShell->TCB_ptcbJoin;
+    if (ptcbJoin) {                                                     /*  等待其他线程结束            */
+        ulJoin = ptcbJoin->TCB_ulId;
     
-    __TTINY_SHELL_SET_OPT(ptcbShell, ulOption);
+    } else {
+        ulOption  = __TTINY_SHELL_GET_OPT(ptcbShell);
+        ulOption |= LW_OPTION_TSHELL_NOLOGO;                            /*  重启时不需要显示 logo       */
+        ulOption &= ~LW_OPTION_TSHELL_AUTHEN;                           /*  重启时不需要用户认证        */
+        __TTINY_SHELL_SET_OPT(ptcbShell, ulOption);
+    }
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */
-                                                                        /*  重启线程                    */
-    API_ThreadRestart(ulThread, (PVOID)__TTINY_SHELL_GET_STDFILE(ptcbShell));
+    
+    if (ulJoin) {
+        kill(ulJoin, SIGKILL);                                          /*  杀死等待的线程/进程         */
+        iMsg = API_IoTaskStdGet(ulThread, STD_OUT);
+        if (iMsg >= 0) {
+            fdprintf(iMsg, "[sh]Warning: Program is kill by shell.\n"
+                           "    Restart SylixOS is recommended!\n");
+        }
+    } else {                                                            /*  重启线程                    */
+        API_ThreadRestart(ulThread, (PVOID)__TTINY_SHELL_GET_STDFILE(ptcbShell));
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: __tshellRename

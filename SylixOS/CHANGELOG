@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-08-27: han.hui
+    shell 收到 control+C 时, 以非安全的方式杀死等待执行完成的任务.
+
     2014-08-11: han.hui
     系统支持堆栈溢出与致命错误安装钩子函数.
     
