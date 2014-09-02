@@ -135,7 +135,7 @@ extern int              __packet_have_event(AF_PACKET_T *pafpacket, int type, in
                             iosFdGetType(s, &iType);    \
                             if (iType != LW_DRV_TYPE_SOCKET) { \
                                 _DebugHandle(__ERRORMESSAGE_LEVEL, "not a socket file.\r\n");   \
-                                _ErrorHandle(EBADF);    \
+                                _ErrorHandle(ENOTSOCK);    \
                                 return  (PX_ERROR); \
                             }
 /*********************************************************************************************************

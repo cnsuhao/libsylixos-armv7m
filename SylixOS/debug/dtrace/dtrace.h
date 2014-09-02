@@ -90,6 +90,10 @@ LW_API ULONG    API_DtraceContinueProcess(PVOID  pvDtrace);
 LW_API ULONG    API_DtraceProcessThread(PVOID  pvDtrace, LW_OBJECT_HANDLE ulThread[], 
                                         UINT   uiTableNum, UINT *puiThreadNum);
 LW_API ULONG    API_DtraceGetBreakInfo(PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm, LW_OBJECT_HANDLE  ulThread);
+LW_API ULONG    API_DtraceDelBreakInfo(PVOID             pvDtrace, 
+                                       LW_OBJECT_HANDLE  ulThread, 
+                                       addr_t            ulBreakAddr,
+                                       BOOL              bContinue);
 LW_API ULONG    API_DtraceThreadExtraInfo(PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread,
                                           PCHAR  pcExtraInfo, size_t  stSize);
 LW_API ULONG    API_DtraceThreadStepSet(PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread, addr_t  ulAddr);

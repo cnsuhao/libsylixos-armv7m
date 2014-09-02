@@ -22,6 +22,7 @@
 2012.09.05  今天凌晨, 重新设计 dtrace 的等待与接口机制, 开始为 GDB server 的编写扫平一切障碍.
 2014.05.23  内存操作时, 需要首先检测内存访问权限.
 2014.08.10  API_DtraceThreadStepSet() 首先对单步断点地址产生一次页面中断.
+2014.09.02  增加 API_DtraceDelBreakInfo() 接口, 调试器可删除断点信息.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -90,11 +91,12 @@ static INT  __dtraceWriteMsg (PLW_DTRACE  pdtrace, const PLW_DTRACE_MSG  pdmsg)
 ** 功能描述: 读取一个调试信息
 ** 输　入  : pdtrace       dtrace 节点
 **           dmsg          调试信息
+**           bPeek         是否需要读后清理
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT  __dtraceReadMsg (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg)
+static INT  __dtraceReadMsg (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg, BOOL  bPeek)
 {
     if (DPOOL_NUM == 0) {
         return  (PX_ERROR);
@@ -108,12 +110,15 @@ static INT  __dtraceReadMsg (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg)
     }
     
     *pdmsg = DPOOL_MSG[DPOOL_OUT];
-    DPOOL_MSG[DPOOL_OUT].DTM_ulThread = LW_OBJECT_HANDLE_INVALID;
-    DPOOL_OUT++;
-    DPOOL_NUM--;
     
-    if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
-        DPOOL_OUT =  0;
+    if (bPeek == LW_FALSE) {
+        DPOOL_MSG[DPOOL_OUT].DTM_ulThread = LW_OBJECT_HANDLE_INVALID;
+        DPOOL_OUT++;
+        DPOOL_NUM--;
+        
+        if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
+            DPOOL_OUT =  0;
+        }
     }
     
     return  (ERROR_NONE);
@@ -123,12 +128,16 @@ static INT  __dtraceReadMsg (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg)
 ** 功能描述: 读取一个调试信息
 ** 输　入  : pdtrace       dtrace 节点
 **           dmsg          调试信息
+**           bPeek         是否需要读后清理
 **           ulThread      指定的线程 ID
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT  __dtraceReadMsgEx (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg, LW_OBJECT_HANDLE  ulThread)
+static INT  __dtraceReadMsgEx (PLW_DTRACE       pdtrace, 
+                               PLW_DTRACE_MSG   pdmsg, 
+                               BOOL             bPeek, 
+                               LW_OBJECT_HANDLE ulThread)
 {
     UINT    uiI = DPOOL_OUT;
 
@@ -147,13 +156,16 @@ static INT  __dtraceReadMsgEx (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg, LW_OB
     }
     
     *pdmsg = DPOOL_MSG[uiI];
-    DPOOL_MSG[uiI].DTM_ulThread = LW_OBJECT_HANDLE_INVALID;
-    DPOOL_NUM--;
     
-    if (DPOOL_OUT == uiI) {
-        DPOOL_OUT++;
-        if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
-            DPOOL_OUT =  0;
+    if (bPeek == LW_FALSE) {
+        DPOOL_MSG[uiI].DTM_ulThread = LW_OBJECT_HANDLE_INVALID;
+        DPOOL_NUM--;
+        
+        if (DPOOL_OUT == uiI) {
+            DPOOL_OUT++;
+            if (DPOOL_OUT >= LW_CFG_MAX_THREADS) {
+                DPOOL_OUT =  0;
+            }
         }
     }
     
@@ -168,8 +180,10 @@ static INT  __dtraceReadMsgEx (PLW_DTRACE  pdtrace, PLW_DTRACE_MSG  pdmsg, LW_OB
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  __dtraceThreadCb (LW_OBJECT_HANDLE  ulId, LW_OBJECT_HANDLE  ulThread[], 
-                               UINT  uiTableNum, UINT *uiNum)
+static VOID  __dtraceThreadCb (LW_OBJECT_HANDLE  ulId, 
+                               LW_OBJECT_HANDLE  ulThread[], 
+                               UINT              uiTableNum, 
+                               UINT             *uiNum)
 {
     if (*uiNum < uiTableNum) {
         ulThread[*uiNum] = ulId;
@@ -782,9 +796,57 @@ ULONG  API_DtraceGetBreakInfo (PVOID  pvDtrace, PLW_DTRACE_MSG  pdtm, LW_OBJECT_
     
     __KERNEL_ENTER();                                                   /*  进入内核                    */
     if (ulThread == LW_OBJECT_HANDLE_INVALID) {
-        iError = __dtraceReadMsg(pdtrace, pdtm);
+        iError = __dtraceReadMsg(pdtrace, pdtm, LW_FALSE);
     } else {
-        iError = __dtraceReadMsgEx(pdtrace, pdtm, ulThread);
+        iError = __dtraceReadMsgEx(pdtrace, pdtm, LW_FALSE, ulThread);
+    }
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    if (iError) {
+        _ErrorHandle(ENOMSG);
+        return  (ENOMSG);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_DtraceDelBreakInfo
+** 功能描述: 删除指定线程的断点信息(仅仅截获下一条断点信息).
+** 输　入  : pvDtrace      dtrace 节点
+**           ulThread      指定的线程句柄 (必须为有效线程句柄)
+**           ulBreakAddr   断点地址
+**           bContinue     移除后是否继续执行线程
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+ULONG  API_DtraceDelBreakInfo (PVOID             pvDtrace, 
+                               LW_OBJECT_HANDLE  ulThread, 
+                               addr_t            ulBreakAddr,
+                               BOOL              bContinue)
+{
+    INT             iError  = PX_ERROR;
+    PLW_DTRACE      pdtrace = (PLW_DTRACE)pvDtrace;
+    LW_DTRACE_MSG   dtm;
+    
+    if (!pdtrace) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (ulThread) {
+        if (__dtraceReadMsgEx(pdtrace, &dtm, LW_TRUE, ulThread) == ERROR_NONE) {
+            if (ulBreakAddr == dtm.DTM_ulAddr) {
+                __dtraceReadMsgEx(pdtrace, &dtm, LW_FALSE, ulThread);
+                if (bContinue) {
+                    API_ThreadContinue(ulThread);
+                }
+                iError = ERROR_NONE;
+            }
+        }
     }
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     

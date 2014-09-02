@@ -166,7 +166,8 @@ netconn_getaddr(struct netconn *conn, ip_addr_t *addr, u16_t *port, u8_t local)
 #endif /* LWIP_MPU_COMPATIBLE */
   API_MSG_VAR_FREE(msg);
 
-  NETCONN_SET_SAFE_ERR(conn, err);
+  /* sylixos fixed (this call do NOT update last_err) */
+  /* NETCONN_SET_SAFE_ERR(conn, err); */
   return err;
 }
 

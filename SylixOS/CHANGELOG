@@ -4,8 +4,11 @@ HISTORY
 
 ++ New features:
 
+    2014-09-02: han.hui
+    加入新的 license 文件.
+    
     2014-08-29: han.hui
-    升级 mtd.
+    升级 mtd, GDB.
 
     2014-08-27: han.hui
     shell 收到 control+C 时, 以非安全的方式杀死等待执行完成的任务.
@@ -554,6 +557,9 @@ HISTORY
     SylixOS 根目录中加入 CHANGELOG 文件.
     
 ++ Bugfixes:.
+
+    2014-09-02: han.hui
+    修正 GDB 多线程调试问题.
 
     2014-08-15: han.hui
     malloc 等 heap 管理分配内存的最小对齐长度为 CPU 取数据最大了能对齐长度要求
