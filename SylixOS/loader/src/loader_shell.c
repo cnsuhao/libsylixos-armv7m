@@ -542,12 +542,12 @@ static INT  __tshellModulestat (INT  iArgC, PCHAR  *ppcArgV)
     }
     
     if (stat(ppcArgV[1], &statGet) < 0) {
-        printf("can not open file!\n");
+        printf("can not open %s : %s\n", ppcArgV[1], lib_strerror(errno));
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     if (!S_ISREG(statGet.st_mode)) {
-        printf("not a reg file!\n");
+        printf("not a REG file.\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 

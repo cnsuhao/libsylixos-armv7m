@@ -18,8 +18,6 @@ compiler:
     1: "SylixOS"
     2: "SylixOS/include"
     3: "SylixOS/include/inet"
-    4: "SylixOS/include/inet/ipv4"
-    5: "SylixOS/include/inet/ipv6"
     6: "SylixOS/include/arch/arm" (ARM)
     7: "SylixOS/include/arch/x86" (x86)
     ...

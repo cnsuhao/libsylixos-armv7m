@@ -710,7 +710,7 @@ static INT  __tshellArp (INT  iArgC, PCHAR  *ppcArgV)
         
         iFd = open("/proc/net/arp", O_RDONLY);
         if (iFd < 0) {
-            printf("can not open /proc/net/arp!\n");
+            printf("can not open /proc/net/arp : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
         

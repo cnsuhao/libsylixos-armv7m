@@ -279,6 +279,7 @@ static VOID armL2x0Clear (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  stByte
 **           uiInstruction      指令 CACHE 类型
 **           uiData             数据 CACHE 类型
 **           pcMachineName      机器名称
+**           uiAux              L2C_AUX_CTRL
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
@@ -286,7 +287,8 @@ static VOID armL2x0Clear (L2C_DRVIER  *pl2cdrv, PVOID  pvPhyAddr, size_t  stByte
 VOID armL2x0Init (L2C_DRVIER  *pl2cdrv,
                   CACHE_MODE   uiInstruction,
                   CACHE_MODE   uiData,
-                  CPCHAR       pcMachineName)
+                  CPCHAR       pcMachineName,
+                  UINT32       uiAux)
 {
     pl2cdrv->L2CD_pfuncEnable        = armL2x0Enable;
     pl2cdrv->L2CD_pfuncDisable       = armL2x0Disable;
@@ -298,6 +300,11 @@ VOID armL2x0Init (L2C_DRVIER  *pl2cdrv,
     pl2cdrv->L2CD_pfuncInvalidateAll = armL2x0InvalidateAll;
     pl2cdrv->L2CD_pfuncClear         = armL2x0Clear;
     pl2cdrv->L2CD_pfuncClearAll      = armL2x0ClearAll;
+    
+    while (!(read32_le(L2C_BASE(pl2cdrv) + L2C_CTRL) & 0x01)) {
+        write32_le(uiAux, L2C_BASE(pl2cdrv) + L2C_AUX_CTRL);            /*  l2x0 controller is disabled */
+        armL2x0InvalidateAll(pl2cdrv);
+    }
 }
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */

@@ -60,6 +60,10 @@ VOID  archCacheInit (CACHE_MODE  uiInstruction, CACHE_MODE  uiData, CPCHAR  pcMa
                (lib_strcmp(pcMachineName, ARM_MACHINE_A8)  == 0) ||
                (lib_strcmp(pcMachineName, ARM_MACHINE_A9)  == 0) ||
                (lib_strcmp(pcMachineName, ARM_MACHINE_A15) == 0)) {
+        if (__SYLIXOS_ARM_ARCH__ < 7) {
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "machine name is NOT fix with "
+                                               "compiler -mcpu or -march parameter.\r\n");
+        }
         armCacheV7Init(pcacheop, uiInstruction, uiData, pcMachineName);
     
     } else {

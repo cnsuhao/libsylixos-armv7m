@@ -112,7 +112,7 @@ static INT  __untarFile (CPCHAR  pcTarFile, CPCHAR  pcDestPath)
     
     iFdTar = open(pcTarFile, O_RDONLY);
     if (iFdTar < 0) {
-        printf("can not open : %s\n", pcTarFile);
+        printf("can not open : %s : %s\n", pcTarFile, lib_strerror(errno));
         return  (PX_ERROR);
     }
     
@@ -237,7 +237,7 @@ static INT  __untargzFile (CPCHAR  pcTargzFile, CPCHAR  pcDestPath)
     
     iFdTar = open(pcTargzFile, O_RDONLY);
     if (iFdTar < 0) {
-        printf("can not open : %s\n", pcTargzFile);
+        printf("can not open : %s : %s\n", pcTargzFile, lib_strerror(errno));
         return  (PX_ERROR);
     }
     

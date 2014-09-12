@@ -36,6 +36,8 @@ extern "C" {
 #endif                                                                  /*  __cplusplus                 */
 
 LW_API int  pthread_attr_get_np(pthread_t  thread, pthread_attr_t *pattr);
+LW_API int  pthread_getattr_np(pthread_t thread, pthread_attr_t *pattr);
+
 LW_API int  pthread_setname_np(pthread_t  thread, const char  *name);
 LW_API int  pthread_getname_np(pthread_t  thread, char  *name, size_t len);
 

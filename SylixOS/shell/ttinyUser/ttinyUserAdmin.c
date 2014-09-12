@@ -55,7 +55,7 @@ static VOID  __tshellUserShow (VOID)
     
     pfile = fopen(_PATH_PASSWD, "r");
     if (pfile == LW_NULL) {
-        fprintf(stderr, "can not open %s %s.\n", _PATH_PASSWD, lib_strerror(errno));
+        fprintf(stderr, "can not open %s : %s.\n", _PATH_PASSWD, lib_strerror(errno));
         return;
     }
     
@@ -103,7 +103,7 @@ static VOID  __tshellGroupShow (VOID)
     
     pfile = fopen(_PATH_GROUP, "r");
     if (pfile == LW_NULL) {
-        fprintf(stderr, "can not open %s %s.\n", _PATH_GROUP, lib_strerror(errno));
+        fprintf(stderr, "can not open %s : %s.\n", _PATH_GROUP, lib_strerror(errno));
         return;
     }
     

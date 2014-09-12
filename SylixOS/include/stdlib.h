@@ -23,6 +23,7 @@
 #define __STDLIB_H
 
 #include <stddef.h>
+#include <alloca.h>
 
 #ifndef __SYLIXOS_H
 #include "SylixOS.h"

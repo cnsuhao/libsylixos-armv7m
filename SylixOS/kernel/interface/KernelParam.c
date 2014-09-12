@@ -17,6 +17,9 @@
 ** 文件创建日期: 2014 年 08 月 08 日
 **
 ** 描        述: 这是系统内核启动参数设置文件。
+**
+** BUG:
+2014/09.09  ncpus 取值范围为 [1 ~ LW_CFG_MAX_PROCESSORS].
 *********************************************************************************************************/
 #define  __KERNEL_NCPUS_SET
 #define  __SYLIXOS_KERNEL
@@ -61,7 +64,7 @@ ULONG  API_KernelStartParam (CPCHAR  pcParam)
     while (pcTok) {
         if (lib_strncmp(pcTok, "ncpus=", 6) == 0) {                     /*  CPU 数量                    */
             INT     iCpus = lib_atoi(&pcTok[6]);
-            if (iCpus > 0 && iCpus < LW_CFG_MAX_PROCESSORS) {
+            if (iCpus > 0 && iCpus <= LW_CFG_MAX_PROCESSORS) {
                 _K_ulNCpus = (ULONG)iCpus;
             }
             

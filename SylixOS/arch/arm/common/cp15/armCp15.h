@@ -43,7 +43,7 @@ VOID    armHighVectorEnable(VOID);
 VOID    armHighVectorDisable(VOID);
 
 /*********************************************************************************************************
-  ARMv7 以上版本
+  ARMv6 以上版本
 *********************************************************************************************************/
 
 VOID    armBranchPredictorInvalidate(VOID);
@@ -51,15 +51,79 @@ VOID    armBranchPredictorInvalidateInnerShareable(VOID);
 VOID    armBranchPredictionDisable(VOID);
 VOID    armBranchPredictionEnable(VOID);
 
-#define AUX_CONTROL_PARITY                          (1 << 9)
-#define AUX_CONTROL_ALLOC_IN_ONE_WAY                (1 << 8)
-#define AUX_CONTROL_EXECLUSIVE_CACHE                (1 << 7)
-#define AUX_CONTROL_SMP                             (1 << 6)
+/*********************************************************************************************************
+  ARMv7 以上版本
+*********************************************************************************************************/
 
-#define AUX_CONTROL_WRITE_FULL_LINE                 (1 << 3)            /*  [0...5] in A5 A7 A15 not use*/
-#define AUX_CONTROL_L1_PREFETCH                     (1 << 2)            /*  A9:L1-Prefetch A8:Reserved  */
-#define AUX_CONTROL_L2_PREFETCH                     (1 << 1)            /*  A9:L2-Prefetch A8 L2EN      */
-#define AUX_CONTROL_MAINTENANCE_BROADCAST           (1 << 0)
+#define AUX_CTRL_A5_DDI                             (1 << 28)
+#define AUX_CTRL_A5_BTDIS                           (1 << 18)
+#define AUX_CTRL_A5_RSDIS                           (1 << 17)
+#define AUX_CTRL_A5_BP_16                           (1 << 16)
+#define AUX_CTRL_A5_BP_15                           (1 << 15)
+#define AUX_CTRL_A5_L1PCTL_14                       (1 << 14)
+#define AUX_CTRL_A5_L1PCTL_13                       (1 << 13)
+#define AUX_CTRL_A5_RADIS                           (1 << 12)
+#define AUX_CTRL_A5_DWBST                           (1 << 11)
+#define AUX_CTRL_A5_DODMBS                          (1 << 10)
+#define AUX_CTRL_A5_EXCL                            (1 <<  7)
+#define AUX_CTRL_A5_SMP                             (1 <<  6)
+#define AUX_CTRL_A5_CACHE_MAINTENANCE_BROADCAST     (1 <<  0)
+
+#define AUX_CTRL_A7_DDI                             (1 << 28)
+#define AUX_CTRL_A7_DDVM                            (1 << 15)
+#define AUX_CTRL_A7_L1PCTL_14                       (1 << 14)
+#define AUX_CTRL_A7_L1PCTL_13                       (1 << 13)
+#define AUX_CTRL_A7_L1RADIS                         (1 << 12)
+#define AUX_CTRL_A7_L2RADIS                         (1 << 11)
+#define AUX_CTRL_A7_DODMBS                          (1 << 10)
+#define AUX_CTRL_A7_SMP                             (1 <<  6)
+
+#define AUX_CTRL_A8_L2_RST_DIS                      (1 << 31)
+#define AUX_CTRL_A8_L1_RST_DIS                      (1 << 30)
+#define AUX_CTRL_A8_CACHE_PIPELINE                  (1 << 20)
+#define AUX_CTRL_A8_CLKSTOPREQ                      (1 << 19)
+#define AUX_CTRL_A8_CP14_15_INS_SERIALIZATION       (1 << 18)
+#define AUX_CTRL_A8_CP14_15_WAIT_ON_IDLE            (1 << 17)
+#define AUX_CTRL_A8_CP14_15_PIPELINE_FLUSH          (1 << 16)
+#define AUX_CTRL_A8_FORCE_ETM_CLK                   (1 << 15)
+#define AUX_CTRL_A8_FORCE_NEON_CLK                  (1 << 14)
+#define AUX_CTRL_A8_FORCE_MAIN_CLK                  (1 << 13)
+#define AUX_CTRL_A8_FORCE_NEON_SIGNAL               (1 << 12)
+#define AUX_CTRL_A8_FORCE_LDSTR_SIGNAL              (1 << 11)
+#define AUX_CTRL_A8_FORCE_SIGNAL                    (1 << 10)
+#define AUX_CTRL_A8_PLDNOP                          (1 <<  9)
+#define AUX_CTRL_A8_WFINOP                          (1 <<  8)
+#define AUX_CTRL_A8_BRANCH_SIZE_MISPREDICTS_DIS     (1 <<  7)
+#define AUX_CTRL_A8_IBE                             (1 <<  6)
+#define AUX_CTRL_A8_L1NEON                          (1 <<  5)
+#define AUX_CTRL_A8_ASA                             (1 <<  4)
+#define AUX_CTRL_A8_L1PE                            (1 <<  3)
+#define AUX_CTRL_A8_L2EN                            (1 <<  1)
+#define AUX_CTRL_A8_L1ALIAS                         (1 <<  0)
+
+#define AUX_CTRL_A9_PARITY_ON                       (1 <<  9)
+#define AUX_CTRL_A9_ALLOC_IN_ONE_WAY                (1 <<  8)
+#define AUX_CTRL_A9_EXCL                            (1 <<  7)
+#define AUX_CTRL_A9_SMP                             (1 <<  6)
+#define AUX_CTRL_A9_WR_FULLLINE_OF_ZEROS_MODE       (1 <<  3)
+#define AUX_CTRL_A9_L1_PREFETCH                     (1 <<  2)
+#define AUX_CTRL_A9_L2_PREFETCH                     (1 <<  1)
+#define AUX_CTRL_A9_CACHE_MAINTENANCE_BROADCAST     (1 <<  0)
+
+#define AUX_CTRL_A15_SNOOP_DELAY                    (1 << 31)
+#define AUX_CTRL_A15_FORCE_MAIN_CLK                 (1 << 30)
+#define AUX_CTRL_A15_FORCE_NEON_CLK                 (1 << 29)
+#define AUX_CTRL_A15_FULL_STRONGLY_ORDERED_MEM      (1 << 16)
+#define AUX_CTRL_A15_FULL_STRONGLY_ORDERED_INS      (1 << 10)
+#define AUX_CTRL_A15_WFINOP                         (1 <<  8)
+#define AUX_CTRL_A15_WFENOP                         (1 <<  7)
+#define AUX_CTRL_A15_SMP                            (1 <<  6)
+#define AUX_CTRL_A15_PLDNOP                         (1 <<  5)
+#define AUX_CTRL_A15_INDIRECT_PREDICTOR             (1 <<  4)
+#define AUX_CTRL_A15_MICRO_BTB_DIS                  (1 <<  3)
+#define AUX_CTRL_A15_LOOP_BUF_FLUSH_LIMT            (1 <<  2)
+#define AUX_CTRL_A15_LOOP_BUF_DIS                   (1 <<  1)
+#define AUX_CTRL_A15_BTB                            (1 <<  0)
 
 VOID    armAuxControlFeatureDisable(UINT32  uiFeature);
 VOID    armAuxControlFeatureEnable(UINT32  uiFeature);
@@ -81,6 +145,8 @@ VOID    armAuxControlFeatureEnable(UINT32  uiFeature);
 
 VOID    armControlFeatureEnable(UINT32  uiFeature);
 VOID    armControlFeatureDisable(UINT32  uiFeature);
+
+addr_t  armPrivatePeriphBaseGet(VOID);
 
 #endif                                                                  /*  LW_CFG_ARM_CP15 > 0         */
 #endif                                                                  /*  __ARMCP15_H                 */

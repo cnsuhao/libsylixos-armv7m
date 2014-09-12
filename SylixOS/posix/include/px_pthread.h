@@ -180,6 +180,7 @@ LW_API int          pthread_attr_getname(const pthread_attr_t  *pattr, char  **p
 
 #if LW_CFG_POSIXEX_EN > 0
 LW_API int          pthread_attr_get_np(pthread_t  thread, pthread_attr_t *pattr);
+LW_API int          pthread_getattr_np(pthread_t thread, pthread_attr_t *pattr);
 LW_API int          pthread_setname_np(pthread_t  thread, const char  *name);
 LW_API int          pthread_getname_np(pthread_t  thread, char  *name, size_t len);
 LW_API void         pthread_safe_np(void);

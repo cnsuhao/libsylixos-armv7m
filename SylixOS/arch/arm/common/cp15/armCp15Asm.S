@@ -49,6 +49,7 @@
     EXPORT_LABEL(armControlFeatureEnable)
     EXPORT_LABEL(armAuxControlFeatureEnable)
     EXPORT_LABEL(armAuxControlFeatureDisable)
+    EXPORT_LABEL(armPrivatePeriphBaseGet)
     
 ;/*********************************************************************************************************
 ;  获得 CP15 基本信息
@@ -132,6 +133,9 @@ FUNC_DEF(armBranchPredictorInvalidate)
     ARM_ISB()
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c5, 6
+    NOP
+    NOP
+    NOP
     ARM_DSB()
     ARM_ISB()
     BX      LR
@@ -146,6 +150,9 @@ FUNC_DEF(armBranchPredictorInvalidateInnerShareable)
     ARM_ISB()
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c1, 6
+    NOP
+    NOP
+    NOP
     ARM_DSB()
     ARM_ISB()
     BX      LR
@@ -305,6 +312,17 @@ FUNC_DEF(armAuxControlFeatureDisable)
     BX      LR
     FUNC_END()
     
+;/*********************************************************************************************************
+;  In Cortex-A9 or later uniprocessor implementations the base address is set to zero.
+;  In Cortex-A9 or later MPCore implementations, the base address is reset to PERIPHBASE[31:13]
+;  so that software can determine the location of the private memory region.
+;*********************************************************************************************************/
+
+FUNC_DEF(armPrivatePeriphBaseGet)
+    MRC     p15, 4, R0, c15, c0, 0
+    BX      LR
+    FUNC_END()
+
     FILE_END()
 
 #endif

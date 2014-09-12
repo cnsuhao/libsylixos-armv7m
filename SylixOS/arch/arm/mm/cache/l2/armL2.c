@@ -48,7 +48,8 @@ extern VOID     armL2A8Init(L2C_DRVIER  *pl2cdrv,
 extern VOID     armL2x0Init(L2C_DRVIER  *pl2cdrv,
                             CACHE_MODE   uiInstruction,
                             CACHE_MODE   uiData,
-                            CPCHAR       pcMachineName);
+                            CPCHAR       pcMachineName,
+                            UINT32       uiAux);
 /*********************************************************************************************************
 ** 函数名称: armL2Enable
 ** 功能描述: 使能 L2 CACHE 
@@ -323,12 +324,12 @@ VOID armL2Init (CACHE_MODE   uiInstruction,
         _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
         _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");
         
-        if (lib_strcmp(pcMachineName, ARM_MACHINE_A9)  == 0) {
-            armAuxControlFeatureEnable(AUX_CONTROL_L2_PREFETCH);        /*  L2: Prefetch Enable         */
+        armL2x0Init(&l2cdrv, uiInstruction, uiData, pcMachineName, uiAux);
+        
+        if ((lib_strcmp(pcMachineName, ARM_MACHINE_A9) == 0) &&
+            (l2cdrv.L2CD_uiType == 0x03)) {                             /*  PL310 L2 Controler support  */
+            armAuxControlFeatureEnable(AUX_CTRL_A9_L2_PREFETCH);        /*  L2: Prefetch Enable         */
         }
-        
-        armL2x0Init(&l2cdrv, uiInstruction, uiData, pcMachineName);
-        
     } else {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "unknown machine name.\r\n");
     }

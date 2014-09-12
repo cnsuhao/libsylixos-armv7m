@@ -48,8 +48,6 @@ FUNC_DEF(armDCacheV4Disable)
     ; * 回写并无效 DCACHE
     ; */
     STMFD   SP!, {LR}
-    LDR     R0, =0x0
-    LDR     R1, =0xffffffff
     BL      armDCacheV4ClearAll
     LDMFD   SP!, {LR}
     
@@ -72,8 +70,6 @@ LINE_LABEL(dcache_not_en)
     ; * 无效 DCACHE
     ; */
     STMFD   SP!, {LR}
-    LDR     R0, =0x0
-    LDR     R1, =0xffffffff
     BL      armDCacheV4InvalidateAll
     LDMFD   SP!, {LR}
     BX      LR

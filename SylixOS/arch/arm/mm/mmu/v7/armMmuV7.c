@@ -20,6 +20,7 @@
 **
 ** BUG:
 2014.05.24  ARMv7 带有 L2 CACHE 所以一级 CACHE 需要为写穿模式.
+2014.09.04  重构 CACHE 权限, L1, L2 可分别控制回写与写穿模式.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -122,15 +123,15 @@ static INT  armMmuFlags2Attr (ULONG   ulFlag,
 
     if ((ulFlag & LW_VMM_FLAG_CACHEABLE) &&
         (ulFlag & LW_VMM_FLAG_BUFFERABLE)) {                            /*  CACHE 与 BUFFER 控制        */
-        *pucTEX = 0x4 + 0x1;                                            /*  Outer: 回写, 写分配         */
-        *pucCB  = 0x2;                                                  /*  Inner: 写穿透, 不具备写分配 */
+        *pucTEX = 0x1;                                                  /*  Outer: 回写, 写分配         */
+        *pucCB  = 0x3;                                                  /*  Inner: 回写, 写分配         */
 
     } else if (ulFlag & LW_VMM_FLAG_CACHEABLE) {
-        *pucTEX = 0x4 + 0x3;                                            /*  Outer: 回写, 不具备写分配   */
-        *pucCB  = 0x2;                                                  /*  Inner: 写穿透, 不具备写分配 */
+        *pucTEX = 0x0;                                                  /*  Outer: 回写, 不具备写分配   */
+        *pucCB  = 0x3;                                                  /*  Inner: 回写, 不具备写分配   */
 
     } else if (ulFlag & LW_VMM_FLAG_BUFFERABLE) {
-        *pucTEX = 0x4 + 0x2;                                            /*  Outer: 写穿透, 不具备写分配 */
+        *pucTEX = 0x0;                                                  /*  Outer: 写穿透, 不具备写分配 */
         *pucCB  = 0x2;                                                  /*  Inner: 写穿透, 不具备写分配 */
 
     } else {
@@ -187,18 +188,18 @@ static INT  armMmuAttr2Flags (UINT8  ucAP,
         *pulFlag |= LW_VMM_FLAG_WRITABLE;
     }
     
-    switch (ucTEX) {
+    switch (ucCB) {
     
-    case (0x4 + 0x01):
-        *pulFlag |= LW_VMM_FLAG_CACHEABLE | LW_VMM_FLAG_BUFFERABLE;
+    case 0x3:
+        if (ucTEX == 0x1) {
+            *pulFlag |= LW_VMM_FLAG_CACHEABLE | LW_VMM_FLAG_BUFFERABLE;
+        } else {
+            *pulFlag |= LW_VMM_FLAG_CACHEABLE;
+        }
         break;
-    
-    case (0x4 + 0x02):
+        
+    case 0x2:
         *pulFlag |= LW_VMM_FLAG_BUFFERABLE;
-        break;
-
-    case (0x4 + 0x03):
-        *pulFlag |= LW_VMM_FLAG_CACHEABLE;
         break;
 
     default:
@@ -804,15 +805,15 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
          * ------------------------------------
          *  31:14 - Base addr
          *  13:7  - 0x0
-         *  6     - IRGN[0]     0x0 (Normal memory, Inner Non-cacheable)
+         *  6     - IRGN[0]     0x0 (Normal memory, Inner Write-Back Write-Allocate Cacheable)
          *  5     - NOS         0x0 (Outer Shareable)
          *  4:3   - RGN         0x1 (Normal memory, Outer Write-Back Write-Allocate Cacheable)
          *  2     - IMP         0x0
          *  1     - S           0x1 (Shareable)
-         *  0     - IRGN[1]     0x0 (Normal memory, Inner Non-cacheable)
+         *  0     - IRGN[1]     0x0 (Normal memory, Inner Write-Back Write-Allocate Cacheable)
          */
         armMmuSetTTBase((LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry |
-                        (0 << 6) |
+                        (1 << 6) |
                         (0 << 5) |
                         (1 << 3) |
                         (0 << 2) |
@@ -821,7 +822,6 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
     } else {
         _G_uiVMSAShareBit = 0;                                          /*  单核设置为非可共享，否则运行*/
                                                                         /*  速度会非常慢                */
-
         /*
          *  Set location of level 1 page table
          * ------------------------------------
@@ -831,14 +831,14 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
          *  4:3   - RGN         0x1 (Normal memory, Outer Write-Back Write-Allocate Cacheable)
          *  2     - IMP         0x0
          *  1     - S           0x0 (NonShareable)
-         *  0     - C           0x0 (Inner Non-cacheable)
+         *  0     - C           0x0 (Inner cacheable)
          */
         armMmuSetTTBase((LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry |
                         (1 << 5) |
                         (1 << 3) |
                         (0 << 2) |
                         (0 << 1) |
-                        (0 << 0)));
+                        (1 << 0)));
     }
 }
 /*********************************************************************************************************

@@ -1224,8 +1224,6 @@ DEPS_XSIIPC  = $(addprefix $(DEPPATH)/, $(addsuffix .d, $(basename $(XSIIPC_SRCS
 INCDIR  = "./SylixOS"
 INCDIR += "./SylixOS/include"
 INCDIR += "./SylixOS/include/inet"
-INCDIR += "./SylixOS/include/inet/ipv4"
-INCDIR += "./SylixOS/include/inet/ipv6"
 
 #*********************************************************************************************************
 # compiler preprocess

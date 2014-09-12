@@ -26,15 +26,23 @@
   ¼Ä´æÆ÷¶¨Òå
 *********************************************************************************************************/
 
-#define SCU_CTL                 0x00                                    /* SCU Control Register         */
-#define SCU_CFG                 0x04                                    /* SCU Configuration Register   */
-#define SCU_CPU_PWR_STS         0x08                                    /* SCU CPU Power Status         */
-#define SCU_INV_ALL_REG         0x0c                                    /* SCU Invalidate All Registers */
-                                                                        /* in Secure State              */
-#define SCU_FILTER_START        0x40                                    /* Filtering Start Address      */
-#define SCU_FILTER_END          0x44                                    /* Filtering End Address        */
-#define SCU_ACCESS_CONTROL      0x50                                    /* SCU Access Control           */
-#define SCU_NS_ACCESS_CONTROL   0x54                                    /* SCU Non-Secure Access Control*/
+#define SCU_FEATURE_IC_STANDBY                     (1 << 6)
+#define SCU_FEATURE_SCU_STANDBY                    (1 << 5)
+#define SCU_FEATURE_ALL_DEV_TO_PORT0               (1 << 4)
+#define SCU_FEATURE_SCU_SPECULATIVE_LINEFILL       (1 << 3)
+#define SCU_FEATURE_SCU_RAMS_PARITY                (1 << 2)
+#define SCU_FEATURE_ADDRESS_FILTERING              (1 << 1)
+#define SCU_FEATURE_SCU                            (1 << 0)
+
+VOID    armScuFeatureEnable(UINT32  uiFeatures);
+VOID    armScuFeatureDisable(UINT32  uiFeatures);
+UINT32  armScuFeatureGet(VOID);
+UINT32  armScuTagRamSize(VOID);
+UINT32  armScuCpuMpStatus(VOID);
+UINT32  armScuCpuNumber(VOID);
+VOID    armScuSecureInvalidateAll(UINT32  uiCpuId,  UINT32  uiWays);
+VOID    armScuFilteringSet(UINT32  uiStart,  UINT32  uiEnd);
+VOID    armScuAccessCtrlSet(UINT32  uiCpuBits);
 
 #endif                                                                  /*  __ARMSCU_H                  */
 /*********************************************************************************************************

@@ -558,6 +558,12 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-09-09: han.hui
+    修正 Bug #8 http://bugzilla.sylixos.com/show_bug.cgi?id=8
+    
+    2014-09-03: han.hui
+    升级 lwip 调整 lwip 头文件目录.
+
     2014-09-02: han.hui
     修正 GDB 多线程调试问题.
 

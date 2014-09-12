@@ -81,7 +81,7 @@ VOID  __tshellNetstatIf (VOID)
     
     iFd = open("/proc/net/dev", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/net/dev!\n");
+        printf("can not open /proc/net/dev : %s\n", lib_strerror(errno));
         return;
     }
     
@@ -222,7 +222,7 @@ VOID  __tshellNetstatStat (VOID)
     fflush(stdout);
     
     if (iFd < 0) {
-        printf("can not open /proc/net/tcpip_stat!\n");
+        printf("can not open /proc/net/tcpip_stat : %s\n", lib_strerror(errno));
         return;
     }
     
@@ -827,7 +827,7 @@ VOID  __tshellNetstatUnix (INT  iNetType)
     
     iFd = open("/proc/net/unix", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/net/unix!\n");
+        printf("can not open /proc/net/unix : %s\n", lib_strerror(errno));
         return;
     }
     
@@ -861,7 +861,7 @@ VOID  __tshellNetstatPacket (INT  iNetType)
     
     iFd = open("/proc/net/packet", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/net/packet!\n");
+        printf("can not open /proc/net/packet : %s\n", lib_strerror(errno));
         return;
     }
     

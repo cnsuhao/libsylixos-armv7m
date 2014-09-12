@@ -166,7 +166,7 @@ netconn_getaddr(struct netconn *conn, ip_addr_t *addr, u16_t *port, u8_t local)
 #endif /* LWIP_MPU_COMPATIBLE */
   API_MSG_VAR_FREE(msg);
 
-  /* sylixos fixed (this call do NOT update last_err) */
+  /* sylixos fixed */
   /* NETCONN_SET_SAFE_ERR(conn, err); */
   return err;
 }
@@ -827,6 +827,11 @@ netconn_gethostbyname(const char *name, ip_addr_t *addr)
 
   LWIP_ERROR("netconn_gethostbyname: invalid name", (name != NULL), return ERR_ARG;);
   LWIP_ERROR("netconn_gethostbyname: invalid addr", (addr != NULL), return ERR_ARG;);
+#if LWIP_MPU_COMPATIBLE
+  if (strlen(name >= DNS_MAX_NAME_LENGTH) {
+    return ERR_ARG;
+  }
+#endif
 
   API_VAR_ALLOC(struct dns_api_msg, MEMP_DNS_API_MSG, msg);
 #if LWIP_MPU_COMPATIBLE

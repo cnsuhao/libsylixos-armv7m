@@ -1563,7 +1563,7 @@ static INT  __tshellFsCmdShfile (INT  iArgC, PCHAR  ppcArgV[])
         if (errno == EACCES) {
             printf("insufficient permissions.\n");
         } else {
-            printf("can not open %s!\n", ppcArgV[1]);
+            printf("can not open %s : %s\n", ppcArgV[1], lib_strerror(errno));
         }
         return  (-ERROR_TSHELL_EPARAM);
     }

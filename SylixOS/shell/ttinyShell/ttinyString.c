@@ -23,6 +23,7 @@
 2008.11.26  升级变量分界的算法.
 2009.12.14  在 __TTNIYSHELL_SEPARATOR 加入冒号.
 2010.02.03  a=$b 当变量 b 字串中存在空格时, 赋值不正确.
+2014.09.06  变量分隔符加入 \r\n\t.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -86,7 +87,7 @@ static PCHAR  __tshellStrSkipRightBigBracket (PCHAR  pcPtr)
 *********************************************************************************************************/
 static BOOL  __tshellIsSeparator (CHAR  cChar)
 {
-#define __TTNIYSHELL_SEPARATOR     "+-*/%!&|~^()<>=,;: \"\\}"
+#define __TTNIYSHELL_SEPARATOR     "+-*/%!&|~^()<>=,;: \"\\}\r\n\t"
 
     if (lib_strchr(__TTNIYSHELL_SEPARATOR, cChar)) {
         return  (LW_TRUE);

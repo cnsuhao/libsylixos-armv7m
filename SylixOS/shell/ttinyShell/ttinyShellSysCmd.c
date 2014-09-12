@@ -1828,7 +1828,7 @@ static INT  __tshellSysCmdLspci (INT  iArgC, PCHAR  ppcArgV[])
     
     iFd = open("/proc/pci", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/pci!\n");
+        printf("can not open /proc/pci : %s\n", lib_strerror(errno));
         return  (PX_ERROR);
     }
     

@@ -45,8 +45,6 @@ FUNC_DEF(armDCacheV7Disable)
     BEQ     dcache_not_en
 
     STMFD   SP!, {LR}
-    LDR     R0, =0x0
-    LDR     R1, =0xffffffff
     BL      armDCacheV7ClearAll
     LDMFD   SP!, {LR}
     
@@ -60,8 +58,6 @@ FUNC_DEF(armDCacheV7Disable)
 	
 LINE_LABEL(dcache_not_en)
     STMFD   SP!, {LR}
-    LDR     R0, =0x0
-    LDR     R1, =0xffffffff
     BL      armDCacheV7InvalidateAll
     LDMFD   SP!, {LR}
     BX      LR
@@ -75,7 +71,6 @@ LINE_LABEL(dcache_not_en)
 #define _FLD_MAX_IDX    0x7fff
 
 FUNC_DEF(armDCacheV7FlushAll)
-#if __SYLIXOS_ARM_ARCH__ >= 7
     STMFD   SP!, {R4-R11}
     ARM_DMB()
     MRC     p15, 1, R0, c0, c0, 1                                       ;/* Read CLID register           */
@@ -97,7 +92,11 @@ LINE_LABEL(floop1)
     ADD     R2, R2, #4
     LDR     R4, =_FLD_MAX_WAY
     ANDS    R4, R4, R1, LSR #3
+#if __SYLIXOS_ARM_ARCH__ >= 5
     CLZ     R5, R4
+#else
+    .long   0xe16f5f14
+#endif
     LDR     R7, =_FLD_MAX_IDX
     ANDS    R7, R7, R1, LSR #13
 
@@ -122,7 +121,6 @@ LINE_LABEL(ffinished)
     ARM_DSB()
     ARM_ISB()
     LDMFD   SP!, {R4-R11}
-#endif
     BX      LR
     FUNC_END()
     
@@ -131,7 +129,6 @@ LINE_LABEL(ffinished)
 ;*********************************************************************************************************/
 
 FUNC_DEF(armDCacheV7ClearAll)
-#if __SYLIXOS_ARM_ARCH__ >= 7
     STMFD   SP!, {R4-R11}
     ARM_DMB()
     MRC     p15, 1, R0, c0, c0, 1                                       ;/* Read CLID register           */
@@ -153,7 +150,11 @@ LINE_LABEL(cloop1)
     ADD     R2, R2, #4
     LDR     R4, =_FLD_MAX_WAY
     ANDS    R4, R4, R1, LSR #3
+#if __SYLIXOS_ARM_ARCH__ >= 5
     CLZ     R5, R4
+#else
+    .long   0xe16f5f14
+#endif
     LDR     R7, =_FLD_MAX_IDX
     ANDS    R7, R7, R1, LSR #13
 
@@ -178,7 +179,6 @@ LINE_LABEL(cfinished)
     ARM_DSB()
     ARM_ISB()
     LDMFD   SP!, {R4-R11}
-#endif
     BX      LR
     FUNC_END()
 
@@ -187,7 +187,6 @@ LINE_LABEL(cfinished)
 ;*********************************************************************************************************/
 
 FUNC_DEF(armDCacheV7InvalidateAll)
-#if __SYLIXOS_ARM_ARCH__ >= 7
     STMFD   SP!, {R4-R11}
     ARM_DMB()
     MRC     p15, 1, R0, c0, c0, 1                                       ;/* Read CLID register           */
@@ -209,7 +208,11 @@ LINE_LABEL(iloop1)
     ADD     R2, R2, #4
     LDR     R4, =_FLD_MAX_WAY
     ANDS    R4, R4, R1, LSR #3
+#if __SYLIXOS_ARM_ARCH__ >= 5
     CLZ     R5, R4
+#else
+    .long   0xe16f5f14
+#endif
     LDR     R7, =_FLD_MAX_IDX
     ANDS    R7, R7, R1, LSR #13
 
@@ -234,7 +237,6 @@ LINE_LABEL(ifinished)
     ARM_DSB()
     ARM_ISB()
     LDMFD   SP!, {R4-R11}
-#endif
     BX      LR
     FUNC_END()
 

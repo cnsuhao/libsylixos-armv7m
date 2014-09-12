@@ -579,7 +579,7 @@ int  pthread_attr_getname (const pthread_attr_t  *pattr, char  **ppcName)
 }
 /*********************************************************************************************************
 ** 函数名称: pthread_attr_get_np
-** 功能描述: 获取线程属性控制块
+** 功能描述: 获取线程属性控制块 (FreeBSD 扩展接口)
 ** 输　入  : thread        线程 ID
 **           pattr         需要设置的 attr 指针.
 ** 输　出  : ERROR CODE
@@ -617,6 +617,21 @@ int  pthread_attr_get_np (pthread_t  thread, pthread_attr_t *pattr)
     pattr->PTHREADATTR_schedparam.sched_priority = PX_PRIORITY_CONVERT(lwattr.THREADATTR_ucPriority);
     
     return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: pthread_getattr_np
+** 功能描述: 获取线程属性控制块 (Linux 扩展接口)
+** 输　入  : thread        线程 ID
+**           pattr         需要设置的 attr 指针.
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+int  pthread_getattr_np (pthread_t thread, pthread_attr_t *pattr)
+{
+    return  (pthread_attr_get_np(thread, pattr));
 }
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
 /*********************************************************************************************************

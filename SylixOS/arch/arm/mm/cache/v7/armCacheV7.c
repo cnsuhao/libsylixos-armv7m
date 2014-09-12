@@ -67,11 +67,16 @@ static INT  armCacheV7Enable (LW_CACHE_TYPE  cachetype)
 {
     if (cachetype == INSTRUCTION_CACHE) {
         armICacheEnable();
+#if LW_CFG_ARM_CACHE_L2 > 0
         iCacheStatus |= L1_CACHE_I_EN;
-        
+#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
+        armBranchPredictionEnable();
+
     } else {
         armDCacheEnable();
+#if LW_CFG_ARM_CACHE_L2 > 0
         iCacheStatus |= L1_CACHE_D_EN;
+#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
     }
     
 #if LW_CFG_ARM_CACHE_L2 > 0
@@ -94,11 +99,16 @@ static INT  armCacheV7Disable (LW_CACHE_TYPE  cachetype)
 {
     if (cachetype == INSTRUCTION_CACHE) {
         armICacheDisable();
+#if LW_CFG_ARM_CACHE_L2 > 0
         iCacheStatus &= ~L1_CACHE_I_EN;
+#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
+        armBranchPredictionDisable();
         
     } else {
         armDCacheV7Disable();
+#if LW_CFG_ARM_CACHE_L2 > 0
         iCacheStatus &= ~L1_CACHE_D_EN;
+#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
     }
     
 #if LW_CFG_ARM_CACHE_L2 > 0
@@ -405,6 +415,10 @@ static INT	armCacheV7TextUpdate (PVOID  pvAdrs, size_t  stBytes)
         armICacheInvalidate(pvAdrs, (PVOID)ulEnd, uiArmV7CacheLineSize);
     }
     
+    if (LW_NCPUS > 1) {
+        armBranchPredictorInvalidateInnerShareable();                   /*  所有核清除分支预测          */
+    }
+    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -423,9 +437,6 @@ VOID  armCacheV7Init (LW_CACHE_OP *pcacheop,
                       CACHE_MODE   uiData, 
                       CPCHAR       pcMachineName)
 {
-    armBranchPredictorInvalidate();
-    armBranchPredictionEnable();                                        /*  开启分支预测功能            */
-
 #if LW_CFG_ARM_CACHE_L2 > 0
     armL2Init(uiInstruction, uiData, pcMachineName);
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
@@ -440,7 +451,7 @@ VOID  armCacheV7Init (LW_CACHE_OP *pcacheop,
         pcacheop->CACHEOP_iILoc      = CACHE_LOCATION_VIPT;
         pcacheop->CACHEOP_iDLoc      = CACHE_LOCATION_PIPT;
         pcacheop->CACHEOP_iCacheLine = 32;
-        armAuxControlFeatureEnable(AUX_CONTROL_L1_PREFETCH);            /*  enable L1 Prefetch          */
+        armAuxControlFeatureEnable(AUX_CTRL_A9_L1_PREFETCH);            /*  Cortex-A9 使能 L1 预取      */
     
     } else if (lib_strcmp(pcMachineName, ARM_MACHINE_A8) == 0) {
         pcacheop->CACHEOP_iILoc      = CACHE_LOCATION_VIPT;
@@ -486,15 +497,15 @@ VOID  armCacheV7Init (LW_CACHE_OP *pcacheop,
 *********************************************************************************************************/
 VOID  armCacheV7Reset (CPCHAR  pcMachineName)
 {
-#if LW_CFG_ARM_CACHE_L2 > 0
-    if (armL2IsEnable()) {
-        armL2Disable();
-    }
-#endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
-    
     armICacheInvalidateAll();
     armDCacheV7Disable();
     armICacheDisable();
+    
+    if (LW_NCPUS > 1) {
+        armBranchPredictorInvalidateInnerShareable();
+    } else {
+        armBranchPredictorInvalidate();
+    }
 }
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */

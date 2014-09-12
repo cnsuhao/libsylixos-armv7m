@@ -1034,7 +1034,7 @@ INT  API_INetNpfShow (INT  iFd)
     
     iFilterFd = open("/proc/net/netfilter", O_RDONLY);
     if (iFilterFd < 0) {
-        printf("can not open /proc/net/netfilter!\n");
+        printf("can not open /proc/net/netfilter : %s\n", lib_strerror(errno));
         return  (PX_ERROR);
     }
     

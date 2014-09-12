@@ -38,7 +38,7 @@
 *********************************************************************************************************/
 static VOID armL2A8Enable (L2C_DRVIER  *pl2cdrv)
 {
-    armAuxControlFeatureEnable(AUX_CONTROL_L2_PREFETCH);
+    armAuxControlFeatureEnable(AUX_CTRL_A8_L2EN | AUX_CTRL_A8_IBE);
 }
 /*********************************************************************************************************
 ** 函数名称: armL2A8Disable
@@ -50,7 +50,7 @@ static VOID armL2A8Enable (L2C_DRVIER  *pl2cdrv)
 *********************************************************************************************************/
 static VOID armL2A8Disable (L2C_DRVIER  *pl2cdrv)
 {
-    armAuxControlFeatureDisable(AUX_CONTROL_L2_PREFETCH);
+    armAuxControlFeatureDisable(AUX_CTRL_A8_L2EN);
 }
 /*********************************************************************************************************
 ** 函数名称: armL2A8IsEnable
@@ -64,7 +64,7 @@ static BOOL armL2A8IsEnable (L2C_DRVIER  *pl2cdrv)
 {
     UINT32  uiAux = armCp15AuxCtrlReg();
     
-    return  ((uiAux & AUX_CONTROL_L2_PREFETCH) ? LW_TRUE : LW_FALSE);
+    return  ((uiAux & AUX_CTRL_A8_L2EN) ? LW_TRUE : LW_FALSE);
 }
 /*********************************************************************************************************
 ** 函数名称: armL2A8Init

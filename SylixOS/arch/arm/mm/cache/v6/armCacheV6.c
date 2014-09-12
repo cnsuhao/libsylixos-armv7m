@@ -26,6 +26,7 @@
 #if LW_CFG_CACHE_EN > 0
 #include "../armCacheCommon.h"
 #include "../../mmu/armMmuCommon.h"
+#include "../../../common/cp15/armCp15.h"
 /*********************************************************************************************************
   º¯ÊýÉùÃ÷
 *********************************************************************************************************/
@@ -49,7 +50,8 @@ static INT  armCacheV6Enable (LW_CACHE_TYPE  cachetype)
 {
     if (cachetype == INSTRUCTION_CACHE) {
         armICacheEnable();
-    
+        armBranchPredictionEnable();
+        
     } else {
         armDCacheEnable();
     }
@@ -68,7 +70,8 @@ static INT  armCacheV6Disable (LW_CACHE_TYPE  cachetype)
 {
     if (cachetype == INSTRUCTION_CACHE) {
         armICacheDisable();
-    
+        armBranchPredictionDisable();
+        
     } else {
         armDCacheV6Disable();
     }
@@ -399,6 +402,8 @@ VOID  armCacheV6Reset (CPCHAR  pcMachineName)
     armICacheInvalidateAll();
     armDCacheV6Disable();
     armICacheDisable();
+    
+    armBranchPredictorInvalidate();
 }
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */

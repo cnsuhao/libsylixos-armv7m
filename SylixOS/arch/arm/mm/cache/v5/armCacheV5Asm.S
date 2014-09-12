@@ -45,8 +45,6 @@ FUNC_DEF(armDCacheV5Disable)
     BEQ     dcache_not_en
 
     STMFD   SP!, {LR}
-    LDR     R0, =0x0
-    LDR     R1, =0xffffffff
     BL      armDCacheV5ClearAll
     LDMFD   SP!, {LR}
     
@@ -60,8 +58,6 @@ FUNC_DEF(armDCacheV5Disable)
 	
 LINE_LABEL(dcache_not_en)
     STMFD   SP!, {LR}
-    LDR     R0, =0x0
-    LDR     R1, =0xffffffff
     BL      armDCacheV5InvalidateAll
     LDMFD   SP!, {LR}
     BX      LR
