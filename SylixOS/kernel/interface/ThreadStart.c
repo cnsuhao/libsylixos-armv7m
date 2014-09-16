@@ -94,9 +94,8 @@ ULONG  API_ThreadStartEx (LW_OBJECT_HANDLE  ulId, BOOL  bJoin, PVOID  *ppvRetVal
         
         if (__LW_THREAD_IS_READY(ptcb)) {                               /*  ¾ÍÐ÷                        */
         
-            _DebugHandle(__LOGMESSAGE_LEVEL, "thread \"");
-            _DebugHandle(__LOGMESSAGE_LEVEL, ptcb->TCB_cThreadName);
-            _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been start.\r\n");
+            _DebugFormat(__LOGMESSAGE_LEVEL, "thread \"%s\" has been start.\r\n",
+                         ptcb->TCB_cThreadName);
         
             ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_OTHER;
             

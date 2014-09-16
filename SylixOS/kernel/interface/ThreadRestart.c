@@ -189,9 +189,7 @@ static ULONG  __threadRestart (PLW_CLASS_TCB          ptcb,
     KN_INT_ENABLE(iregInterLevel);
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "thread \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, ptcb->TCB_cThreadName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been restart.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "thread \"%s\" has been restart.\r\n", ptcb->TCB_cThreadName);
     
     return  (ERROR_NONE);
 }

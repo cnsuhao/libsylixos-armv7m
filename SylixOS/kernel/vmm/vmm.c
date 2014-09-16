@@ -187,6 +187,8 @@ ULONG  API_VmmLibPrimaryInit (LW_VMM_ZONE_DESC       vmzone[],
     }
     
     bIsInit = LW_TRUE;
+    
+    _DebugHandle(__LOGMESSAGE_LEVEL, "MMU initilaized.\r\n");
 
     return  (ERROR_NONE);                                               /*  ³õÊ¼»¯µ×²ã MMU              */
 }
@@ -209,6 +211,8 @@ ULONG  API_VmmLibSecondaryInit (CPCHAR  pcMachineName)
     __VMM_LOCK();
     ulError = __vmmLibSecondaryInit(pcMachineName);
     __VMM_UNLOCK();
+    
+    _DebugHandle(__LOGMESSAGE_LEVEL, "secondary MMU initilaized.\r\n");
 
     return  (ulError);
 }

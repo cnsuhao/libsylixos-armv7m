@@ -42,8 +42,7 @@ VOID  archCacheInit (CACHE_MODE  uiInstruction, CACHE_MODE  uiData, CPCHAR  pcMa
 {
     LW_CACHE_OP *pcacheop = API_CacheGetLibBlock();
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, pcMachineName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, " L1 cache controller initialization.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "%s L1 cache controller initialization.\r\n", pcMachineName);
 
     if (lib_strcmp(pcMachineName, ARM_MACHINE_920) == 0) {
         armCacheV4Init(pcacheop, uiInstruction, uiData, pcMachineName);

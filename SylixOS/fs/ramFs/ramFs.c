@@ -215,9 +215,7 @@ INT  API_RamFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
         return  (PX_ERROR);
     }
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "target \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" mount ok.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "target \"%s\" mount ok.\r\n", pcName);
 
     return  (ERROR_NONE);
 }

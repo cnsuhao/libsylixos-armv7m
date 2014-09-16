@@ -485,11 +485,10 @@ LW_API  int  mmapfd(void  *pvAddr);
 
              addr_t                 ulAbortAddr = pvmpagefailctx->PAGEFCTX_ulAbortAddr;
              LW_OBJECT_HANDLE       ulOwner;
-             CHAR                   cBuffer[PATH_MAX + 1];
              PCHAR                  pcTail = LW_NULL;
              PCHAR                  pcType = LW_NULL;
              CPCHAR                 pcKernelFunc;
-             CHAR                   cMmapMsg[PATH_MAX + 1] = "<unknown>.";
+             CHAR                   cMmapMsg[128] = "<unknown>.";
              
     REGISTER PLW_VMM_PAGE           pvmpageVirtual;
     REGISTER PLW_VMM_PAGE_PRIVATE   pvmpagep;
@@ -504,7 +503,7 @@ LW_API  int  mmapfd(void  *pvAddr);
         if (pvmpagep->PAGEP_pfuncFiller) {
 #if LW_CFG_POSIX_EN > 0
             INT     iFd = mmapfd((void *)ulAbortAddr);                  /*  获得地址对应的文件描述符    */
-            snprintf(cMmapMsg, PATH_MAX + 1, "address in mmap, fd %d\n", iFd);
+            snprintf(cMmapMsg, 128, "address in mmap, fd %d\n", iFd);
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
             pcTail = cMmapMsg;
         
@@ -553,16 +552,10 @@ LW_API  int  mmapfd(void  *pvAddr);
         pcType = "unknown";
         break;
     }
-    
-    snprintf(cBuffer, PATH_MAX + 1, "abort in kernel status, "
-                                    "owner : 0x%08lx, func : %s, addr: 0x%08lx, type : %s, %s.\r\n", 
-                                    ulOwner, 
-                                    pcKernelFunc,
-                                    pvmpagefailctx->PAGEFCTX_ulAbortAddr,
-                                    pcType,
-                                    pcTail);
                                     
-    _DebugHandle(__ERRORMESSAGE_LEVEL, cBuffer);
+    _DebugFormat(__ERRORMESSAGE_LEVEL, 
+                 "abort in kernel status, owner : 0x%08lx, func : %s, addr: 0x%08lx, type : %s, %s.\r\n",
+                 ulOwner, pcKernelFunc, pvmpagefailctx->PAGEFCTX_ulAbortAddr, pcType, pcTail);
 }
 /*********************************************************************************************************
 ** 函数名称: __vmmAbortShell
@@ -761,6 +754,7 @@ static VOID  __vmmAbortKill (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
     case LW_VMM_ABORT_TYPE_MAP:
         sigeventAbort.sigev_signo = SIGSEGV;
         iSigCode = SEGV_MAPERR;
+        break;
         
     case LW_VMM_ABORT_TYPE_EXEC:                                        /*  与 default 共享分支         */
     default:
@@ -855,7 +849,10 @@ VOID  API_VmmAbortIsr (addr_t  ulRetAddr, addr_t  ulAbortAddr, ULONG  ulAbortTyp
     BYTE                    *pucStkNow;                                 /*  记录还原堆栈点              */
     
     if (ulNesting > 1) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "abort occur in exception mode.\r\n");
+        _DebugFormat(__ERRORMESSAGE_LEVEL, 
+                     "abort occur in exception mode. "
+                     "ulRetAddr 0x%lx ulAbortAddr 0x%lx ulAbortType 0x%lx\r\n",
+                     ulRetAddr, ulAbortAddr, ulAbortType);
         API_KernelReboot(LW_REBOOT_FORCE);                              /*  直接重新启动操作系统        */
         return;
     }

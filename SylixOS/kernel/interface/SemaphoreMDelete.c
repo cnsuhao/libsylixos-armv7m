@@ -149,9 +149,7 @@ ULONG  API_SemaphoreMDelete (LW_OBJECT_HANDLE  *pulId)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_SEMM, MONITOR_EVENT_SEM_DELETE, ulId, LW_NULL);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "semaphore \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pevent->EVENT_cEventName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "semaphore \"%s\" has been delete.\r\n", pevent->EVENT_cEventName);
     
     if (ptcb) {
         if (ulOptionTemp & LW_OPTION_DELETE_SAFE) {                     /*  退出安全模式                */

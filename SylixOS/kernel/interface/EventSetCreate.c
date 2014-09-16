@@ -101,9 +101,7 @@ LW_OBJECT_HANDLE  API_EventSetCreate (CPCHAR             pcName,
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_ESET, MONITOR_EVENT_ESET_CREATE, 
                       ulIdTemp, ulInitEvent, ulOption, pcName);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "eventset \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "eventset \"%s\" has been create.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
 }

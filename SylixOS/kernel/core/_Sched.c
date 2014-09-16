@@ -35,7 +35,6 @@
 2014.01.07  加入 _SchedCrSwp, 统一任务与协程移植的格式.
 2014.07.21  加入 CPU 停止功能.
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
@@ -48,12 +47,10 @@
                              "scheduler candidate serious error, ptcb == NULL.\r\n");   \
                 for (;;);                                                               \
             } else if (!__LW_THREAD_IS_READY(ptcb)) {                                   \
-                CHAR    cBuffer[128];                                                   \
-                snprintf(cBuffer, sizeof(cBuffer),                                      \
-                         "scheduler candidate serious error, "                          \
-                         "ptcb %p, name \"%s\", status 0x%x.\r\n",                      \
-                         ptcb, ptcb->TCB_cThreadName, ptcb->TCB_usStatus);              \
-                _DebugHandle(__ERRORMESSAGE_LEVEL, cBuffer);                            \
+                _DebugFormat(__ERRORMESSAGE_LEVEL,                                      \
+                             "scheduler candidate serious error, "                      \
+                             "ptcb %p, name \"%s\", status 0x%x.\r\n",                  \
+                             ptcb, ptcb->TCB_cThreadName, ptcb->TCB_usStatus);          \
                 for (;;);                                                               \
             }                                                                           \
         } while (0)

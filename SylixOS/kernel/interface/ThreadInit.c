@@ -238,9 +238,7 @@ LW_OBJECT_HANDLE  API_ThreadInit (CPCHAR                   pcName,
         _ThreadUnsafeInternal();                                        /*  退出安全模式                */
     }
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "thread \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been initialized.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "thread \"%s\" has been initialized.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
     

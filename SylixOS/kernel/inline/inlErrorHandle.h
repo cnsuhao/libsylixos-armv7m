@@ -40,7 +40,7 @@
 VOID  _ErrorHandle(ULONG  ulErrorCode);
 
 /*********************************************************************************************************
-  错误定位
+  错误打印
 *********************************************************************************************************/
 
 VOID  _DebugMessage(INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcString);
@@ -49,6 +49,17 @@ VOID  _DebugMessage(INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcString);
         (((level) & __ERRORMESSAGE_LEVEL) ? \
          _DebugMessage((level), __func__, (msg)) : \
          _DebugMessage((level), LW_NULL, (msg)))
+
+/*********************************************************************************************************
+  错误格式化打印
+*********************************************************************************************************/
+
+VOID  _DebugFmtMsg(INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcFmt, ...);
+
+#define _DebugFormat(level, fmt, ...)   \
+        (((level) & __ERRORMESSAGE_LEVEL) ? \
+         _DebugFmtMsg((level), __func__, (fmt), ##__VA_ARGS__) : \
+         _DebugFmtMsg((level), LW_NULL, (fmt), ##__VA_ARGS__))
 
 #endif                                                                  /*  __INLERRORHANDLE_H          */
 /*********************************************************************************************************

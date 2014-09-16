@@ -21,7 +21,6 @@
 ** BUG:
 2009.11.03  初始化时 BLKD_bDiskChange 为 LW_FALSE.
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
@@ -110,20 +109,9 @@ ULONG  API_RamDiskCreate (PVOID  pvDiskAddr, UINT64  ullDiskSize, PLW_BLK_DEV  *
 
     *ppblkdRam = &pramd->RAMD_blkdRam;                                  /*  保存控制块                  */
     
-#if LW_CFG_ERRORMESSAGE_EN > 0 || LW_CFG_LOGMESSAGE_EN > 0
-    {
-        CHAR    cString[20];
-        _DebugHandle(__LOGMESSAGE_LEVEL, "ram disk");
-        _DebugHandle(__LOGMESSAGE_LEVEL, " size : ");
-        sprintf(cString, "0x%x", (INT)ullDiskSize);
-        _DebugHandle(__LOGMESSAGE_LEVEL, cString);
-        sprintf(cString, "0x%x", (INT)pvDiskAddr);
-        _DebugHandle(__LOGMESSAGE_LEVEL, " base : ");
-        _DebugHandle(__LOGMESSAGE_LEVEL, cString);
-        _DebugHandle(__LOGMESSAGE_LEVEL, " has been create.\r\n");
-    }
-#endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
-                                                                        /*  LW_CFG_LOGMESSAGE_EN > 0    */
+    _DebugFormat(__LOGMESSAGE_LEVEL, "ram disk size : 0x%lx base : 0x%lx has been create.\r\n",
+                 (ULONG)ullDiskSize, (addr_t)pvDiskAddr);
+    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

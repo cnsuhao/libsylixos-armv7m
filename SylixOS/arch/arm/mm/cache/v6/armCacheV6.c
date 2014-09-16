@@ -402,7 +402,6 @@ VOID  armCacheV6Reset (CPCHAR  pcMachineName)
     armICacheInvalidateAll();
     armDCacheV6Disable();
     armICacheDisable();
-    
     armBranchPredictorInvalidate();
 }
 

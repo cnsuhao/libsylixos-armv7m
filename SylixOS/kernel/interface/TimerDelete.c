@@ -83,9 +83,7 @@ ULONG  API_TimerDelete (LW_OBJECT_HANDLE  *pulId)
     
     _ObjectCloseId(pulId);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "timer \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, ptmr->TIMER_cTmrName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "timer \"%s\" has been delete.\r\n", ptmr->TIMER_cTmrName);
     
     iregInterLevel = KN_INT_DISABLE();                                  /*  πÿ±’÷–∂œ                    */
     

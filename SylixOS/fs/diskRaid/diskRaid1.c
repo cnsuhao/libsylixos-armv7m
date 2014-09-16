@@ -20,7 +20,6 @@
 **
 ** 注        意: 阵列中所有物理磁盘参数必须完全一致, 例如磁盘大小, 扇区大小等参数必须相同.
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
@@ -201,12 +200,10 @@ static INT  __raid1DevRd (PLW_DISKRAID1_CB   pdiskr,
 {
     INT  i;
     INT  iRet = ERROR_NONE;
-    CHAR cDebug[64];
 
     for (i = 0; i < pdiskr->DISKR_uiNDisks; i++) {
         if (RAID_BLK_READ(pdiskr, i, pvBuffer, ulStartSector, ulSectorCount)) {
-            snprintf(cDebug, sizeof(cDebug), "RAID-1 system block disk %u error.\r\n", i);
-            _DebugHandle(__ERRORMESSAGE_LEVEL, cDebug);
+            _DebugFormat(__ERRORMESSAGE_LEVEL, "RAID-1 system block disk %u error.\r\n", i);
             iRet = PX_ERROR;
         } else {
             break;

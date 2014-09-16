@@ -422,9 +422,7 @@ INT  API_YaffsDevCreate (PCHAR   pcName)
     }
     _G_bIsCreateDev = LW_TRUE;                                          /*  创建 yaffs 设备成功         */
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "yaffs \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "yaffs \"%s\" has been create.\r\n", pcName);
     
     return  (ERROR_NONE);
 }
@@ -714,9 +712,7 @@ __re_umount_vol:
                 return  (iError);
             }
             
-            _DebugHandle(__LOGMESSAGE_LEVEL, "yaffs volume \"");
-            _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
-            _DebugHandle(__LOGMESSAGE_LEVEL, "\" unmount ok.\r\n");
+            _DebugFormat(__LOGMESSAGE_LEVEL, "yaffs volume \"%s\" unmount ok.\r\n", pcName);
             
             return  (ERROR_NONE);
         

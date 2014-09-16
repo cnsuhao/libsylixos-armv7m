@@ -59,7 +59,6 @@
             free 操作确保最右侧分段应该在 freelist 的最后, 为最不推荐分配的段.
 2014.08.15  采用新的判断对齐内存释放算法.
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
@@ -150,12 +149,8 @@ VOIDFUNCPTR _K_pfuncHeapTraceFree;
   当出现需要归还的内存不在内存堆时, 需要打印如下信息
 *********************************************************************************************************/
 #define __DEBUG_MEM_ERROR(caller, heap, error, addr)  \
-        {   \
-            CHAR    cBuffer[128];   \
-            snprintf(cBuffer, sizeof(cBuffer),  \
-                     "\'%s\' heap %s memory is %s, address %p.\r\n", caller, heap, error, addr);   \
-            _DebugHandle(__ERRORMESSAGE_LEVEL, cBuffer);    \
-        }
+        _DebugFormat(__ERRORMESSAGE_LEVEL, "\'%s\' heap %s memory is %s, address %p.\r\n",  \
+                     caller, heap, error, addr);
 /*********************************************************************************************************
   需要内存越界检查
 *********************************************************************************************************/

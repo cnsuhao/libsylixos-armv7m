@@ -145,9 +145,7 @@ LW_OBJECT_HANDLE  API_PartitionCreate (CPCHAR             pcName,
     MONITOR_EVT_LONG4(MONITOR_EVENT_ID_PART, MONITOR_EVENT_PART_CREATE,
                       ulIdTemp, pvLowAddr, ulBlockCounter, stBlockByteSize, LW_NULL);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "partition \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "partition \"%s\" has been create.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
 }

@@ -23,7 +23,6 @@
 ** BUG:
 2014.04.22  API_InterVectorConnectEx() 不允许安装重复的中断处理函数.
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
@@ -181,20 +180,9 @@ ULONG  API_InterVectorConnectEx (ULONG              ulVector,
         __KHEAP_FREE(piaction);
     }
     
-#if LW_CFG_ERRORMESSAGE_EN > 0 || LW_CFG_LOGMESSAGE_EN > 0
-    {
-        CHAR    cString[20];
-        sprintf(cString, "%d", (int)ulVector);
-        _DebugHandle(__LOGMESSAGE_LEVEL, "IRQ");
-        _DebugHandle(__LOGMESSAGE_LEVEL, cString);
-        _DebugHandle(__LOGMESSAGE_LEVEL, " : ");
-        _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-        _DebugHandle(__LOGMESSAGE_LEVEL, " connect : ");
-        sprintf(cString, "0x%p\r\n", (PVOID)pfuncIsr);
-        _DebugHandle(__LOGMESSAGE_LEVEL, cString);
-    }
-#endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
-                                                                        /*  LW_CFG_LOGMESSAGE_EN > 0    */
+    _DebugFormat(__LOGMESSAGE_LEVEL, "IRQ %d : %s connect : 0x%p\r\n",
+                 (INT)ulVector, (pcName ? pcName : ""), (PVOID)pfuncIsr);
+
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

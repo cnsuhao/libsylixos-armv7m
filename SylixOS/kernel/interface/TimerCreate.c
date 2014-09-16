@@ -115,9 +115,7 @@ LW_OBJECT_HANDLE  API_TimerCreate (CPCHAR             pcName,
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_TIMER, MONITOR_EVENT_TIMER_CREATE, 
                       ulIdTemp, ulOption, pcName);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "timer \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "timer \"%s\" has been create.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
 }

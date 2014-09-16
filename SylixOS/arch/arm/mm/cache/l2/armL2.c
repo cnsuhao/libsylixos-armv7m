@@ -263,8 +263,8 @@ VOID armL2Init (CACHE_MODE   uiInstruction,
         l2cdrv.L2CD_uiType    = 0;
         l2cdrv.L2CD_uiRelease = 0;
         
-        _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
-        _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");
+        _DebugFormat(__LOGMESSAGE_LEVEL, "%s L2 cache controller initialization.\r\n", 
+                     l2cdrv.L2CD_pcName);
         
         armL2A8Init(&l2cdrv, uiInstruction, uiData, pcMachineName);
         
@@ -321,8 +321,8 @@ VOID armL2Init (CACHE_MODE   uiInstruction,
         
         l2cdrv.L2CD_stSize = uiWays * uiWaySize * LW_CFG_KB_SIZE;
         
-        _DebugHandle(__LOGMESSAGE_LEVEL, l2cdrv.L2CD_pcName);
-        _DebugHandle(__LOGMESSAGE_LEVEL, " L2 cache controller initialization.\r\n");
+        _DebugFormat(__LOGMESSAGE_LEVEL, "%s L2 cache controller initialization.\r\n",
+                     l2cdrv.L2CD_pcName);
         
         armL2x0Init(&l2cdrv, uiInstruction, uiData, pcMachineName, uiAux);
         

@@ -40,8 +40,7 @@ VOID  archMmuInit (CPCHAR  pcMachineName)
 {
     LW_MMU_OP *pmmuop = API_VmmGetLibBlock();
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, pcMachineName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, " MMU initialization.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "%s MMU initialization.\r\n", pcMachineName);
 
     if ((lib_strcmp(pcMachineName, ARM_MACHINE_920)  == 0) ||
         (lib_strcmp(pcMachineName, ARM_MACHINE_926)  == 0) ||

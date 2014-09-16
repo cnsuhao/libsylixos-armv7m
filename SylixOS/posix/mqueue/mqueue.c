@@ -614,9 +614,7 @@ mqd_t  mq_open (const char  *name, int  flag, ...)
             __resAddRawHook(&pmqfile->PMSGF_resraw, (VOIDFUNCPTR)mq_close, 
                             pmqfile, 0, 0, 0, 0, 0);                    /*  加入资源管理器              */
             
-            _DebugHandle(__LOGMESSAGE_LEVEL, "posix msgqueue \"");
-            _DebugHandle(__LOGMESSAGE_LEVEL, name);
-            _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+            _DebugFormat(__LOGMESSAGE_LEVEL, "posix msgqueue \"%s\" has been create.\r\n", name);
             
             return  ((mqd_t)pmqfile);                                   /*  返回句柄地址                */
         
@@ -698,6 +696,8 @@ int  mq_unlink (const char  *name)
         pmq = (__PX_MSG *)pxnode->PXNODE_pvData;
         
         __pxnameDel(name);                                              /*  从名字表中删除              */
+        
+        _DebugFormat(__LOGMESSAGE_LEVEL, "posix msgqueue \"%s\" has been delete.\r\n", name);
         
         __mqueueDelete(pmq);                                            /*  删除消息队列控制块          */
     

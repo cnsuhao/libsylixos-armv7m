@@ -164,6 +164,9 @@ ULONG   API_CacheLibPrimaryInit (CACHE_MODE  uiInstruction, CACHE_MODE  uiData, 
     API_CacheFuncsSet();
     
     bIsInit = LW_TRUE;
+    
+    _DebugHandle(__LOGMESSAGE_LEVEL, "CACHE initilaized.\r\n");
+    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -237,6 +240,9 @@ ULONG    API_CacheEnable (LW_CACHE_TYPE  cachetype)
                (_G_cacheopLib.CACHEOP_pfuncEnable)(cachetype));
     __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
     
+    _DebugFormat(__LOGMESSAGE_LEVEL, "%sCACHE enable.\r\n",
+                 (cachetype == INSTRUCTION_CACHE) ? "I-" : "D-");
+    
     return  (ulError);
 }
 /*********************************************************************************************************
@@ -259,6 +265,9 @@ ULONG    API_CacheDisable (LW_CACHE_TYPE  cachetype)
     ulError = ((_G_cacheopLib.CACHEOP_pfuncDisable == LW_NULL) ? __ERROR : 
                (_G_cacheopLib.CACHEOP_pfuncDisable)(cachetype));
     __CACHE_OP_EXIT(iregInterLevel);                                    /*  结束操作 cache              */
+    
+    _DebugFormat(__LOGMESSAGE_LEVEL, "%sCACHE disable.\r\n",
+                 (cachetype == INSTRUCTION_CACHE) ? "I-" : "D-");
     
     return  (ulError);
 }

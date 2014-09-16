@@ -131,8 +131,6 @@ ULONG  __vmmLibPrimaryInit (PLW_MMU_GLOBAL_DESC  pmmugdesc, CPCHAR  pcMachineNam
     KN_SMP_MB();
     __VMM_MMU_ENABLE();                                                 /*  Æô¶¯ MMU                    */
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "mmu initialized.\r\n");
-    
     return  (ERROR_NONE);
     
 __error_handle:

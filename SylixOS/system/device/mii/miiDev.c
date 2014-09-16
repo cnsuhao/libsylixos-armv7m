@@ -18,7 +18,6 @@
 **
 ** 描        述: MII 总线库
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
@@ -53,11 +52,7 @@ static LW_OBJECT_HANDLE     _G_hMiiMSem;
   debug info
 *********************************************************************************************************/
 #define MII_DEBUG_ADDR(fmt, var)                                \
-        do {                                                    \
-            CHAR cPrintBuf[128];                                \
-            snprintf(cPrintBuf, sizeof(cPrintBuf), fmt, var);   \
-            _DebugHandle(__LOGMESSAGE_LEVEL, cPrintBuf);        \
-        } while(0)
+        _DebugFormat(__LOGMESSAGE_LEVEL, fmt, var);
 /*********************************************************************************************************
 ** 函数名称: __miiAbilFlagUpdate
 ** 功能描述: 读取PHY功能参数，并保存到PHY设备的Flag中

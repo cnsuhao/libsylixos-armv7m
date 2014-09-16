@@ -56,6 +56,8 @@ VOID  API_KernelFpuPrimaryInit (CPCHAR  pcMachineName, CPCHAR  pcFpuName)
             __ARCH_FPU_CTX_INIT((PVOID)&(LW_CPU_GET(i)->CPU_fpuctxContext[j]));
         }
     }
+    
+    _DebugHandle(__LOGMESSAGE_LEVEL, "FPU initilaized.\r\n");
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: API_KernelFpuSecondaryInit
@@ -73,6 +75,8 @@ LW_API
 VOID  API_KernelFpuSecondaryInit (CPCHAR  pcMachineName, CPCHAR  pcFpuName)
 {
     archFpuSecondaryInit(pcMachineName, pcFpuName);
+    
+    _DebugHandle(__LOGMESSAGE_LEVEL, "secondary FPU initilaized.\r\n");
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */

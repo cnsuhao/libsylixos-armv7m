@@ -99,9 +99,8 @@ ULONG  API_PartitionDeleteEx (LW_OBJECT_HANDLE   *pulId, BOOL  bForce)
     
     __LW_OBJECT_DELETE_HOOK(ulId);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "partition \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, p_part->PARTITION_cPatitionName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "partition \"%s\" has been delete.\r\n", 
+                 p_part->PARTITION_cPatitionName);
     
     __KERNEL_ENTER();                                                   /*  ½øÈëÄÚºË                    */
     

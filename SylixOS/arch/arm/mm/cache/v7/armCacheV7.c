@@ -500,12 +500,7 @@ VOID  armCacheV7Reset (CPCHAR  pcMachineName)
     armICacheInvalidateAll();
     armDCacheV7Disable();
     armICacheDisable();
-    
-    if (LW_NCPUS > 1) {
-        armBranchPredictorInvalidateInnerShareable();
-    } else {
-        armBranchPredictorInvalidate();
-    }
+    armBranchPredictorInvalidate();
 }
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */

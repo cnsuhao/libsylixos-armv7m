@@ -111,9 +111,7 @@ ULONG  API_EventSetDelete (LW_OBJECT_HANDLE  *pulId)
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_ESET, MONITOR_EVENT_ESET_DELETE, ulId, LW_NULL);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "eventset \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pes->EVENTSET_cEventSetName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "eventset \"%s\" has been delete.\r\n", pes->EVENTSET_cEventSetName);
 
     return  (ERROR_NONE);
 }

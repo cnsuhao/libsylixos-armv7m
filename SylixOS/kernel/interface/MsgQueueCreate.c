@@ -174,9 +174,7 @@ LW_OBJECT_HANDLE  API_MsgQueueCreate (CPCHAR             pcName,
     MONITOR_EVT_LONG4(MONITOR_EVENT_ID_MSGQ, MONITOR_EVENT_MSGQ_CREATE, 
                       ulIdTemp, ulMaxMsgCounter, stMaxMsgByteSize, ulOption, pcName);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "msgqueue \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "msgqueue \"%s\" has been create.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
 }

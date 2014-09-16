@@ -22,7 +22,6 @@
 2013.09.17  加入线程堆栈警戒检查功能.
 2014.08.10  堆栈溢出调用相关 hook.
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
@@ -58,7 +57,6 @@ VOID  _StackCheckInit (VOID)
 *********************************************************************************************************/
 VOID  _StackCheckGuard (PLW_CLASS_TCB  ptcb)
 {
-    CHAR    cBuffer[128];
     pid_t   pid;
 
     if ((ptcb->TCB_ulOption & LW_OPTION_THREAD_STK_CLR) &&
@@ -69,9 +67,8 @@ VOID  _StackCheckGuard (PLW_CLASS_TCB  ptcb)
         pid = 0;
 #endif
         __LW_STACK_OVERFLOW_HOOK(pid, ptcb->TCB_ulId);
-        snprintf(cBuffer, sizeof(cBuffer), "thread %s id 0x%08lx stack may overflow.\r\n",
-                 ptcb->TCB_cThreadName, ptcb->TCB_ulId);
-        _DebugHandle(__ERRORMESSAGE_LEVEL, cBuffer);
+        _DebugFormat(__ERRORMESSAGE_LEVEL, "thread %s id 0x%08lx stack may overflow.\r\n",
+                     ptcb->TCB_cThreadName, ptcb->TCB_ulId);
     }
 }
 /*********************************************************************************************************

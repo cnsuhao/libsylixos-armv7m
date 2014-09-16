@@ -293,9 +293,7 @@ sem_t  *sem_open (const char  *name, int  flag, ...)
             __resAddRawHook(psem->SEM_presraw, (VOIDFUNCPTR)sem_close, 
                             psem, 0, 0, 0, 0, 0);                       /*  加入资源管理器              */
             
-            _DebugHandle(__LOGMESSAGE_LEVEL, "posix semaphore \"");
-            _DebugHandle(__LOGMESSAGE_LEVEL, name);
-            _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+            _DebugFormat(__LOGMESSAGE_LEVEL, "posix semaphore \"%s\" has been create.\r\n", name);
             
             return  (psem);                                             /*  返回句柄地址                */
         
@@ -388,6 +386,9 @@ int  sem_unlink (const char *name)
             return  (PX_ERROR);                                         /*  errno set by SemaphoreDelete*/
         }
         __pxnameDel(name);
+        
+        _DebugFormat(__LOGMESSAGE_LEVEL, "posix semaphore \"%s\" has been delete.\r\n", name);
+        
         __SHEAP_FREE(pxsem);                                            /*  释放缓存                    */
         
         __PX_UNLOCK();                                                  /*  解锁 posix                  */

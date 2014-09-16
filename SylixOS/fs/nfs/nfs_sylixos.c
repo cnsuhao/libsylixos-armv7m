@@ -625,9 +625,7 @@ INT  API_NfsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
         API_SystemHookAdd(__nfsRebootHook, LW_OPTION_KERNEL_REBOOT);    /*  º”»Î reboot hook            */
     }
 
-    _DebugHandle(__LOGMESSAGE_LEVEL, "target \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" mount ok.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "target \"%s\" mount ok.\r\n", pcName);
 
     return  (ERROR_NONE);
 

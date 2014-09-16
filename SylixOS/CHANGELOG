@@ -558,6 +558,9 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-09-16: han.hui
+    加入 _DebugFormat 带参数的调试输出接口.
+
     2014-09-09: han.hui
     修正 Bug #8 http://bugzilla.sylixos.com/show_bug.cgi?id=8
     

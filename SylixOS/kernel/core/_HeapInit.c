@@ -28,7 +28,6 @@
 2009.12.11  修正注释.
 2013.11.14  使用对象资源管理器结构管理空闲资源.
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
@@ -118,28 +117,15 @@ VOID  _HeapKernelInit (VOID)
 
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_FIO_LIB_EN > 0)
 #if LW_CFG_ERRORMESSAGE_EN > 0 || LW_CFG_LOGMESSAGE_EN > 0
-    {
-        CHAR    cStartAddr[20];
-        CHAR    cByteSize[20];
-        
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE > 0
-        sprintf(cStartAddr, "0x%08lx", (addr_t)pvKernelHeapMem);
-        sprintf(cByteSize,  "%zd Bytes", stKernelHeapSize);
+    _DebugFormat(__LOGMESSAGE_LEVEL, "kernel heap has been create 0x%lx (%zd Bytes).\r\n",
+                 (addr_t)pvKernelHeapMem, stKernelHeapSize);
 #else
-#if LW_CFG_MEMORY_KERNEL_HEAP_ADDRESS == 0
-        sprintf(cStartAddr, "0x%08lx", (addr_t)_K_stkKernelHeap);
-#else
-        sprintf(cStartAddr, "0x%08lx", (addr_t)LW_CFG_MEMORY_KERNEL_HEAP_ADDRESS);
-#endif
-        sprintf(cByteSize,  "%zd Bytes", (size_t)LW_CFG_MEMORY_KERNEL_HEAP_SIZE_BYTE);
+    _DebugFormat(__LOGMESSAGE_LEVEL, "kernel heap has been create 0x%lx (%zd Bytes).\r\n",
+                 (LW_CFG_MEMORY_KERNEL_HEAP_ADDRESS == 0) ? 
+                 (addr_t)_K_stkKernelHeap : (addr_t)LW_CFG_MEMORY_KERNEL_HEAP_ADDRESS,
+                 (size_t)LW_CFG_MEMORY_KERNEL_HEAP_SIZE_BYTE);
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
-
-        _DebugHandle(__LOGMESSAGE_LEVEL, "kernel heap has been create.\r\nstart address : ");
-        _DebugHandle(__LOGMESSAGE_LEVEL, cStartAddr);
-        _DebugHandle(__LOGMESSAGE_LEVEL, " size : ");
-        _DebugHandle(__LOGMESSAGE_LEVEL, cByteSize);
-        _DebugHandle(__LOGMESSAGE_LEVEL, "\r\n");
-    }
 #endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN...   */
 #endif                                                                  /*  LW_CFG_DEVICE_EN...         */
 
@@ -175,28 +161,15 @@ VOID  _HeapSystemInit (VOID)
 
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_FIO_LIB_EN > 0)
 #if (LW_CFG_ERRORMESSAGE_EN > 0) || (LW_CFG_LOGMESSAGE_EN > 0)
-    {
-        CHAR    cStartAddr[20];
-        CHAR    cByteSize[20];
-        
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE > 0
-        sprintf(cStartAddr, "0x%08lx", (addr_t)pvSystemHeapMem);
-        sprintf(cByteSize,  "%zd Bytes", stSystemHeapSize);
+    _DebugFormat(__LOGMESSAGE_LEVEL, "system heap has been create 0x%lx (%zd Bytes).\r\n",
+                 (addr_t)pvSystemHeapMem, stSystemHeapSize);
 #else
-#if LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS == 0
-        sprintf(cStartAddr, "0x%08lx", (addr_t)_K_stkSystemHeap);
-#else
-        sprintf(cStartAddr, "0x%08lx", (addr_t)LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS);
-#endif
-        sprintf(cByteSize,  "%zd Bytes", (size_t)LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE);
+    _DebugFormat(__LOGMESSAGE_LEVEL, "system heap has been create 0x%lx (%zd Bytes).\r\n",
+                 (LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS == 0) ? 
+                 (addr_t)_K_stkSystemHeap : (addr_t)LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS,
+                 (size_t)LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE);
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
-
-        _DebugHandle(__LOGMESSAGE_LEVEL, "system heap has been create.\r\nstart address : ");
-        _DebugHandle(__LOGMESSAGE_LEVEL, cStartAddr);
-        _DebugHandle(__LOGMESSAGE_LEVEL, " size : ");
-        _DebugHandle(__LOGMESSAGE_LEVEL, cByteSize);
-        _DebugHandle(__LOGMESSAGE_LEVEL, "\r\n");
-    }
 #endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN...   */
 #endif                                                                  /*  LW_CFG_DEVICE_EN...         */
 

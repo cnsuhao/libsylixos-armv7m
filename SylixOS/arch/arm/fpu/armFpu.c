@@ -18,7 +18,6 @@
 **
 ** 描        述: ARM 体系架构硬件浮点运算器 (VFP).
 *********************************************************************************************************/
-#define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
 /*********************************************************************************************************
@@ -47,11 +46,8 @@ static PARM_FPU_OP      _G_pfpuop;
 *********************************************************************************************************/
 VOID  archFpuPrimaryInit (CPCHAR  pcMachineName, CPCHAR  pcFpuName)
 {
-    CHAR    cInfo[128];
-    
-    snprintf(cInfo, sizeof(cInfo), "%s %s FPU pri-core initialization.\r\n", 
-             pcMachineName, pcFpuName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, cInfo);
+    _DebugFormat(__LOGMESSAGE_LEVEL, "%s %s FPU pri-core initialization.\r\n", 
+                 pcMachineName, pcFpuName);
 
     if (lib_strcmp(pcFpuName, ARM_FPU_NONE) == 0) {                         /*  选择 VFP 架构           */
         _G_pfpuop = armVfpNonePrimaryInit(pcMachineName, pcFpuName);
@@ -103,11 +99,8 @@ VOID  archFpuPrimaryInit (CPCHAR  pcMachineName, CPCHAR  pcFpuName)
 
 VOID  archFpuSecondaryInit (CPCHAR  pcMachineName, CPCHAR  pcFpuName)
 {
-    CHAR    cInfo[128];
-    
-    snprintf(cInfo, sizeof(cInfo), "%s %s FPU sec-core initialization.\r\n", 
-             pcMachineName, pcFpuName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, cInfo);
+    _DebugFormat(__LOGMESSAGE_LEVEL, "%s %s FPU sec-core initialization.\r\n", 
+                 pcMachineName, pcFpuName);
 
     if (lib_strcmp(pcFpuName, ARM_FPU_NONE) == 0) {                     /*  选择 VFP 架构               */
         armVfpNoneSecondaryInit(pcMachineName, pcFpuName);

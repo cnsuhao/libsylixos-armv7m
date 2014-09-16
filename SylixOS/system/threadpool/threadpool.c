@@ -148,9 +148,7 @@ LW_OBJECT_HANDLE  API_ThreadPoolCreate (PCHAR                    pcName,
     
     __LW_OBJECT_CREATE_HOOK(ulIdTemp, ulOption);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "thread pool \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "thread pool \"%s\" has been create.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
 }
@@ -234,9 +232,8 @@ ULONG  API_ThreadPoolDelete (LW_OBJECT_HANDLE   *pulId)
     
     _ObjectCloseId(pulId);
 
-    _DebugHandle(__LOGMESSAGE_LEVEL, "thread pool \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pthreadpool->TPCB_cThreadPoolName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "thread pool \"%s\" has been delete.\r\n", 
+                 pthreadpool->TPCB_cThreadPoolName);
     
     __KERNEL_MODE_PROC(
         _Free_ThreadPool_Object(pthreadpool);                           /*  ÊÍ·Å¿ØÖÆ¿é                  */

@@ -255,7 +255,7 @@ INT  archElfRelocateRel (Elf_Rel     *prel,
 
 
     default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unknown relocate type.\r\n");
+        _DebugFormat(__ERRORMESSAGE_LEVEL, "unknown relocate type %d.\r\n", ELF_R_TYPE(prel->r_info));
         return  (PX_ERROR);
     }
 

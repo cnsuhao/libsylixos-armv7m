@@ -73,9 +73,7 @@ INT  diskformat (CPCHAR  pcDevName)
     
     close(iFd);                                                         /*  πÿ±’…Ë±∏                    */
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "disk \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pcDevName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" format ok.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "disk \"%s\" format ok.\r\n", pcDevName);
     
     return  (ERROR_NONE);
 }

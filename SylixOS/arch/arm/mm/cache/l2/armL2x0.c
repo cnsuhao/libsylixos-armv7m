@@ -301,7 +301,7 @@ VOID armL2x0Init (L2C_DRVIER  *pl2cdrv,
     pl2cdrv->L2CD_pfuncClear         = armL2x0Clear;
     pl2cdrv->L2CD_pfuncClearAll      = armL2x0ClearAll;
     
-    while (!(read32_le(L2C_BASE(pl2cdrv) + L2C_CTRL) & 0x01)) {
+    if (!(read32_le(L2C_BASE(pl2cdrv) + L2C_CTRL) & 0x01)) {
         write32_le(uiAux, L2C_BASE(pl2cdrv) + L2C_AUX_CTRL);            /*  l2x0 controller is disabled */
         armL2x0InvalidateAll(pl2cdrv);
     }

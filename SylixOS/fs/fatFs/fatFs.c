@@ -429,9 +429,7 @@ INT  API_FatFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     __blockIoDevReset(iBlkdIndex);                                      /*  复位磁盘接口                */
     __blockIoDevIoctl(iBlkdIndex, FIODISKINIT, 0);                      /*  初始化磁盘                  */
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "disk \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, pcName);
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" mount ok.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "disk \"%s\" mount ok.\r\n", pcName);
     
     return  (ERROR_NONE);
     

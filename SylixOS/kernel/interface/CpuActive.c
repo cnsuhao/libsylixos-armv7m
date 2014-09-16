@@ -36,6 +36,7 @@
 LW_API  
 ULONG  API_CpuUp (ULONG  ulCPUId)
 {
+    INTREG          iregInterLevel;
     PLW_CLASS_CPU   pcpu;
 
     if ((ulCPUId == 0) || (ulCPUId >= LW_NCPUS)) {
@@ -45,11 +46,14 @@ ULONG  API_CpuUp (ULONG  ulCPUId)
     
     pcpu = LW_CPU_GET(ulCPUId);
     
+    KN_SMP_MB();
     if (LW_CPU_IS_ACTIVE(pcpu)) {
         return  (ERROR_NONE);
     }
     
+    iregInterLevel = KN_INT_DISABLE();
     bspCpuUp(ulCPUId);
+    KN_INT_ENABLE(iregInterLevel);
     
     return  (ERROR_NONE);
 }
@@ -74,6 +78,7 @@ ULONG  API_CpuDown (ULONG  ulCPUId)
     
     pcpu = LW_CPU_GET(ulCPUId);
     
+    KN_SMP_MB();
     if (!LW_CPU_IS_ACTIVE(pcpu)) {
         return  (ERROR_NONE);
     }
@@ -103,6 +108,7 @@ BOOL  API_CpuIsUp (ULONG  ulCPUId)
     
     pcpu = LW_CPU_GET(ulCPUId);
     
+    KN_SMP_MB();
     if (LW_CPU_IS_ACTIVE(pcpu)) {
         return  (LW_TRUE);
     

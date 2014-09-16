@@ -25,8 +25,10 @@
 2014.04.08  由于 _DebugHandle() 已经为函数, 丧失了获得调用者位置信息的能力, 这里不再打印错误位置.
 2013.07.18  使用新的获取 TCB 的方法, 确保 SMP 系统安全.
 2013.12.13  将 _DebugHandle() 改名为 _DebugMessage(), _DebugHandle() 转由宏实现.
+2014.09.14  加入 _DebugFmtMsg() 可支持带参数格式化打印 (不支持浮点数据).
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
+#define  __SYLIXOS_STDARG
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
@@ -48,8 +50,8 @@
 /*********************************************************************************************************
 ** 函数名称: __errno
 ** 功能描述: posix 获得当前 errno
-** 输　入  : 
-** 输　出  : 
+** 输　入  : NONE
+** 输　出  : errno
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : 由于 longwing 由于历史原因采用 ulong 保存错误编号, 而 posix 使用 errno_t 类型, 而绝大多数系统
@@ -86,7 +88,7 @@ errno_t *__errno (VOID)
 ** 函数名称: _ErrorHandle
 ** 功能描述: 记录当前错误号
 ** 输　入  : ulErrorCode       当前错误号
-** 输　出  : 
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : 
@@ -126,7 +128,7 @@ VOID  _ErrorHandle (ULONG  ulErrorCode)
 ** 输　入  : iLevel      等级
 **           pcPosition  位置
 **           pcString    打印内容
-** 输　出  : 
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : 
@@ -145,6 +147,427 @@ VOID  _DebugMessage (INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcString)
 #if LW_CFG_LOGMESSAGE_EN > 0
     if (_K_pfuncKernelDebugLog && (iLevel & __LOGMESSAGE_LEVEL)) {
         _K_pfuncKernelDebugLog(pcString);
+    }
+#endif
+}
+/*********************************************************************************************************
+** 函数名称: printFullFmt
+** 功能描述: 打印一个元素完整输出
+** 输　入  : pfuncPrint  打印函数
+**           bDigit      是否为数字
+**           pcStr       需要输出的字串
+**           stStrLen    字串长度
+**           iTransLen   总长度不得小于此长度
+**           bZeroIns    是否用 0 填充
+**           bLeftAlign  是否为左对齐
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+** 注  意  :
+*********************************************************************************************************/
+static VOID  printFullFmt (VOIDFUNCPTR   pfuncPrint,
+                           BOOL          bDigit,
+                           CPCHAR        pcStr,
+                           size_t        stStrLen,
+                           INT           iTransLen,
+                           BOOL          bZeroIns,
+                           BOOL          bLeftAlign)
+{
+#define FILL_SIZE   8
+#define FILL_SHIFT  3
+
+    CHAR    cFill[FILL_SIZE + 1] = "        ";
+    INT     i;
+    INT     iTimes;
+    INT     iExceed;
+
+    if (stStrLen >= iTransLen) {
+        pfuncPrint(pcStr);
+        return;
+    }
+
+    if (bLeftAlign) {
+        pfuncPrint(pcStr);
+        iTimes  = (iTransLen - stStrLen) >> FILL_SHIFT;
+        iExceed = (iTransLen - stStrLen) & ((1 << FILL_SHIFT) - 1);
+        for (i = 0; i < iTimes; i++) {
+            pfuncPrint(cFill);
+        }
+        cFill[iExceed] = PX_EOS;
+        pfuncPrint(cFill);
+
+    } else {
+        if (bZeroIns) {
+            lib_memset(cFill, '0', FILL_SIZE);
+            if (bDigit) {
+                if (*pcStr == '-') {
+                    pfuncPrint("-");
+                    pcStr++;
+                    stStrLen--;
+                    iTransLen--;
+                }
+            }
+        }
+        iTimes  = (iTransLen - stStrLen) >> FILL_SHIFT;
+        iExceed = (iTransLen - stStrLen) & ((1 << FILL_SHIFT) - 1);
+        for (i = 0; i < iTimes; i++) {
+            pfuncPrint(cFill);
+        }
+        cFill[iExceed] = PX_EOS;
+        pfuncPrint(cFill);
+        pfuncPrint(pcStr);
+    }
+}
+/*********************************************************************************************************
+** 函数名称: transIntSig
+** 功能描述: 转换一个有符号整形到字符串
+** 输　入  : pcDigit     输出缓冲
+**           i64Data     打印数字
+**           iBase       进制数
+** 输　出  : 字串起始
+** 全局变量: 
+** 调用模块: 
+** 注  意  : 
+*********************************************************************************************************/
+static PCHAR  transIntSig (PCHAR  pcDigit, INT64  i64Data, INT  iBase)
+{
+#define DIGIT_BUF_SIZE  64
+#define DIGIT_BUF_NEXT  pcPtr--;    \
+                        if (pcPtr < pcDigit) {   \
+                            return  (LW_NULL); \
+                        }
+#define	to_char(n)	    (CHAR)((n) + '0')
+#define to_hexchar(n)   (CHAR)(cHex[(n)])
+
+    static CHAR cHex[] = "0123456789abcdef";
+    PCHAR       pcPtr  = &pcDigit[DIGIT_BUF_SIZE];
+    BOOL        bNegative;
+
+    pcDigit[DIGIT_BUF_SIZE] = PX_EOS;
+    bNegative = (i64Data >= 0) ? LW_FALSE : LW_TRUE;
+    if (bNegative) {
+        i64Data = -i64Data;
+    }
+    
+    switch (iBase) {
+    
+    case 10:
+        while (i64Data > 10) {
+            DIGIT_BUF_NEXT;
+            *pcPtr = to_char(i64Data % 10);
+            i64Data /= 10;
+        }
+        DIGIT_BUF_NEXT;
+        *pcPtr = to_char(i64Data % 10);
+        if (bNegative) {
+            DIGIT_BUF_NEXT;
+            *pcPtr = '-';
+        }
+        break;
+        
+    case 16:
+        while (i64Data > 16) {
+            DIGIT_BUF_NEXT;
+            *pcPtr = to_hexchar(i64Data & 15);
+            i64Data >>= 4;
+        }
+        DIGIT_BUF_NEXT;
+        *pcPtr = to_hexchar(i64Data & 15);
+        break;
+    }
+
+    return  (pcPtr);
+}
+/*********************************************************************************************************
+** 函数名称: transIntNonsig
+** 功能描述: 转换一个无符号整形到字符串
+** 输　入  : pcDigit     输出缓冲
+**           ui64Data    打印数字
+**           iBase       进制数
+** 输　出  : 字串起始
+** 全局变量: 
+** 调用模块: 
+** 注  意  : 
+*********************************************************************************************************/
+static PCHAR  transIntNonsig (PCHAR  pcDigit, UINT64  ui64Data, INT  iBase)
+{
+    static CHAR cHex[] = "0123456789abcdef";
+    PCHAR       pcPtr  = &pcDigit[DIGIT_BUF_SIZE];
+
+    pcDigit[DIGIT_BUF_SIZE] = PX_EOS;
+    
+    switch (iBase) {
+    
+    case 10:
+        while (ui64Data > 10) {
+            DIGIT_BUF_NEXT;
+            *pcPtr = to_char(ui64Data % 10);
+            ui64Data /= 10;
+        }
+        DIGIT_BUF_NEXT;
+        *pcPtr = to_char(ui64Data % 10);
+        break;
+        
+    case 16:
+        while (ui64Data > 16) {
+            DIGIT_BUF_NEXT;
+            *pcPtr = to_hexchar(ui64Data & 15);
+            ui64Data >>= 4;
+        }
+        DIGIT_BUF_NEXT;
+        *pcPtr = to_hexchar(ui64Data & 15);
+        break;
+    }
+
+    return  (pcPtr);
+}
+/*********************************************************************************************************
+** 函数名称: _DebugFmtMsg
+** 功能描述: 内核打印调试信息
+** 输　入  : pfuncPrint  打印函数
+**           pcFmt       打印格式
+**           ...         打印参数
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+** 注  意  : 
+*********************************************************************************************************/
+static VOID  _DebugFmtPrint (VOIDFUNCPTR pfuncPrint, CPCHAR  pcFmt, va_list ap)
+{
+#define LONG_ARG        0x01
+#define LONG_LONG_ARG   0x02
+
+    BOOL    bTans      = LW_FALSE;
+    INT     iFlag      = 0;
+    INT     iTransLen  = 0;
+    BOOL    bZeroIns   = LW_FALSE;
+    BOOL    bLeftAlign = LW_FALSE;
+    
+    INT     iData;
+    UINT    uiData;
+    LONG    lData;
+    ULONG   ulData;
+    INT64   i64Data;
+    UINT64  ui64Data;
+    PCHAR   pcString;
+    CHAR    cChar;
+    
+    PCHAR   pcPos = (PCHAR)pcFmt;
+    PCHAR   pcTrans;
+    CHAR    cDigit[DIGIT_BUF_SIZE + 1];
+
+#define BUF_SIZE    16
+#define BUF_PUT(c)  \
+        cBuffer[uiIndex] = c;   \
+        uiIndex++;  \
+        if (uiIndex >= BUF_SIZE) {  \
+            cBuffer[BUF_SIZE] = PX_EOS;   \
+            pfuncPrint(cBuffer);    \
+            uiIndex = 0;    \
+        }
+#define BUF_PNT()   \
+        if (uiIndex) {  \
+            cBuffer[uiIndex] = PX_EOS;  \
+            pfuncPrint(cBuffer);    \
+            uiIndex = 0;    \
+        }
+    
+    CHAR    cBuffer[BUF_SIZE + 1];
+    UINT    uiIndex = 0;
+    
+#define POS_STEP(pcPos) \
+        pcPos++;    \
+        if (*pcPos == PX_EOS) { \
+            BUF_PNT();  \
+            return; \
+        }
+    
+#define END_TRANS() \
+        iFlag      = 0;  \
+        bTans      = LW_FALSE;   \
+        iTransLen  = 0;  \
+        bZeroIns   = LW_FALSE;  \
+        bLeftAlign = LW_FALSE
+
+    while (*pcPos) {
+        if (*pcPos == '%') {
+            if (bTans == LW_TRUE) {
+                END_TRANS();
+                BUF_PUT('%');
+
+            } else {
+                bTans =  LW_TRUE;
+            }
+        } else {
+            if (bTans == LW_TRUE) {
+                switch (*pcPos) {
+                
+                case 'l':
+                case 'z':
+                    iFlag = LONG_ARG;
+                    break;
+                    
+                case 'q':
+                    iFlag = LONG_LONG_ARG;
+                    break;
+                    
+                case '-':
+                    if ((iTransLen == 0) && (bZeroIns == LW_FALSE)) {
+                        bLeftAlign = LW_TRUE;
+                    }
+                    break;
+
+                case '0':
+                    if (iTransLen == 0) {
+                        bZeroIns = LW_TRUE;
+                    } else {
+                        iTransLen *= 10;
+                    }
+                    break;
+
+                case '1':
+                case '2':
+                case '3':
+                case '4':
+                case '5':
+                case '6':
+                case '7':
+                case '8':
+                case '9':
+                    iTransLen = (iTransLen * 10) + ((*pcPos) - '0');
+                    break;
+
+                case 'd':
+                    BUF_PNT();
+                    if (iFlag == LONG_ARG) {
+                        lData = va_arg(ap, LONG);
+                        pcTrans = transIntSig(cDigit, (INT64)lData, 10);
+                    
+                    } else if (iFlag == LONG_LONG_ARG) {
+                        i64Data = va_arg(ap, INT64);
+                        pcTrans = transIntSig(cDigit, i64Data, 10);
+                    
+                    } else {
+                        iData = va_arg(ap, INT);
+                        pcTrans = transIntSig(cDigit, (INT64)iData, 10);
+                    }
+                    if (pcTrans) {
+                        printFullFmt(pfuncPrint, LW_TRUE, pcTrans,
+                                     (&cDigit[DIGIT_BUF_SIZE] - pcTrans),
+                                     iTransLen, bZeroIns, bLeftAlign);
+                    }
+                    END_TRANS();
+                    break;
+                    
+                case 'u':
+                    BUF_PNT();
+                    if (iFlag == LONG_ARG) {
+                        ulData = va_arg(ap, ULONG);
+                        pcTrans = transIntNonsig(cDigit, (UINT64)ulData, 10);
+                    
+                    } else if (iFlag == LONG_LONG_ARG) {
+                        ui64Data = va_arg(ap, UINT64);
+                        pcTrans = transIntNonsig(cDigit, ui64Data, 10);
+                    
+                    } else {
+                        uiData = va_arg(ap, UINT);
+                        pcTrans = transIntNonsig(cDigit, (UINT64)uiData, 10);
+                    }
+                    if (pcTrans) {
+                        printFullFmt(pfuncPrint, LW_TRUE, pcTrans,
+                                     (&cDigit[DIGIT_BUF_SIZE] - pcTrans),
+                                     iTransLen, bZeroIns, bLeftAlign);
+                    }
+                    END_TRANS();
+                    break;
+                    
+                case 'p':
+                    iFlag = LONG_ARG;
+                case 'x':
+                    BUF_PNT();
+                    if (iFlag == LONG_ARG) {
+                        ulData = va_arg(ap, ULONG);
+                        pcTrans = transIntNonsig(cDigit, (UINT64)ulData, 16);
+                    
+                    } else if (iFlag == LONG_LONG_ARG) {
+                        ui64Data = va_arg(ap, UINT64);
+                        pcTrans = transIntNonsig(cDigit, ui64Data, 16);
+                    
+                    } else {
+                        uiData = va_arg(ap, UINT);
+                        pcTrans = transIntNonsig(cDigit, (UINT64)uiData, 16);
+                    }
+                    if (pcTrans) {
+                        printFullFmt(pfuncPrint, LW_TRUE, pcTrans,
+                                     (&cDigit[DIGIT_BUF_SIZE] - pcTrans),
+                                     iTransLen, bZeroIns, bLeftAlign);
+                    }
+                    END_TRANS();
+                    break;
+                    
+                case 'c':
+                    cChar = (CHAR)va_arg(ap, INT);
+                    BUF_PUT((cChar));
+                    END_TRANS();
+                    break;
+                    
+                case 's':
+                    BUF_PNT();
+                    pcString = va_arg(ap, PCHAR);
+                    if (pcString == LW_NULL) {
+                        pcString =  "<null>";
+                    }
+                    printFullFmt(pfuncPrint, LW_FALSE, pcString, lib_strlen(pcString),
+                                 iTransLen, bZeroIns, bLeftAlign);
+                    END_TRANS();
+                    break;
+                
+                default:
+                    BUF_PUT((*pcPos));
+                    END_TRANS();
+                    break;
+                }
+            } else {
+                BUF_PUT((*pcPos));
+            }
+        }
+        pcPos++;
+    }
+    
+    BUF_PNT();
+}
+/*********************************************************************************************************
+** 函数名称: _DebugFmtMsg
+** 功能描述: 带有格式的内核打印调试信息 (支持 %d %ld %zd %qd %u %zu %lu %qu %x %lx %zx %qx %c %s)
+** 输　入  : iLevel      等级
+**           pcPosition  位置
+**           pcFmt       打印格式
+**           ...         打印参数
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+** 注  意  : 
+*********************************************************************************************************/
+VOID  _DebugFmtMsg (INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcFmt, ...)
+{
+    va_list ap;
+
+#if LW_CFG_ERRORMESSAGE_EN > 0
+    if (_K_pfuncKernelDebugError && (iLevel & __ERRORMESSAGE_LEVEL)) {
+        _K_pfuncKernelDebugError(pcPosition);
+        _K_pfuncKernelDebugError("() error: ");
+        va_start(ap, pcFmt);
+        _DebugFmtPrint(_K_pfuncKernelDebugError, pcFmt, ap);
+        va_end(ap);
+        __ERROR_THREAD_SHOW();
+    }
+#endif
+
+#if LW_CFG_LOGMESSAGE_EN > 0
+    if (_K_pfuncKernelDebugLog && (iLevel & __LOGMESSAGE_LEVEL)) {
+        va_start(ap, pcFmt);
+        _DebugFmtPrint(_K_pfuncKernelDebugLog, pcFmt, ap);
+        va_end(ap);
     }
 #endif
 }

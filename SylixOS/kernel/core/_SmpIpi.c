@@ -226,6 +226,25 @@ static VOID  _SmpProcFlushTlb (PLW_CLASS_CPU  pcpuCur)
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 /*********************************************************************************************************
+** 函数名称: _SmpProcFlushCache
+** 功能描述: 处理核间中断回写 CACHE
+** 输　入  : pcpuCur       当前 CPU
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_CACHE_EN > 0
+
+static VOID  _SmpProcFlushCache (PLW_CLASS_CPU  pcpuCur)
+{
+    API_CacheFlush(DATA_CACHE, (PVOID)0, (size_t)~0);
+    
+    KN_SMP_MB();
+    LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_FLUSH_CACHE_MSK);              /*  清除                        */
+}
+
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
+/*********************************************************************************************************
 ** 函数名称: _SmpProcCallfunc
 ** 功能描述: 处理核间中断调用函数
 ** 输　入  : pcpuCur       当前 CPU
@@ -280,7 +299,19 @@ VOID  _SmpProcIpi (PLW_CLASS_CPU  pcpuCur)
     if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_FLUSH_TLB_MSK) {         /*  更新 MMU 快表               */
         _SmpProcFlushTlb(pcpuCur);
     }
+#else
+    KN_SMP_MB();
+    LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_FLUSH_TLB_MSK);
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+    
+#if LW_CFG_CACHE_EN > 0
+    if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_FLUSH_CACHE_MSK) {       /*  回写 CACHE                  */
+        _SmpProcFlushCache(pcpuCur);
+    }
+#else
+    KN_SMP_MB();
+    LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_FLUSH_CACHE_MSK);
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
     
     if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_CALL_MSK) {              /*  自定义调用 ?                */
         _SmpProcCallfunc(pcpuCur);

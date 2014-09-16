@@ -108,6 +108,8 @@ ULONG  API_RmsDeleteEx (LW_OBJECT_HANDLE   *pulId, BOOL  bForce)
     
     __LW_OBJECT_DELETE_HOOK(ulId);
     
+    _DebugFormat(__LOGMESSAGE_LEVEL, "RMS \"%s\" has been delete.\r\n", prms->RMS_cRmsName);
+    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************

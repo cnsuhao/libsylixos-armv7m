@@ -128,6 +128,10 @@ VOID    armBranchPredictionEnable(VOID);
 VOID    armAuxControlFeatureDisable(UINT32  uiFeature);
 VOID    armAuxControlFeatureEnable(UINT32  uiFeature);
 
+/*********************************************************************************************************
+  ARM 系统控制器
+*********************************************************************************************************/
+
 #define CP15_CONTROL_THUMB_EXCEPT                   (1 << 30)
 #define CP15_CONTROL_ACCESSFLAG                     (1 << 29)
 #define CP15_CONTROL_TEXREMAP                       (1 << 28)
@@ -145,6 +149,10 @@ VOID    armAuxControlFeatureEnable(UINT32  uiFeature);
 
 VOID    armControlFeatureEnable(UINT32  uiFeature);
 VOID    armControlFeatureDisable(UINT32  uiFeature);
+
+/*********************************************************************************************************
+  ARM 外部私有设备地址
+*********************************************************************************************************/
 
 addr_t  armPrivatePeriphBaseGet(VOID);
 

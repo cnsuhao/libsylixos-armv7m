@@ -61,15 +61,7 @@ kernel MUST NOT compiler with VFP instructions!
 
 所以在早期的内核代码中, 很多对象的抽象没有做的很好, 而且对公共对象行为的封装做的很不够, 这也恰恰是作者成长的历程... 
 
-这几年的业余时间都放在这里啦!
-
-   SylixOS 采用微内核设计, 最小可裁至 60K Bytes, 她吸取了 N 多操作系统的优点, 例如: ucos rtems vxworks BSD/unix linux ... 
-   
-同时可能会涉及到一些版权问题, 这里声明: SylixOS 符合 GPL 与 BSD 版权. 主要为了提高编程水平, 学习之用, 并且保持永久商业免费! 
-
-希望 SylixOS 可以作为大家学习, 项目设计的理想选择. 如果侵犯到一些公司的版权, 请告之作者.
-
-   QQ:8270789
+   SylixOS 商业授权请参考 license/LICENSE 文件.
 
    email:sylixos@gmail.com
 

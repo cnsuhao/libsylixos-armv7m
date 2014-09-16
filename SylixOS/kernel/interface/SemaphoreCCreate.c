@@ -127,9 +127,7 @@ LW_OBJECT_HANDLE  API_SemaphoreCCreate (CPCHAR             pcName,
     MONITOR_EVT_LONG4(MONITOR_EVENT_ID_SEMC, MONITOR_EVENT_SEM_CREATE, 
                       ulIdTemp, ulInitCounter, ulMaxCounter, ulOption, pcName);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "semaphore \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "semaphore \"%s\" has been create.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
 }

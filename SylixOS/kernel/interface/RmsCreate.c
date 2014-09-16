@@ -98,9 +98,7 @@ LW_OBJECT_HANDLE  API_RmsCreate (CPCHAR             pcName,
     
     __LW_OBJECT_CREATE_HOOK(ulIdTemp, ulOption);
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "RMS \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, (pcName ? pcName : ""));
-    _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been create.\r\n");
+    _DebugFormat(__LOGMESSAGE_LEVEL, "RMS \"%s\" has been create.\r\n", (pcName ? pcName : ""));
     
     return  (ulIdTemp);
 }

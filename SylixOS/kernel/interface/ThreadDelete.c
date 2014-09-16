@@ -169,13 +169,9 @@ ULONG  __threadDelete (PLW_CLASS_TCB  ptcbDel, BOOL  bIsInSafe,
     _CoroutineFreeAll(ptcbDel);                                         /*  删除协程内存空间            */
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */
     
-    _DebugHandle(__LOGMESSAGE_LEVEL, "thread \"");
-    _DebugHandle(__LOGMESSAGE_LEVEL, ptcbDel->TCB_cThreadName);
-    if (bIsInSafe) {
-        _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete in safe mode.\r\n");
-    } else {
-        _DebugHandle(__LOGMESSAGE_LEVEL, "\" has been delete.\r\n");
-    }
+    _DebugFormat(__LOGMESSAGE_LEVEL, "thread \"%s\" has been delete%s.\r\n",
+                 ptcbDel->TCB_cThreadName,
+                 (bIsInSafe) ? " in safe mode" : "");
     
     pvVProc = ptcbDel->TCB_pvVProcessContext;                           /*  进程信息                    */
     
