@@ -30,14 +30,23 @@
 
     FILE_BEGIN()
     
-    EXPORT_LABEL(armMmuV7SelectTtb0)
+    EXPORT_LABEL(armMmuV7GetTTBCR)
+    EXPORT_LABEL(armMmuV7SetTTBCR)
     
 ;/*********************************************************************************************************
-;  This API Configures the TTB control register to use only TTB0
+;  This API get TTBCR register
 ;*********************************************************************************************************/
 
-FUNC_DEF(armMmuV7SelectTtb0)
-    MOV     R0, #0
+FUNC_DEF(armMmuV7GetTTBCR)
+    MRC     p15, 0, R0, c2, c0, 2
+    BX      LR
+    FUNC_END()
+
+;/*********************************************************************************************************
+;  This API set TTBCR register
+;*********************************************************************************************************/
+
+FUNC_DEF(armMmuV7SetTTBCR)
     MCR     p15, 0, R0, c2, c0, 2
     BX      LR
     FUNC_END()

@@ -252,7 +252,7 @@ static PCHAR  transIntSig (PCHAR  pcDigit, INT64  i64Data, INT  iBase)
     switch (iBase) {
     
     case 10:
-        while (i64Data > 10) {
+        while (i64Data >= 10) {
             DIGIT_BUF_NEXT;
             *pcPtr = to_char(i64Data % 10);
             i64Data /= 10;
@@ -266,7 +266,7 @@ static PCHAR  transIntSig (PCHAR  pcDigit, INT64  i64Data, INT  iBase)
         break;
         
     case 16:
-        while (i64Data > 16) {
+        while (i64Data >= 16) {
             DIGIT_BUF_NEXT;
             *pcPtr = to_hexchar(i64Data & 15);
             i64Data >>= 4;
@@ -299,7 +299,7 @@ static PCHAR  transIntNonsig (PCHAR  pcDigit, UINT64  ui64Data, INT  iBase)
     switch (iBase) {
     
     case 10:
-        while (ui64Data > 10) {
+        while (ui64Data >= 10) {
             DIGIT_BUF_NEXT;
             *pcPtr = to_char(ui64Data % 10);
             ui64Data /= 10;
@@ -309,7 +309,7 @@ static PCHAR  transIntNonsig (PCHAR  pcDigit, UINT64  ui64Data, INT  iBase)
         break;
         
     case 16:
-        while (ui64Data > 16) {
+        while (ui64Data >= 16) {
             DIGIT_BUF_NEXT;
             *pcPtr = to_hexchar(ui64Data & 15);
             ui64Data >>= 4;

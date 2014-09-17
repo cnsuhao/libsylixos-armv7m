@@ -60,9 +60,10 @@
 #define ACCESS_NOT_CHK      1                                           /*  1 号域                      */
 #define ACCESS_FAIL         2                                           /*  2 号域                      */
 /*********************************************************************************************************
-  地址检查选项 (Qt 里面用到了非对齐指令)
+  MMU 相关配置选项 (Qt 里面用到了非对齐指令)
 *********************************************************************************************************/
 #define MMU_ALIGNFAULT_EN   0                                           /*  是否是能地址对齐检查        */
+#define MMU_TTBR_SELECT     0                                           /*  TTBR0 or TTBR1 XXX          */
 /*********************************************************************************************************
   全局变量
 *********************************************************************************************************/
@@ -78,7 +79,8 @@ static UINT                 _G_uiVMSAShareBit;                          /*  共享
 /*********************************************************************************************************
   汇编函数
 *********************************************************************************************************/
-extern VOID armMmuV7SelectTtb0(VOID);
+extern UINT32 armMmuV7GetTTBCR(VOID);
+extern VOID   armMmuV7SetTTBCR(UINT32 uiTTBCR);
 /*********************************************************************************************************
 ** 函数名称: armMmuFlags2Attr
 ** 功能描述: 根据 SylixOS 权限标志, 生成 ARM MMU 权限标志
@@ -375,7 +377,11 @@ static INT  armMmuGlobalInit (CPCHAR  pcMachineName)
 
     armControlFeatureDisable(CP15_CONTROL_TEXREMAP);                    /*  Disable TEX remapping       */
 
-    armMmuV7SelectTtb0();                                               /*  Use only TTB0               */
+#if MMU_TTBR_SELECT > 0
+    armMmuV7SetTTBCR((1 << 31) | 1);                                    /*  XXX Use TTBR1               */
+#else
+    armMmuV7SetTTBCR(0);                                                /*  Use TTBR0                   */
+#endif
 
     return  (ERROR_NONE);
 }
@@ -789,7 +795,7 @@ static VOID  armMmuMakeTrans (PLW_MMU_CONTEXT     pmmuctx,
 }
 /*********************************************************************************************************
 ** 函数名称: armMmuMakeCurCtx
-** 功能描述: 设置 MMU 当前上下文
+** 功能描述: 设置 MMU 当前上下文, 这里使用 TTBR1 页表基址寄存器.
 ** 输　入  : pmmuctx        mmu 上下文
 ** 输　出  : NONE
 ** 全局变量: 
@@ -797,6 +803,8 @@ static VOID  armMmuMakeTrans (PLW_MMU_CONTEXT     pmmuctx,
 *********************************************************************************************************/
 static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
 {
+    REGISTER LW_PGD_TRANSENTRY  *p_pgdentry;
+
     if (LW_NCPUS > 1) {
         _G_uiVMSAShareBit = 1;                                          /*  多核设置为可共享            */
 
@@ -805,20 +813,20 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
          * ------------------------------------
          *  31:14 - Base addr
          *  13:7  - 0x0
-         *  6     - IRGN[0]     0x0 (Normal memory, Inner Write-Back Write-Allocate Cacheable)
+         *  6     - IRGN[0]     0x1 (Normal memory, Inner Write-Back Write-Allocate Cacheable)
          *  5     - NOS         0x0 (Outer Shareable)
          *  4:3   - RGN         0x1 (Normal memory, Outer Write-Back Write-Allocate Cacheable)
          *  2     - IMP         0x0
          *  1     - S           0x1 (Shareable)
          *  0     - IRGN[1]     0x0 (Normal memory, Inner Write-Back Write-Allocate Cacheable)
          */
-        armMmuSetTTBase((LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry |
-                        (1 << 6) |
-                        (0 << 5) |
-                        (1 << 3) |
-                        (0 << 2) |
-                        (1 << 1) |
-                        (0 << 0)));
+        p_pgdentry = (LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry
+                   | (1 << 6)
+                   | (0 << 5)
+                   | (1 << 3)
+                   | (0 << 2)
+                   | (1 << 1)
+                   | (0 << 0));
     } else {
         _G_uiVMSAShareBit = 0;                                          /*  单核设置为非可共享，否则运行*/
                                                                         /*  速度会非常慢                */
@@ -831,15 +839,18 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
          *  4:3   - RGN         0x1 (Normal memory, Outer Write-Back Write-Allocate Cacheable)
          *  2     - IMP         0x0
          *  1     - S           0x0 (NonShareable)
-         *  0     - C           0x0 (Inner cacheable)
+         *  0     - C           0x1 (Inner cacheable)
          */
-        armMmuSetTTBase((LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry |
-                        (1 << 5) |
-                        (1 << 3) |
-                        (0 << 2) |
-                        (0 << 1) |
-                        (1 << 0)));
+        p_pgdentry = (LW_PGD_TRANSENTRY *)((ULONG)pmmuctx->MMUCTX_pgdEntry
+                   | (1 << 5)
+                   | (1 << 3)
+                   | (0 << 2)
+                   | (0 << 1)
+                   | (1 << 0));
     }
+    
+    armMmuSetTTBase(p_pgdentry);
+    armMmuSetTTBase1(p_pgdentry);
 }
 /*********************************************************************************************************
 ** 函数名称: armMmuV7Init

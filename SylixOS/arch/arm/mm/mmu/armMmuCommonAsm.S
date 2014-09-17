@@ -42,6 +42,7 @@
     EXPORT_LABEL(armMmuDisableAlignFault)
     EXPORT_LABEL(armMmuSetDomain)
     EXPORT_LABEL(armMmuSetTTBase)
+    EXPORT_LABEL(armMmuSetTTBase1)
     EXPORT_LABEL(armMmuInvalidateTLB)
     EXPORT_LABEL(armMmuInvalidateTLBMVA)
     EXPORT_LABEL(armMmuSetProcessId)
@@ -141,11 +142,24 @@ FUNC_DEF(armMmuSetDomain)
     FUNC_END()
     
 ;/*********************************************************************************************************
-;  设置页表基地址
+;  设置页表基地址 TTBR0 为进程相关页表  TTBR1 为系统全局页表
 ;*********************************************************************************************************/
 
 FUNC_DEF(armMmuSetTTBase)
+    ARM_DSB()
+    ARM_ISB()
     MCR     p15, 0, R0, c2, c0, 0
+    ARM_DSB()
+    ARM_ISB()
+    BX      LR
+    FUNC_END()
+    
+FUNC_DEF(armMmuSetTTBase1)
+    ARM_DSB()
+    ARM_ISB()
+    MCR     p15, 0, R0, c2, c0, 1
+    ARM_DSB()
+    ARM_ISB()
     BX      LR
     FUNC_END()
     

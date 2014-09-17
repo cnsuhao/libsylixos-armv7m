@@ -33,6 +33,7 @@
     EXPORT_LABEL(armDCacheV5Disable)
     EXPORT_LABEL(armDCacheV5FlushAll)
     EXPORT_LABEL(armDCacheV5ClearAll)
+    EXPORT_LABEL(armDCacheV5InvalidateAll)
     
 ;/*********************************************************************************************************
 ;  ARMv5 ¹Ø±Õ DCACHE

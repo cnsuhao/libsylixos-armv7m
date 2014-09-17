@@ -43,6 +43,7 @@ VOID    armMmuEnableAlignFault(VOID);
 VOID    armMmuDisableAlignFault(VOID);
 VOID    armMmuSetDomain(UINT32  uiDomainAttr);
 VOID    armMmuSetTTBase(LW_PGD_TRANSENTRY  *pgdEntry);
+VOID    armMmuSetTTBase1(LW_PGD_TRANSENTRY  *pgdEntry);
 VOID    armMmuInvalidateTLB(VOID);
 VOID    armMmuInvalidateTLBMVA(PVOID pvVAddr);
 VOID    armMmuSetProcessId(pid_t  pid);
