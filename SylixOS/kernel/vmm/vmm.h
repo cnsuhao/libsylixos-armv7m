@@ -264,8 +264,10 @@ LW_API VOID         API_VmmDmaFree(PVOID  pvDmaMem);                    /*  回收
 
 LW_API PVOID        API_VmmIoRemap(PVOID  pvPhysicalAddr, 
                                    size_t stSize);                      /*  将物理 IO 映射到虚拟空间    */
+LW_API PVOID        API_VmmIoRemapEx(PVOID  pvPhysicalAddr, 
+                                     size_t stSize,
+                                     ULONG  ulFlags);
 LW_API VOID         API_VmmIoUnmap(PVOID  pvVirtualAddr);               /*  释放 IO 映射虚拟空间        */
-
 LW_API PVOID        API_VmmIoRemapNocache(PVOID  pvPhysicalAddr, 
                                           size_t stSize);
 LW_API ULONG        API_VmmMap(PVOID  pvVirtualAddr, 
@@ -283,12 +285,16 @@ static LW_INLINE ULONG        API_VmmVirtualToPhysical(addr_t  ulVirtualAddr,
     if (pulPhysicalAddr) {
         *pulPhysicalAddr = ulVirtualAddr;
     }
-    
     return  (ERROR_NONE);
 }
-
 static LW_INLINE PVOID        API_VmmIoRemap(PVOID  pvPhysicalAddr, 
                                              size_t stSize)
+{
+    return  (pvPhysicalAddr);
+}
+static LW_INLINE PVOID        API_VmmIoRemapEx(PVOID  pvPhysicalAddr, 
+                                               size_t stSize,
+                                               ULONG  ulFlags)
 {
     return  (pvPhysicalAddr);
 }
@@ -352,6 +358,7 @@ LW_API VOID         API_VmmAbortIsr(addr_t          ulRetAddr,
 #define vmmDmaFree              API_VmmDmaFree
 
 #define vmmIoRemap              API_VmmIoRemap
+#define vmmIoRemapEx            API_VmmIoRemapEx
 #define vmmIoUnmap              API_VmmIoUnmap
 #define vmmIoRemapNocache       API_VmmIoRemapNocache
 

@@ -37,6 +37,7 @@
 2013.03.16  加入对物理内存的分配函数, 这些物理内存分配出后不能直接使用, 必须让有效的虚拟地址映射后使用.
             DMA 物理内存分配函数分配的物理内存可以直接访问, 因为 DMA 物理内存和虚拟空间绝不重复.
 2013.07.20  SMP 情况下 MMU 初始化加入主从核分离的初始化函数.
+2014.09.18  加入 API_VmmIoRemapEx() 可指定内存属性.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -540,18 +541,20 @@ VOID  API_VmmDmaFree (PVOID  pvDmaMem)
                       pvDmaMem, LW_NULL);
 }
 /*********************************************************************************************************
-** 函数名称: API_VmmIoRemap
-** 功能描述: 将物理 IO 空间指定内存映射到逻辑空间. (非 CACHE)
+** 函数名称: API_VmmIoRemapEx
+** 功能描述: 将物理 IO 空间指定内存映射到逻辑空间. (用户可指定 CACHE 与否)
 ** 输　入  : pvPhysicalAddr     物理内存地址
 **           stSize             需要映射的内存大小
+**           ulFlags            内存属性
 ** 输　出  : 映射到的逻辑内存地址
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-PVOID  API_VmmIoRemap (PVOID  pvPhysicalAddr, 
-                       size_t stSize)
+PVOID  API_VmmIoRemapEx (PVOID  pvPhysicalAddr, 
+                         size_t stSize,
+                         ULONG  ulFlags)
 {
     REGISTER ULONG          ulPageNum = (ULONG) (stSize >> LW_CFG_VMM_PAGE_SHIFT);
     REGISTER size_t         stExcess  = (size_t)(stSize & ~LW_CFG_VMM_PAGE_MASK);
@@ -579,7 +582,7 @@ PVOID  API_VmmIoRemap (PVOID  pvPhysicalAddr,
     ulError = __vmmLibPageMap((addr_t)pvPhysicalAddr,                   /*  不使用 CACHE                */
                               pvmpageVirtual->PAGE_ulPageAddr,
                               ulPageNum, 
-                              LW_VMM_FLAG_DMA);                         /*  映射为连续虚拟地址          */
+                              ulFlags);                                 /*  映射为连续虚拟地址          */
     if (ulError) {                                                      /*  映射错误                    */
         __vmmVirtualPageFree(pvmpageVirtual);                           /*  释放虚拟地址空间            */
         __VMM_UNLOCK();
@@ -587,7 +590,7 @@ PVOID  API_VmmIoRemap (PVOID  pvPhysicalAddr,
         return  (LW_NULL);
     }
     
-    pvmpageVirtual->PAGE_ulFlags = LW_VMM_FLAG_DMA;
+    pvmpageVirtual->PAGE_ulFlags = ulFlags;
     
     __areaVirtualInsertPage(pvmpageVirtual->PAGE_ulPageAddr, 
                             pvmpageVirtual);                            /*  插入逻辑空间反查表          */
@@ -597,6 +600,22 @@ PVOID  API_VmmIoRemap (PVOID  pvPhysicalAddr,
                       pvmpageVirtual->PAGE_ulPageAddr, pvPhysicalAddr, stSize, LW_NULL);
     
     return  ((PVOID)pvmpageVirtual->PAGE_ulPageAddr);
+}
+/*********************************************************************************************************
+** 函数名称: API_VmmIoRemap
+** 功能描述: 将物理 IO 空间指定内存映射到逻辑空间. (非 CACHE)
+** 输　入  : pvPhysicalAddr     物理内存地址
+**           stSize             需要映射的内存大小
+** 输　出  : 映射到的逻辑内存地址
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+PVOID  API_VmmIoRemap (PVOID  pvPhysicalAddr, 
+                       size_t stSize)
+{
+    return  (API_VmmIoRemapEx(pvPhysicalAddr, stSize, LW_VMM_FLAG_DMA));
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmIoUnmap
@@ -659,7 +678,7 @@ LW_API
 PVOID  API_VmmIoRemapNocache (PVOID  pvPhysicalAddr, 
                               size_t stSize)
 {
-    return  (API_VmmIoRemap(pvPhysicalAddr, stSize));
+    return  (API_VmmIoRemapEx(pvPhysicalAddr, stSize, LW_VMM_FLAG_DMA));
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmMap

@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-09-18: han.hui
+    加入 vmmIoRemapEx 驱动程序可指定内存属性.
+
     2014-09-02: han.hui
     加入新的 license 文件.
     
