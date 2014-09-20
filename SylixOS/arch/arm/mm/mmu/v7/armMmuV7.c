@@ -61,6 +61,7 @@
 #define ACCESS_FAIL         2                                           /*  2 号域                      */
 /*********************************************************************************************************
   MMU 相关配置选项 (Qt 里面用到了非对齐指令)
+  注 意: 如果使能地址对齐检查, GCC 编译必须加入 -mno-unaligned-access 选项 (不生成非对齐访问指令)
 *********************************************************************************************************/
 #define MMU_ALIGNFAULT_EN   0                                           /*  是否是能地址对齐检查        */
 #define MMU_TTBR_SELECT     0                                           /*  TTBR0 or TTBR1 XXX          */
@@ -142,7 +143,7 @@ static INT  armMmuFlags2Attr (ULONG   ulFlag,
             *pucCB  = 0x1;
         } else {
             *pucTEX = 0x2;                                              /*  非可共享设备内存            */
-            *pucCB  = 0x0;
+            *pucCB  = 0x0;                                              /*  XXX 是否使用强排序 ?        */
         }
     }
 
@@ -370,7 +371,7 @@ static INT  armMmuGlobalInit (CPCHAR  pcMachineName)
     armMmuSetProcessId(0);
 
 #if MMU_ALIGNFAULT_EN > 0
-    armMmuEnableAlignFault();
+    armMmuEnableAlignFault();                                           /*  -mno-unaligned-access       */
 #else
     armMmuDisableAlignFault();
 #endif                                                                  /*  __MMU_ALIGNFAULT_EN > 0     */

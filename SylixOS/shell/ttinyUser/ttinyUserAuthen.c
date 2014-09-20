@@ -29,6 +29,7 @@
 2012.04.01  需要 initgroups 设置附加组.
 2013.01.15  如果 60 秒还没有输入, 则登录失败.
 2013.12.12  登陆完成后需要清除一次缓冲区.
+2014.09.19  登录过程中不允许 Crtl+X 重启.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "unistd.h"
@@ -72,7 +73,8 @@ ULONG  __tshellUserAuthen (INT  iTtyFd)
     /*
      *  初始化终端模式
      */
-    iRetValue = ioctl(iTtyFd, FIOSETOPTIONS, OPT_TERMINAL);             /*  进入终端模式                */
+    iRetValue = ioctl(iTtyFd, FIOSETOPTIONS, 
+                      OPT_TERMINAL & (~OPT_MON_TRAP));                  /*  进入终端模式                */
     if (iRetValue < 0) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "can not set terminal mode.\r\n");
         return  (ERROR_TSHELL_EUSER);
@@ -102,7 +104,7 @@ ULONG  __tshellUserAuthen (INT  iTtyFd)
      *  转为无回显终端模式
      */
     iRetValue = ioctl(iTtyFd, FIOSETOPTIONS, 
-                      (OPT_TERMINAL & ~OPT_ECHO));                      /*  没有回显                    */
+                      (OPT_TERMINAL & (~(OPT_ECHO | OPT_MON_TRAP))));   /*  没有回显                    */
     if (iRetValue < 0) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "can not set terminal mode.\r\n");
         return  (ERROR_TSHELL_EUSER);

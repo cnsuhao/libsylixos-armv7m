@@ -25,6 +25,13 @@
 /*********************************************************************************************************
   DMA 传输控制
   
+  BURST_LEN:
+  b0000 = 1 data transfer
+  b0001 = 2 data transfer
+  b0010 = 3 data transfer
+  ...
+  b1111 = 16 data transfer
+  
   DBURST_SZ:
   b000 = 1 byte
   b001 = 2 bytes
@@ -34,6 +41,9 @@
   b101 = 32 bytes
   b110 = 64 bytes
   b111 = 128 bytes.
+  
+  注意: 如果设置猝发模式传输, 则传输字节数一定是猝发参数 SBURST_LEN * DBURST_SZ 的整数倍.
+        PL330 单次猝发最长为 256 字节.
 *********************************************************************************************************/
 
 #define PL330_TRANSMODE_SBURST_LEN(len)     ((len)  << 4)
@@ -42,15 +52,39 @@
 #define PL330_TRANSMODE_DBURST_LEN(len)     ((len)  << 18)
 #define PL330_TRANSMODE_DBURST_SZ(size)     ((size) << 15)
 
+#define PL330_TRANSMODE_SRCCCTRL(srcctrl)   ((srcctrl) << 11)
+#define PL330_TRANSMODE_DSTCCTRL(dstctrl)   ((dstctrl) << 25)
+
+enum PL330_SRCCTRL {
+    SCCTRL0 = 0,                                    /* Noncacheable and nonbufferable                   */
+    SCCTRL1,                                        /* Bufferable only                                  */
+    SCCTRL2,                                        /* Cacheable, but do not allocate                   */
+    SCCTRL3,                                        /* Cacheable and bufferable, but do not allocate    */
+    SINVALID1,
+    SINVALID2,
+    SCCTRL6,                                        /* Cacheable write-through, allocate on reads only  */
+    SCCTRL7                                         /* Cacheable write-back, allocate on reads only     */
+};
+
+enum PL330_DSTCTRL {
+    DCCTRL0 = 0,                                    /* Noncacheable and nonbufferable                   */
+    DCCTRL1,                                        /* Bufferable only                                  */
+    DCCTRL2,                                        /* Cacheable, but do not allocate                   */
+    DCCTRL3,                                        /* Cacheable and bufferable, but do not allocate    */
+    DINVALID1 = 8,
+    DINVALID2,
+    DCCTRL6,                                        /* Cacheable write-through, allocate on writes only */
+    DCCTRL7                                         /* Cacheable write-back, allocate on writes only    */
+};
+
 /*********************************************************************************************************
   DMA 传输参数
 *********************************************************************************************************/
 
-#define PL330_OPTION_SRCMEM         0x00000000
-#define PL330_OPTION_SRCPRI         0x00000001
-
-#define PL330_OPTION_DSTMEM         0x00000000
-#define PL330_OPTION_DSTPRI         0x00000002
+#define PL330_OPTION_MEM2MEM        0
+#define PL330_OPTION_MEM2MEM_NOBAR  1
+#define PL330_OPTION_MEM2DEV        2
+#define PL330_OPTION_DEV2MEM        3
 
 #define PL330_OPTION_SRCNS          0x00000010
 #define PL330_OPTION_DSTNS          0x00000020
@@ -62,10 +96,9 @@
   操作函数
 *********************************************************************************************************/
 
-#ifdef __DMA_H
-INT             armDmaPl330Add(addr_t  ulBase, UINT  uiChanOft);
+PVOID           armDmaPl330Add(addr_t  ulBase, UINT  uiChanOft);
+irqreturn_t     armDmaPl330Isr(PVOID  pvPl330);
 PLW_DMA_FUNCS   armDmaPl330GetFuncs(VOID);
-#endif                                                                  /*  __DMA_H                     */
 
 #endif                                                                  /*  __ARMPL330_H                */
 /*********************************************************************************************************

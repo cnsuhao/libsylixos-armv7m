@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-09-20: han.hui
+    加入 ARM PL330 DMA 驱动程序.
+
     2014-09-18: han.hui
     加入 vmmIoRemapEx 驱动程序可指定内存属性.
 

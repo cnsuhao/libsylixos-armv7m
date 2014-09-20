@@ -24,12 +24,12 @@
 /*********************************************************************************************************
   裁剪支持
 *********************************************************************************************************/
-#if LW_CFG_DMA_EN > 0
+#if (LW_CFG_DMA_EN > 0) && (LW_CFG_ARM_PL330 > 0)
 #include "armPl330.h"
 /*********************************************************************************************************
   DMA debug message
 *********************************************************************************************************/
-#ifdef SYLIXOS /* __SYLIXOS_DEBUG */
+#ifdef __SYLIXOS_DEBUG
 #define PL330_DEBUG(msg)    printk msg
 #else
 #define PL330_DEBUG(msg)
@@ -228,6 +228,33 @@
 #define SZ_DMAWMB               1
 #define SZ_DMAGO                6
 /*********************************************************************************************************
+  PL330 传输控制属性
+*********************************************************************************************************/
+#define CC_SRCINC               (1 << 0)
+#define CC_DSTINC               (1 << 14)
+#define CC_SRCPRI               (1 << 8)
+#define CC_DSTPRI               (1 << 22)
+#define CC_SRCNS                (1 << 9)
+#define CC_DSTNS                (1 << 23)
+#define CC_SRCIA                (1 << 10)
+#define CC_DSTIA                (1 << 24)
+#define CC_SRCBRSTLEN_SHFT      4
+#define CC_DSTBRSTLEN_SHFT      18
+#define CC_SRCBRSTSIZE_SHFT     1
+#define CC_DSTBRSTSIZE_SHFT     15
+#define CC_SRCCCTRL_SHFT        11
+#define CC_SRCCCTRL_MASK        0x7
+#define CC_DSTCCTRL_SHFT        25
+#define CC_DRCCCTRL_MASK        0x7
+#define CC_SWAP_SHFT            28
+/*********************************************************************************************************
+  PL330 促发传输相关计算
+*********************************************************************************************************/
+#define BRST_LEN(ccr)           ((((ccr) >> CC_SRCBRSTLEN_SHFT) & 0xf) + 1)
+#define BRST_SIZE(ccr)          (1 << (((ccr) >> CC_SRCBRSTSIZE_SHFT) & 0x7))
+#define BYTE_TO_BURST(b, ccr)   ((b) / BRST_SIZE(ccr) / BRST_LEN(ccr))
+#define BURST_TO_BYTE(c, ccr)   ((c) * BRST_SIZE(ccr) * BRST_LEN(ccr))
+/*********************************************************************************************************
   PL330 指令参数
 *********************************************************************************************************/
 typedef enum {
@@ -246,6 +273,13 @@ typedef enum {
     BURST,
     ALWAYS
 } PL330_COND;
+/*********************************************************************************************************
+  PL330 传输参数
+*********************************************************************************************************/
+typedef struct {
+    UINT32  XFER_uiCcr;
+    size_t  XFER_stSize;
+} PL330_XFER_SPEC;
 /*********************************************************************************************************
   PL330 控制器
 *********************************************************************************************************/
@@ -279,9 +313,15 @@ static LW_INLINE size_t  emitADDH (BOOL bSizeOnly, UINT8 *pucBuffer, DMAMOV_DST 
         return  (SZ_DMAADDH);
     }
 
-    pucBuffer[0] = CMD_DMAADDH;
+    pucBuffer[0]  = CMD_DMAADDH;
     pucBuffer[0] |= (dst << 1);
+    
+#if LW_CFG_CPU_ENDIAN > 0
+    pucBuffer[1] = (UINT8)(usVal & 0xff);
+    pucBuffer[2] = (UINT8)((usVal >>  8) & 0xff);
+#else
     *((UINT16 *)&pucBuffer[1]) = usVal;
+#endif                                                                  /*  LW_CFG_CPU_ENDIAN > 0       */
 
     PL330_DEBUG((KERN_DEBUG "PL330 DMAADDH %s %u\n",
                 dst == 1 ? "DA" : "SA", usVal));
@@ -354,11 +394,19 @@ static LW_INLINE size_t  emitGO (BOOL  bSizeOnly, UINT8 *pucBuffer, UINT8  ucCha
         return  (SZ_DMAGO);
     }
     
-    pucBuffer[0] = CMD_DMAGO;
-    
+    pucBuffer[0]  = CMD_DMAGO;
     pucBuffer[0] |= (bNonSecure << 1);
+    
     pucBuffer[1]  = ucChan & 0x7;
+    
+#if LW_CFG_CPU_ENDIAN > 0
+    pucBuffer[2] = (UINT8)(uiAddr & 0xff);
+    pucBuffer[3] = (UINT8)((uiAddr >>  8) & 0xff);
+    pucBuffer[4] = (UINT8)((uiAddr >> 16) & 0xff);
+    pucBuffer[5] = (UINT8)((uiAddr >> 24) & 0xff);
+#else
     *((UINT32 *)&pucBuffer[2]) = uiAddr;
+#endif                                                                  /*  LW_CFG_CPU_ENDIAN > 0       */
     
     PL330_DEBUG((KERN_DEBUG "PL330 DMAGO chan_%u 0x%x %s\n",
                 ucChan, uiAddr, bNonSecure ? "Non-Secure" : "Secure"));
@@ -540,7 +588,15 @@ static LW_INLINE size_t  emitMOV (BOOL bSizeOnly, UINT8 *pucBuffer, DMAMOV_DST d
     
     pucBuffer[0] = CMD_DMAMOV;
     pucBuffer[1] = (UINT8)dst;
+    
+#if LW_CFG_CPU_ENDIAN > 0
+    pucBuffer[2] = (UINT8)(uiVal & 0xff);
+    pucBuffer[3] = (UINT8)((uiVal >>  8) & 0xff);
+    pucBuffer[4] = (UINT8)((uiVal >> 16) & 0xff);
+    pucBuffer[5] = (UINT8)((uiVal >> 24) & 0xff);
+#else
     *((UINT32 *)&pucBuffer[2]) = uiVal;
+#endif                                                                  /*  LW_CFG_CPU_ENDIAN > 0       */
     
     PL330_DEBUG((KERN_DEBUG "PL330 DMAMOV %s 0x%x\n", 
                 dst == SAR ? "SAR" : (dst == DAR ? "DAR" : "CCR"), uiVal));
@@ -790,6 +846,290 @@ static LW_INLINE size_t emitWMB (BOOL bSizeOnly, UINT8 *pucBuffer)
     return  (SZ_DMAWMB);
 }
 /*********************************************************************************************************
+** 函数名称: executeDBGINSN
+** 功能描述: DMA 开始执行指令
+** 输　入  : pl330         控制器
+**           pucIns        指令缓冲
+**           bAsManager    是否为管理线程
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE VOID executeDBGINSN (DMAC_PL330  *pl330, UINT8 *pucIns, 
+                                      UINT  uiInnerChan, BOOL  bAsManager)
+{
+    UINT32  uiVal;
+    
+    uiVal = (pucIns[0] << 16) | (pucIns[1] << 24);
+    
+    if (!bAsManager) {
+        uiVal |= (1 << 0);
+        uiVal |= (uiInnerChan << 8);                                    /*  Channel Number              */
+    }
+    
+    PL330_DBGINST0(pl330->PL330_ulBase) = uiVal;
+    
+#if LW_CFG_CPU_ENDIAN > 0
+    uiVal  = pucIns[2] << 0;
+    uiVal |= pucIns[3] << 8;
+    uiVal |= pucIns[4] << 16;
+    uiVal |= pucIns[5] << 24;
+#else
+    uiVal  = *((UINT32 *)&pucIns[2]);
+#endif                                                                  /*  LW_CFG_CPU_ENDIAN > 0       */
+
+    PL330_DBGINST1(pl330->PL330_ulBase) = uiVal;
+    
+    PL330_DBGCMD(pl330->PL330_ulBase) = 0;                              /*  Go!                         */
+}
+/*********************************************************************************************************
+** 函数名称: ldstMem2Mem
+** 功能描述: 内存到内存传输
+** 输　入  : bSizeOnly     是否只返回大小
+**           pucBuffer     指令缓存
+**           iCyc          循环次数
+** 输　出  : 指令长度
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE size_t ldstMem2Mem (BOOL bSizeOnly, UINT8 *pucBuffer, INT  iCyc)
+{
+    size_t  stOff = 0;
+    
+    while (iCyc > 0) {
+        stOff += emitLD(bSizeOnly, &pucBuffer[stOff], ALWAYS);
+        stOff += emitRMB(bSizeOnly, &pucBuffer[stOff]);
+        stOff += emitST(bSizeOnly, &pucBuffer[stOff], ALWAYS);
+        stOff += emitWMB(bSizeOnly, &pucBuffer[stOff]);
+        iCyc--;
+    }
+    
+    return  (stOff);
+}
+/*********************************************************************************************************
+** 函数名称: ldstMem2Mem
+** 功能描述: 内存到内存传输 (不使用内存屏障)
+** 输　入  : bSizeOnly     是否只返回大小
+**           pucBuffer     指令缓存
+**           iCyc          循环次数
+** 输　出  : 指令长度
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE size_t ldstMem2MemNoBar (BOOL bSizeOnly, UINT8 *pucBuffer, INT  iCyc)
+{
+    size_t  stOff = 0;
+    
+    while (iCyc > 0) {
+        stOff += emitLD(bSizeOnly, &pucBuffer[stOff], ALWAYS);
+        stOff += emitST(bSizeOnly, &pucBuffer[stOff], ALWAYS);
+        iCyc--;
+    }
+    
+    return  (stOff);
+}
+/*********************************************************************************************************
+** 函数名称: ldstDev2Mem
+** 功能描述: 设备到内存传输
+** 输　入  : bSizeOnly     是否只返回大小
+**           pucBuffer     指令缓存
+**           ucPeri        物理设备号
+**           iCyc          循环次数
+** 输　出  : 指令长度
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE size_t ldstDev2Mem (BOOL bSizeOnly, UINT8 *pucBuffer, UINT8  ucPeri, INT  iCyc)
+{
+    size_t  stOff = 0;
+    
+    while (iCyc > 0) {
+        stOff += emitWFP(bSizeOnly, &pucBuffer[stOff], SINGLE, ucPeri);
+        stOff += emitLDP(bSizeOnly, &pucBuffer[stOff], SINGLE, ucPeri);
+        stOff += emitST(bSizeOnly, &pucBuffer[stOff], ALWAYS);
+        stOff += emitFLUSHP(bSizeOnly, &pucBuffer[stOff], ucPeri);
+        iCyc--;
+    }
+    
+    return  (stOff);
+}
+/*********************************************************************************************************
+** 函数名称: ldstMem2Dev
+** 功能描述: 内存到设备传输
+** 输　入  : bSizeOnly     是否只返回大小
+**           pucBuffer     指令缓存
+**           ucPeri        物理设备号
+**           iCyc          循环次数
+** 输　出  : 指令长度
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE size_t ldstMem2Dev (BOOL bSizeOnly, UINT8 *pucBuffer, UINT8  ucPeri, INT  iCyc)
+{
+    size_t  stOff = 0;
+    
+    while (iCyc > 0) {
+        stOff += emitWFP(bSizeOnly, &pucBuffer[stOff], SINGLE, ucPeri);
+        stOff += emitLD(bSizeOnly, &pucBuffer[stOff], ALWAYS);
+        stOff += emitSTP(bSizeOnly, &pucBuffer[stOff], SINGLE, ucPeri);
+        stOff += emitFLUSHP(bSizeOnly, &pucBuffer[stOff], ucPeri);
+        iCyc--;
+    }
+    
+    return  (stOff);
+}
+/*********************************************************************************************************
+** 函数名称: ldstBursts
+** 功能描述: 生成传输指令
+** 输　入  : bSizeOnly     是否只返回大小
+**           pucBuffer     指令缓存
+**           ulOption      传输选项
+**           ucPeri        物理设备号
+**           iCyc          循环次数
+** 输　出  : 指令长度
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE size_t ldstBursts (BOOL bSizeOnly, UINT8 *pucBuffer, ULONG  ulOption, 
+                                    UINT8  ucPeri, INT  iCyc)
+{
+    size_t  stOff = 0;
+
+    switch (ulOption & 0xf) {
+    
+    case PL330_OPTION_MEM2MEM:
+        stOff += ldstMem2Mem(bSizeOnly, &pucBuffer[stOff], iCyc);
+        break;
+        
+    case PL330_OPTION_MEM2MEM_NOBAR:
+        stOff += ldstMem2MemNoBar(bSizeOnly, &pucBuffer[stOff], iCyc);
+        break;
+        
+    case PL330_OPTION_MEM2DEV:
+        stOff += ldstMem2Dev(bSizeOnly, &pucBuffer[stOff], ucPeri, iCyc);
+        break;
+        
+    case PL330_OPTION_DEV2MEM:
+        stOff += ldstDev2Mem(bSizeOnly, &pucBuffer[stOff], ucPeri, iCyc);
+        break;
+        
+    default:
+        stOff = (size_t)(~0);
+    }
+    
+    return  (stOff);
+}
+/*********************************************************************************************************
+** 函数名称: ldstLoop
+** 功能描述: 生成循环传输指令
+** 输　入  : bSizeOnly     是否只返回大小
+**           pucBuffer     指令缓存
+**           pstBurst      传输数据大小
+**           ulOption      传输选项
+**           ucPeri        物理设备号
+** 输　出  : 指令长度
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE size_t ldstLoop (BOOL bSizeOnly, UINT8 *pucBuffer, size_t  *pstBurst, 
+                                  ULONG  ulOption, UINT8  ucPeri)
+{
+    INT    iCyc, iCycMax;
+    size_t stOff, stSZLP, stSZBRST, stSZLPEND;
+    size_t stLcnt0, stLcnt1, stLjmp0, stLjmp1;
+    
+    /* 
+     * Max iterations possibile in DMALP is 256 
+     */
+    if (*pstBurst >= 256 * 256) {
+        stLcnt1 = 256;
+        stLcnt0 = 256;
+        iCyc    = *pstBurst / 256 / 256;
+    
+    } else if (*pstBurst > 256) {
+        stLcnt1 = 256;
+        stLcnt0 = *pstBurst / 256;
+        iCyc    = 1;
+        
+    } else {
+        stLcnt1 = *pstBurst;
+        stLcnt0 = 0;
+        iCyc    = 1;
+    }
+    
+    stSZLP    = emitLP(LW_TRUE, pucBuffer, 0, 0);
+    stSZBRST  = ldstBursts(LW_TRUE, pucBuffer, ulOption, ucPeri, 1);
+    stSZLPEND = emitLPEND(LW_TRUE, pucBuffer, ALWAYS, LW_FALSE, LW_FALSE, 0);
+    
+    if (stLcnt0) {
+        stSZLP    *= 2;
+        stSZLPEND *= 2;
+    }
+    
+    /*
+     * Max bursts that we can unroll due to limit on the
+     * size of backward jump that can be encoded in DMALPEND
+     * which is 8-bits and hence 255
+     */
+    iCycMax = (255 - (stSZLP + stSZLPEND)) / stSZBRST;
+    iCyc    = (iCycMax < iCyc) ? iCycMax : iCyc;
+    
+    stOff = 0;
+    
+    if (stLcnt0) {
+        stOff   += emitLP(bSizeOnly, &pucBuffer[stOff], 0, (UINT8)stLcnt0);
+        stLjmp0  = stOff;
+    }
+    
+    stOff   += emitLP(bSizeOnly, &pucBuffer[stOff], 1, (UINT8)stLcnt1);
+    stLjmp1  = stOff;
+    
+    stOff += ldstBursts(bSizeOnly, &pucBuffer[stOff], ulOption, ucPeri, iCyc);
+    stOff += emitLPEND(bSizeOnly, &pucBuffer[stOff], ALWAYS, 
+                       LW_FALSE, LW_TRUE, (UINT8)(stOff - stLjmp1));
+    
+    if (stLcnt0) {
+        stOff += emitLPEND(bSizeOnly, &pucBuffer[stOff], ALWAYS, 
+                           LW_FALSE, LW_FALSE, (UINT8)(stOff - stLjmp0));
+    }
+    
+    *pstBurst = stLcnt1 * iCyc;
+    if (stLcnt0) {
+        *pstBurst *= stLcnt0;
+    }
+    
+    return  (stOff);
+}
+/*********************************************************************************************************
+** 函数名称: ldstSetupLoop
+** 功能描述: 设置循环传输指令
+** 输　入  : bSizeOnly     是否只返回大小
+**           pucBuffer     指令缓存
+**           pstBurst      传输数据大小
+**           pdmatMsg      传输控制信息
+** 输　出  : 指令长度
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE size_t ldstSetupLoop (BOOL bSizeOnly, UINT8 *pucBuffer, 
+                                       UINT32   uiCcr, PLW_DMA_TRANSACTION  pdmatMsg)
+{
+    size_t  stOff;
+    size_t  stCur;
+    size_t  stBurst = BYTE_TO_BURST(pdmatMsg->DMAT_stDataBytes, uiCcr);
+    
+    stOff = 0;
+    
+    while (stBurst) {
+        stCur    = stBurst;
+        stOff   += ldstLoop(bSizeOnly, &pucBuffer[stOff], &stCur, 
+                            pdmatMsg->DMAT_ulOption, (UINT8)pdmatMsg->DMAT_iHwReqNum);
+        stBurst -= stCur;
+    }
+    
+    return  (stOff);
+}
+/*********************************************************************************************************
 ** 函数名称: armDmaPl330Get
 ** 功能描述: 获取一个 PL330 控制器
 ** 输　入  : uiChan        通道号
@@ -821,11 +1161,78 @@ static VOID  armDmaPl330Reset (UINT  uiChan, PLW_DMA_FUNCS  pdmafuncs)
 {
     DMAC_PL330  *pl330;
     UINT         uiInnerChan;
+    UINT32       uiCs;
+    UINT8        ucInsn[6] = {0, 0, 0, 0, 0, 0};
     
     pl330 = armDmaPl330Get(uiChan, &uiInnerChan);
     if (pl330 == LW_NULL) {
         return;
     }
+    
+    uiCs  = PL330_CS(pl330->PL330_ulBase, uiInnerChan);
+    uiCs &= 0xF;
+    
+    if ((uiCs == DS_ST_STOP) ||
+        (uiCs == DS_ST_CMPLT) ||
+        (uiCs == DS_ST_KILL)) {
+        return;
+    }
+    
+    emitKILL(LW_FALSE, ucInsn);
+    
+    PL330_INTEN(pl330->PL330_ulBase) &= ~(1 << uiInnerChan);            /*  禁止事件中断                */
+    
+    executeDBGINSN(pl330, ucInsn, uiInnerChan, LW_FALSE);               /*  只停止一个通道即可          */
+}
+/*********************************************************************************************************
+** 函数名称: armDmaPl330Trigger
+** 功能描述: PL330 控制器触发一次传输
+** 输　入  : pl330         DMAC
+**           uiInnerChan   内部通道
+**           uiCcr         预处理后的传输控制字
+**           pdmatMsg      传输控制信息
+** 输　出  : 是否传输成功
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  armDmaPl330Trigger (DMAC_PL330          *pl330, 
+                                UINT                 uiInnerChan, 
+                                UINT32               uiCcr,
+                                PLW_DMA_TRANSACTION  pdmatMsg)
+{
+    size_t  stOff     = 0;
+    UINT8  *pucBuffer = pl330->PL330_ucCode[uiInnerChan];
+    UINT8   ucInsn[6] = {0, 0, 0, 0, 0, 0};
+    
+    stOff += emitMOV(LW_FALSE, &pucBuffer[stOff], CCR, uiCcr);
+    stOff += emitMOV(LW_FALSE, &pucBuffer[stOff], SAR, (UINT32)pdmatMsg->DMAT_pucSrcAddress);
+    stOff += emitMOV(LW_FALSE, &pucBuffer[stOff], DAR, (UINT32)pdmatMsg->DMAT_pucDestAddress);
+    
+    stOff += ldstSetupLoop(LW_FALSE, &pucBuffer[stOff], uiCcr, pdmatMsg);
+    
+    stOff += emitSEV(LW_FALSE, &pucBuffer[stOff], (UINT8)uiInnerChan);  /*  传输完成, 产生事件          */
+    stOff += emitEND(LW_FALSE, &pucBuffer[stOff]);
+    
+    if (stOff >= ARM_DMA_PL330_PSZ) {
+        _DebugFormat(__ERRORMESSAGE_LEVEL, "DMA buffer overrun %zu!\r\n", stOff);
+        API_KernelReboot(LW_REBOOT_FORCE);
+        return  (ERROR_NONE);
+    }
+    
+    _DebugFormat(__LOGMESSAGE_LEVEL, "trigger DMA buffer used %zu bytes.\r\n", stOff);
+    
+#if LW_CFG_CACHE_EN > 0
+    API_CacheFlushPage(DATA_CACHE, (PVOID)pucBuffer, 
+                       (PVOID)pucBuffer, stOff);                        /*  将 DMA 指令写入内存         */
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
+    
+    emitGO(LW_FALSE, ucInsn, (UINT8)uiInnerChan, (UINT32)pucBuffer, LW_FALSE);
+    
+    PL330_INTEN(pl330->PL330_ulBase) |= (1 << uiInnerChan);             /*  允许事件中断                */
+    
+    executeDBGINSN(pl330, ucInsn, uiInnerChan, LW_TRUE);
+    
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: armDmaPl330Trans
@@ -843,6 +1250,7 @@ static INT  armDmaPl330Trans (UINT                 uiChan,
 {
     DMAC_PL330  *pl330;
     UINT         uiInnerChan;
+    UINT32       uiCcr = 0;
     
     pl330 = armDmaPl330Get(uiChan, &uiInnerChan);
     if (pl330 == LW_NULL) {
@@ -850,8 +1258,64 @@ static INT  armDmaPl330Trans (UINT                 uiChan,
         return  (PX_ERROR);
     }
     
+    switch (pdmatMsg->DMAT_iSrcAddrCtl) {
     
-    return  (ERROR_NONE);
+    case LW_DMA_ADDR_INC:
+        uiCcr |= CC_SRCINC;
+        break;
+        
+    case LW_DMA_ADDR_FIX:
+        break;
+        
+    default:
+        _ErrorHandle(ENOTSUP);
+        return  (PX_ERROR);
+    }
+    
+    switch (pdmatMsg->DMAT_iDestAddrCtl) {
+    
+    case LW_DMA_ADDR_INC:
+        uiCcr |= CC_DSTINC;
+        break;
+        
+    case LW_DMA_ADDR_FIX:
+        break;
+        
+    default:
+        _ErrorHandle(ENOTSUP);
+        return  (PX_ERROR);
+    }
+    
+    if (pdmatMsg->DMAT_ulOption & PL330_OPTION_SRCNS) {
+        uiCcr |= CC_SRCNS;
+    }
+    
+    if (pdmatMsg->DMAT_ulOption & PL330_OPTION_DSTNS) {
+        uiCcr |= CC_DSTNS;
+    }
+    
+    if (pdmatMsg->DMAT_ulOption & PL330_OPTION_SRCIA) {
+        uiCcr |= CC_SRCIA;
+    }
+    
+    if (pdmatMsg->DMAT_ulOption & PL330_OPTION_DSTIA) {
+        uiCcr |= CC_DSTIA;
+    }
+    
+    uiCcr |= (UINT32)pdmatMsg->DMAT_iTransMode;                         /*  设置猝发与 cache 控制       */
+    
+    switch (pdmatMsg->DMAT_ulOption & 0xf) {
+    
+    case PL330_OPTION_MEM2MEM:
+    case PL330_OPTION_MEM2MEM_NOBAR:
+    case PL330_OPTION_MEM2DEV:
+    case PL330_OPTION_DEV2MEM:
+        return  (armDmaPl330Trigger(pl330, uiInnerChan, uiCcr, pdmatMsg));
+        
+    default:
+        _ErrorHandle(ENOTSUP);
+        return  (PX_ERROR);
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: armDmaPl330Status
@@ -901,38 +1365,43 @@ static INT  armDmaPl330Status (UINT  uiChan, PLW_DMA_FUNCS  pdmafuncs)
 ** 功能描述: 插入一个 PL330 控制器
 ** 输　入  : ulBase        控制器基地址
 **           uiChanOft     通道号起始偏移量 (从 0  开始, 必须是 8 的整数倍)
-** 输　出  : 是否创建成功
+** 输　出  : PL330 句柄
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  armDmaPl330Add (addr_t  ulBase, UINT  uiChanOft)
+PVOID  armDmaPl330Add (addr_t  ulBase, UINT  uiChanOft)
 {
     INT          i;
     DMAC_PL330  *pl330;
     
-    if (uiChanOft & ~8) {
+    if (uiChanOft & 0x7) {
         _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+        return  (LW_NULL);
     }
     
     uiChanOft >>= 3;
     if (uiChanOft >= ARM_DMA_PL330_MAX) {
         _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
+        return  (LW_NULL);
     }
     
     pl330 = (DMAC_PL330 *)__SHEAP_ALLOC(sizeof(DMAC_PL330));
     if (pl330 == LW_NULL) {
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
-        return  (PX_ERROR);
+        return  (LW_NULL);
     }
     
     pl330->PL330_ulBase    = ulBase;
+    pl330->PL330_uiChanOft = uiChanOft;
+    
+    /*
+     *  XXX 是否可使用 API_VmmDmaAlloc ? 可减少回写 CACHE 操作.
+     */
     pl330->PL330_ucCode[0] = (UINT8 *)__SHEAP_ALLOC(ARM_DMA_PL330_CHANS * ARM_DMA_PL330_PSZ);
     if (pl330->PL330_ucCode[0] == LW_NULL) {
         __SHEAP_FREE(pl330);
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
-        return  (PX_ERROR);
+        return  (LW_NULL);
     }
     
     for (i = 1; i < ARM_DMA_PL330_CHANS; i++) {
@@ -941,7 +1410,37 @@ INT  armDmaPl330Add (addr_t  ulBase, UINT  uiChanOft)
     
     _G_pl330[uiChanOft] = pl330;
     
-    return  (ERROR_NONE);
+    return  ((PVOID)pl330);
+}
+/*********************************************************************************************************
+** 函数名称: armDmaPl330Isr
+** 功能描述: PL330 中断处理函数
+** 输　入  : pvPl330 DMAC
+** 输　出  : 中断返回值
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+irqreturn_t  armDmaPl330Isr (PVOID  pvPl330)
+{
+    DMAC_PL330  *pl330 = (DMAC_PL330 *)pvPl330;
+    INT          i;
+    UINT32       uiEvtStatus;
+    
+    if (pl330 == LW_NULL) {
+        return  (LW_IRQ_NONE);
+    }
+    
+    uiEvtStatus = PL330_ES(pl330->PL330_ulBase);
+    
+    for (i = 0; i < 8; i++) {
+        if (uiEvtStatus & (1 << i)) {
+            API_DmaContext(pl330->PL330_uiChanOft + i);                 /*  DMA 中断服务                */
+        }
+    }
+    
+    PL330_INTCLR(pl330->PL330_ulBase) = uiEvtStatus;
+
+    return  (LW_IRQ_HANDLED);
 }
 /*********************************************************************************************************
 ** 函数名称: armDmaPl330GetFuncs
@@ -965,6 +1464,7 @@ PLW_DMA_FUNCS  armDmaPl330GetFuncs (VOID)
 }
 
 #endif                                                                  /*  LW_CFG_DMA_EN > 0           */
+                                                                        /*  LW_CFG_ARM_PL330 > 0        */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

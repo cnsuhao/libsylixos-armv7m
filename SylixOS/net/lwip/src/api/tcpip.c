@@ -189,6 +189,7 @@ tcpip_input(struct pbuf *p, struct netif *inp)
 #if defined(SYLIXOS) && defined(LWIP_HOOK_LINK_INPUT) /* SylixOS add this */
   if (LWIP_HOOK_LINK_INPUT(p, inp)) {
     /* the packet has been eaten */
+    pbuf_free(p);
     return ERR_OK;
   }
 #endif /* SYLIXOS && LWIP_HOOK_TCPIP_INPUT */
@@ -211,6 +212,7 @@ tcpip_input(struct pbuf *p, struct netif *inp)
 #if defined(SYLIXOS) && defined(LWIP_HOOK_LINK_INPUT) /* SylixOS add this */
   if (LWIP_HOOK_LINK_INPUT(p, inp)) {
     /* the packet has been eaten */
+    pbuf_free(p);
     return ERR_OK;
   }
 #endif /* SYLIXOS && LWIP_HOOK_TCPIP_INPUT */

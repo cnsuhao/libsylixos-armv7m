@@ -550,7 +550,7 @@ extern int ip_input_hook(PVOID  pvPBuf, PVOID  pvNetif);
 #define LWIP_HOOK_IP4_INPUT             ip_input_hook
 
 /*********************************************************************************************************
-  lwip link input/output hook (for AF_PACKET)
+  lwip link input/output hook (for AF_PACKET and Net Defender)
 *********************************************************************************************************/
 
 extern int link_input_hook(PVOID  pvPBuf, PVOID  pvNetif);

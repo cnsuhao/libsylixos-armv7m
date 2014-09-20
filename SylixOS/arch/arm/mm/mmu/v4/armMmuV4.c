@@ -73,6 +73,7 @@
 #define ACCESS_FAIL         2                                           /*  2 号域                      */
 /*********************************************************************************************************
   地址检查选项 (Qt 里面用到了非对齐指令)
+  注 意: 如果使能地址对齐检查, GCC 编译必须加入 -mno-unaligned-access 选项 (不生成非对齐访问指令)
 *********************************************************************************************************/
 #define MMU_ALIGNFAULT_EN   0                                           /*  是否是能地址对齐检查        */
 /*********************************************************************************************************
@@ -353,7 +354,7 @@ static INT  armMmuGlobalInit (CPCHAR  pcMachineName)
     armMmuSetProcessId(0);
     
 #if MMU_ALIGNFAULT_EN > 0
-    armMmuEnableAlignFault();
+    armMmuEnableAlignFault();                                           /*  -mno-unaligned-access       */
 #else
     armMmuDisableAlignFault();
 #endif                                                                  /*  __MMU_ALIGNFAULT_EN > 0     */

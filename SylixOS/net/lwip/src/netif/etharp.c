@@ -441,7 +441,10 @@ etharp_send_ip(struct netif *netif, struct pbuf *p, struct eth_addr *src, struct
   LWIP_DEBUGF(ETHARP_DEBUG | LWIP_DBG_TRACE, ("etharp_send_ip: sending packet %p\n", (void *)p));
   
 #if defined(SYLIXOS) && defined(LWIP_HOOK_LINK_OUTPUT) /* SylixOS add this */
-  LWIP_HOOK_LINK_OUTPUT(p, netif);
+  if (LWIP_HOOK_LINK_OUTPUT(p, netif)) {
+    /* the packet has been eaten */
+    return ERR_IF;
+  }
 #endif /* SYLIXOS && LWIP_HOOK_TCPIP_INPUT */
   /* send the packet */
   return netif->linkoutput(netif, p);
@@ -856,7 +859,10 @@ etharp_arp_input(struct netif *netif, struct eth_addr *ethaddr, struct pbuf *p)
          are already correct, we tested that before */
 
 #if defined(SYLIXOS) && defined(LWIP_HOOK_LINK_OUTPUT) /* SylixOS add this */
-  LWIP_HOOK_LINK_OUTPUT(p, netif);
+      if (LWIP_HOOK_LINK_OUTPUT(p, netif)) {
+        /* the packet has been eaten */
+        break;
+      }
 #endif /* SYLIXOS && LWIP_HOOK_TCPIP_INPUT */
       /* return ARP reply */
       netif->linkoutput(netif, p);
@@ -1344,11 +1350,16 @@ etharp_raw(struct netif *netif, const struct eth_addr *ethsrc_addr,
   ETHADDR16_COPY(&ethhdr->src, ethsrc_addr);
 
 #if defined(SYLIXOS) && defined(LWIP_HOOK_LINK_OUTPUT) /* SylixOS add this */
-  LWIP_HOOK_LINK_OUTPUT(p, netif);
+  if (LWIP_HOOK_LINK_OUTPUT(p, netif)) {
+    result = ERR_IF;
+  } else
+#else
+  {
+    /* send ARP query */
+    result = netif->linkoutput(netif, p);
+    ETHARP_STATS_INC(etharp.xmit);
+  }
 #endif /* SYLIXOS && LWIP_HOOK_TCPIP_INPUT */
-  /* send ARP query */
-  result = netif->linkoutput(netif, p);
-  ETHARP_STATS_INC(etharp.xmit);
   /* free ARP query packet */
   pbuf_free(p);
   p = NULL;

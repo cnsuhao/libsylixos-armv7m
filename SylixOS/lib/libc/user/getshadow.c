@@ -496,7 +496,7 @@ char *getpass_r (const char *prompt, char *buffer, size_t buflen)
   }
   
   ioctl(STD_IN, FIOGETOPTIONS, &iOldOpt);
-  ioctl(STD_IN, FIOSETOPTIONS, (OPT_TERMINAL & ~OPT_ECHO));
+  ioctl(STD_IN, FIOSETOPTIONS, (OPT_TERMINAL & ~(OPT_ECHO | OPT_MON_TRAP)));
   
   if (prompt) {
     write(STD_OUT, prompt, lib_strlen(prompt));
