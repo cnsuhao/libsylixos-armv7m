@@ -51,6 +51,7 @@
 2014.05.21  notify parent 将信号同时发送给调试器.
 2014.05.31  加入退出模式的选择.
 2014.07.03  加入获取进程虚拟空间组的函数.
+2014.09.29  API_ModuleGetBase() 加入长度参数.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -1027,7 +1028,7 @@ static VOID  vprocSetFilesid (LW_LD_VPROC *pvproc, CPCHAR  pcFile)
 }
 /*********************************************************************************************************
 ** 函数名称: vprocPatchVerCheck
-** 功能描述: 检查进程补丁的版本, 如果没有则不允许运行 (补丁至少要是 1.3.0 版本)
+** 功能描述: 检查进程补丁的版本, 如果没有则不允许运行 (补丁至少要是 1.3.1 版本)
 ** 输　入  : pvproc      进程控制块
 ** 输　出  : 
 ** 全局变量:
@@ -1039,7 +1040,7 @@ static INT  vprocPatchVerCheck (LW_LD_VPROC *pvproc)
     PCHAR              pcVersion;
     ULONG              ulMajor = 0, ulMinor = 0, ulRevision = 0;
     
-    ULONG              ulLowVpVer = __SYLIXOS_MAKEVER(1, 3, 0);         /*  最低进程补丁版本要求        */
+    ULONG              ulLowVpVer = __SYLIXOS_MAKEVER(1, 3, 1);         /*  最低进程补丁版本要求        */
     ULONG              ulCurrent;
     
     pmodule   = _LIST_ENTRY(pvproc->VP_ringModules, LW_LD_EXEC_MODULE, EMOD_ringModules);
@@ -1063,7 +1064,7 @@ static INT  vprocPatchVerCheck (LW_LD_VPROC *pvproc)
     
 __bad_version:
     fprintf(stderr, "bad version of vprocess patch, "
-                    "the minimum version of vprocess patch MUST higher than 1.3.0\n");
+                    "the minimum version of vprocess patch MUST higher than 1.3.1\n");
     return  (PX_ERROR);
 }
 /*********************************************************************************************************
@@ -1234,7 +1235,7 @@ VOID  vprocTickHook (PLW_CLASS_TCB  ptcb, PLW_CLASS_CPU  pcpu)
     LW_LD_VPROC  *pvprocFather;
     
     if (ptcb && ptcb->TCB_pvVProcessContext) {
-        pvproc = (LW_LD_VPROC *)ptcb->TCB_pvVProcessContext;
+        pvproc = __LW_VP_GET_TCB_PROC(ptcb);
         if (pvproc) {
             if (pcpu->CPU_iKernelCounter) {
                 pvproc->VP_clockSystem++;
@@ -1251,6 +1252,10 @@ VOID  vprocTickHook (PLW_CLASS_TCB  ptcb, PLW_CLASS_CPU  pcpu)
             }
         }
     }
+    
+#if LW_CFG_PTIMER_EN > 0
+    vprocItimerHook(ptcb, pcpu);
+#endif                                                                  /*  LW_CFG_PTIMER_EN > 0        */
 }
 /*********************************************************************************************************
 ** 函数名称: vprocIoEnvGet
@@ -1798,13 +1803,14 @@ INT  API_ModuleAddr (PVOID   pvAddr,
 ** 输　入  : pid         进程id
 **           pcModPath   模块路径
 **           pulAddrBase 模块基地址
+**           pstLen      模块长度
 ** 输　出  : ERROR CODE
 ** 全局变量:
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API
-INT  API_ModuleGetBase (pid_t  pid, PCHAR  pcModPath, addr_t  *pulAddrBase)
+INT  API_ModuleGetBase (pid_t  pid, PCHAR  pcModPath, addr_t  *pulAddrBase, size_t  *pstLen)
 {
     LW_LD_EXEC_MODULE  *pmodule;
 
@@ -1814,7 +1820,13 @@ INT  API_ModuleGetBase (pid_t  pid, PCHAR  pcModPath, addr_t  *pulAddrBase)
         return  (PX_ERROR);
     }
 
-    *pulAddrBase = (addr_t)pmodule->EMOD_pvBaseAddr;
+    if (pulAddrBase) {
+        *pulAddrBase = (addr_t)pmodule->EMOD_pvBaseAddr;
+    }
+    
+    if (pstLen) {
+        *pstLen = pmodule->EMOD_stLen;
+    }
 
     return  (ERROR_NONE);
 }
@@ -1838,6 +1850,11 @@ ssize_t  vprocGetModsInfo (pid_t  pid, PCHAR  pcBuff, size_t stMaxLen)
     LW_LD_VPROC        *pvproc;
     LW_LD_EXEC_MODULE  *pmodTemp;
     size_t              stXmlLen;
+    
+    if (!pcBuff || !stMaxLen) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
 
     LW_LD_LOCK();
     pvproc = vprocGet(pid);

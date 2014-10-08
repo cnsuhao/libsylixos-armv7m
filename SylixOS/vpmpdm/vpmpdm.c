@@ -25,7 +25,7 @@
 #include "./loader/include/loader_lib.h" /* need _Unwind_Ptr */
 #endif /* LW_CFG_CPU_ARCH_ARM */
 
-#define __VP_PATCH_VERSION      "1.3.0" /* vp patch version */
+#define __VP_PATCH_VERSION      "1.3.1" /* vp patch version */
 
 #ifdef __GNUC__
 #if __GNUC__ < 2  || (__GNUC__ == 2 && __GNUC_MINOR__ < 5)

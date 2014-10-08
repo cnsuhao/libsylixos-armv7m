@@ -719,6 +719,7 @@ SylixOS/loader/src/loader_proc.c \
 SylixOS/loader/src/loader_shell.c \
 SylixOS/loader/src/loader_symbol.c \
 SylixOS/loader/src/loader_vppatch.c \
+SylixOS/loader/src/loader_vptimer.c \
 SylixOS/loader/src/loader_wait.c
 
 #*********************************************************************************************************
@@ -1112,7 +1113,6 @@ SylixOS/vpmpdm/vpmpdm_cpp.cpp \
 SylixOS/vpmpdm/vpmpdm_lm.c \
 SylixOS/vpmpdm/vpmpdm_start.c \
 SylixOS/vpmpdm/vpmpdm_stdio.c \
-SylixOS/vpmpdm/vpmpdm_timer.c \
 SylixOS/vpmpdm/vpmpdm.c
 
 #*********************************************************************************************************
@@ -1414,10 +1414,6 @@ $(OBJPATH)/SylixOS/vpmpdm/vpmpdm_start.o: ./SylixOS/vpmpdm/vpmpdm_start.c
 		$(COMPILE_PIC.c) $< -o $@
 
 $(OBJPATH)/SylixOS/vpmpdm/vpmpdm_stdio.o: ./SylixOS/vpmpdm/vpmpdm_stdio.c
-		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
-		$(COMPILE_PIC.c) $< -o $@
-
-$(OBJPATH)/SylixOS/vpmpdm/vpmpdm_timer.o: ./SylixOS/vpmpdm/vpmpdm_timer.c
 		@if [ ! -d "$(dir $@)" ]; then mkdir -p "$(dir $@)"; fi
 		$(COMPILE_PIC.c) $< -o $@
 

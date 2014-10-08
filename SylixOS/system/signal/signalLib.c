@@ -55,6 +55,7 @@
 2013.11.24  加入对 signalfd 功能的支持.
 2013.12.12  _sigGetLsb() 使用 archFindLsb() 寻找最需要递送的信号编号最小的信号.
 2014.06.01  遇到紧急停止信号, 进程将会被强制停止.
+2014.09.30  SA_SIGINFO 加入对信号上下文参数的传递, 由于解除阻塞运行的信号, 则信号上下文参数为 LW_NULL.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -485,7 +486,10 @@ static VOID  __sigReturn (PLW_CLASS_SIGCONTEXT  psigctx, PLW_CLASS_SIGCTLMSG  ps
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx, INT  iSigNo, struct siginfo *psiginfo)
+static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx, 
+                             INT                   iSigNo, 
+                             struct siginfo       *psiginfo, 
+                             PLW_CLASS_SIGCTLMSG   psigctlmsg)
 {
     REGISTER struct sigaction     *psigaction;
     
@@ -506,7 +510,8 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx, INT  iSigNo, struct 
         (vfuncHandle != SIG_DFL)) {
         
         if (psigaction->sa_flags & SA_SIGINFO) {
-            vfuncHandle(iSigNo, psiginfo, LW_NULL);                     /*  执行信号句柄                */
+            vfuncHandle(iSigNo, psiginfo, 
+                        psigctlmsg->SIGCTLMSG_pvStackRet);              /*  执行信号句柄                */
         } else {
             vfuncHandle(iSigNo);                                        /*  执行信号句柄                */
         }
@@ -568,7 +573,7 @@ static VOID  __sigShell (PLW_CLASS_SIGCTLMSG  psigctlmsg)
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_SIGNAL, MONITOR_EVENT_SIGNAL_SIGRUN, 
                       ptcbCur->TCB_ulId, iSigNo, psiginfo->si_code, LW_NULL);
     
-    __sigRunHandle(psigctx, iSigNo, psiginfo);                          /*  运行信号句柄                */
+    __sigRunHandle(psigctx, iSigNo, psiginfo, psigctlmsg);              /*  运行信号句柄                */
     
     __sigReturn(psigctx, psigctlmsg);                                   /*  信号返回                    */
 }
@@ -830,7 +835,7 @@ static BOOL _sigPendRunSelf (VOID)
             }
             
             __KERNEL_EXIT();                                            /*  退出内核                    */
-            __sigRunHandle(psigctx, iSigNo, &siginfo);                  /*  直接运行信号句柄            */
+            __sigRunHandle(psigctx, iSigNo, &siginfo, LW_NULL);         /*  直接运行信号句柄            */
             __KERNEL_ENTER();                                           /*  重新进入内核                */
             
             psigctx->SIGCTX_sigsetSigBlockMask = sigsetOld;

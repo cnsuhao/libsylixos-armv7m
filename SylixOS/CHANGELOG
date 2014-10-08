@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-09-29: han.hui
+    加入 __locale_mb_cur_max 函数声明, 实现在 libcextern 库中.
+
     2014-09-20: han.hui
     加入 ARM PL330 DMA 驱动程序.
 
@@ -563,6 +566,12 @@ HISTORY
     SylixOS 根目录中加入 CHANGELOG 文件.
     
 ++ Bugfixes:.
+
+    2014-10-08: han.hui
+    重新设计 itimer 定时器符合 POSIX 标准, 可提供 REAL / VIRTUAL / PROF 定时器功能.
+
+    2014-09-29: han.hui
+    API_ModuleGetBase 加入长度参数.
 
     2014-09-16: han.hui
     加入 _DebugFormat 带参数的调试输出接口.

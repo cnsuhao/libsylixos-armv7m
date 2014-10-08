@@ -193,6 +193,8 @@ typedef LW_GM_FILEOPERATIONS    *PLW_GM_FILEOPERATIONS;
 typedef struct {
     LW_DEV_HDR                  GMDEV_devhdrHdr;                        /*  IO 设备头                   */
     PLW_GM_FILEOPERATIONS       GMDEV_gmfileop;                         /*  设备操作函数集              */
+    ULONG                       GMDEV_ulMapFlags;                       /*  内存映射选项                */
+    PVOID                       GMDEV_pvReserved[8];                    /*  保留配置字                  */
     /*
      * ... (设备相关信息, 此结构体作为所有绘图函数的第一个参数)
      */

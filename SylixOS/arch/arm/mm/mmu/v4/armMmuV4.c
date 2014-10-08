@@ -107,7 +107,6 @@ static INT  armMmuFlags2Attr (ULONG ulFlag, UINT8  *pucAP, UINT8  *pucDomain, UI
         } else {
             *pucDomain = ACCESS_NOT_CHK;                                /*  非权限检查                  */
         }
-    
     } else {
         *pucDomain = ACCESS_FAIL;                                       /*  访问失效                    */
     }
@@ -121,19 +120,15 @@ static INT  armMmuFlags2Attr (ULONG ulFlag, UINT8  *pucAP, UINT8  *pucDomain, UI
     
     if (ulFlag & LW_VMM_FLAG_CACHEABLE &&
         ulFlag & LW_VMM_FLAG_BUFFERABLE) {                              /*  CACHE 与 BUFFER 控制        */
-        
         *pucCB = C_B;
         
     } else if (ulFlag & LW_VMM_FLAG_CACHEABLE) {
-               
         *pucCB = C_NB;
         
     } else if (ulFlag & LW_VMM_FLAG_BUFFERABLE) {
-               
         *pucCB = NC_B;
         
     } else {
-        
         *pucCB = NC_NB;
     }
     

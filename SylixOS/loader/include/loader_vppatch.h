@@ -125,6 +125,23 @@ INT                 vprocIoFileRefDecByPid(pid_t  pid, INT  iFd);
 
 VOID                vprocIoReclaim(pid_t  pid, BOOL  bIsExec);
 
+/*********************************************************************************************************
+  进程定时器
+*********************************************************************************************************/
+#if LW_CFG_PTIMER_EN > 0
+
+VOID                vprocItimerHook(PLW_CLASS_TCB  ptcb, PLW_CLASS_CPU  pcpu);
+
+INT                 vprocSetitimer(INT        iWhich, 
+                                   ULONG      ulCounter,
+                                   ULONG      ulInterval,
+                                   ULONG     *pulCounter,
+                                   ULONG     *pulInterval);
+INT                 vprocGetitimer(INT        iWhich, 
+                                   ULONG     *pulCounter,
+                                   ULONG     *pulInterval);
+
+#endif                                                                  /*  LW_CFG_PTIMER_EN > 0        */
 #endif                                                                  /*  __LOADER_SYMBOL_H           */
 /*********************************************************************************************************
   END

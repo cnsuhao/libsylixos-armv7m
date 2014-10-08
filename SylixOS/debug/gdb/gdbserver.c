@@ -1002,7 +1002,7 @@ static INT gdbGetElfOffset (pid_t   pid,
     PCHAR           pcBuf    = NULL;
     PCHAR           pcShName = NULL;
 
-    if (API_ModuleGetBase(pid, pcModPath, &addrBase) != (ERROR_NONE)) {
+    if (API_ModuleGetBase(pid, pcModPath, &addrBase, LW_NULL) != (ERROR_NONE)) {
         return  (PX_ERROR);
     }
 

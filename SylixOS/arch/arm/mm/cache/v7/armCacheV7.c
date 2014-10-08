@@ -457,11 +457,18 @@ VOID  armCacheV7Init (LW_CACHE_OP *pcacheop,
         pcacheop->CACHEOP_iILoc      = CACHE_LOCATION_VIPT;
         pcacheop->CACHEOP_iDLoc      = CACHE_LOCATION_PIPT;
         pcacheop->CACHEOP_iCacheLine = 64;
+        armAuxControlFeatureEnable(AUX_CTRL_A8_FORCE_ETM_CLK |
+                                   AUX_CTRL_A8_FORCE_MAIN_CLK |
+                                   AUX_CTRL_A8_L1NEON |
+                                   AUX_CTRL_A8_FORCE_NEON_CLK |
+                                   AUX_CTRL_A8_FORCE_NEON_SIGNAL);
     
     } else if (lib_strcmp(pcMachineName, ARM_MACHINE_A15) == 0) {
         pcacheop->CACHEOP_iILoc      = CACHE_LOCATION_PIPT;
         pcacheop->CACHEOP_iDLoc      = CACHE_LOCATION_PIPT;
         pcacheop->CACHEOP_iCacheLine = 64;
+        armAuxControlFeatureEnable(AUX_CTRL_A15_FORCE_MAIN_CLK |
+                                   AUX_CTRL_A15_FORCE_NEON_CLK);
     }
     
     uiArmV7CacheLineSize = (UINT32)pcacheop->CACHEOP_iCacheLine;

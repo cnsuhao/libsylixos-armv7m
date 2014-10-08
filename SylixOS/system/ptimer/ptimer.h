@@ -50,12 +50,6 @@ LW_API INT          nanosleep(const struct timespec  *rqtp, struct timespec  *rm
 
 #if LW_CFG_PTIMER_EN > 0
 
-LW_API INT          setitimer(INT iWhich, const struct itimerval *pitValue, struct itimerval *pitOld);
-LW_API INT          getitimer(INT iWhich, struct itimerval *pitValue);
-
-LW_API UINT         alarm(UINT  uiSeconds);
-LW_API useconds_t   ualarm(useconds_t usec, useconds_t usecInterval);
-
 LW_API INT          timer_create(clockid_t  clockid, struct sigevent *sigeventT, timer_t *ptimer);
 LW_API INT          timer_delete(timer_t  timer);
 LW_API INT          timer_gettime(timer_t  timer, struct itimerspec  *ptvTime);
@@ -63,7 +57,21 @@ LW_API INT          timer_getoverrun(timer_t  timer);
 LW_API INT          timer_settime(timer_t  timer, INT  iFlag, 
                                   const struct itimerspec *ptvNew,
                                   struct itimerspec       *ptvOld);
-                                
+
+/*********************************************************************************************************
+  posix 进程定时器
+*********************************************************************************************************/
+
+#if LW_CFG_MODULELOADER_EN > 0
+
+LW_API INT          setitimer(INT iWhich, const struct itimerval *pitValue, struct itimerval *pitOld);
+LW_API INT          getitimer(INT iWhich, struct itimerval *pitValue);
+
+LW_API UINT         alarm(UINT  uiSeconds);
+LW_API useconds_t   ualarm(useconds_t usec, useconds_t usecInterval);
+
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+
 /*********************************************************************************************************
   posix 定时器内部扩展接口
 *********************************************************************************************************/

@@ -79,20 +79,22 @@
 #define  SIGTTOU               22                                       /*  后台进程请求输出            */
 #define  SIGCANCEL             SIGTERM
 
+#define  SIGIO                 23
+#define  SIGXCPU               24                                       /*  exceeded CPU time limit     */
+#define  SIGXFSZ               25                                       /*  exceeded file size limit    */
+#define  SIGVTALRM             26                                       /*  virtual time alarm          */
+#define  SIGPROF               27                                       /*  profiling time alarm        */
+#define  SIGWINCH              28                                       /*  window size changes         */
+#define  SIGINFO               29                                       /*  information request         */
+#define  SIGPOLL               SIGIO                                    /*  pollable event              */
+
 #define  SIGUSR1               30                                       /*  user defined signal 1       */
 #define  SIGUSR2               31                                       /*  user defined signal 2       */
 
-#define  SIGPOLL               32                                       /*  pollable event              */
-#define  SIGPROF               33                                       /*  profiling timer expired     */
+#define  SIGPWR                33                                       /*  Power failure restart-Sys V */
 #define  SIGSYS                34                                       /*  bad system call             */
 #define  SIGURG                35                                       /*  high bandwidth data is      */
                                                                         /*  available at socket         */
-#define  SIGVTALRM             36                                       /*  virtual timer expired       */
-#define  SIGXCPU               37                                       /*  CPU time limit exceeded     */
-#define  SIGXFSZ               38                                       /* file size time limit exceeded*/
-
-#define  SIGWINCH              41
-
 /*********************************************************************************************************
   实时信号范围
 *********************************************************************************************************/

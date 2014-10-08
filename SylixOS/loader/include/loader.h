@@ -112,7 +112,8 @@ LW_API INT      API_ModuleTimes(PVOID    pvVProc,
                                                                         
 LW_API INT      API_ModuleGetBase(pid_t   pid, 
                                   PCHAR   pcModPath, 
-                                  addr_t *pulAddrBase);                 /*  获得模块装载基地址          */
+                                  addr_t *pulAddrBase,
+                                  size_t *pstLen);                      /*  获得模块装载基地址          */
                                                                         
 #define moduleRun           API_ModuleRun
 #define moduleRunEx         API_ModuleRunEx

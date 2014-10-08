@@ -27,6 +27,7 @@
 2011.08.02  加入对 mmap 的支持.
 2011.11.09  加入 GMFO_pfuncIoctl 接口, 以支持驱动程序的更多功能.
 2014.07.05  加入 LW_GM_GET_PHYINFO 可以获取显示物理特征.
+2014.09.29  允许驱动程序指定内存映射属性.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -225,7 +226,7 @@ static INT   __gmemMmap (PLW_GM_DEVICE  pgmdev, PLW_DEV_MMAP_AREA  pdmap)
     ulPhysical += (addr_t)(pdmap->DMAP_offPages * LW_CFG_VMM_PAGE_SIZE);
     
     if (API_VmmRemapArea(pdmap->DMAP_pvAddr, (PVOID)ulPhysical, 
-                         pdmap->DMAP_stLen, LW_VMM_FLAG_DMA, 
+                         pdmap->DMAP_stLen, pgmdev->GMDEV_ulMapFlags, 
                          LW_NULL, LW_NULL)) {                           /*  将物理显存映射到虚拟内存    */
         return  (PX_ERROR);
     }
@@ -271,6 +272,10 @@ INT   API_GMemDevAdd (CPCHAR  cpcName, PLW_GM_DEVICE  pgmdev)
         !pgmdev->GMDEV_gmfileop->GMFO_pfuncGetScrInfo) {
         _ErrorHandle(ENOSYS);
         return  (PX_ERROR);
+    }
+    
+    if (pgmdev->GMDEV_ulMapFlags == 0ul) {
+        pgmdev->GMDEV_ulMapFlags =  LW_VMM_FLAG_DMA;
     }
     
     if (iosDevAddEx((PLW_DEV_HDR)pgmdev, cpcName, iGMemDrvNum, DT_CHR) != 

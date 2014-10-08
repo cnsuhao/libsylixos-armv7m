@@ -34,6 +34,7 @@
 2013.05.05  sleep 与 nanosleep 判断调度器返回值, 决定是重启调用还是退出.
 2013.10.08  加入 setitimer 与 getitimer 函数.
 2013.11.20  支持 timerfd 功能.
+2014.09.29  加入对 ITIMER_VIRTUAL 与 ITIMER_PROF 支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -43,6 +44,9 @@
 *********************************************************************************************************/
 #if LW_CFG_PTIMER_EN > 0
 #include "sys/time.h"
+#if LW_CFG_MODULELOADER_EN > 0
+#include "../SylixOS/loader/include/loader_vppatch.h"
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 /*********************************************************************************************************
   内部函数声明
 *********************************************************************************************************/
@@ -50,213 +54,6 @@ static VOID  __ptimerCallback(LW_OBJECT_ID  ulTimer);
 #if LW_CFG_PTIMER_AUTO_DEL_EN > 0
 static VOID  __ptimerThreadDeleteHook(LW_OBJECT_HANDLE  ulId);
 #endif                                                                  /*  LW_CFG_PTIMER_AUTO_DEL_EN   */
-/*********************************************************************************************************
-  内部变量
-*********************************************************************************************************/
-static LW_OBJECT_HANDLE     _G_ulAlarmTimerHandle = LW_OBJECT_HANDLE_INVALID;
-/*********************************************************************************************************
-  创建内部定时器
-*********************************************************************************************************/
-#define __ALARM_TIMER_CREATE() \
-        if (_G_ulAlarmTimerHandle == 0) { \
-            if (timer_create(CLOCK_REALTIME, LW_NULL, \
-                             &_G_ulAlarmTimerHandle) != ERROR_NONE) { \
-                return  (PX_ERROR); \
-            } \
-        }
-#endif                                                                  /*  LW_CFG_PTIMER_EN            */
-/*********************************************************************************************************
-** 函数名称: sleep 
-** 功能描述: sleep()会令目前的线程暂停，直到达到参数 uiSeconds 所指定的时间，或是被信号所中断。(POSIX)
-** 输　入  : uiSeconds         睡眠的秒数
-** 输　出  : 若进程暂停到参数 uiSeconds 所指定的时间则返回 0，若有信号中断则返回剩余秒数。
-
-             error == EINTR    表示被信号激活.
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-                                           
-                                       (不得在中断中调用)
-*********************************************************************************************************/
-LW_API  
-UINT  sleep (UINT    uiSeconds)
-{
-             INTREG                iregInterLevel;
-             
-             PLW_CLASS_TCB         ptcbCur;
-    REGISTER PLW_CLASS_PCB         ppcb;
-	REGISTER ULONG                 ulKernelTime;
-	         INT                   iSchedRet;
-	         
-	         ULONG                 ulTick = (ULONG)(uiSeconds * LW_CFG_TICKS_PER_SEC);
-    
-    if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
-        _ErrorHandle(ERROR_KERNEL_IN_ISR);
-        return  (0);
-    }
-    
-__wait_again:
-    if (!ulTick) {                                                      /*  不进行延迟                  */
-        return  (0);
-    }
-    
-    __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
-    
-    LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
-    
-    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLEEP, 
-                      ptcbCur->TCB_ulId, ulTick, LW_NULL);
-    
-    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核                    */
-    
-    ppcb = _GetPcb(ptcbCur);
-    __DEL_FROM_READY_RING(ptcbCur, ppcb);                               /*  从就绪表中删除              */
-    
-    ptcbCur->TCB_ulDelay = ulTick;
-    __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
-    
-    __KERNEL_TIME_GET(ulKernelTime, ULONG);                             /*  记录系统时间                */
-    
-    iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
-    if (iSchedRet == LW_SIGNAL_EINTR) {
-        ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        uiSeconds = (UINT)(ulTick / LW_CFG_TICKS_PER_SEC);
-        
-        _ErrorHandle(EINTR);                                            /*  被信号激活                  */
-        return  (uiSeconds);                                            /*  剩余秒数                    */
-        
-    } else if (iSchedRet == LW_SIGNAL_RESTART) {
-        ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        goto    __wait_again;
-    }
-    
-    return  (0);
-}
-/*********************************************************************************************************
-** 函数名称: nanosleep 
-** 功能描述: 使调用此函数的线程睡眠一个指定的时间, 睡眠过程中可能被信号惊醒!!! (POSIX)
-** 输　入  : rqtp         睡眠的时间
-**           rmtp         保存剩余时间的结构.
-** 输　出  : ERROR_NONE  or  PX_ERROR
-
-             error == EINTR    表示被信号激活.
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-                                           
-                                       (不得在中断中调用)
-*********************************************************************************************************/
-LW_API  
-INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
-{
-             INTREG                iregInterLevel;
-             
-             PLW_CLASS_TCB         ptcbCur;
-    REGISTER PLW_CLASS_PCB         ppcb;
-	REGISTER ULONG                 ulKernelTime;
-	REGISTER INT                   iRetVal;
-	         INT                   iSchedRet;
-	
-	REGISTER ULONG                 ulError;
-             ULONG                 ulTick;
-             
-    if (!rqtp) {                                                        /*  指定时间为空                */
-        _ErrorHandle(EINVAL);
-        return (PX_ERROR);
-    }
-    if (rqtp->tv_nsec >= __TIMEVAL_NSEC_MAX) {                          /*  时间格式错误                */
-        _ErrorHandle(EINVAL);
-        return (PX_ERROR);
-    }
-    
-    ulTick = __timespecToTick((struct timespec *)rqtp);
-    if (!ulTick) {
-        ulTick = 1;                                                     /*  至少延迟一个 tick           */
-    }
-    
-__wait_again:
-    if (!ulTick) {                                                      /*  不进行延迟                  */
-        return  (ERROR_NONE);
-    }
-    
-    __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
-    
-    LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
-    
-    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLEEP, 
-                      ptcbCur->TCB_ulId, ulTick, LW_NULL);
-    
-    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核                    */
-    
-    ppcb = _GetPcb(ptcbCur);
-    __DEL_FROM_READY_RING(ptcbCur, ppcb);                               /*  从就绪表中删除              */
-    
-    ptcbCur->TCB_ulDelay = ulTick;
-    __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
-    
-    __KERNEL_TIME_GET(ulKernelTime, ULONG);                             /*  记录系统时间                */
-    
-    iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
-    if (iSchedRet == LW_SIGNAL_EINTR) {
-        iRetVal =  PX_ERROR;                                            /*  被信号激活                  */
-        ulError =  EINTR;
-    
-    } else if (iSchedRet == LW_SIGNAL_RESTART) {
-        ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        goto    __wait_again;
-    
-    } else {
-        iRetVal =  ERROR_NONE;                                          /*  自然唤醒                    */
-        ulError =  ERROR_NONE;
-    }
-    
-    if (rmtp) {
-        ULONG           ulTimeTemp;
-        
-        struct timespec tvNow;
-        struct timespec tvThen;
-        
-        __KERNEL_TIME_GET(ulTimeTemp, ULONG);                           /*  记录系统时间                */
-        
-        __tickToTimespec(ulKernelTime, &tvThen);                        /*  等待前的时间                */
-        __tickToTimespec(ulTimeTemp,   &tvNow);                         /*  等待后的时间                */
-    
-        __timespecSub(&tvNow, &tvThen);                                 /*  计算时间差                  */
-        
-        if (__timespecLeftTime(&tvNow, (struct timespec *)rqtp)) {      /*  是否存在差别                */
-            *rmtp = *rqtp;
-            __timespecSub(rmtp, &tvNow);                                /*  计算时间偏差                */
-        } else {
-            rmtp->tv_sec  = 0;                                          /*  不存在时间差别              */
-            rmtp->tv_nsec = 0;
-        }
-    }
-             
-    _ErrorHandle(ulError);                                              /*  设置 errno 值               */
-    return  (iRetVal);
-}
-/*********************************************************************************************************
-** 函数名称: usleep 
-** 功能描述: 使调用此函数的线程睡眠一个指定的时间(us 为单位), 睡眠过程中可能被信号惊醒!!! (POSIX)
-** 输　入  : usecondTime       时间 (us)
-** 输　出  : ERROR_NONE  or  PX_ERROR
-             error == EINTR    表示被信号激活.
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-                                           
-                                       (不得在中断中调用)
-*********************************************************************************************************/
-LW_API  
-INT  usleep (usecond_t   usecondTime)
-{
-    struct timespec ts;
-
-    ts.tv_sec  = (time_t)(usecondTime / 1000000);
-    ts.tv_nsec = (LONG)(usecondTime % 1000000) * 1000ul;
-    
-    return  (nanosleep(&ts, LW_NULL));
-}
 /*********************************************************************************************************
 ** 函数名称: __ptimerHookInstall
 ** 功能描述: 定时器任务删除回调安装
@@ -289,8 +86,6 @@ static VOID __ptimerHookInstall (VOID)
                                            
                                        (不得在中断中调用)
 *********************************************************************************************************/
-#if LW_CFG_PTIMER_EN > 0
-
 LW_API  
 INT  timer_create (clockid_t  clockid, struct sigevent *sigeventT, timer_t *ptimer)
 {
@@ -785,43 +580,41 @@ static VOID  __ptimerThreadDeleteHook (LW_OBJECT_HANDLE  ulId)
                                            
                                        (不得在中断中调用)
 *********************************************************************************************************/
+#if LW_CFG_MODULELOADER_EN > 0
+
 LW_API  
 INT  setitimer (INT                     iWhich, 
                 const struct itimerval *pitValue,
                 struct itimerval       *pitOld)
 {
-    struct itimerspec   tvNew;
-    struct itimerspec   tvOld;
+    ULONG      ulCounter;
+    ULONG      ulInterval;
+    ULONG      ulGetCounter;
+    ULONG      ulGetInterval;
+    INT        iError;
     
-    __ALARM_TIMER_CREATE();
-    
-    if (iWhich != ITIMER_REAL) {
-        _ErrorHandle(ENOSYS);
+    if ((iWhich != ITIMER_REAL)    &&
+        (iWhich != ITIMER_VIRTUAL) &&
+        (iWhich != ITIMER_PROF)) {
+        _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
     
     if (pitValue) {
-        tvNew.it_interval.tv_sec  = pitValue->it_interval.tv_sec;
-        tvNew.it_interval.tv_nsec = pitValue->it_interval.tv_usec * 1000;
-        
-        tvNew.it_value.tv_sec  = pitValue->it_value.tv_sec;
-        tvNew.it_value.tv_nsec = pitValue->it_value.tv_usec * 1000;
-        
-        timer_settime(_G_ulAlarmTimerHandle, 0, &tvNew, &tvOld);
-        
-    } else if (pitOld) {
-        timer_gettime(_G_ulAlarmTimerHandle, &tvOld);
+        ulCounter  = __timevalToTick(&pitValue->it_value);
+        ulInterval = __timevalToTick(&pitValue->it_interval);
+        iError = vprocSetitimer(iWhich, ulCounter, ulInterval,
+                                &ulGetCounter, &ulGetInterval);
+    } else {
+        iError = vprocGetitimer(iWhich, &ulGetCounter, &ulGetInterval);
     }
     
-    if (pitOld) {
-        pitOld->it_interval.tv_sec  = tvOld.it_interval.tv_sec;
-        pitOld->it_interval.tv_usec = tvOld.it_interval.tv_nsec / 1000;
-        
-        pitOld->it_value.tv_sec  = tvOld.it_value.tv_sec;
-        pitOld->it_value.tv_usec = tvOld.it_value.tv_nsec / 1000;
+    if ((iError == ERROR_NONE) && pitOld) {
+        __tickToTimeval(ulGetCounter,  &pitOld->it_value);
+        __tickToTimeval(ulGetInterval, &pitOld->it_interval);
     }
     
-    return  (ERROR_NONE);
+    return  (iError);
 }
 /*********************************************************************************************************
 ** 函数名称: setitimer
@@ -838,26 +631,24 @@ INT  setitimer (INT                     iWhich,
 LW_API  
 INT  getitimer (INT iWhich, struct itimerval *pitValue)
 {
-    struct itimerspec   tvOld;
-
-    __ALARM_TIMER_CREATE();
+    ULONG      ulGetCounter;
+    ULONG      ulGetInterval;
+    INT        iError;
     
-    if (iWhich != ITIMER_REAL) {
-        _ErrorHandle(ENOSYS);
+    if ((iWhich != ITIMER_REAL)    &&
+        (iWhich != ITIMER_VIRTUAL) &&
+        (iWhich != ITIMER_PROF)) {
+        _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
     
-    if (pitValue) {
-        timer_gettime(_G_ulAlarmTimerHandle, &tvOld);
-        
-        pitValue->it_interval.tv_sec  = tvOld.it_interval.tv_sec;
-        pitValue->it_interval.tv_usec = tvOld.it_interval.tv_nsec / 1000;
-        
-        pitValue->it_value.tv_sec  = tvOld.it_value.tv_sec;
-        pitValue->it_value.tv_usec = tvOld.it_value.tv_nsec / 1000;
+    iError = vprocGetitimer(iWhich, &ulGetCounter, &ulGetInterval);
+    if ((iError == ERROR_NONE) && pitValue) {
+        __tickToTimeval(ulGetCounter,  &pitValue->it_value);
+        __tickToTimeval(ulGetInterval, &pitValue->it_interval);
     }
     
-    return  (ERROR_NONE);
+    return  (iError);
 }
 /*********************************************************************************************************
 ** 函数名称: alarm
@@ -915,6 +706,8 @@ useconds_t ualarm (useconds_t usec, useconds_t usecInterval)
     return  ((useconds_t)(tvOld.it_value.tv_sec * __TIMEVAL_USEC_MAX) + 
              (useconds_t)tvOld.it_value.tv_usec);
 }
+
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 #endif                                                                  /*  LW_CFG_PTIMER_EN > 0        */
 /*********************************************************************************************************
   END

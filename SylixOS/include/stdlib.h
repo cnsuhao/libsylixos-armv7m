@@ -36,6 +36,8 @@ extern "C" {
 extern size_t __mb_cur_max;                                             /*  需要C外部库支持             */
 #define	MB_CUR_MAX	__mb_cur_max
 
+__LW_RETU_FUNC_DECLARE(int, __locale_mb_cur_max, (void))                /*  需要C外部库支持             */
+
 typedef lib_div_t   div_t;
 typedef lib_ldiv_t  ldiv_t;
 typedef lib_lldiv_t lldiv_t;
