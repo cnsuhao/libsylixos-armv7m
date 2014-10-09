@@ -101,6 +101,7 @@
 #  define FUNC_DEF(func)  \
         .code   32; \
         .balign 4;  \
+        .type func, %function   \
 func:
 
 #  define FUNC_END()    \

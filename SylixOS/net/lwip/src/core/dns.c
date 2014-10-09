@@ -1083,7 +1083,6 @@ dns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, ip_addr_t *addr, u16_t 
             /* deallocate memory and return */
             goto memerr;
           } else {
-            /* sylixos fixed */
             res_idx += SIZEOF_DNS_ANSWER + htons(ans.len);
           }
           --nanswers;
