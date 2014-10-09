@@ -1353,13 +1353,13 @@ etharp_raw(struct netif *netif, const struct eth_addr *ethsrc_addr,
   if (LWIP_HOOK_LINK_OUTPUT(p, netif)) {
     result = ERR_IF;
   } else
-#else
+#endif /* SYLIXOS && LWIP_HOOK_TCPIP_INPUT */
   {
     /* send ARP query */
     result = netif->linkoutput(netif, p);
     ETHARP_STATS_INC(etharp.xmit);
   }
-#endif /* SYLIXOS && LWIP_HOOK_TCPIP_INPUT */
+
   /* free ARP query packet */
   pbuf_free(p);
   p = NULL;

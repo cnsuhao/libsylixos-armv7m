@@ -557,6 +557,7 @@ INT  API_INetTftpReceive (CPCHAR  pcRemoteHost, CPCHAR  pcFileName, CPCHAR  pcLo
     }
     
     if (!inet_aton(pcRemoteHost, &inaddrRemote)) {
+        hints.ai_family = AF_UNSPEC;
         getaddrinfo(pcRemoteHost, LW_NULL, &hints, &phints);            /*  域名解析                    */
         if (phints == LW_NULL) {
             _ErrorHandle(EHOSTUNREACH);
@@ -637,6 +638,7 @@ INT  API_INetTftpSend (CPCHAR  pcRemoteHost, CPCHAR  pcFileName, CPCHAR  pcLocal
     }
     
     if (!inet_aton(pcRemoteHost, &inaddrRemote)) {
+        hints.ai_family = AF_UNSPEC;
         getaddrinfo(pcRemoteHost, LW_NULL, &hints, &phints);            /*  域名解析                    */
         if (phints == LW_NULL) {
             _ErrorHandle(EHOSTUNREACH);

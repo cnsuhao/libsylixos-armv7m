@@ -380,22 +380,27 @@ static INT  __tshellPing (INT  iArgC, PCHAR  *ppcArgV)
         {
             ULONG  iOptionNoAbort;
             ULONG  iOption;
+            
             ioctl(STD_IN, FIOGETOPTIONS, &iOption);
             iOptionNoAbort = (iOption & ~OPT_ABORT);
             ioctl(STD_IN, FIOSETOPTIONS, iOptionNoAbort);               /*  不允许 control-C 操作       */
             
+            hints.ai_family = AF_INET;                                  /*  解析 IPv4 地址              */
             getaddrinfo(ppcArgV[1], LW_NULL, &hints, &phints);          /*  域名解析                    */
         
             ioctl(STD_IN, FIOSETOPTIONS, iOption);                      /*  回复原来状态                */
         }
+        
         if (phints == LW_NULL) {
             printf("Pinging request could not find host %s ."
                    "Please check the name and try again.\n\n", ppcArgV[1]);
             return  (-ERROR_TSHELL_EPARAM);
+        
         } else {
             if (phints->ai_addr->sa_family == AF_INET) {                /*  获得网络地址                */
                 inaddr = ((struct sockaddr_in *)(phints->ai_addr))->sin_addr;
                 freeaddrinfo(phints);
+            
             } else {
                 freeaddrinfo(phints);
                 printf("Ping only support AF_INET domain!\n");

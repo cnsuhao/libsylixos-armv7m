@@ -506,18 +506,22 @@ static INT  __tshellPing6 (INT  iArgC, PCHAR  *ppcArgV)
             iOptionNoAbort = (iOption & ~OPT_ABORT);
             ioctl(STD_IN, FIOSETOPTIONS, iOptionNoAbort);               /*  不允许 control-C 操作       */
             
+            hints.ai_family = AF_INET6;                                 /*  解析 IPv6 地址              */
             getaddrinfo(ppcArgV[1], LW_NULL, &hints, &phints);          /*  域名解析                    */
         
             ioctl(STD_IN, FIOSETOPTIONS, iOption);                      /*  回复原来状态                */
         }
+        
         if (phints == LW_NULL) {
             printf("Pinging request could not find host %s ."
                    "Please check the name and try again.\n\n", ppcArgV[1]);
             return  (-ERROR_TSHELL_EPARAM);
+        
         } else {
             if (phints->ai_addr->sa_family == AF_INET6) {               /*  获得网络地址                */
                 in6addr = ((struct sockaddr_in6 *)(phints->ai_addr))->sin6_addr;
                 freeaddrinfo(phints);
+            
             } else {
                 freeaddrinfo(phints);
                 printf("Ping6 only support AF_INET6 domain!\n");

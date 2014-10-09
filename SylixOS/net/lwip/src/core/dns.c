@@ -476,7 +476,7 @@ dns_lookup_local(const char *hostname)
 
 #if DNS_LOCAL_HOSTLIST_IS_DYNAMIC
 /** Remove all entries from the local host-list for a specific hostname
- * and/or IP addess
+ * and/or IP address
  *
  * @param hostname hostname for which entries shall be removed from the local
  *                 host-list
@@ -1083,7 +1083,8 @@ dns_recv(void *arg, struct udp_pcb *pcb, struct pbuf *p, ip_addr_t *addr, u16_t 
             /* deallocate memory and return */
             goto memerr;
           } else {
-            res_idx = SIZEOF_DNS_ANSWER + htons(ans.len);
+            /* sylixos fixed */
+            res_idx += SIZEOF_DNS_ANSWER + htons(ans.len);
           }
           --nanswers;
         }
@@ -1115,7 +1116,7 @@ memerr:
  *
  * @param name the hostname that is to be queried
  * @param hostnamelen length of the hostname
- * @param found a callback founction to be called on success, failure or timeout
+ * @param found a callback function to be called on success, failure or timeout
  * @param callback_arg argument to pass to the callback function
  * @return @return a err_t return code.
  */

@@ -567,6 +567,10 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-10-09: han.hui
+    修正 arp 发送 bug.
+    修正 dns 分析 bug.
+
     2014-10-08: han.hui
     重新设计 itimer 定时器符合 POSIX 标准, 可提供 REAL / VIRTUAL / PROF 定时器功能.
 
