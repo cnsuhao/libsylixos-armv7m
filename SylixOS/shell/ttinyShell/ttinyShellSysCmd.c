@@ -59,6 +59,7 @@
 2013.08.27  加入 monitor 命令.
 2013.09.30  加入 lspci 命令.
 2014.07.11  加入 color 命令.
+2014.10.10  help 命令支持通配符匹配.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -78,6 +79,9 @@
 *********************************************************************************************************/
 #include "../SylixOS/shell/ttinyVar/ttinyVarLib.h"
 #include "../SylixOS/posix/include/px_resource.h"
+#if LW_CFG_POSIX_EN > 0
+#include "fnmatch.h"
+#endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
 /*********************************************************************************************************
 ** 函数名称: __tshellSysCmdArgs
 ** 功能描述: 系统命令 "args"
@@ -118,6 +122,35 @@ static INT  __tshellSysCmdEcho (INT  iArgC, PCHAR  ppcArgV[])
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __helpPrintKeyword
+** 功能描述: 打印一个系统内建关键字信息
+** 输　入  : pskwNode      关键字
+**           bDetails      是否打印详细信息
+** 输　出  : 0
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __helpPrintKeyword (__PTSHELL_KEYWORD  pskwNode, BOOL  bDetails)
+{
+    if (bDetails && pskwNode->SK_pcHelpString) {
+        printf("%s", pskwNode->SK_pcHelpString);                        /*  打印帮助信息                */
+    }
+
+    if (bDetails) {
+        printf("%s", pskwNode->SK_pcKeyword);                           /*  打印关键字队列              */
+    } else {
+        printf("%-20s", pskwNode->SK_pcKeyword);
+    }
+    
+    if (pskwNode->SK_pcFormatString) {
+        API_TShellColorStart("", "", S_IFREG | S_IEXEC, STD_OUT);
+        printf("%s", pskwNode->SK_pcFormatString);                      /*  打印格式信息                */
+        API_TShellColorEnd(STD_OUT);
+    }
+    
+    printf("\n");
+}
+/*********************************************************************************************************
 ** 函数名称: __tshellSysCmdHelp
 ** 功能描述: 系统命令 "help"
 ** 输　入  : iArgC         参数个数
@@ -138,19 +171,12 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
     __PTSHELL_KEYWORD       pskwNode[__SHELL_LINE_PER_SCREEN];
 
     if (iArgC == 1) {                                                   /*  需要显示所有信息            */
-        
         do {
             ulGetNum = __tshellKeywordList(pskwNodeStart,
                                            pskwNode,
                                            __SHELL_LINE_PER_SCREEN);
             for (i = 0; i < ulGetNum; i++) {
-                printf("%-20s", pskwNode[i]->SK_pcKeyword);             /*  打印关键字队列              */
-                if (pskwNode[i]->SK_pcFormatString) {
-                    API_TShellColorStart("", "", S_IFREG | S_IEXEC, STD_OUT);
-                    printf("%s", pskwNode[i]->SK_pcFormatString);       /*  打印格式信息                */
-                    API_TShellColorEnd(STD_OUT);
-                }
-                printf("\n");
+                __helpPrintKeyword(pskwNode[i], LW_FALSE);
             }
         
             if (ulGetNum == __SHELL_LINE_PER_SCREEN) {
@@ -162,10 +188,8 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
                 }
                 pskwNodeStart = pskwNode[__SHELL_LINE_PER_SCREEN - 1];
             }
-        
         } while ((ulGetNum == __SHELL_LINE_PER_SCREEN) && 
                  (pskwNodeStart != LW_NULL));
-
     } else {
         PCHAR   pcKeyword = LW_NULL;
     
@@ -181,20 +205,31 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
             return  (-1);
         }
         
-        if (ERROR_NONE == 
-            __tshellKeywordFind(pcKeyword, &pskwNode[0])) {
-            if (pskwNode[0]->SK_pcHelpString) {
-                printf("%s", pskwNode[0]->SK_pcHelpString);             /*  打印帮助信息                */
-                printf("%s", pskwNode[0]->SK_pcKeyword);                /*  打印关键字队列              */
-                if (pskwNode[0]->SK_pcFormatString) {
-                    API_TShellColorStart("", "", S_IFREG | S_IEXEC, STD_OUT);
-                    printf("%s", pskwNode[0]->SK_pcFormatString);       /*  打印格式信息                */
-                    API_TShellColorEnd(STD_OUT);
+        if (lib_strchr(pcKeyword, '*') ||
+            lib_strchr(pcKeyword, '?')) {                               /*  包含 shell 通配符           */
+
+#if LW_CFG_POSIX_EN > 0
+            INT     iRet;
+            do {
+                ulGetNum = __tshellKeywordList(pskwNodeStart,
+                                               pskwNode, 1);
+                if (ulGetNum) {
+                    iRet = fnmatch(pcKeyword, pskwNode[0]->SK_pcKeyword, FNM_PATHNAME);
+                    if (iRet == ERROR_NONE) {
+                        __helpPrintKeyword(pskwNode[0], LW_FALSE);
+                    }
+                    pskwNodeStart = pskwNode[0];
                 }
-                printf("\n");
-            } else {
-                return  (-ERROR_TSHELL_EKEYWORD);
-            }
+            } while (ulGetNum);
+#else
+            printf("sylixos do not have fnmatch().\n");
+            return  (-ERROR_TSHELL_EKEYWORD);
+#endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
+        } else if (ERROR_NONE == __tshellKeywordFind(pcKeyword, &pskwNode[0])) {
+            __helpPrintKeyword(pskwNode[0], LW_TRUE);
+            
+        } else {
+            return  (-ERROR_TSHELL_EKEYWORD);
         }
     }
     

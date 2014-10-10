@@ -60,6 +60,7 @@
 2013.04.01  修正 GCC 4.7.3 引发的新 warning.
 2013.06.24  加入对 vfat 卷标的支持.
 2014.05.30  加入查看文件夹大小的命令.
+2014.10.10  cp 命令将目标文件设置为与原始文件相同的 mode.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -920,6 +921,7 @@ __re_select:
 __error_handle:
     close(iFdSrc);
     if (iFdDst >= 0) {
+        fchmod(iFdDst, statFile.st_mode);                               /*  设置为与源文件相同的 mode   */
         close(iFdDst);
     }
     

@@ -493,27 +493,30 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx,
 {
     REGISTER struct sigaction     *psigaction;
     
-    REGISTER VOIDFUNCPTR           vfuncHandle;
+    REGISTER VOIDFUNCPTR           pfuncHandle;
+             PVOID                 pvCtx;
     
     __KERNEL_ENTER();                                                   /*  进入内核                    */
-    psigaction = &psigctx->SIGCTX_sigaction[__sigindex(iSigNo)];
-    
-    vfuncHandle = (VOIDFUNCPTR)psigaction->sa_handler;                  /*  获得信号执行函数句柄        */
+    psigaction  = &psigctx->SIGCTX_sigaction[__sigindex(iSigNo)];
+    pfuncHandle = (VOIDFUNCPTR)psigaction->sa_handler;                  /*  获得信号执行函数句柄        */
     
     if (psigaction->sa_flags & SA_ONESHOT) {                            /*  仅仅截获这一次信号          */
         psigaction->sa_handler = SIG_DFL;                               /*  进入默认处理                */
     }
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    if ((vfuncHandle != SIG_IGN) && 
-        (vfuncHandle != SIG_ERR) &&
-        (vfuncHandle != SIG_DFL)) {
+    if ((pfuncHandle != SIG_IGN) && 
+        (pfuncHandle != SIG_ERR) &&
+        (pfuncHandle != SIG_DFL)) {
+        pvCtx = (psigctlmsg) 
+              ? psigctlmsg->SIGCTLMSG_pvStackRet
+              : LW_NULL;
+              
+        if (psigaction->sa_flags & SA_SIGINFO) {                        /*  需要 siginfo_t 信息         */
+            pfuncHandle(iSigNo, psiginfo, pvCtx);                       /*  执行信号句柄                */
         
-        if (psigaction->sa_flags & SA_SIGINFO) {
-            vfuncHandle(iSigNo, psiginfo, 
-                        psigctlmsg->SIGCTLMSG_pvStackRet);              /*  执行信号句柄                */
         } else {
-            vfuncHandle(iSigNo);                                        /*  执行信号句柄                */
+            pfuncHandle(iSigNo, pvCtx);                                 /*  XXX 是否传入 pvCtx 参数 ?   */
         }
     
         if (__SIGNO_MUST_EXIT & __sigmask(iSigNo)) {                    /*  必须退出                    */
@@ -522,6 +525,7 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx,
         } else if (iSigNo == SIGCNCL) {                                 /*  线程取消信号                */
             __signalCnclHandle(iSigNo, psiginfo);
         }
+    
     } else {
         switch (iSigNo) {                                               /*  默认处理句柄                */
         
