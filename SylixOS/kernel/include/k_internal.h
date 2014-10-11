@@ -96,13 +96,13 @@ extern  __typeof (name) aliasname __attribute__ ((alias(#name)));
 *********************************************************************************************************/
 
 #define ker_malloc(size)                __KHEAP_ALLOC((size_t)(size))
-#define ker_zalloc(size)                __KHEAP_ZALLOC((size_t)(size));
+#define ker_zalloc(size)                __KHEAP_ZALLOC((size_t)(size))
 #define ker_free(p)                     __KHEAP_FREE((p))
 #define ker_realloc(p, new_size)        __KHEAP_REALLOC((p), (size_t)(new_size))
 #define ker_malloc_align(size, align)   __KHEAP_ALLOC_ALIGN((size_t)(size), (size_t)(align))
 
 #define sys_malloc(size)                __SHEAP_ALLOC((size_t)(size))
-#define sys_zalloc(size)                __SHEAP_ZALLOC((size_t)(size));
+#define sys_zalloc(size)                __SHEAP_ZALLOC((size_t)(size))
 #define sys_free(p)                     __SHEAP_FREE((p))
 #define sys_realloc(p, new_size)        __SHEAP_REALLOC((p), (size_t)(new_size))
 #define sys_malloc_align(size, align)   __SHEAP_ALLOC_ALIGN((size_t)(size), (size_t)(align))

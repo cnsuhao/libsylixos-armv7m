@@ -241,7 +241,7 @@ static ssize_t  __procFsProcMemRead (PLW_PROCFS_NODE  p_pfsn,
                     stTotalMem += (size_t)(ulPages * LW_CFG_VMM_PAGE_SIZE);
                 }
 #else
-                stTotalMem += (size_t)(pheapVpPatch->HEAP_ulTotalByteSize);
+                stTotalMem += (size_t)(pheapVpPatch->HEAP_stTotalByteSize);
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
             }
         }

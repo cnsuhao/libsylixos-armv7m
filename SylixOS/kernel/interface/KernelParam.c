@@ -68,19 +68,23 @@ ULONG  API_KernelStartParam (CPCHAR  pcParam)
                 _K_ulNCpus = (ULONG)iCpus;
             }
             
+#if LW_CFG_LOGMESSAGE_EN > 0
         } else if (lib_strncmp(pcTok, "kdlog=", 6) == 0) {              /*  是否使能内核 log 打印       */
             if (pcTok[6] == 'n') {
                 _K_pfuncKernelDebugLog = LW_NULL;
             } else {
                 _K_pfuncKernelDebugLog = bspDebugMsg;
             }
-            
+#endif                                                                  /*  LW_CFG_LOGMESSAGE_EN > 0    */
+
+#if LW_CFG_ERRORMESSAGE_EN > 0
         } else if (lib_strncmp(pcTok, "kderror=", 8) == 0) {            /*  是否使能内核错误打印        */
             if (pcTok[8] == 'n') {
                 _K_pfuncKernelDebugError = LW_NULL;
             } else {
                 _K_pfuncKernelDebugError = bspDebugMsg;
             }
+#endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
         
         } else if (lib_strncmp(pcTok, "kfpu=", 5) == 0) {               /*  是否使能内核浮点支持        */
             if (pcTok[5] == 'n') {

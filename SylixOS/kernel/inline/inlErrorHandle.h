@@ -45,21 +45,30 @@ VOID  _ErrorHandle(ULONG  ulErrorCode);
 
 VOID  _DebugMessage(INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcString);
 
+#if LW_CFG_ERRORMESSAGE_EN > 0 || LW_CFG_LOGMESSAGE_EN > 0
 #define _DebugHandle(level, msg) \
         (((level) & __ERRORMESSAGE_LEVEL) ? \
          _DebugMessage((level), __func__, (msg)) : \
          _DebugMessage((level), LW_NULL, (msg)))
-
+#else
+#define _DebugHandle(level, msg)
+#endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
+                                                                        /*  LW_CFG_LOGMESSAGE_EN > 0    */
 /*********************************************************************************************************
   错误格式化打印
 *********************************************************************************************************/
 
 VOID  _DebugFmtMsg(INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcFmt, ...);
 
+#if LW_CFG_ERRORMESSAGE_EN > 0 || LW_CFG_LOGMESSAGE_EN > 0
 #define _DebugFormat(level, fmt, ...)   \
         (((level) & __ERRORMESSAGE_LEVEL) ? \
          _DebugFmtMsg((level), __func__, (fmt), ##__VA_ARGS__) : \
          _DebugFmtMsg((level), LW_NULL, (fmt), ##__VA_ARGS__))
+#else
+#define _DebugFormat(level, fmt, ...)
+#endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
+                                                                        /*  LW_CFG_LOGMESSAGE_EN > 0    */
 
 #endif                                                                  /*  __INLERRORHANDLE_H          */
 /*********************************************************************************************************

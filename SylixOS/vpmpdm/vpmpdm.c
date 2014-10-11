@@ -25,7 +25,7 @@
 #include "./loader/include/loader_lib.h" /* need _Unwind_Ptr */
 #endif /* LW_CFG_CPU_ARCH_ARM */
 
-#define __VP_PATCH_VERSION      "1.3.1" /* vp patch version */
+#define __VP_PATCH_VERSION      "1.3.2" /* vp patch version */
 
 #ifdef __GNUC__
 #if __GNUC__ < 2  || (__GNUC__ == 2 && __GNUC_MINOR__ < 5)
@@ -163,7 +163,12 @@ void __vp_patch_ctor (void *pvproc)
     if (ctx.blksize < 0) {
         return;
     }
+    
+#if LW_CFG_VMM_EN > 0
     ctx.blksize *= LW_CFG_VMM_PAGE_SIZE;
+#else
+    ctx.blksize *= 4096;
+#endif /* LW_CFG_VMM_EN > 0 */
 
     ctx.locker = API_SemaphoreMCreate("vp_lock", LW_PRIO_DEF_CEILING,
                                       LW_OPTION_INHERIT_PRIORITY | 
@@ -174,12 +179,15 @@ void __vp_patch_ctor (void *pvproc)
 
 #if LW_CFG_VMM_EN > 0
     ctx.vmem[0] = vmmMallocArea(ctx.blksize, NULL, NULL);
+#else
+    ctx.vmem[0] = __SHEAP_ALLOC(ctx.blksize);
+#endif /* LW_CFG_VMM_EN > 0 */
+
     if (ctx.vmem[0]) {
         lib_itoa(getpid(), ctx.heap.HEAP_cHeapName, 10);
         _HeapCtor(&ctx.heap, ctx.vmem[0], ctx.blksize);
         ctx.allc_en = 1;
     }
-#endif /* LW_CFG_VMM_EN > 0 */
 }
 
 /*
@@ -194,7 +202,11 @@ void __vp_patch_dtor (void *pvproc)
         _HeapDtor(&ctx.heap, FALSE);
         for (i = 0; i < MAX_MEM_BLKS; i++) {
             if (ctx.vmem[i]) {
+#if LW_CFG_VMM_EN > 0
                 vmmFreeArea(ctx.vmem[i]); /* free all module private memory area */
+#else
+                __SHEAP_FREE(ctx.vmem[i]);
+#endif /* LW_CFG_VMM_EN > 0 */
                 ctx.vmem[i] = NULL;
             }
         }
@@ -255,12 +267,12 @@ int atexit (void (*func)(void))
     return  (0);
 }
 
-#if LW_CFG_VMM_EN > 0
 /*
  *  pre-alloc physical pages (use page fault mechanism)
  */
 static void  pre_alloc_phy (const void *pmem, size_t nbytes)
 {
+#if LW_CFG_VMM_EN > 0
     unsigned long  algin = (unsigned long)pmem;
     unsigned long  end   = algin + nbytes - 1;
     volatile char  temp;
@@ -280,6 +292,7 @@ static void  pre_alloc_phy (const void *pmem, size_t nbytes)
     }
     
     (void)temp; /* no warning for this variable */
+#endif /* LW_CFG_VMM_EN > 0 */
 }
 
 /*
@@ -294,7 +307,11 @@ static void  heap_mem_extern (void)
         __vp_patch_lock();
         for (i = 0; i < MAX_MEM_BLKS; i++) {
             if (ctx.vmem[i] == NULL) {
+#if LW_CFG_VMM_EN > 0
                 ctx.vmem[i] = vmmMallocArea(ctx.blksize, NULL, NULL);
+#else
+                ctx.vmem[i] = __SHEAP_ALLOC(ctx.blksize);
+#endif /* LW_CFG_VMM_EN > 0 */
                 if (ctx.vmem[i]) {
                     temp = *(char *)ctx.vmem[i];    /* vmm alloc physical page */
                     _HeapAddMemory(&ctx.heap, ctx.vmem[i], ctx.blksize);
@@ -820,4 +837,6 @@ char *getpass (const char *prompt)
     return getpass_r(prompt, cPass, sizeof(cPass));
 }
 
-#endif /* LW_CFG_VMM_EN > 0 */
+/*
+ * end
+ */

@@ -647,7 +647,7 @@ static INT  __tshellModuleShow (INT  iArgC, PCHAR  *ppcArgV)
                     stTotalMem += (size_t)(ulPages * LW_CFG_VMM_PAGE_SIZE);
                 }
 #else
-                stTotalMem += (size_t)(pheapVpPatch->HEAP_ulTotalByteSize);
+                stTotalMem += (size_t)(pheapVpPatch->HEAP_stTotalByteSize);
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
                 lib_strlcpy(cVpVersion, __moduleVpPatchVersion(pmodTemp), sizeof(cVpVersion));
             }
@@ -793,7 +793,7 @@ static INT  __tshellVProcShow (INT  iArgC, PCHAR  *ppcArgV)
                     stTotalMem += (size_t)(ulPages * LW_CFG_VMM_PAGE_SIZE);
                 }
 #else
-                stTotalMem += (size_t)(pheapVpPatch->HEAP_ulTotalByteSize);
+                stTotalMem += (size_t)(pheapVpPatch->HEAP_stTotalByteSize);
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
             }
         } else {
@@ -919,11 +919,12 @@ VOID  API_LoaderInit (VOID)
     _G_ulVProcMutex    = API_SemaphoreMCreate("loader_lock", LW_PRIO_DEF_CEILING, 
                                               LW_OPTION_INHERIT_PRIORITY | LW_OPTION_DELETE_SAFE |
                                               LW_OPTION_OBJECT_GLOBAL, LW_NULL);
-                                              
+#if LW_CFG_VMM_EN > 0
     _G_ulExecShareLock = API_SemaphoreMCreate("execshare_lock", LW_PRIO_DEF_CEILING, 
                                               LW_OPTION_INHERIT_PRIORITY | LW_OPTION_DELETE_SAFE |
                                               LW_OPTION_OBJECT_GLOBAL, LW_NULL);
-                                              
+#endif                                                                  /*  LW_CFG_VMM_EN > 0          */
+
     lib_bzero(&_G_vprocKernel, sizeof(_G_vprocKernel));
     
     _G_vprocKernel.VP_pcName = "kernel";

@@ -469,7 +469,9 @@ static BOOL  __packetCanRead (AF_PACKET_T *pafpacket, INT  flags, size_t  stLen)
 {
     AF_PACKET_Q *pktq;
     
+#if LW_CFG_NET_PACKET_MMAP > 0
     if (pafpacket->PACKET_bMmap == LW_FALSE) {
+#endif                                                                  /*  LW_CFG_NET_PACKET_MMAP > 0  */
         pktq = &pafpacket->PACKET_pktq;
         
         if (pktq->PKTQ_pmonoHeader == LW_NULL) {                        /*  没有信息可接收              */
@@ -481,9 +483,9 @@ static BOOL  __packetCanRead (AF_PACKET_T *pafpacket, INT  flags, size_t  stLen)
                 return  (LW_FALSE);
             }
         }
-    }
+        
 #if LW_CFG_NET_PACKET_MMAP > 0
-      else {
+    } else {
         BOOL  bCanRead = LW_FALSE;
         __packetRingTraversal(&pafpacket->PACKET_mmapRx, __packetCanReadCb,
                               pafpacket, &bCanRead, LW_NULL, LW_NULL, 
@@ -524,8 +526,11 @@ static AF_PACKET_T  *__packetCreate (INT  iType, INT  iProtocol)
     pafpacket->PACKET_tpver         = TPACKET_V1;
     pafpacket->PACKET_uiHdrLen      = TPACKET_HDRLEN;
     pafpacket->PACKET_uiReserve     = 0;
-    pafpacket->PACKET_bMapBusy      = LW_FALSE;
-    pafpacket->PACKET_bMmap         = LW_FALSE;
+    
+#if LW_CFG_NET_PACKET_MMAP > 0
+    pafpacket->PACKET_bMapBusy = LW_FALSE;
+    pafpacket->PACKET_bMmap    = LW_FALSE;
+#endif                                                                  /*  LW_CFG_NET_PACKET_MMAP > 0  */
     
     pafpacket->PACKET_hCanRead = API_SemaphoreBCreate("packet_rlock", LW_FALSE, 
                                                       LW_OPTION_OBJECT_GLOBAL, LW_NULL);
@@ -553,10 +558,12 @@ static VOID  __packetDelete (AF_PACKET_T *pafpacket)
     __AF_PACKET_LOCK();
     __packetBufFreeAll(pafpacket);
     _List_Line_Del(&pafpacket->PACKET_lineManage, &_G_plineAfPacket);
+#if LW_CFG_NET_PACKET_MMAP > 0
     if (pafpacket->PACKET_bMmap) {
         API_VmmFreeArea(pafpacket->PACKET_mmapRx.PKTB_pvVirMem);
         API_VmmPhyFree(pafpacket->PACKET_mmapRx.PKTB_pvPhyMem);
     }
+#endif                                                                  /*  LW_CFG_NET_PACKET_MMAP > 0  */
     __AF_PACKET_UNLOCK();
     
     API_SemaphoreBDelete(&pafpacket->PACKET_hCanRead);
@@ -858,9 +865,11 @@ INT  packet_link_input (struct pbuf *p, struct netif *inp, BOOL bOutgo)
             continue;
         }
         
+#if LW_CFG_NET_PACKET_MMAP > 0
         if (pafpacket->PACKET_bMapBusy) {                               /*  busy 状态                   */
             continue;
         }
+#endif                                                                  /*  LW_CFG_NET_PACKET_MMAP > 0  */
         
         if (bOutgo && (pafpacket->PACKET_bRecvOut == LW_FALSE)) {
             continue;
@@ -869,11 +878,13 @@ INT  packet_link_input (struct pbuf *p, struct netif *inp, BOOL bOutgo)
         if ((pethhdr->type == (UINT16)pafpacket->PACKET_iProtocol) ||
             (usAll         == (UINT16)pafpacket->PACKET_iProtocol)) {   /*  协议匹配                    */
             
-            if (pafpacket->PACKET_bMmap == LW_FALSE) {
-                __packetBufInput(pafpacket, p, inp, bOutgo);
-            }
 #if LW_CFG_NET_PACKET_MMAP > 0
-             else {
+            if (pafpacket->PACKET_bMmap == LW_FALSE) {
+#endif                                                                  /*  LW_CFG_NET_PACKET_MMAP > 0  */
+                __packetBufInput(pafpacket, p, inp, bOutgo);
+
+#if LW_CFG_NET_PACKET_MMAP > 0
+            } else {
                 __packetMapInput(pafpacket, p, inp, bOutgo);
             }
 #endif                                                                  /*  LW_CFG_NET_PACKET_MMAP > 0  */
@@ -1422,7 +1433,9 @@ INT  packet_setsockopt (AF_PACKET_T *pafpacket, int level, int optname,
                         const void *optval, socklen_t optlen)
 {
     INT                     iRet = PX_ERROR;
+#if LW_CFG_NET_PACKET_MMAP > 0
     struct tpacket_req     *preq;
+#endif
     struct packet_mreq     *pmreq;
     
     if (!optval || optlen < sizeof(INT)) {
