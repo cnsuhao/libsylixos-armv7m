@@ -60,6 +60,8 @@
 2013.09.30  加入 lspci 命令.
 2014.07.11  加入 color 命令.
 2014.10.10  help 命令支持通配符匹配.
+2014.10.12  将环境变量删除命令改为 vardel.
+            free 命令为显示当前内存使用情况.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -245,6 +247,25 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
 ** 调用模块: 
 *********************************************************************************************************/
 static INT  __tshellSysCmdFree (INT  iArgC, PCHAR  ppcArgV[])
+{
+    API_RegionShow(0);
+    
+#if LW_CFG_VMM_EN > 0
+    API_VmmPhysicalShow();
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __tshellSysCmdVardel
+** 功能描述: 系统命令 "vardel"
+** 输　入  : iArgC         参数个数
+**           ppcArgV       参数表
+** 输　出  : 0
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __tshellSysCmdVardel (INT  iArgC, PCHAR  ppcArgV[])
 {
     if (iArgC != 2) {
         printf("argument error.\n");
@@ -487,7 +508,6 @@ static INT  __tshellSysCmdMems (INT  iArgC, PCHAR  ppcArgV[])
     LW_OBJECT_HANDLE   ulId = LW_OBJECT_HANDLE_INVALID;
     
     if (iArgC == 1) {
-        
         API_RegionShow(0);
     
     } else if (iArgC == 2) {
@@ -1915,10 +1935,13 @@ VOID  __tshellSysCmdInit (VOID)
     API_TShellKeywordAdd("varsave", __tshellSysCmdVarsave);
     API_TShellFormatAdd("varsave", " [profile]");
     API_TShellHelpAdd("varsave", "synchronize envionment variables to profile.\n");
-                              
+
     API_TShellKeywordAdd("free", __tshellSysCmdFree);
-    API_TShellFormatAdd("free", " [variable]");
-    API_TShellHelpAdd("free", "delete a variable.\n");
+    API_TShellHelpAdd("free", "show system memory information.\n");
+
+    API_TShellKeywordAdd("vardel", __tshellSysCmdVardel);
+    API_TShellFormatAdd("vardel", " [variable]");
+    API_TShellHelpAdd("vardel", "delete a variable.\n");
                               
     API_TShellKeywordAdd("msgq", __tshellSysCmdMsgq);
     API_TShellFormatAdd("msgq", " message queue handle");
@@ -1952,6 +1975,10 @@ VOID  __tshellSysCmdInit (VOID)
     API_TShellKeywordAdd("cpuus", __tshellSysCmdCpuus);
     API_TShellFormatAdd("cpuus", " [-n times] [-t wait_seconds]");
     API_TShellHelpAdd("cpuus", "show cpu usage information, wait_seconds max is 10s.\n");
+    
+    API_TShellKeywordAdd("top", __tshellSysCmdCpuus);
+    API_TShellFormatAdd("top", " [-n times] [-t wait_seconds]");
+    API_TShellHelpAdd("top", "show cpu usage information, wait_seconds max is 10s.\n");
     
     API_TShellKeywordAdd("ints", __tshellSysCmdInts);
     API_TShellHelpAdd("ints", "show system interrupt vecter information.\n");

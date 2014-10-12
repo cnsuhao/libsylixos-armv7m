@@ -1061,7 +1061,7 @@ static VOID  __procFsNetIgmpPrint (struct igmp_group *group, PCHAR  pcBuffer,
                                   size_t  stTotalSize, size_t *pstOft)
 {
     *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
-                       "%c%c%d %08X %d\n",
+                       "%c%c%d: %08X %d\n",
                        group->netif->name[0],
                        group->netif->name[1],
                        group->netif->num,
@@ -1085,7 +1085,7 @@ static ssize_t  __procFsNetIgmpRead (PLW_PROCFS_NODE  p_pfsn,
                                      off_t            oft)
 {
     const CHAR      cIgmpInfoHdr[] = 
-    "DEV GROUP    COUNT\n";
+    "DEV  GROUP    COUNT\n";
           PCHAR     pcFileBuffer;
           size_t    stRealSize;                                         /*  实际的文件内容大小          */
           size_t    stCopeBytes;
@@ -1148,7 +1148,7 @@ static VOID  __procFsNetIgmp6Print (struct mld_group *group, PCHAR  pcBuffer,
                                     size_t  stTotalSize, size_t *pstOft)
 {
     *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
-                       "%c%c%d %08X%08X%08X%08X %d\n",
+                       "%c%c%d: %08X%08X%08X%08X %d\n",
                        group->netif->name[0],
                        group->netif->name[1],
                        group->netif->num,
@@ -1175,7 +1175,7 @@ static ssize_t  __procFsNetIgmp6Read (PLW_PROCFS_NODE  p_pfsn,
                                       off_t            oft)
 {
     const CHAR      cIgmp6InfoHdr[] = 
-    "DEV GROUP                            COUNT\n";
+    "DEV  GROUP                            COUNT\n";
           PCHAR     pcFileBuffer;
           size_t    stRealSize;                                         /*  实际的文件内容大小          */
           size_t    stCopeBytes;
@@ -1728,7 +1728,7 @@ static VOID  __procFsNetDevPrint (struct netif *netif, PCHAR  pcBuffer,
     __procFsNetGetIfFlag(netif, cFlag);
     
     *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
-                       "%c%c%d  %-6u %-10u %-5u %-6u %-6u %-6u    %-10u %-5u %-6u %-6u %-6u %s\n",
+                       "%c%c%d: %-6u %-10u %-5u %-6u %-6u %-6u    %-10u %-5u %-6u %-6u %-6u %s\n",
                        netif->name[0], netif->name[1], netif->num,
                        netif->mtu,
                        netif->ifinoctets,
@@ -1756,6 +1756,7 @@ static ssize_t  __procFsNetDevRead (PLW_PROCFS_NODE  p_pfsn,
                                     off_t            oft)
 {
     const CHAR      cDevInfoHdr[] = 
+    "           |RECEIVE                                 |TRANSMIT\n"
     "FACE MTU    RX-BYTES   RX-OK RX-ERR RX-DRP RX-OVR    TX-BYTES   TX-OK TX-ERR TX-DRP TX-OVR FLAG\n";
           PCHAR     pcFileBuffer;
           size_t    stRealSize;                                         /*  实际的文件内容大小          */
