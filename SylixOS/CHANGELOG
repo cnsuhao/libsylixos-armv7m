@@ -570,6 +570,7 @@ HISTORY
     2014-10-12: han.hui
     free 命令改为查看系统内存信息，vardel 为删除环境变量
     修正 proc/net 下相关文件格式.
+    修正调试器退出错误.
 
     2014-10-09: han.hui
     修正 arp 发送 bug.

@@ -854,10 +854,6 @@ int wext_handle_ioctl (unsigned int cmd, struct ifreq *ifr)
     ret = wext_ioctl_dispatch(ifr, cmd, &info,
                               ioctl_standard_call,
                               ioctl_private_call);
-    if (ret >= 0 && IW_IS_GET(cmd)) {
-        return  (-EFAULT);
-    }
-
     return  (ret);
 }
 

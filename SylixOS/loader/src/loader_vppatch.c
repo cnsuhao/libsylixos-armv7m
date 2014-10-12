@@ -1844,8 +1844,6 @@ INT  API_ModuleGetBase (pid_t  pid, PCHAR  pcModPath, addr_t  *pulAddrBase, size
 
 ssize_t  vprocGetModsInfo (pid_t  pid, PCHAR  pcBuff, size_t stMaxLen)
 {
-    BOOL                bStart;
-
     LW_LIST_RING       *pringTemp;
     LW_LD_VPROC        *pvproc;
     LW_LD_EXEC_MODULE  *pmodTemp;
@@ -1866,9 +1864,9 @@ ssize_t  vprocGetModsInfo (pid_t  pid, PCHAR  pcBuff, size_t stMaxLen)
     stXmlLen = bnprintf(pcBuff, stMaxLen, 0, "<library-list>");
 
     LW_VP_LOCK(pvproc);
-    for (pringTemp  = pvproc->VP_ringModules, bStart = LW_TRUE;
-         pringTemp && (pringTemp != pvproc->VP_ringModules || bStart);
-         pringTemp  = _list_ring_get_next(pringTemp), bStart = LW_FALSE) {
+    for (pringTemp  = _list_ring_get_next(pvproc->VP_ringModules);
+         pringTemp && (pringTemp != pvproc->VP_ringModules);
+         pringTemp  = _list_ring_get_next(pringTemp)) {                 /*  返回除自身之外的所有库      */
 
         pmodTemp = _LIST_ENTRY(pringTemp, LW_LD_EXEC_MODULE, EMOD_ringModules);
 
