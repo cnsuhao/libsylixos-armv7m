@@ -1,6 +1,6 @@
 /**
  * @file
- * net interface sending queue.
+ * net interface pbuf queue.
  *
  * Verification using sylixos(tm) real-time operating system
  */
@@ -43,7 +43,7 @@
 struct pktn {
   struct pktn *next;
   struct pktn *prev;
-  struct pbuf p;
+  struct pbuf *p;
 };
 
 /*
@@ -61,10 +61,17 @@ extern "C" {
 #endif
 
 void pktq_init(struct pktq *pktq, size_t max_size);
-void pktq_deinit(struct pktq *pktq);
-err_t pktq_put(struct pktq *pktq, struct pbuf *p);
-struct pktn *pktq_get(struct pktq *pktq);
-void pktq_free(struct pktq *pktq, struct pktn *pktn);
+
+/* transmit a packet copy MUST be 1 
+   if copy == 0 then user can delete p until pktn has been delete */
+err_t pktq_put(struct pktq *pktq, struct pbuf *p, u8_t copy);
+
+/* del == 1 then this function will delete this pktn
+   the return pbuf user must free by yourself */
+struct pbuf *pktq_get(struct pktq *pktq, u8_t del);
+
+/* if pktq not empty return 1 */
+u8_t pktq_isempty(struct pktq *pktq);
 
 #ifdef __cplusplus
 }
