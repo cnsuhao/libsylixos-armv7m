@@ -439,7 +439,7 @@ extern  UINT32  __inetHostTableGetItem(CPCHAR  pcHost);                 /*  ±¾µØ
 #define MSCHAP_SUPPORT                  0
 #endif                                                                  /*  __LWIP_USE_PPP_NEW > 0      */
 
-#define EAP_SUPPORT                     0
+#define EAP_SUPPORT                     1
 #define CBCP_SUPPORT                    0
 #define CCP_SUPPORT                     0
 #define ECP_SUPPORT                     0
