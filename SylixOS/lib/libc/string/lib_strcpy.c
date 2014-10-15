@@ -33,11 +33,11 @@ PCHAR  lib_strcpy (PCHAR  pcDest, CPCHAR  pcSrc)
     REGISTER PCHAR    pcSrcReg = (PCHAR)pcSrc;
              PCHAR    pcSave   = pcDest;
     
-    while (*pcSrcReg != '\0') {
+    while (*pcSrcReg != PX_EOS) {
         *pcDest++ = *pcSrcReg++;
     }
     
-    *pcDest = '\0';
+    *pcDest = PX_EOS;
     
     return  (pcSave);
 }

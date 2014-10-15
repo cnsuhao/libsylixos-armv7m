@@ -33,13 +33,13 @@ PCHAR  lib_rindex (CPCHAR  pcString, INT iC)
     REGISTER PCHAR    pcLast = LW_NULL;
     REGISTER PCHAR    pcStr  = (PCHAR)pcString;
     
-    for (; *pcStr != '\0'; pcStr++) {
+    for (; *pcStr != PX_EOS; pcStr++) {
         if (*pcStr == (CHAR)iC) {
             pcLast = pcStr;
         }
     }
     
-    if (iC == '\0') {                                                   /*  find the end of string      */
+    if (iC == PX_EOS) {                                                 /*  find the end of string      */
         pcLast = pcStr;
     }
     

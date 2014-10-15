@@ -37,7 +37,7 @@ INT    lib_strncmp (CPCHAR  pcStr1, CPCHAR  pcStr2, size_t  stLen)
 
     for (; stLen > 0; stLen--) {
         if (*pucStr1Reg == *pucStr2Reg) {
-            if (*pucStr1Reg == '\0') {
+            if (*pucStr1Reg == PX_EOS) {
                 return  (0);
             }
         } else {

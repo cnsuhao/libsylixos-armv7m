@@ -207,7 +207,7 @@ static INT  __tshellWhich (INT  iArgC, PCHAR  *ppcArgV)
 static INT  __ldRunScript (PCHAR   pcSheBangLine, INT  iArgC, PCHAR  *ppcArgV)
 {
 #define __IS_WHITE(c)       (c == ' ' || c == '\t' || c == '\r' || c == '\n')
-#define __IS_END(c)         (c == '\0')
+#define __IS_END(c)         (c == PX_EOS)
 #define __SKIP_WHITE(str)   while (__IS_WHITE(*str)) {  \
                                 str++;  \
                             }

@@ -154,7 +154,7 @@ INT  __fsCheckFileName (CPCHAR  pcName)
      *  不能包含非法字符
      */
     pcTemp = (PCHAR)pcName;
-    for (; *pcTemp != '\0'; pcTemp++) {
+    for (; *pcTemp != PX_EOS; pcTemp++) {
         if (lib_strchr(__LW_FILE_ERROR_NAME_STR, *pcTemp)) {            /*  检查合法性                  */
             return  (PX_ERROR);
         }

@@ -636,6 +636,7 @@ SylixOS/lib/libc/string/lib_mempcpy.c \
 SylixOS/lib/libc/string/lib_memrchr.c \
 SylixOS/lib/libc/string/lib_memset.c \
 SylixOS/lib/libc/string/lib_rindex.c \
+SylixOS/lib/libc/string/lib_stpcpy.c \
 SylixOS/lib/libc/string/lib_strcasecmp.c \
 SylixOS/lib/libc/string/lib_strcat.c \
 SylixOS/lib/libc/string/lib_strchrnul.c \
@@ -655,6 +656,7 @@ SylixOS/lib/libc/string/lib_strndup.c \
 SylixOS/lib/libc/string/lib_strnlen.c \
 SylixOS/lib/libc/string/lib_strnset.c \
 SylixOS/lib/libc/string/lib_strpbrk.c \
+SylixOS/lib/libc/string/lib_strsignal.c \
 SylixOS/lib/libc/string/lib_strspn.c \
 SylixOS/lib/libc/string/lib_strstr.c \
 SylixOS/lib/libc/string/lib_strtok.c \

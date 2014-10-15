@@ -32,15 +32,15 @@ PCHAR  lib_strcat (PCHAR  pcDest, CPCHAR  pcSrc)
     REGISTER PCHAR    pcDestReg = pcDest;
     REGISTER PCHAR    pcSrcReg  = (PCHAR)pcSrc;
     
-    while (*pcDestReg != '\0') {
+    while (*pcDestReg != PX_EOS) {
         pcDestReg++;
     }
     
-    while (*pcSrcReg != '\0') {
+    while (*pcSrcReg != PX_EOS) {
         *pcDestReg++ = *pcSrcReg++;
     }
     
-    *pcDestReg = '\0';
+    *pcDestReg = PX_EOS;
     
     return  (pcDest);
 }

@@ -32,7 +32,7 @@ size_t  lib_strnlen (CPCHAR  pcStr, size_t  stN)
     REGISTER size_t stLen = 0;
     REGISTER PCHAR  pcStrReg = (PCHAR)pcStr;
     
-    while (*pcStrReg != '\0' && stN > 0) {
+    while (*pcStrReg != PX_EOS && stN > 0) {
         pcStrReg++;
         stLen++;
         stN--;

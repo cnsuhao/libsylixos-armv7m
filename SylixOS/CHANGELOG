@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-10-15: han.hui
+    加入 stpcpy stpncpy strsignal 函数.
+
     2014-09-29: han.hui
     加入 __locale_mb_cur_max 函数声明, 实现在 libcextern 库中.
 

@@ -273,15 +273,16 @@ __LW_RETU_FUNC_DEFINE(int, strcasecmp, (const char *pcStr1, const char *pcStr2),
 __LW_RETU_FUNC_DEFINE(int, strncasecmp, (const char *pcStr1, const char *pcStr2, size_t  stLen), \
                       (pcStr1, pcStr2, stLen))
 
+__LW_RETU_FUNC_DEFINE(char *, stpcpy, (char *pcDest, const char *pcSrc), (pcDest, pcSrc))
+__LW_RETU_FUNC_DEFINE(char *, stpncpy, (char *pcDest, const char *pcSrc, size_t stN), (pcDest, pcSrc, stN))
+
 __LW_RETU_FUNC_DEFINE(char *, strcpy, (char *pcDest, const char *pcSrc), (pcDest, pcSrc))
 __LW_RETU_FUNC_DEFINE(char *, strncpy, (char *pcDest, const char *pcSrc, size_t stN), (pcDest, pcSrc, stN))
 __LW_RETU_FUNC_DEFINE(size_t, strlcpy, (char *pcDest, const char *pcSrc, size_t stN), (pcDest, pcSrc, stN))
 __LW_VOID_FUNC_DEFINE(bcopy, (const void *pvSrc, void *pvDest, size_t stN), (pvSrc, pvDest, stN))
 
-
 __LW_RETU_FUNC_DEFINE(size_t, strlen, (const char *pcStr), (pcStr))
 __LW_RETU_FUNC_DEFINE(size_t, strnlen, (const char *pcStr, size_t stN), (pcStr, stN))
-
 
 __LW_RETU_FUNC_DEFINE(char *, strdup, (const char *pcStr), (pcStr))
 __LW_RETU_FUNC_DEFINE(char *, xstrdup, (const char *pcStr), (pcStr))
@@ -313,6 +314,7 @@ __LW_RETU_FUNC_DEFINE(int, toupper, (int  iC), (iC))
 __LW_RETU_FUNC_DEFINE(int, strerror_r, (int  iNum, char *pcBuffer, size_t stLen), \
                       (iNum, pcBuffer, stLen))
 __LW_RETU_FUNC_DEFINE(char *, strerror, (int  iNum), (iNum))
+__LW_RETU_FUNC_DEFINE(char *, strsignal, (int  iSigNo), (iSigNo))
 __LW_RETU_FUNC_DEFINE(char *, strstr, (const char *cpcS1, const char *cpcS2), (cpcS1, cpcS2))
 __LW_RETU_FUNC_DEFINE(size_t, strcspn, (const char *cpcS1, const char *cpcS2), (cpcS1, cpcS2))
 __LW_RETU_FUNC_DEFINE(char *, strpbrk, (const char *cpcS1, const char *cpcS2), (cpcS1, cpcS2))

@@ -29,6 +29,9 @@ PCHAR  lib_strchrnul(CPCHAR  pcString, INT iC);
 #define  lib_strrchr     lib_rindex
 #define  lib_strchr      lib_index
 
+PCHAR  lib_stpcpy(PCHAR  pcDest, CPCHAR  pcSrc);
+PCHAR  lib_stpncpy(PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN);
+
 PCHAR  lib_strcat(PCHAR  pcDest, CPCHAR       pcSrc);
 PCHAR  lib_strncat(PCHAR pcDest, CPCHAR       pcSrc, size_t  stN);
 size_t lib_strlcat(PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN);
@@ -68,6 +71,7 @@ INT    lib_toupper(INT  iC);
 
 INT    lib_strerror_r(INT  iNum, PCHAR  pcBuffer, size_t stLen);
 PCHAR  lib_strerror(INT  iNum);
+PCHAR  lib_strsignal(INT  iSigNo);
 PCHAR  lib_strstr(CPCHAR  cpcS1, CPCHAR  cpcS2);
 size_t lib_strcspn(CPCHAR  cpcS1, CPCHAR  cpcS2);
 PCHAR  lib_strpbrk(CPCHAR  cpcS1, CPCHAR  cpcS2);

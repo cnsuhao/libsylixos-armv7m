@@ -35,15 +35,15 @@ PCHAR  lib_strncat (PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN)
     REGISTER PCHAR    pcDestReg = (PCHAR)pcDest;
     REGISTER PCHAR    pcSrcReg  = (PCHAR)pcSrc;
     
-    while (*pcDestReg != '\0') {
+    while (*pcDestReg != PX_EOS) {
         pcDestReg++;
     }
     
-    while (*pcSrcReg != '\0' && stN > 0) {
+    while (*pcSrcReg != PX_EOS && stN > 0) {
         *pcDestReg++ = *pcSrcReg++;
         stN--;
     }
-    *pcDestReg = '\0';
+    *pcDestReg = PX_EOS;
     
     return  (pcDest);
 }
@@ -62,7 +62,7 @@ size_t  lib_strlcat (PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN)
              size_t   stCnt     = stN;
              size_t   stDlen;
     
-    while ((stCnt > 0) && (*pcDestReg != '\0')) {
+    while ((stCnt > 0) && (*pcDestReg != PX_EOS)) {
         pcDestReg++;
         stCnt--;
     }
@@ -74,14 +74,14 @@ size_t  lib_strlcat (PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN)
         return  (stDlen + lib_strlen(pcSrc));
     }
     
-    while (*pcSrcReg != '\0') {
+    while (*pcSrcReg != PX_EOS) {
         if (stCnt > 1) {
             *pcDestReg++ = *pcSrcReg;
             stCnt--;
         }
         pcSrcReg++;
     }
-    *pcDestReg = '\0';
+    *pcDestReg = PX_EOS;
     
     /* 
      * Returns strlen(pcSrc) + MIN(stN, strlen(initial pcDest)).

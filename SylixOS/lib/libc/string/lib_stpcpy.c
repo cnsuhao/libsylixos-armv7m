@@ -10,43 +10,50 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: lib_strncasecmp.c
+** 文   件   名: lib_stpcpy.c
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2006 年 12 月 25 日
+** 文件创建日期: 2014 年 10 月 15 日
 **
 ** 描        述: 库
 *********************************************************************************************************/
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-** 函数名称: lib_strncasecmp
+** 函数名称: lib_stpcpy
 ** 功能描述: 
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  lib_strncasecmp (CPCHAR cpcStr1, CPCHAR  cpcStr2, size_t  stLen)
+PCHAR  lib_stpcpy (PCHAR  pcDest, CPCHAR  pcSrc)
 {
-    REGISTER PCHAR      pcStr1 = (PCHAR)cpcStr1;
-    REGISTER PCHAR      pcStr2 = (PCHAR)cpcStr2;
-
-    while ((stLen > 0) && 
-           (lib_toupper((UCHAR)*pcStr1) == lib_toupper((UCHAR)*pcStr2))) {
-        if (*pcStr1 == PX_EOS) {
-            return  (0);
-        }
-        pcStr1++;
-        pcStr2++;
-        stLen--;
+    REGISTER PCHAR    pcSrcReg = (PCHAR)pcSrc;
+    
+    do {
+        *pcDest++ = *pcSrcReg;
+    } while (*pcSrc++ != PX_EOS);
+    
+    return  (pcDest - 1);
+}
+/*********************************************************************************************************
+** 函数名称: lib_stpncpy
+** 功能描述: 
+** 输　入  : 
+** 输　出  : 
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+PCHAR  lib_stpncpy (PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN)
+{
+    size_t stSize = lib_strlen(pcSrc);
+    
+    if (stSize > stN) {
+        stSize = stN;
     }
     
-    if (stLen == 0) {
-        return  (0);
-    }
-    
-    return  (lib_toupper((UCHAR)*pcStr1) - lib_toupper((UCHAR)*pcStr2));
+    return  (lib_strncpy(pcDest, pcSrc, stN) + stSize);
 }
 /*********************************************************************************************************
   END

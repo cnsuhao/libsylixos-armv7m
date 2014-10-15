@@ -45,7 +45,7 @@ PCHAR  lib_strndup (CPCHAR pcStr, size_t  stSize)
 
     if (stSize) {
         lib_memcpy(pcMem, pcStr, stSize - 1);
-        pcMem[stSize - 1] = '\0';
+        pcMem[stSize - 1] = PX_EOS;
     }
     
     return  (pcMem);

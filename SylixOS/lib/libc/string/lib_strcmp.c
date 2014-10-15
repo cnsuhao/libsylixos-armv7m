@@ -36,8 +36,9 @@ INT    lib_strcmp (CPCHAR  pcStr1, CPCHAR  pcStr2)
     REGISTER PUCHAR      pucStr2Reg = (PUCHAR)pcStr2;
 
     while (*pucStr1Reg == *pucStr2Reg) {
-        if (*pucStr1Reg == '\0')
+        if (*pucStr1Reg == PX_EOS) {
             return  (0);
+        }
         pucStr1Reg++;
         pucStr2Reg++;
     }

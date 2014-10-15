@@ -40,12 +40,12 @@ PCHAR  lib_strncpy (PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN)
         return  (pcSave);
     }
     
-    while (*pcSrcReg != '\0' && stN > 0) {
+    while (*pcSrcReg != PX_EOS && stN > 0) {
         *pcDest++ = *pcSrcReg++;
         stN--;
     }
     if (stN > 0) {                                                      /*  仅当有空间时, 才防止 \0     */
-        *pcDest = '\0';
+        *pcDest = PX_EOS;
     }
     
     return  (pcSave);
@@ -67,13 +67,13 @@ size_t  lib_strlcpy (PCHAR  pcDest, CPCHAR  pcSrc, size_t  stN)
         return  (lib_strlen(pcSrc));
     }
     
-    while (*pcSrcReg != '\0' && stN > 1) {
+    while (*pcSrcReg != PX_EOS && stN > 1) {
         *pcDest++ = *pcSrcReg++;
         stN--;
     }
-    *pcDest = '\0';
+    *pcDest = PX_EOS;
     
-    while (*pcSrcReg != '\0') {
+    while (*pcSrcReg != PX_EOS) {
         pcSrcReg++;
     }
     

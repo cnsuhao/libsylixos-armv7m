@@ -33,11 +33,9 @@ INT  lib_strcasecmp (CPCHAR cpcStr1, CPCHAR  cpcStr2)
     REGISTER PCHAR      pcStr2 = (PCHAR)cpcStr2;
 
     while (lib_toupper((UCHAR)*pcStr1) == lib_toupper((UCHAR)*pcStr2)) {
-        
-        if (*pcStr1 == '\0') {
+        if (*pcStr1 == PX_EOS) {
             return  (0);
         }
-        
         pcStr1++;
         pcStr2++;
     }

@@ -36,7 +36,7 @@ size_t lib_strlen (CPCHAR  pcStr)
         return  (0);
     }
     
-    while (*pcStrReg != '\0') {
+    while (*pcStrReg != PX_EOS) {
         pcStrReg++;
         stLen++;
     }

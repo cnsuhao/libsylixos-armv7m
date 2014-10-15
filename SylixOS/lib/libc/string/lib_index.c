@@ -36,14 +36,14 @@ PCHAR  lib_index (CPCHAR  pcString, INT iC)
     REGISTER PCHAR    pcFirst = LW_NULL;
     REGISTER PCHAR    pcStr   = (PCHAR)pcString;
     
-    for (; *pcStr != '\0'; pcStr++) {
+    for (; *pcStr != PX_EOS; pcStr++) {
         if (*pcStr == (CHAR)iC) {                                       /*  FIRST CHARACTER             */
             pcFirst = pcStr;
             break;
         }
     }
     
-    if (iC == '\0') {                                                   /*  find the end of string      */
+    if (iC == PX_EOS) {                                                 /*  find the end of string      */
         pcFirst = pcStr;
     }
     

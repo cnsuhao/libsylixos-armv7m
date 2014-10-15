@@ -10,43 +10,46 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: lib_strncasecmp.c
+** 文   件   名: lib_strsignal.c
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2006 年 12 月 25 日
+** 文件创建日期: 2014 年 10 月 15 日
 **
 ** 描        述: 库
 *********************************************************************************************************/
+#define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
+#include "../SylixOS/system/include/s_system.h"
 /*********************************************************************************************************
-** 函数名称: lib_strncasecmp
+** 函数名称: lib_strsignal
 ** 功能描述: 
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  lib_strncasecmp (CPCHAR cpcStr1, CPCHAR  cpcStr2, size_t  stLen)
+PCHAR  lib_strsignal (INT  iSigNo)
 {
-    REGISTER PCHAR      pcStr1 = (PCHAR)cpcStr1;
-    REGISTER PCHAR      pcStr2 = (PCHAR)cpcStr2;
-
-    while ((stLen > 0) && 
-           (lib_toupper((UCHAR)*pcStr1) == lib_toupper((UCHAR)*pcStr2))) {
-        if (*pcStr1 == PX_EOS) {
-            return  (0);
-        }
-        pcStr1++;
-        pcStr2++;
-        stLen--;
+    PCHAR   pcSignalName[] = { "",
+        "SIGHUP", "SIGINT", "SIGQUIT", "SIGILL", "SIGTRAP", "SIGABRT",
+        "SIGUNUSED", "SIGFPE", "SIGKILL", "SIGBUS", "SIGSEGV", "SIGUNUSED2", 
+        "SIGPIPE", "SIGALRM", "SIGTERM", "SIGCNCL", "SIGSTOP", "SIGTSTP", 
+        "SIGCONT", "SIGCHLD", "SIGTTIN", "SIGTTOU", "SIGIO", "SIGXCPU", 
+        "SIGXFSZ", "SIGVTALRM", "SIGPROF", "SIGWINCH", "SIGINFO", "SIGUSR1", 
+        "SIGUSR2", "SIG_32", "SIGPWR", "SIGSYS", "SIGURG", "SIG_36", 
+        "SIG_37", "SIG_38", "SIG_39", "SIG_40", "SIG_41", "SIG_42", 
+        "SIG_43", "SIG_44", "SIG_45", "SIG_46", "SIG_47", "SIG_RT_48",
+        "SIG_RT_49", "SIG_RT_50", "SIG_RT_51", "SIG_RT_52", "SIG_RT_53", "SIG_RT_54", 
+        "SIG_RT_55", "SIG_RT_56", "SIG_RT_57", "SIG_RT_58", "SIG_RT_59", "SIG_RT_60", 
+        "SIG_RT_61", "SIG_RT_62", "SIG_RT_63", 
+    };
+    
+    if (!__issig(iSigNo)) {
+        return  (LW_NULL);
     }
     
-    if (stLen == 0) {
-        return  (0);
-    }
-    
-    return  (lib_toupper((UCHAR)*pcStr1) - lib_toupper((UCHAR)*pcStr2));
+    return  (pcSignalName[iSigNo]);
 }
 /*********************************************************************************************************
   END
