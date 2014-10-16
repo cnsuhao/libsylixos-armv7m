@@ -39,6 +39,7 @@
             unix_accept() 在没有足够内存时, 需要拒绝所有等待的连接.
 2013.11.17  支持 SOCK_SEQPACKET 类型连接.
 2013.11.21  升级新的发送信号接口.
+2014.10.16  __unixFind() 加入对 listen 状态 unix 套接字的搜索.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -752,11 +753,12 @@ static VOID  __unixDelete (AF_UNIX_T  *pafunix)
 ** 功能描述: 查询一个节点
 ** 输　入  : pcPath                查询一个节点
 **           iType                 类型
+**           bListen               是否查询一个 listen 节点
 ** 输　出  : pafunix
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static AF_UNIX_T  *__unixFind (CPCHAR  pcPath, INT  iType)
+static AF_UNIX_T  *__unixFind (CPCHAR  pcPath, INT  iType, BOOL  bListen)
 {
     AF_UNIX_T       *pafunixTemp;
     PLW_LIST_LINE    plineTemp;
@@ -767,7 +769,8 @@ static AF_UNIX_T  *__unixFind (CPCHAR  pcPath, INT  iType)
     
         pafunixTemp = (AF_UNIX_T *)plineTemp;
         if ((__AF_UNIX_TYPE(pafunixTemp) == iType) &&
-            (lib_strcmp(pafunixTemp->UNIX_cFile, pcPath) == 0)) {
+            (lib_strcmp(pafunixTemp->UNIX_cFile, pcPath) == 0) &&
+            (bListen && (pafunixTemp->UNIX_iStatus == __AF_UNIX_STATUS_LISTEN))) {
             return  (pafunixTemp);
         }
     }
@@ -1098,7 +1101,7 @@ INT  unix_bind (AF_UNIX_T  *pafunix, const struct sockaddr *name, socklen_t name
     __AF_UNIX_LOCK();
     API_IosFdGetName(iFd, cPath, MAX_FILENAME_LENGTH);                  /*  获得完整路径                */
     if (__AF_UNIX_TYPE(pafunix) == SOCK_DGRAM) {
-        AF_UNIX_T  *pafunixTemp = __unixFind(cPath, SOCK_DGRAM);
+        AF_UNIX_T  *pafunixTemp = __unixFind(cPath, SOCK_DGRAM, LW_FALSE);
         if (pafunixTemp) {
             __AF_UNIX_UNLOCK();
             close(iFd);
@@ -1282,7 +1285,7 @@ INT  unix_connect (AF_UNIX_T  *pafunix, const struct sockaddr *name, socklen_t n
         return  (PX_ERROR);
     }
     
-    pafunixAcce = __unixFind(cPath, __AF_UNIX_TYPE(pafunix));           /*  查询连接目的                */
+    pafunixAcce = __unixFind(cPath, __AF_UNIX_TYPE(pafunix), LW_TRUE);  /*  查询连接目的                */
     if (pafunixAcce == LW_NULL) {
         __AF_UNIX_UNLOCK();
         _ErrorHandle(ECONNRESET);                                       /*  没有目的 ECONNRESET         */
@@ -1627,7 +1630,7 @@ static ssize_t  unix_sendto2 (AF_UNIX_T  *pafunix, const void *data, size_t size
         }
         
         if (bHaveTo) {                                                  /*  是否有地址信息              */
-            pafunixRecver = __unixFind(cPath, __AF_UNIX_TYPE(pafunix));
+            pafunixRecver = __unixFind(cPath, __AF_UNIX_TYPE(pafunix), LW_FALSE);
         
         } else {
             pafunixRecver = pafunix->UNIX_pafunxPeer;

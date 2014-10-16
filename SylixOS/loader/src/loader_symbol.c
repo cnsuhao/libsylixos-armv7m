@@ -433,7 +433,7 @@ INT __moduleExportSymbol (LW_LD_EXEC_MODULE  *pmodule,
         
         pesym = (LW_LD_EXEC_SYMBOL *)LW_LD_VMSAFEMALLOC(stSymBufferSize);
         if (pesym == LW_NULL) {
-            LD_DEBUG_MSG(("system low memory\n"));
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "vmm low memory!\r\n");
             return  (PX_ERROR);
         }
         pesym->ESYM_stSize = stSymBufferSize;
