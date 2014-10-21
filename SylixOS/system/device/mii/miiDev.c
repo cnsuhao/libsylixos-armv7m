@@ -32,9 +32,9 @@
 *********************************************************************************************************/
 #define MII_FROM_ANSR_TO_ANAR(phyStat, phyAds);             \
     do {                                                    \
-        (phyStat)   &= MII_SR_SPEED_SEL_MASK;               \
-        (phyStat)   >>= 6;                                  \
-        (phyAds)    = (phyStat) | ((phyAds) & (0x7000)) |   \
+        (phyStat) &= MII_SR_SPEED_SEL_MASK;                 \
+        (phyStat) >>= 6;                                    \
+        (phyAds)  = (phyStat) | ((phyAds) & (0x7000)) |     \
         ((phyAds) & (MII_ADS_SEL_MASK));                    \
     } while (0)
 /*********************************************************************************************************
@@ -52,7 +52,7 @@ static LW_OBJECT_HANDLE     _G_hMiiMSem;
   debug info
 *********************************************************************************************************/
 #define MII_DEBUG_ADDR(fmt, var)                                \
-        _DebugFormat(__LOGMESSAGE_LEVEL, fmt, var);
+        _DebugFormat(__LOGMESSAGE_LEVEL, fmt, var)
 /*********************************************************************************************************
 ** 函数名称: __miiAbilFlagUpdate
 ** 功能描述: 读取PHY功能参数，并保存到PHY设备的Flag中
@@ -450,8 +450,8 @@ static INT __miiAutoNegStart (PHY_DEV *pPhyDev)
     /*
      * restart the auto-negotiation process
      */
-    ucRegAddr   = MII_CTRL_REG;
-    usData      = (MII_CTRL_RESTART | MII_CTRL_AUTO_EN);
+    ucRegAddr = MII_CTRL_REG;
+    usData    = (MII_CTRL_RESTART | MII_CTRL_AUTO_EN);
     if (MII_WRITE(pPhyDev->PHY_ucPhyAddr, ucRegAddr, usData) != MII_OK) {
         return  (MII_ERROR);
     }
@@ -475,10 +475,11 @@ static INT __miiAutoNegStart (PHY_DEV *pPhyDev)
     if (i >= pPhyDev->PHY_uiTryMax) {
         _DebugHandle(__LOGMESSAGE_LEVEL, "mii: negotiation fail.\r\n");
         return  (MII_PHY_AN_FAIL);
-    }
-    else {
+    
+    } else {
         _DebugHandle(__LOGMESSAGE_LEVEL, "mii: negotiation success.\r\n");
     }
+    
     return  (MII_OK);
 }
 /*********************************************************************************************************
@@ -500,7 +501,6 @@ static INT __miiAutoNegotiate (PHY_DEV *pPhyDev)
     UINT16  usPhyMstSlaCtrl;                                            /* PHY Mater-slave Control      */
     UINT16  usPhyExtStat;                                               /* PHY extended status          */
     INT     iRet;
-
 
     /*
      * save phyFlags for phyAutoNegotiateFlags
@@ -543,8 +543,8 @@ static INT __miiAutoNegotiate (PHY_DEV *pPhyDev)
     if ((MII_PHY_FLAGS_ARE_SET (MII_PHY_TX_FLOW_CTRL)) &&
            (MII_PHY_FLAGS_ARE_SET (MII_PHY_RX_FLOW_CTRL))) {
        usPhyAds |= MII_ANAR_PAUSE;
-    }
-    else {
+    
+    } else {
        usPhyAds &= ~MII_ANAR_PAUSE;
     }
 
@@ -557,14 +557,13 @@ static INT __miiAutoNegotiate (PHY_DEV *pPhyDev)
 
             usPhyAds &= ~MII_ANAR_ASM_PAUSE;
             usPhyAds &= ~MII_ANAR_PAUSE;
-        }
-        else if ((MII_PHY_FLAGS_ARE_SET (MII_PHY_TX_FLOW_CTRL)) &&
-               !(MII_PHY_FLAGS_ARE_SET (MII_PHY_RX_FLOW_CTRL))) {       /* TX flow control              */
+        } else if ((MII_PHY_FLAGS_ARE_SET (MII_PHY_TX_FLOW_CTRL)) &&
+                  !(MII_PHY_FLAGS_ARE_SET (MII_PHY_RX_FLOW_CTRL))) {    /* TX flow control              */
 
             usPhyAds |= MII_ANAR_ASM_PAUSE;
             usPhyAds &= ~MII_ANAR_PAUSE;
-        }
-        else {                                                          /* RX flow control              */
+        
+        } else {                                                        /* RX flow control              */
 
             usPhyAds |= MII_ANAR_ASM_PAUSE;
             usPhyAds |= MII_ANAR_PAUSE;
@@ -685,6 +684,7 @@ static INT __miiAutoNegotiate (PHY_DEV *pPhyDev)
     if (__miiAnCheck(pPhyDev) == MII_OK) {
        return   (MII_OK);
     }
+    
     return  (MII_ERROR);
 }
 /*********************************************************************************************************
@@ -726,6 +726,7 @@ static INT __miiModeForce (PHY_DEV *pPhyDev)
     if (__miiFlagsHandle(pPhyDev) != MII_OK) {                          /* handle some flags            */
         return  (MII_ERROR);
     }
+    
     return  (MII_OK);
 }
 /*********************************************************************************************************
@@ -743,7 +744,6 @@ LW_API
 INT API_MiiPhyModeSet (PHY_DEV *pPhyDev)
 {
     if (pPhyDev->PHY_uiPhyFlags & MII_PHY_AUTO) {                       /* AutoNegotiation enabled      */
-
        if (__miiAutoNegotiate(pPhyDev) == MII_OK) {
            if (pPhyDev->PHY_uiPhyFlags & MII_PHY_GMII_TYPE) {
                pPhyDev->PHY_uiPhyLinkMethod = MII_PHY_LINK_AUTO;
@@ -753,12 +753,12 @@ INT API_MiiPhyModeSet (PHY_DEV *pPhyDev)
     }
 
     if (__miiModeForce(pPhyDev) == MII_OK) {
-
         if (pPhyDev->PHY_uiPhyFlags & MII_PHY_GMII_TYPE) {
             pPhyDev->PHY_uiPhyLinkMethod = MII_PHY_LINK_FORCE;
         }
         return  (MII_OK);
     }
+    
     return  (MII_ERROR);
 }
 /*********************************************************************************************************
@@ -803,8 +803,8 @@ INT API_MiiPhyDiagnostic (PHY_DEV *pPhyDev)
     UINT32  i;
     INT     iRet;
 
-    ucRegAddr   = MII_CTRL_REG;
-    usData      = MII_CTRL_RESET;
+    ucRegAddr = MII_CTRL_REG;
+    usData    = MII_CTRL_RESET;
 
     iRet = MII_WRITE(pPhyDev->PHY_ucPhyAddr, ucRegAddr, usData);       /* Reset the PHY                */
 
@@ -859,6 +859,7 @@ INT API_MiiPhyDiagnostic (PHY_DEV *pPhyDev)
                         pPhyDev->PHY_ucPhyAddr);
         return  (MII_ERROR);
     }
+    
     return  (MII_OK);
 }
 /*********************************************************************************************************
@@ -877,8 +878,8 @@ INT API_MiiPhyLinkStatGet (PHY_DEV *pPhyDev)
     UINT16  usPhyStatus;
     INT     iRet;
 
-    ucRegAddr   = MII_STAT_REG;
-    iRet        =  MII_READ(pPhyDev->PHY_ucPhyAddr, ucRegAddr, &usPhyStatus);
+    ucRegAddr = MII_STAT_REG;
+    iRet      =  MII_READ(pPhyDev->PHY_ucPhyAddr, ucRegAddr, &usPhyStatus);
     if (iRet == MII_ERROR) {
         return  (MII_ERROR);
     }
@@ -925,6 +926,7 @@ INT API_MiiPhyLinkStatGet (PHY_DEV *pPhyDev)
              MII_PHY_FLAGS_CLEAR(MII_PHY_1000T_FD);
         }
     }
+    
     return  (MII_OK);
 }
 /*********************************************************************************************************
@@ -948,8 +950,8 @@ INT API_MiiPhyIsolate (PHY_DEV *pPhyDev)
         return  (MII_OK);
     }
 
-    usData      = MII_CTRL_ISOLATE;
-    ucRegAddr   = MII_CTRL_REG;
+    usData    = MII_CTRL_ISOLATE;
+    ucRegAddr = MII_CTRL_REG;
 
     iRet = MII_WRITE(pPhyDev->PHY_ucPhyAddr, ucRegAddr, usData);
     if (iRet != MII_OK) {
@@ -960,7 +962,6 @@ INT API_MiiPhyIsolate (PHY_DEV *pPhyDev)
         API_TimeMSleep(pPhyDev->PHY_uiLinkDelay);
 
         iRet = MII_READ(pPhyDev->PHY_ucPhyAddr, ucRegAddr, &usData);
-
         if (iRet != MII_OK) {
             return  (MII_ERROR);
         }
@@ -973,6 +974,7 @@ INT API_MiiPhyIsolate (PHY_DEV *pPhyDev)
     if (i >= pPhyDev->PHY_uiTryMax) {
         return  (MII_ERROR);
     }
+    
     return  (MII_OK);
 }
 /*********************************************************************************************************
@@ -1023,8 +1025,7 @@ INT API_MiiPhyScan (PHY_DEV *pPhyDev)
     INT     i;
     INT     iRet;
 
-    for(i=0; i < MII_MAX_PHY_NUM; i++, pPhyDev->PHY_ucPhyAddr++) {
-
+    for (i = 0; i < MII_MAX_PHY_NUM; i++, pPhyDev->PHY_ucPhyAddr++) {
         iRet = API_MiiPhyProbe(pPhyDev);
         if(iRet != MII_OK) {
             continue;
@@ -1038,6 +1039,7 @@ INT API_MiiPhyScan (PHY_DEV *pPhyDev)
          */
         return  (MII_OK);
     }
+    
     return  (MII_PHY_NULL);
 }
 /*********************************************************************************************************
@@ -1094,7 +1096,7 @@ INT API_MiiPhyDel (PHY_DEV *pPhyDev)
 *********************************************************************************************************/
 static INT __miiPhyMonitor (VOID)
 {
-    PLW_LIST_LINE       pListNode;
+    PLW_LIST_LINE       plineNode;
     UINT16              usPhyStatus;
     PHY_DEV            *pPhyDev;
     INT                 iRet    = MII_ERROR;
@@ -1103,21 +1105,20 @@ static INT __miiPhyMonitor (VOID)
      * Loop the MII PHY list
      * Check all Status of PHYs
      */
-    for (pListNode = _G_plineMiiList; pListNode != LW_NULL; /* NOP */) {
-
-        pPhyDev = (PHY_DEV *) pListNode;
+    for (plineNode = _G_plineMiiList; plineNode != LW_NULL; /* NOP */) {
+        pPhyDev = (PHY_DEV *)plineNode;
 
         if ((MII_PHY_FLAGS_ARE_SET (MII_PHY_INIT)) &&
-                (MII_PHY_FLAGS_ARE_SET (MII_PHY_MONITOR))) {
+            (MII_PHY_FLAGS_ARE_SET (MII_PHY_MONITOR))) {
 
             iRet = MII_READ(pPhyDev->PHY_ucPhyAddr, MII_STAT_REG, &usPhyStatus);
             if (iRet == MII_ERROR) {
-                goto miiMonitorExit;
+                goto    __mii_monitor_exit;
             }
 
             iRet = MII_READ(pPhyDev->PHY_ucPhyAddr, MII_STAT_REG, &usPhyStatus);
             if (iRet == MII_ERROR) {
-                goto miiMonitorExit;
+                goto    __mii_monitor_exit;
             }
 
             /*
@@ -1125,10 +1126,8 @@ static INT __miiPhyMonitor (VOID)
              */
             if ((pPhyDev->PHY_usPhyStatus & MII_SR_LINK_STATUS) !=
                 (usPhyStatus & MII_SR_LINK_STATUS)) {
-
                 MII_DEBUG_ADDR("mii: link change stat=0x%02x.\r\n",
                                 usPhyStatus);
-
                 /*
                  * Tell the Mac Driver
                  */
@@ -1136,16 +1135,16 @@ static INT __miiPhyMonitor (VOID)
                     API_NetJobAdd((VOIDFUNCPTR)(pPhyDev->PHY_pPhyDrvFunc->PHYF_pfuncLinkDown),
                                   (PVOID)(pPhyDev->PHY_pvMacDrv), 0, 0, 0, 0, 0);
                     pPhyDev->PHY_usPhyStatus = usPhyStatus;
-
                 }
             }
         }
+        
         MII_LOCK();                                                     /* Get MII Mutex Lock           */
-        _list_line_next(&pListNode);
-        MII_UNLOCK ();
+        _list_line_next(&plineNode);
+        MII_UNLOCK();
     }
-miiMonitorExit:
-
+    
+__mii_monitor_exit:
     return  (iRet);
 }
 /*********************************************************************************************************
@@ -1163,6 +1162,7 @@ INT API_MiiPhyMonitorStop (VOID)
     if (API_TimerCancel(_G_hMiiTimer) == MII_ERROR) {
         return  (MII_ERROR);
     }
+    
     return  (MII_OK);
 }
 /*********************************************************************************************************
@@ -1184,6 +1184,7 @@ INT API_MiiPhyMonitorStart (VOID)
                         LW_NULL)) == MII_ERROR) {
         return  (MII_ERROR);
     }
+    
     return  (MII_OK);
 }
 /*********************************************************************************************************

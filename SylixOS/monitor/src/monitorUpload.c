@@ -20,6 +20,7 @@
 
 ** BUG:
 2013.09.14  可以设置监控的目标进程.
+2014.10.21  与远程节点的握手使用 XML 格式.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -33,10 +34,14 @@
 #include "../SylixOS/loader/include/loader_vppatch.h"
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 /*********************************************************************************************************
+  上传任务参数
+*********************************************************************************************************/
+#define MONITOR_STK_MIN_SZ      (LW_CFG_KB_SIZE * 8)
+/*********************************************************************************************************
   上传参数
 *********************************************************************************************************/
 #define MONITOR_EVENT_VERSION   "0.0.2"
-#define MONITOR_EVENT_TIMEOUT   (LW_CFG_TICKS_PER_SEC * 3)
+#define MONITOR_EVENT_TIMEOUT   (LW_CFG_TICKS_PER_SEC * 2)
 /*********************************************************************************************************
   上传节点
 *********************************************************************************************************/
@@ -66,7 +71,6 @@ typedef MONITOR_UPLOAD         *PMONITOR_UPLOAD;
 ** 输　出  : 是否收集事件
 ** 全局变量: 
 ** 调用模块: 
-                                           API 函数
 *********************************************************************************************************/
 static BOOL  __monitorUploadFilter (PVOID  pvMonitorUpload, UINT32  uiEventId, UINT32  uiSubEvent)
 {
@@ -138,7 +142,6 @@ static BOOL  __monitorUploadFilter (PVOID  pvMonitorUpload, UINT32  uiEventId, U
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-                                           API 函数
 *********************************************************************************************************/
 static VOID  __monitorUploadCollector (PVOID           pvMonitorUpload, 
                                        UINT32          uiEventId, 
@@ -217,7 +220,6 @@ static VOID  __monitorUploadCollector (PVOID           pvMonitorUpload,
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-                                           API 函数
 *********************************************************************************************************/
 static VOID  __monitorUploadTryProcProto (PMONITOR_UPLOAD  pmu)
 {
@@ -255,13 +257,50 @@ static VOID  __monitorUploadTryProcProto (PMONITOR_UPLOAD  pmu)
     }
 }
 /*********************************************************************************************************
+** 函数名称: __monitorUploadHello
+** 功能描述: 发送 upload hello 数据包
+** 输　入  : iFd       双穿
+** 输　出  : 是否发送成功
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __monitorUploadHello (INT  iFd)
+{
+    static const CHAR       cMonitor[] = \
+    "<?xml version=\"1.0\">"
+    "<!-- Copyright (C) 2007-2014 SylixOS Group. -->"
+    "<cpu name=\"%s\" wordlen=\"%d\" endian=\"%d\"/>"
+    "<os name=\"sylixos\" version=\"%s\" tick=\"%dhz\"/>"
+    "<tracer name=\"monitor\" version=\"%s\"/>\n";
+                 
+    CHAR            cStart[16];
+    ssize_t         sstLen;
+    struct timeval  tvTo = {5, 0};
+                 
+    fdprintf(iFd, cMonitor, bspInfoCpu(), LW_CFG_CPU_WORD_LENGHT, LW_CFG_CPU_ENDIAN,
+                            __SYLIXOS_VERSTR, LW_CFG_TICKS_PER_SEC,
+                            MONITOR_EVENT_VERSION);
+                            
+    if (waitread(iFd, &tvTo) < 1) {
+        printf("remote no response.\n");
+        return  (PX_ERROR);
+    }
+    
+    sstLen = read(iFd, cStart, 16);
+    if ((sstLen < 5) || lib_strncmp(cStart, "start", 5)) {
+        printf("remote response error.\n");
+        return  (PX_ERROR);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: __monitorUploadThread
 ** 功能描述: 监控跟踪节点上传线程
 ** 输　入  : pvArg     监控跟踪节点
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
-                                           API 函数
 *********************************************************************************************************/
 static PVOID  __monitorUploadThread (PVOID  pvArg)
 {
@@ -275,24 +314,10 @@ static PVOID  __monitorUploadThread (PVOID  pvArg)
     
     __KERNEL_TIME_GET(i64ProcProtoTime, INT64);
     
-    sstLen = (ssize_t)bnprintf((PCHAR)&ucEvent[2], 
-                               MONITOR_EVENT_MAX_SIZE - 2, 0,
-                               "hello|osv:%s|uploadv:%s|cpuinfo:%s|wordlen:%d"
-                               "endian:%d|hz:%d",
-                               __SYLIXOS_VERSTR, 
-                               MONITOR_EVENT_VERSION,
-                               bspInfoCpu(), 
-                               LW_CFG_CPU_WORD_LENGHT, 
-                               LW_CFG_CPU_ENDIAN, 
-                               LW_CFG_TICKS_PER_SEC);                   /*  构造欢迎信息                */
+    if (__monitorUploadHello(pmu->UPLOAD_iFd) < ERROR_NONE) {           /*  发送 hello 数据头           */
+        bMustStop = LW_TRUE;
+    }
     
-    sstLen += 2;                                                        /*  加入长度信息字节数          */
-    
-    ucEvent[0] = (UCHAR)(sstLen >> 8);                                  /*  两字节大端长度              */
-    ucEvent[1] = (UCHAR)(sstLen & 0xFF);
-    
-    write(pmu->UPLOAD_iFd, ucEvent, (size_t)sstLen);                    /*  发送欢迎信息                */
-
     for (;;) {
         if (bMustStop == LW_FALSE) {
             sstLen = __monitorBufferGet(pmu->UPLOAD_pvMonitorBuffer, 
@@ -320,7 +345,6 @@ static PVOID  __monitorUploadThread (PVOID  pvArg)
                     __KERNEL_TIME_GET(i64ProcProtoTime, INT64);
                 }
             }
-            
         } else {
             API_TimeSleep(MONITOR_EVENT_TIMEOUT);
         }
@@ -405,6 +429,10 @@ PVOID  API_MonitorUploadCreate (INT                   iFd,
     threadattr.THREADATTR_pvArg     = (PVOID)pmu;
     threadattr.THREADATTR_ulOption |= LW_OPTION_OBJECT_GLOBAL
                                     | LW_OPTION_THREAD_NO_MONITOR;
+    
+    if (threadattr.THREADATTR_stStackByteSize < MONITOR_STK_MIN_SZ) {
+        threadattr.THREADATTR_stStackByteSize = MONITOR_STK_MIN_SZ;
+    }
     
     pmu->UPLOAD_hMonitorThread = API_ThreadCreate("t_monitor", __monitorUploadThread,
                                                   &threadattr, LW_NULL);
