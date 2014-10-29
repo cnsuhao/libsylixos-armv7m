@@ -10,40 +10,37 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: vi_sylixos.c
+** 文   件   名: mosipc.h
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2009 年 02 月 10 日
+** 文件创建日期: 2014 年 10 月 28 日
 **
-** 描        述: 操作系统 shell 接口
+** 描        述: 多操作系统通信.
 *********************************************************************************************************/
-#define  __SYLIXOS_KERNEL
-#include "../SylixOS/kernel/include/k_kernel.h"
-#include "../SylixOS/system/include/s_system.h"
-#include "../SylixOS/shell/include/ttiny_shell.h"
+
+#ifndef __MOSIPC_H
+#define __MOSIPC_H
+
 /*********************************************************************************************************
-  函数声明
+  主操作系统初始化结构 (每个系统中只能存在一个主操作系统)
 *********************************************************************************************************/
-#if LW_CFG_SHELL_EN > 0
-int vi_main(int argc, char **argv);
-#endif                                                                  /*  LW_CFG_SHELL_EN > 0         */
+typedef struct {
+    addr_t      MHP_ulSmBase;                                           /*  共享内存基地址              */
+    size_t      MHP_stSize;                                             /*  共享内存大小                */
+    FUNCPTR     MHP_pfuncNotify;                                        /*  通知操作系统事件            */
+} LW_MOSIPC_HOSTOS_PARAM;
+
 /*********************************************************************************************************
-** 函数名称: viShellInit
-** 功能描述: 初始化 vi shell 接口(当前 VI 有内存泄露, 不能两个用户同时打开... vi 仅能用于调试使用)
-** 输　入  : NONE
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
+  从操作系统初始化结构 (每个系统中可以存在多个从操作系统)
 *********************************************************************************************************/
-VOID  viShellInit (VOID)
-{
-#if LW_CFG_SHELL_EN > 0
-    API_TShellKeywordAddEx("vi",  vi_main, LW_OPTION_KEYWORD_SYNCBG);
-    API_TShellFormatAdd("vi",     " [-H]");
-    API_TShellHelpAdd("vi", "(-H show help) busybox vi editor can Lead <Memory leak>! be carefull!\n");
-#endif                                                                  /*  LW_CFG_SHELL_EN > 0         */
-}
+typedef struct {
+    addr_t      MHP_ulSmBase;                                           /*  共享内存基地址              */
+    size_t      MHP_stSize;                                             /*  共享内存大小                */
+    FUNCPTR     MHP_pfuncNotify;                                        /*  通知操作系统事件            */
+} LW_MOSIPC_GUESTOS_PARAM;
+
+#endif                                                                  /*  __MOSIPC_H                  */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

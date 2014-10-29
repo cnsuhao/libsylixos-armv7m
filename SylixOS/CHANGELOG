@@ -5,6 +5,9 @@ HISTORY
 ++ New features:
 
     2014-10-15: han.hui
+    telnet 支持动态同步窗口大小.
+
+    2014-10-15: han.hui
     加入 stpcpy stpncpy strsignal 函数.
 
     2014-09-29: han.hui

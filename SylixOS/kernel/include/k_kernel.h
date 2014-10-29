@@ -90,6 +90,7 @@ __attribute__((weak)) char              __sylixos_version[] = __SYLIXOS_VERSTR;
 #include "../SylixOS/config/debug/debug_cfg.h"                          /*  调试器功能配置              */
 #include "../SylixOS/config/kernel/kernel_cfg.h"                        /*  系统内核配置文件            */
 #include "../SylixOS/config/system/system_cfg.h"                        /*  外围系统配置                */
+#include "../SylixOS/config/mosipc/mosipc_cfg.h"                        /*  多操作系统通信配置文件      */
 #include "../SylixOS/config/mp/mp_cfg.h"                                /*  多处理器配置文件            */
 #include "../SylixOS/config/shell/shell_cfg.h"                          /*  shell 系统配置文件          */
 #include "../SylixOS/config/fs/fs_cfg.h"                                /*  文件系统配置文件            */

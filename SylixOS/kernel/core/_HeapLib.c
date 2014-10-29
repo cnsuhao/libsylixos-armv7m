@@ -58,6 +58,7 @@
 2014.07.03  可以给 heap 中添加内存.
             free 操作确保最右侧分段应该在 freelist 的最后, 为最不推荐分配的段.
 2014.08.15  采用新的判断对齐内存释放算法.
+2014.10.27  加入多操作系统通信接口.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -247,13 +248,15 @@ static VOID    __heap_unlock (PLW_CLASS_HEAP  pheap)
 ** 输　入  : pheapToBuild          需要创建的堆
 **           pvStartAddress        起始内存地址
 **           stByteSize            内存堆的大小
+**           bIsMosHeap            是否为多操作系统内存堆
 ** 输　出  : 建立好的内存堆控制块
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-PLW_CLASS_HEAP  _HeapCtor (PLW_CLASS_HEAP    pheapToBuild,
-                           PVOID             pvStartAddress, 
-                           size_t            stByteSize)
+PLW_CLASS_HEAP  _HeapCtorEx (PLW_CLASS_HEAP    pheapToBuild,
+                             PVOID             pvStartAddress, 
+                             size_t            stByteSize, 
+                             BOOL              bIsMosHeap)
 {
     REGISTER PLW_CLASS_SEGMENT  psegment;
     REGISTER addr_t             ulStart      = (addr_t)pvStartAddress;
@@ -286,17 +289,38 @@ PLW_CLASS_HEAP  _HeapCtor (PLW_CLASS_HEAP    pheapToBuild,
                                          - __SEGMENT_BLOCK_SIZE_ALIGN;  /*  空闲的字节数                */
     pheapToBuild->HEAP_stMaxUsedByteSize = pheapToBuild->HEAP_stUsedByteSize;
 
+    if (bIsMosHeap) {
+        pheapToBuild->HEAP_ulLock = LW_OBJECT_HANDLE_INVALID;
+        
+    } else {
 #if (LW_CFG_SEMM_EN > 0) && (LW_CFG_MAX_EVENTS > 0)
-    pheapToBuild->HEAP_ulLock = API_SemaphoreMCreate("heap_lock",
-                                LW_PRIO_DEF_CEILING, 
-                                __HEAP_LOCK_OPT, LW_NULL);              /*  建立锁                      */
+        pheapToBuild->HEAP_ulLock = API_SemaphoreMCreate("heap_lock",
+                                                         LW_PRIO_DEF_CEILING, 
+                                                         __HEAP_LOCK_OPT, 
+                                                         LW_NULL);      /*  建立锁                      */
 #endif                                                                  /*  (LW_CFG_SEMM_EN > 0) &&     */
-                                                                        /*  (LW_CFG_MAX_EVENTS > 0)     */
+    }                                                                   /*  (LW_CFG_MAX_EVENTS > 0)     */
     
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_REGION, MONITOR_EVENT_REGION_CREATE,
                       pheapToBuild, pvStartAddress, stByteSize, LW_NULL);
     
     return  (pheapToBuild);
+}
+/*********************************************************************************************************
+** 函数名称: _HeapCtor
+** 功能描述: 构造一个内存堆
+** 输　入  : pheapToBuild          需要创建的堆
+**           pvStartAddress        起始内存地址
+**           stByteSize            内存堆的大小
+** 输　出  : 建立好的内存堆控制块
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+PLW_CLASS_HEAP  _HeapCtor (PLW_CLASS_HEAP    pheapToBuild,
+                           PVOID             pvStartAddress, 
+                           size_t            stByteSize)
+{
+    return  (_HeapCtorEx(pheapToBuild, pvStartAddress, stByteSize, LW_FALSE));
 }
 /*********************************************************************************************************
 ** 函数名称: _HeapCreate

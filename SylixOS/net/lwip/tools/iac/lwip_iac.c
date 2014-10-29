@@ -20,6 +20,7 @@
 
 ** BUG:
 2013.06.09  使用 -fsigned-char 时, 出现错误, 这里比较时需要使用无符号比较
+2014.10.22  修正 __inetIacFilter() 判断错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -34,7 +35,7 @@
 ** 函数名称: __inetIacMakeFrame
 ** 功能描述: 创建一个 IAC 数据包 (当前功能较为简单, 未来可能会增强)
 ** 输　入  : iCommand      命令
-**           iOpt          选项标识
+**           iOpt          选项标识, PX_ERROR 表示没有选项标识
 **           pcBuffer      缓冲区 (至少 3 个字节)
 ** 输　出  : ERROR
 ** 全局变量: 
@@ -45,8 +46,12 @@ INT  __inetIacMakeFrame (INT  iCommand, INT  iOpt, PCHAR  pcBuffer)
     if (pcBuffer) {
         pcBuffer[0] = (CHAR)LW_IAC_IAC;
         pcBuffer[1] = (CHAR)iCommand;
-        pcBuffer[2] = (CHAR)iOpt;
-        return  (3);
+        if (iOpt != PX_ERROR) {                                         /*   PX_ERROR 表示没有选项标识  */
+            pcBuffer[2] = (CHAR)iOpt;
+            return  (3);
+        } else {
+            return  (2);
+        }
     } else {
         return  (PX_ERROR);
     }
@@ -78,10 +83,11 @@ INT  __inetIacSend (INT  iFd, INT  iCommand, INT  iOpt)
 ** 功能描述: IAC 数据包接收滤波器
 ** 输　入  : pcBuffer          接收缓冲
 **           iLen              缓冲长度
-**           pfunc             IAC 回调函数
 **           piPtyLen          pty 需要接收的数据长度
 **           piProcessLen      本轮处理的字节数 (由于本次接收的 IAC 字段不完整, 
                                                  有可能会剩余几个字节不处理)
+**           pfunc             IAC 回调函数
+**           pvArg             IAC 回调参数
 ** 输　出  : pty data buffer
 ** 全局变量: 
 ** 调用模块: 
@@ -90,7 +96,8 @@ PCHAR  __inetIacFilter (PCHAR        pcBuffer,
                         INT          iLen, 
                         INT         *piPtyLen, 
                         INT         *piProcessLen, 
-                        FUNCPTR      pfunc)
+                        FUNCPTR      pfunc,
+                        PVOID        pvArg)
 {
     REGISTER PUCHAR     pucTemp = (PUCHAR)pcBuffer;
     REGISTER PUCHAR     pucEnd  = (PUCHAR)(pcBuffer + iLen);
@@ -100,11 +107,13 @@ PCHAR  __inetIacFilter (PCHAR        pcBuffer,
         if (*pucTemp != LW_IAC_IAC) {                                   /*  非 IAC 转义                 */
             *pucOut++ = *pucTemp;
         } else {
-            if ((pucTemp + 2) < pucEnd) {
+            if ((pucTemp + 2) <= pucEnd) {
                 if (pfunc) {
-                    pfunc((INT)pucTemp[0], (INT)pucTemp[1]);            /*  回调                        */
+                    pucTemp += pfunc(pvArg, pucTemp, pucEnd);           /*  回调                        */
+                    pucTemp--;                                          /*  调和for循环后面的++         */
+                } else {
+                    pucTemp += 1;                                       /*  忽略 IAC 字段               */
                 }
-                pucTemp += 2;                                           /*  忽略 IAC 字段               */
             } else {
                 break;                                                  /*  最后的 IAC 不完整           */
             }

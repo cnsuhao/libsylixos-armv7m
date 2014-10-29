@@ -28,6 +28,7 @@ directory overview
          threadext  (thread extened function)
    lib          (SylixOS tiny c lib)
    license      (SylixOS license)
+   mosipc       (SylixOS multi-OS IPC)
    mpi          (SylixOS MPI support)
    net          (SylixOS networking support)
        --bsd    (FreeBSD networking transplant)

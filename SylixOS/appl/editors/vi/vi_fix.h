@@ -43,7 +43,7 @@ typedef  int    smallint;
 
 #define  ENABLE_FEATURE_VI_8BIT                 1
 #define  ENABLE_FEATURE_VI_OPTIMIZE_CURSOR      1
-#define  ENABLE_FEATURE_VI_USE_SIGNALS          0
+#define  ENABLE_FEATURE_VI_USE_SIGNALS          1
 #define  ENABLE_FEATURE_VI_CRASHME              0
 #define  ENABLE_FEATURE_VI_DOT_CMD              1
 #define  ENABLE_FEATURE_VI_YANKMARK             1
@@ -54,11 +54,11 @@ typedef  int    smallint;
 #define  ENABLE_FEATURE_VI_WIN_RESIZE           1
 #define  ENABLE_FEATURE_VI_SET                  1
 
-#define  CONFIG_FEATURE_VI_MAX_LEN              BUFSIZ
+#define  CONFIG_FEATURE_VI_MAX_LEN              2048
 
 #define RESERVE_CONFIG_BUFFER(buffer,len)       char    buffer[len]
 
-#define  BB_VER                                 "busybox ver: 1.10.2"
+#define  BB_VER                                 "busybox vi for sylixos : 1.10.2"
 #define  BB_BT                                  ""
 
 #ifndef  __cplusplus
@@ -99,6 +99,12 @@ typedef  int    smallint;
 #define safe_write(fd,buf , count)              write(fd, buf, count)
 #define safe_read(fd, buf , count)              read(fd, buf, count)
 
+#ifdef __GNUC__
+#define ATTRIBUTE_UNUSED                        __attribute__((unused))
+#else
+#define ATTRIBUTE_UNUSED
+#endif
+
 /*********************************************************************************************************
   sylixos º¯ÊýÉùÃ÷
 *********************************************************************************************************/
@@ -113,11 +119,13 @@ extern   ssize_t    full_write(int fd, const void *buf, size_t len);
 extern   int        isblank(int c);
 extern   int        bb_putchar(int ch);
 
+#include "unistd.h"
 #include "string.h"
 #include "stdlib.h"
 #include "time.h"
 #include "ctype.h"
 #include "termios.h"
+#include "setjmp.h"
 
 #define xzalloc     lib_xzalloc
 

@@ -61,12 +61,14 @@
 2013.06.24  加入对 vfat 卷标的支持.
 2014.05.30  加入查看文件夹大小的命令.
 2014.10.10  cp 命令将目标文件设置为与原始文件相同的 mode.
+2014.10.29  ls 显示的单行宽度通过 TIOCGWINSZ 获取.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
 #include "../SylixOS/shell/include/ttiny_shell.h"
+#include "sys/ioctl.h"
 /*********************************************************************************************************
   裁剪控制
 *********************************************************************************************************/
@@ -550,6 +552,7 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER DIR            *pdir;
     REGISTER struct dirent  *pdirent;
              struct stat     statGet;
+             struct winsize  winsz;
              
              INT             iError;
              
@@ -582,6 +585,12 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
             printf("can not open dir! %s\n", lib_strerror(errno));
         }
         return  (-1);
+    }
+    
+    if (ioctl(STD_OUT, TIOCGWINSZ, &winsz)) {                           /*  获得窗口信息                */
+        winsz.ws_col = __TSHELL_BYTES_PERLINE;
+    } else {
+        winsz.ws_col = (unsigned short)ROUND_DOWN(winsz.ws_col, __TSHELL_BYTES_PERFILE);
     }
     
     do {
@@ -618,7 +627,7 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
             stTotalLen += stPrintLen + stPad;
             API_TShellColorEnd(STD_OUT);
             
-            if (stTotalLen >= __TSHELL_BYTES_PERLINE) {
+            if (stTotalLen >= winsz.ws_col) {
                 printf("\n");                                           /*  换行                        */
                 stTotalLen = 0;
             }

@@ -22,12 +22,14 @@
 ** BUG:
 2012.10.19  修正 __tshellCharTab() 参数列表缓存个数错误, 应该为 LW_CFG_SHELL_MAX_PARAMNUM + 1.
 2014.02.24  tab 补齐时, 进行相似度补齐.
+2014.10.29  tab 补齐时, 显示的单行宽度通过 TIOCGWINSZ 获取.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
 #include "../SylixOS/shell/include/ttiny_shell.h"
+#include "sys/ioctl.h"
 /*********************************************************************************************************
   裁剪控制
 *********************************************************************************************************/
@@ -558,6 +560,7 @@ static VOID  __tshellFileMatch (INT  iFd, PCHAR  pcDir, PCHAR  pcFileName,
     
     CHAR             cStat[MAX_FILENAME_LENGTH];
     struct stat      statGet;
+    struct winsize   winsz;
     
     struct dirent    direntcMatch;
     struct dirent   *pdirent;
@@ -569,6 +572,12 @@ static VOID  __tshellFileMatch (INT  iFd, PCHAR  pcDir, PCHAR  pcFileName,
     
     if (pdir == LW_NULL) {
         return;
+    }
+    
+    if (ioctl(STD_OUT, TIOCGWINSZ, &winsz)) {                           /*  获得窗口信息                */
+        winsz.ws_col = __TSHELL_BYTES_PERLINE;
+    } else {
+        winsz.ws_col = (unsigned short)ROUND_DOWN(winsz.ws_col, __TSHELL_BYTES_PERFILE);
     }
     
     stDirLen = lib_strlen(pcDir);
@@ -617,7 +626,7 @@ __print_dirent:
                     stTotalLen += stPrintLen + stPad;
                     API_TShellColorEnd(STD_OUT);
                     
-                    if (stTotalLen >= __TSHELL_BYTES_PERLINE) {
+                    if (stTotalLen >= winsz.ws_col) {
                         printf("\n");                                   /*  换行                        */
                         stTotalLen = 0;
                     }

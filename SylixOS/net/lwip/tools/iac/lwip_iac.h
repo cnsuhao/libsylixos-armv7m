@@ -92,7 +92,8 @@ PCHAR  __inetIacFilter(PCHAR        pcBuffer,
                        INT          iLen, 
                        INT         *piPtyLen, 
                        INT         *piProcessLen, 
-                       FUNCPTR      pfunc);
+                       FUNCPTR      pfunc,
+                       PVOID        pvArg);
 
 #endif                                                                  /*  __LW_IAC_H                  */
 /*********************************************************************************************************

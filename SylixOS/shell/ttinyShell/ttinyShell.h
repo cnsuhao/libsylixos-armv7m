@@ -35,6 +35,8 @@ typedef INT               (*PCOMMAND_START_ROUTINE)(INT  iArgC, PCHAR  ppcArgV[]
 
 /*********************************************************************************************************
   API
+  
+  注意: 添加命令时如果命令代码使用了信号, 必须使用 LW_OPTION_KEYWORD_SYNCBG 或者 LW_OPTION_KEYWORD_ASYNCBG
 *********************************************************************************************************/
 LW_API VOID                 API_TShellInit(VOID);                       /*  安装 tshell 系统            */
 
@@ -46,7 +48,10 @@ LW_API VOID                 API_TShellScrClear(INT  iFd);               /*  清屏
 
 LW_API INT                  API_TShellSetStackSize(size_t  stNewSize, size_t  *pstOldSize);
                                                                         /*  设置堆栈大小                */
-
+LW_API ULONG                API_TShellSigEvent(LW_OBJECT_HANDLE  ulShell, 
+                                               struct sigevent  *psigevent, 
+                                               INT               iSigCode);
+                                                                        /*  向 shell 发送信号           */
 LW_API LW_OBJECT_HANDLE     API_TShellCreate(INT  iTtyFd, 
                                              ULONG  ulOption);          /*  创建一个 tshell 终端        */
 
@@ -80,6 +85,7 @@ LW_API INT                  API_TShellExecBg(CPCHAR  pcCommandExec, INT  iFd[3],
                                                                         
 #define tshellInit          API_TShellInit
 #define tshellSetStackSize  API_TShellSetStackSize
+#define tshellSigEvent      API_TShellSigEvent
 #define tshellCreate        API_TShellCreate
 #define tshellCreateEx      API_TShellCreateEx
 #define tshellGetUserName   API_TShellGetUserName

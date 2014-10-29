@@ -19,6 +19,7 @@
 ** 描        述: vi 编辑器移植层
 *********************************************************************************************************/
 #include "vi_fix.h"
+#include "sys/ioctl.h"
 /*********************************************************************************************************
 ** 函数名称: get_terminal_width_height
 ** 功能描述: 获得终端窗口的大小
@@ -31,12 +32,23 @@
 *********************************************************************************************************/
 int  get_terminal_width_height (const int  fd, int  *width, int  *height)
 {
-    if (width) {
-        *width = __VI_TERMINAL_WIDTH;
-    }
-    if (height) {
+#define FIX_BUSYBOX_BUG
+
+#ifdef FIX_BUSYBOX_BUG
+    struct winsize  ws;
+    
+    if (ioctl(fd, TIOCGWINSZ, &ws) == ERROR_NONE) {
+        *width  = ws.ws_col;
+        *height = ws.ws_row;
+    
+    } else {
+#endif
+        *width  = __VI_TERMINAL_WIDTH;
         *height = __VI_TERMINAL_HEIGHT;
+        
+#ifdef FIX_BUSYBOX_BUG
     }
+#endif
     
     return  (0);
 }

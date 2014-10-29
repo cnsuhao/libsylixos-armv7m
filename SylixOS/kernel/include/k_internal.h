@@ -567,6 +567,10 @@ VOID           _PartitionFree(PLW_CLASS_PARTITION  p_part, PVOID  pvFree);
 PLW_CLASS_HEAP _HeapCtor(PLW_CLASS_HEAP    pheapToBuild,
                          PVOID             pvStartAddress, 
                          size_t            stByteSize);
+PLW_CLASS_HEAP _HeapCtorEx(PLW_CLASS_HEAP    pheapToBuild,
+                           PVOID             pvStartAddress, 
+                           size_t            stByteSize, 
+                           BOOL              bIsMosHeap);
 PLW_CLASS_HEAP _HeapDtor(PLW_CLASS_HEAP  pheap, BOOL  bIsCheckUsed);
 PLW_CLASS_HEAP _HeapCreate(PVOID               pvStartAddress, 
                            size_t              stByteSize);

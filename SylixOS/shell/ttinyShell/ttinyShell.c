@@ -200,6 +200,49 @@ VOID  API_TShellInit (VOID)
     }
 }
 /*********************************************************************************************************
+** 函数名称: API_TShellSigEvent
+** 功能描述: 向一个 shell 终端发送信号.
+** 输　入  : ulShell               终端线程
+**           psigevent             信号信息
+**           iSigCode              信号
+** 输　出  : 发送是否成功.
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG  API_TShellSigEvent (LW_OBJECT_HANDLE  ulShell, struct sigevent *psigevent, INT  iSigCode)
+{
+    REGISTER PLW_CLASS_TCB    ptcbShell;
+    REGISTER PLW_CLASS_TCB    ptcbJoin;
+             LW_OBJECT_HANDLE ulJoin = LW_OBJECT_HANDLE_INVALID;
+             UINT16           usIndex;
+    
+    usIndex = _ObjectGetIndex(ulShell);
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (_Thread_Invalid(usIndex)) {
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+        return  (ERROR_THREAD_NULL);
+    }
+    
+    ptcbShell = __GET_TCB_FROM_INDEX(usIndex);
+    ptcbJoin  = ptcbShell->TCB_ptcbJoin;
+    if (ptcbJoin) {                                                     /*  等待其他线程结束            */
+        ulJoin = ptcbJoin->TCB_ulId;
+    }
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    if (ulJoin) {
+        _doSigEvent(ulJoin, psigevent, iSigCode);
+    
+    } else {
+        _doSigEvent(ulShell, psigevent, iSigCode);
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
 ** 函数名称: API_TShellCreateEx
 ** 功能描述: 创建一个 ttiny shell 系统, SylixOS 支持多个终端设备同时运行.
 **           tshell 可以使用标准 tty 设备, 或者 pty 虚拟终端设备.

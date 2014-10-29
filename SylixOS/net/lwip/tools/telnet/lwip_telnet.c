@@ -37,7 +37,8 @@
 2011.04.07  服务器线程从 /etc/services 中获取 telnet 的服务端口, 如果没有, 默认使用 23 端口.
 2011.08.06  侦听任务名改为 t_telnetd.
 2012.03.26  __telnetCommunication() 优化退出机制. 所以 t_ptyproc 线程不需要再使用 FIFO 调度.
-2013.05.08  pty 默认目录为 /dev/pty 目录
+2013.05.08  pty 默认目录为 /dev/pty 目录.
+2014.10.22  加入对部分 IAC 命令的处理.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -51,6 +52,7 @@
 #include "netdb.h"
 #include "arpa/inet.h"
 #include "sys/socket.h"
+#include "sys/ioctl.h"
 #include "../iac/lwip_iac.h"
 #include "../SylixOS/shell/ttinyShell/ttinyShellLib.h"
 /*********************************************************************************************************
@@ -69,6 +71,98 @@
 static CHAR           _G_cTelnetPtyStartName[MAX_FILENAME_LENGTH] = "/dev/pty";
 static const CHAR     _G_cTelnetAbort[] = __TTINY_SHELL_FORCE_ABORT "\n";
 static atomic_t       _G_atomicTelnetLinks;
+/*********************************************************************************************************
+  IAC命令格式：
+  FMT1 = IAC(BYTE) + CMD(BYTE)
+  FMT2 = IAC(BYTE) + CMD(BYTE) + OPT(BYTE)
+  FMT3 = IAC(BYTE) + SB(BYTE)  + PARAM(...) + IAC(BYTE) + SE(BYTE)
+*********************************************************************************************************/
+/*********************************************************************************************************
+** 函数名称: __telnetIacProcesser
+** 功能描述: telnet IAC 命令回调函数，响应客户端发过来的 IAC 命令
+** 输　入  : ulShell         shell 线程.
+**           pucIACBuff      IAC命令其实位置
+**           pucIACBuffEnd   缓冲区结束位置
+** 输　出  : 命令占用长度，即解析数据时应该跳过的长度
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT __telnetIacProcesser (LW_OBJECT_HANDLE   ulShell,
+                                 PUCHAR             pucIACBuff,
+                                 PUCHAR             pucIACBuffEnd)
+{
+    INT     iCmd;
+    INT     iOpt;
+    INT     iBuffLen;
+    PUCHAR  pucTemp;
+    
+    if ((pucIACBuff    == LW_NULL)       ||
+        (pucIACBuffEnd == LW_NULL)       ||
+        (pucIACBuffEnd - pucIACBuff) < 2 ||
+        (pucIACBuff[0] != LW_IAC_IAC)) {                                /*  只处理IAC命令               */
+        return  (1);                                                    /*  命令错误，只跳过当前字符    */
+    }
+    
+    iCmd     = pucIACBuff[1];
+    iBuffLen = pucIACBuffEnd - pucIACBuff;
+
+    switch (iCmd) {
+    
+    case LW_IAC_AYT:                                                    /*  Are you there命令           */
+        __inetIacSend(STD_OUT, LW_IAC_AYT, -1);
+        return  (2);
+
+    case LW_IAC_WILL:                                                   /*  协商选项                    */
+    case LW_IAC_WONT:
+    case LW_IAC_DO:
+    case LW_IAC_DONT:
+        if (iBuffLen >= 3) {
+            iOpt = pucIACBuff[2];                                       /*  选项码                      */
+        }
+        return  (__MIN(3, iBuffLen));                                   /*  跳过3个字节，含选项内容     */
+
+    case LW_IAC_SB:                                                     /*  设置选项参数                */
+        pucTemp = pucIACBuff + 2;
+        while (pucTemp < pucIACBuffEnd) {
+            if ((*pucTemp == LW_IAC_SE) &&
+                (*(pucTemp - 1) == LW_IAC_IAC)) {                       /*  子选项以 IAC SE结束         */
+                pucTemp++;
+                break;
+            }
+            pucTemp++;
+        }
+
+        if ((pucIACBuff + 2) < pucTemp) {
+            iOpt = pucIACBuff[2];                                       /*  选项码                      */
+        }
+
+        switch (iOpt) {
+        
+        case LW_IAC_OPT_NAWS:                                           /*  窗口大小                    */
+            if ((pucIACBuff + 4) < pucTemp) {
+                INT             iFd = API_IoTaskStdGet(ulShell, STD_OUT);
+                struct winsize  ws;
+                struct sigevent sigevent;
+                
+                ws.ws_row = (unsigned short)(((INT)pucIACBuff[5] << 8) + pucIACBuff[6]);
+                ws.ws_col = (unsigned short)(((INT)pucIACBuff[3] << 8) + pucIACBuff[4]);
+                ws.ws_xpixel = (unsigned short)(ws.ws_col *  8);
+                ws.ws_ypixel = (unsigned short)(ws.ws_row * 16);
+                ioctl(iFd, TIOCSWINSZ, &ws);                            /*  设置新的窗口大小            */
+                
+                sigevent.sigev_signo           = SIGWINCH;
+                sigevent.sigev_value.sival_ptr = LW_NULL;
+                sigevent.sigev_notify          = SIGEV_NONE;
+                API_TShellSigEvent(ulShell, &sigevent, SIGWINCH);       /*  通知应用程序                */
+            }
+            break;
+        }
+        return  (pucTemp - pucIACBuff);                                 /*  计算参数长度                */
+
+    default:
+        return  (2);
+    }
+}
 /*********************************************************************************************************
 ** 函数名称: __telnetCommunication
 ** 功能描述: telnet 服务器半双工网络服务. (lwip 暂不支持全双工多线程读写同套接字操作)
@@ -136,7 +230,8 @@ static VOID  __telnetCommunication (INT  iDevFd)
                                               iSockReadNum, 
                                               &iPtyLen, 
                                               &iProcessLen, 
-                                              LW_NULL);                 /*  滤除 IAC 字段               */
+                                              __telnetIacProcesser, 
+                                              (PVOID)ulShell);          /*  滤除 IAC 字段               */
                 if (pcPtyBuffer && (iPtyLen > 0)) {
                     if ((iPtyLen >= 2) &&
                         (pcPtyBuffer[iPtyLen - 2] == '\r') &&
@@ -290,6 +385,7 @@ static VOID  __telnetServer (INT  iSock)
     
     __inetIacSend(iSock, LW_IAC_DO,   LW_IAC_OPT_ECHO);
     __inetIacSend(iSock, LW_IAC_DO,   LW_IAC_OPT_LFLOW);
+    __inetIacSend(iSock, LW_IAC_DO,   LW_IAC_OPT_NAWS);
     __inetIacSend(iSock, LW_IAC_WILL, LW_IAC_OPT_ECHO);                 /*  服务器端回显                */
     __inetIacSend(iSock, LW_IAC_WILL, LW_IAC_OPT_SGA);                  /*  允许远程机开始通信          */
     

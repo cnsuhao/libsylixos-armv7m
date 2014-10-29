@@ -417,6 +417,7 @@
 #define IW_POWER_TYPE           0xF000  /* Type of parameter                                            */
 #define IW_POWER_PERIOD         0x1000  /* Value is a period/duration of                                */
 #define IW_POWER_TIMEOUT        0x2000  /* Value is a timeout (to go asleep)                            */
+#define IW_POWER_SAVING         0x4000
 #define IW_POWER_MODE           0x0F00  /* Power Management mode                                        */
 #define IW_POWER_UNICAST_R      0x0100  /* Receive only unicast messages                                */
 #define IW_POWER_MULTICAST_R    0x0200  /* Receive only multicast messages                              */
@@ -672,6 +673,11 @@
 /*********************************************************************************************************
  --- TYPES ---
 *********************************************************************************************************/
+
+#define IW_BITRATE_TYPE                 0x00FF                          /*  Type of value               */
+#define IW_BITRATE_UNICAST              0x0001                          /* Maximum/Fixed unicast bitrate*/
+#define IW_BITRATE_BROADCAST            0x0002                          /*  Fixed broadcast bitrate     */
+
 /*********************************************************************************************************
  --- SUBTYPES ---
 *********************************************************************************************************/
@@ -780,7 +786,7 @@ struct iw_scan_req {
     u8                flags;            /* reserved as padding; use zero, this may
                                          * be used in the future for adding flags
                                          * to request different scan behavior                           */
-    struct sockaddr    bssid;           /* ff:ff:ff:ff:ff:ff for broadcast BSSID or
+    struct sockaddr   bssid;            /* ff:ff:ff:ff:ff:ff for broadcast BSSID or
                                          * individual address of a specific BSS                         */
 
     /*
@@ -804,7 +810,7 @@ struct iw_scan_req {
     u32                min_channel_time; /* in TU                                                       */
     u32                max_channel_time; /* in TU                                                       */
 
-    struct iw_freq    channel_list[IW_MAX_FREQUENCIES];
+    struct iw_freq     channel_list[IW_MAX_FREQUENCIES];
 };
 
 /*********************************************************************************************************
@@ -1118,6 +1124,24 @@ struct iw_range {
      */
 
     u32                 enc_capa;           /* IW_ENC_CAPA_* bit field                                  */
+    
+    /*
+     *  Port from iwconfig as follow
+     *  More power management stuff
+     */
+    s32                 min_pms;            /*  Minimal PM saving                                       */
+    s32                 max_pms;            /*  Maximal PM saving                                       */
+    u16                 pms_flags;          /*  How to decode max/min PM                                */
+
+    /*
+     *  All available modulations for driver (hw may support less)
+     */
+    s32                 modul_capa;         /*  IW_MODUL_* bit field                                    */
+
+    /*
+     *  More bitrate stuff
+     */
+    u32                 bitrate_capa;       /*  Types of bitrates supported                             */
 };
 
 /*********************************************************************************************************
