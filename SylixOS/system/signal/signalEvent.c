@@ -184,6 +184,7 @@ static INT  _doSigEventInternal (LW_OBJECT_HANDLE  ulId, PSIGNAL_EVENT_ARG   psi
     
     sigpend.SIGPEND_siginfo          = *psiginfo;
     sigpend.SIGPEND_siginfo.si_signo = psigevent->sigev_signo;          /*  ÒÔ sigevent ÎªÖ÷            */
+    sigpend.SIGPEND_siginfo.si_errno = errno;
     sigpend.SIGPEND_siginfo.si_value = psigevent->sigev_value;
     sigpend.SIGPEND_iNotify          = psigevent->sigev_notify;
     

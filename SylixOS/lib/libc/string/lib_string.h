@@ -82,6 +82,7 @@ PCHAR  lib_strpbrk(CPCHAR  cpcS1, CPCHAR  cpcS2);
 
 int    lib_ffs(int valu);
 size_t lib_strftime(char *s, size_t maxsize, const char *format, const struct tm *t);
+char  *lib_strptime(const char *buf, const char *fmt, struct tm *tm);
 int    lib_stricmp(const char *s1, const char *s2);
 size_t lib_strspn(const char *s1, const char *s2);
 char  *lib_strtok(char *s, const char *delim);

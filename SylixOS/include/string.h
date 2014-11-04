@@ -88,6 +88,8 @@ __LW_RETU_FUNC_DECLARE(size_t, strcspn, (const char *cpcS1, const char *cpcS2))
 __LW_RETU_FUNC_DECLARE(char *, strpbrk, (const char *cpcS1, const char *cpcS2))
 
 __LW_RETU_FUNC_DECLARE(size_t, strftime, (char *s, size_t maxsize, const char *format, const struct tm *t))
+__LW_RETU_FUNC_DECLARE(char *, strptime, (const char *buf, const char *fmt, struct tm *tm))
+
 __LW_RETU_FUNC_DECLARE(int, stricmp, (const char *s1, const char *s2))
 __LW_RETU_FUNC_DECLARE(size_t, strspn, (const char *s1, const char *s2))
 __LW_RETU_FUNC_DECLARE(char *, strtok, (char *s, const char *delim))

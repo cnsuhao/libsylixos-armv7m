@@ -1255,7 +1255,7 @@ static ssize_t  __fatFsWrite (PLW_FD_ENTRY  pfdentry,
     __FAT_FILE_UNLOCK(pfatfile);
     
     if (ulError == ERROR_NONE) {
-        if (pfdentry->FDENTRY_iFlag & O_SYNC) {                         /*  需要立即同步                */
+        if (pfdentry->FDENTRY_iFlag & (O_SYNC | O_DSYNC)) {             /*  需要立即同步                */
             ulError = __fatFsSync(pfdentry, LW_TRUE);
         }
     }
@@ -1325,7 +1325,7 @@ static ssize_t  __fatFsPWrite (PLW_FD_ENTRY  pfdentry,
     __FAT_FILE_UNLOCK(pfatfile);
     
     if (ulError == ERROR_NONE) {
-        if (pfdentry->FDENTRY_iFlag & O_SYNC) {                         /*  需要立即同步                */
+        if (pfdentry->FDENTRY_iFlag & (O_SYNC | O_DSYNC)) {             /*  需要立即同步                */
             ulError = __fatFsSync(pfdentry, LW_TRUE);
         }
     }

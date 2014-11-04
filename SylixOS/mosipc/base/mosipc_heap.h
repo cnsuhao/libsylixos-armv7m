@@ -10,33 +10,31 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: mosipc.h
+** 文   件   名: mosipc_heap.h
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
 ** 文件创建日期: 2014 年 10 月 28 日
 **
-** 描        述: 多操作系统通信.
+** 描        述: 多操作系统通信内存堆.
 *********************************************************************************************************/
 
-#ifndef __MOSIPC_H
-#define __MOSIPC_H
+#ifndef __MOSIPC_HEAP_H
+#define __MOSIPC_HEAP_H
 
 /*********************************************************************************************************
-  主操作系统初始化结构 (每个系统中只能存在一个主操作系统)
+  多操作系统通信内存堆管理
 *********************************************************************************************************/
-typedef struct {
 
-} LW_MOSIPC_HOSTOS_PARAM;
+INT   __mosipcHeapInit(PLW_CLASS_HEAP pheapToBuild, PVOID pvStartAddress, size_t stByteSize);
+PVOID __mosipcHeapAlloc(PLW_CLASS_HEAP pheap, size_t stByteSize, size_t stAlign, CPCHAR pcPurpose);
+INT   __mosipcHeapFree(PLW_CLASS_HEAP pheap, PVOID pvStartAddress, CPCHAR pcPurpose);
 
-/*********************************************************************************************************
-  从操作系统初始化结构 (每个系统中可以存在多个从操作系统)
-*********************************************************************************************************/
-typedef struct {
+#define MOSIPC_HEAP_INIT(pheap, addr, size)     __mosipcHeapInit(pheap, addr, size)
+#define MOSIPC_HEAP_ALLOC(pheap, size, align)   __mosipcHeapAlloc(pheap, size, align, __func__)
+#define MOSIPC_HEAP_FREE(pheap, addr)           __mosipcHeapFree(pheap, addr, __func__)
 
-} LW_MOSIPC_GUESTOS_PARAM;
-
-#endif                                                                  /*  __MOSIPC_H                  */
+#endif                                                                  /*  __MOSIPC_HEAP_H             */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

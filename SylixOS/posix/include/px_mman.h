@@ -109,6 +109,18 @@ LW_API int      munmap(void  *pvAddr, size_t  stLen);
 LW_API int      msync(void  *pvAddr, size_t  stLen, int  iFlag);
 
 /*********************************************************************************************************
+  memory advisory information and alignment control
+*********************************************************************************************************/
+
+#define POSIX_MADV_NORMAL       0                                       /*  no further special treatment*/
+#define POSIX_MADV_RANDOM       1                                       /*  expect random page refs     */
+#define POSIX_MADV_SEQUENTIAL   2                                       /*  expect sequential page refs */
+#define POSIX_MADV_WILLNEED     3                                       /*  will need these pages       */
+#define POSIX_MADV_DONTNEED     4                                       /*  dont need these pages       */
+
+LW_API int      posix_madvise(void *addr, size_t len, int advice);
+
+/*********************************************************************************************************
   share memory
 *********************************************************************************************************/
 

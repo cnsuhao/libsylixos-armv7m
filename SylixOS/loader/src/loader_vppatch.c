@@ -666,6 +666,7 @@ INT  vprocNotifyParent (LW_LD_VPROC *pvproc, INT  iSigCode)
     }
     
     siginfoChld.si_signo = SIGCHLD;
+    siginfoChld.si_errno = ERROR_NONE;
     siginfoChld.si_code  = iSigCode;
     siginfoChld.si_pid   = pvproc->VP_pid;
     siginfoChld.si_uid   = getuid();

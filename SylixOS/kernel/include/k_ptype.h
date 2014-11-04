@@ -213,6 +213,8 @@ struct sigaction {
 #define sa_handler       _u._sa_handler
 #define sa_sigaction     _u._sa_sigaction
 
+typedef PSIGNAL_HANDLE   sighandler_t;
+
 /*********************************************************************************************************
   UNIX BSD signal
 *********************************************************************************************************/
@@ -243,6 +245,7 @@ typedef union sigval {
 
 typedef struct siginfo {
     INT                        si_signo;
+    INT                        si_errno;
     INT                        si_code;
     
     union {

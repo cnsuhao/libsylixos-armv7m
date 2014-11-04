@@ -56,6 +56,8 @@
 2013.12.12  _sigGetLsb() 使用 archFindLsb() 寻找最需要递送的信号编号最小的信号.
 2014.06.01  遇到紧急停止信号, 进程将会被强制停止.
 2014.09.30  SA_SIGINFO 加入对信号上下文参数的传递, 由于解除阻塞运行的信号, 则信号上下文参数为 LW_NULL.
+2014.10.31  支持 POSIX 定义的指定堆栈的信号上下文操作.
+2014.11.04  支持 SA_NOCLDWAIT 自动回收子进程.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -70,6 +72,7 @@
 *********************************************************************************************************/
 #if LW_CFG_MODULELOADER_EN > 0
 #include "sys/vproc.h"
+#include "sys/wait.h"
 #include "unistd.h"
 #include "../SylixOS/loader/include/loader_vppatch.h"
 #define __tcb_pid(ptcb)     __lw_vp_get_tcb_pid(ptcb)
@@ -202,6 +205,21 @@ static VOID  __signalExitHandle (INT  iSigNo, struct siginfo *psiginfo)
     }
 }
 /*********************************************************************************************************
+** 函数名称: __signalWaitHandle
+** 功能描述: 回收子进程资源
+** 输　入  : iSigNo        信号数值
+**           psiginfo      信号信息
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __signalWaitHandle (INT  iSigNo, struct siginfo *psiginfo)
+{
+#if LW_CFG_MODULELOADER_EN > 0
+    reclaimchild();
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN      */
+}
+/*********************************************************************************************************
 ** 函数名称: __signalStopHandle
 ** 功能描述: SIGSTOP / SIGTSTP 信号的服务函数
 ** 输　入  : iSigNo        信号数值
@@ -250,6 +268,8 @@ static VOID  __sigTaskCreateHook (LW_OBJECT_HANDLE  ulId)
     REGISTER PLW_CLASS_SIGCONTEXT   psigctx = _signalGetCtx(ptcb);
     
     lib_bzero(psigctx, sizeof(LW_CLASS_SIGCONTEXT));                    /*  所有信号 DEFAULT 处理       */
+    
+    psigctx->SIGCTX_stack.ss_flags = SS_DISABLE;                        /*  不使用自定义堆栈            */
     
 #if LW_CFG_SIGNALFD_EN > 0
     if (_K_hSigfdSelMutex == LW_OBJECT_HANDLE_INVALID) {
@@ -395,8 +415,9 @@ static VOID  __sigMakeReady (PLW_CLASS_TCB  ptcb,
 }
 /*********************************************************************************************************
 ** 函数名称: __sigCtlCreate
-** 功能描述: 在内存中创造一个用于执行信号和信号退出的环境
+** 功能描述: 在堆栈中创造一个用于执行信号和信号退出的环境
 ** 输　入  : ptcb                   任务控制块
+**           psigctx                信号任务相关信息
 **           psiginfo               信号信息
 **           ulSuspendNesting       阻塞嵌套数
 **           iSchedRet              期望的调度器返回值
@@ -405,15 +426,33 @@ static VOID  __sigMakeReady (PLW_CLASS_TCB  ptcb,
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static  VOID  __sigCtlCreate (PLW_CLASS_TCB    ptcb,
-                              struct siginfo  *psiginfo,
-                              INT              iSchedRet,
-                              sigset_t        *psigsetMask)
+static  VOID  __sigCtlCreate (PLW_CLASS_TCB         ptcb,
+                              PLW_CLASS_SIGCONTEXT  psigctx,
+                              struct siginfo       *psiginfo,
+                              INT                   iSchedRet,
+                              sigset_t             *psigsetMask)
 {
     PLW_CLASS_SIGCTLMSG  psigctlmsg;
     PLW_STACK            pstkSignalShell;                               /*  启动signalshell的堆栈点     */
-    
-    BYTE                *pucStkNow = (BYTE *)ptcb->TCB_pstkStackNow;    /*  记录还原堆栈点              */
+    BYTE                *pucStkNow;
+    stack_t             *pstack;
+
+    if (psigctx && (psigctx->SIGCTX_stack.ss_flags & SS_ONSTACK)) {     /*  使用用户指定的信号堆栈      */
+        pstack = &psigctx->SIGCTX_stack;
+        if ((ptcb->TCB_pstkStackNow >= (PLW_STACK)pstack->ss_sp) && 
+            (ptcb->TCB_pstkStackNow < (PLW_STACK)(pstack->ss_sp + pstack->ss_size))) {
+            pucStkNow = (BYTE *)ptcb->TCB_pstkStackNow;                 /*  已经在用户指定的信号堆栈中  */
+        
+        } else {
+#if	CPU_STK_GROWTH == 0
+            pucStkNow = (BYTE *)pstack->ss_sp;
+#else
+            pucStkNow = (BYTE *)pstack->ss_sp + pstack->ss_size;
+#endif                                                                  /*  CPU_STK_GROWTH == 0         */
+        }
+    } else {
+        pucStkNow = (BYTE *)ptcb->TCB_pstkStackNow;
+    }
 
 #if	CPU_STK_GROWTH == 0
     pucStkNow  += sizeof(LW_STACK);                                     /*  向空栈方向移动一个堆栈空间  */
@@ -544,6 +583,15 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx,
         case SIGSTOP:
         case SIGTSTP:
             __signalStopHandle(iSigNo, psiginfo);
+            break;
+            
+        case SIGCHLD:
+            if (((psiginfo->si_code == CLD_EXITED) ||
+                 (psiginfo->si_code == CLD_KILLED) ||
+                 (psiginfo->si_code == CLD_DUMPED)) &&
+                (psigaction->sa_flags & SA_NOCLDWAIT)) {                /*  回收子进程资源              */
+                __signalWaitHandle(iSigNo, psiginfo);
+            }
             break;
             
         case SIGCNCL:
@@ -767,6 +815,7 @@ INT  _sigPendGet (PLW_CLASS_SIGCONTEXT  psigctx, const sigset_t  *psigset, struc
         psigctx->SIGCTX_sigsetKill  &= ~sigsetNeedRun;
         
         psiginfo->si_signo           = iSigNo;
+        psiginfo->si_errno           = ERROR_NONE;
         psiginfo->si_code            = SI_KILL;
         psiginfo->si_value.sival_ptr = LW_NULL;
     
@@ -900,7 +949,7 @@ BOOL  _sigPendRun (PLW_CLASS_TCB  ptcb)
         }
         
         __sigMakeReady(ptcb, &iSchedRet, iSaType);                      /*  强制进入就绪状态            */
-        __sigCtlCreate(ptcb, &siginfo, iSchedRet, &sigsetOld);          /*  创建信号上下文环境          */
+        __sigCtlCreate(ptcb, psigctx, &siginfo, iSchedRet, &sigsetOld); /*  创建信号上下文环境          */
         
         return  (LW_TRUE);
     
@@ -987,7 +1036,7 @@ LW_SEND_VAL  _doSignal (PLW_CLASS_TCB  ptcb, PLW_CLASS_SIGPEND   psigpend)
     
     if ((psigaction->sa_flags & SA_NOCLDSTOP) &&
         (psigpend->SIGPEND_siginfo.si_signo == SIGCHLD) &&
-        (psigpend->SIGPEND_siginfo.si_code  == CLD_STOPPED)) {          /*  父进程不接收子进程暂停信号  */
+        (__SI_CODE_STOP(psigpend->SIGPEND_siginfo.si_code))) {          /*  父进程不接收子进程暂停信号  */
         return  (SEND_IGN);
     }
     
@@ -1035,7 +1084,7 @@ LW_SEND_VAL  _doSignal (PLW_CLASS_TCB  ptcb, PLW_CLASS_SIGPEND   psigpend)
     }
     
     __sigMakeReady(ptcb, &iSchedRet, iSaType);                          /*  强制进入就绪状态            */
-    __sigCtlCreate(ptcb, psiginfo, iSchedRet, &sigsetOld);              /*  创建信号上下文环境          */
+    __sigCtlCreate(ptcb, psigctx, psiginfo, iSchedRet, &sigsetOld);     /*  创建信号上下文环境          */
     
     return  (SEND_OK);
 }
@@ -1059,6 +1108,7 @@ LW_SEND_VAL  _doKill (PLW_CLASS_TCB  ptcb, INT  iSigNo)
     
     psiginfo = &sigpend.SIGPEND_siginfo;
     psiginfo->si_signo = iSigNo;
+    psiginfo->si_errno = errno;
     psiginfo->si_code  = SI_KILL;                                       /*  不可排队                    */
     psiginfo->si_pid   = __tcb_pid(ptcbCur);
     psiginfo->si_uid   = ptcbCur->TCB_uid;
@@ -1093,6 +1143,7 @@ LW_SEND_VAL  _doSigQueue (PLW_CLASS_TCB  ptcb, INT  iSigNo, const union sigval s
     
     psiginfo = &sigpend.SIGPEND_siginfo;
     psiginfo->si_signo = iSigNo;
+    psiginfo->si_errno = errno;
     psiginfo->si_code  = SI_QUEUE;                                       /*  不可排队                    */
     psiginfo->si_pid   = __tcb_pid(ptcbCur);
     psiginfo->si_uid   = ptcbCur->TCB_uid;

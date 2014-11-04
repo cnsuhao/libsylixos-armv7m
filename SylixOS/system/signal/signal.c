@@ -30,6 +30,7 @@
 2012.12.12  sigprocmask 设置信号屏蔽时, 有些信号是不可屏蔽的.
 2013.01.15  sigaction 安装的信号屏蔽字, 要允许不可屏蔽的信号.
 2014.05.21  将 killTrap 改为 sigTrap 可以发送参数.
+2014.10.31  加入诸多 POSIX 规定的信号函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -242,7 +243,22 @@ INT   sigaction (INT                      iSigNo,
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-PSIGNAL_HANDLE signal(INT  iSigNo, PSIGNAL_HANDLE  pfuncHandler)
+sighandler_t bsd_signal (INT   iSigNo, PSIGNAL_HANDLE  pfuncHandler)
+{
+    return  (signal(iSigNo, pfuncHandler));
+}
+/*********************************************************************************************************
+** 函数名称: signal
+** 功能描述: 是指一个信号的处理句柄
+** 输　入  : iSigNo        信号
+**           pfuncHandler  处理句柄
+** 输　出  : 先早的处理句柄
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+PSIGNAL_HANDLE signal (INT  iSigNo, PSIGNAL_HANDLE  pfuncHandler)
 {
     INT               iError;
     struct sigaction  sigactionNew;
@@ -395,6 +411,45 @@ INT  sigprocmask (INT              iCmd,
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: sigmask
+** 功能描述: 通过信号的值获取一个信号掩码
+** 输　入  : iSigNo                  信号
+** 输　出  : 信号掩码
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  sigmask (INT  iSigNo)
+{
+    if (!__issig(iSigNo)) {
+        _ErrorHandle(EINVAL);
+        return  (0);
+    }
+    
+    return  ((INT)__sigmask(iSigNo));
+}
+/*********************************************************************************************************
+** 函数名称: siggetmask
+** 功能描述: 获得当前线程信号掩码
+** 输　入  : NONE
+** 输　出  : 信号掩码
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  siggetmask (VOID)
+{
+    sigset_t    sigsetOld;
+    INT         iMaskOld = 0;
+    
+    sigprocmask(SIG_BLOCK, LW_NULL, &sigsetOld);
+    iMaskOld  = (INT)sigsetOld;
+    
+    return  (iMaskOld);
+}
+/*********************************************************************************************************
 ** 函数名称: sigsetmask
 ** 功能描述: 设置当前线程新的掩码 (BSD 兼容)
 ** 输　入  : iMask                   新的掩码
@@ -408,11 +463,11 @@ INT  sigsetmask (INT  iMask)
 {
     sigset_t    sigsetNew;
     sigset_t    sigsetOld;
-    INT         iMaskOld;
+    INT         iMaskOld = 0;
     
-    lib_memcpy(&sigsetNew, &iMask, sizeof(INT));
-    (VOID)sigprocmask(SIG_SETMASK, &sigsetNew, &sigsetOld);
-    lib_memcpy(&iMaskOld,  &sigsetOld, sizeof(INT));
+    sigsetNew = (sigset_t)iMask;                                        /*  早期 BSD 接口仅 32 个信号   */
+    sigprocmask(SIG_SETMASK, &sigsetNew, &sigsetOld);
+    iMaskOld  = (INT)sigsetOld;
     
     return  (iMaskOld);
 }
@@ -430,13 +485,219 @@ INT  sigblock (INT  iMask)
 {
     sigset_t    sigsetNew;
     sigset_t    sigsetOld;
-    INT         iMaskOld;
+    INT         iMaskOld = 0;
     
-    lib_memcpy(&sigsetNew, &iMask, sizeof(INT));
-    (VOID)sigprocmask(SIG_BLOCK, &sigsetNew, &sigsetOld);
-    lib_memcpy(&iMaskOld,  &sigsetOld, sizeof(INT));
+    sigsetNew = (sigset_t)iMask;                                        /*  早期 BSD 接口仅 32 个信号   */
+    sigprocmask(SIG_BLOCK, &sigsetNew, &sigsetOld);
+    iMaskOld  = (INT)sigsetOld;
     
     return  (iMaskOld);
+}
+/*********************************************************************************************************
+** 函数名称: sighold
+** 功能描述: 将新的需要阻塞的信号添加到当前线程
+** 输　入  : iSigNo                   需要阻塞的信号
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  sighold (INT  iSigNo)
+{
+    sigset_t    sigset = 0;
+
+    if (!__issig(iSigNo)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+
+    sigset = __sigmask(iSigNo);
+
+    return  (sigprocmask(SIG_BLOCK, &sigset, LW_NULL));
+}
+/*********************************************************************************************************
+** 函数名称: sigignore
+** 功能描述: 将指定的信号设置为 SIG_IGN
+** 输　入  : iSigNo                   需要 SIG_IGN 的信号
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  sigignore (INT  iSigNo)
+{
+    if (!__issig(iSigNo)) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    signal(iSigNo, SIG_IGN);
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: sigrelse
+** 功能描述: 将指定的信号从掩码中删除
+** 输　入  : iSigNo                   需要删除掩码的信号
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  sigrelse (INT  iSigNo)
+{
+    sigset_t    sigset;
+    
+    if (sigprocmask(SIG_SETMASK, LW_NULL, &sigset) < ERROR_NONE) {
+        return  (PX_ERROR);
+    }
+    
+    if (sigdelset(&sigset, iSigNo) < ERROR_NONE) {
+        return  (PX_ERROR);
+    }
+    
+    return  (sigprocmask(SIG_SETMASK, &sigset, LW_NULL));
+}
+/*********************************************************************************************************
+** 函数名称: sigset
+** 功能描述: 此函数暂不支持
+** 输　入  : iSigNo                   需要删除掩码的信号
+**           disp
+** 输　出  : disp
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+sighandler_t  sigset (INT  iSigNo, sighandler_t  disp)
+{
+    _ErrorHandle(ENOSYS);
+    return  ((sighandler_t)PX_ERROR);
+}
+/*********************************************************************************************************
+** 函数名称: siginterrupt
+** 功能描述: 改变信号 SA_RESTART 选项
+** 输　入  : iSigNo                   信号
+**           iFlag                    是否使能 SA_RESTART 选项
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  siginterrupt (INT  iSigNo, INT  iFlag)
+{
+    struct sigaction    sigact;
+    
+    if (sigaction(iSigNo, LW_NULL, &sigact)) {
+        return  (PX_ERROR);
+    }
+    
+    if (iFlag) {
+        sigact.sa_flags &= ~SA_RESTART;
+    } else {
+        sigact.sa_flags |= SA_RESTART;
+    }
+    
+    return  (sigaction(iSigNo, &sigact, LW_NULL));
+}
+/*********************************************************************************************************
+** 函数名称: sigstack
+** 功能描述: 设置信号上下文的堆栈
+** 输　入  : ss                       新的堆栈信息
+**           oss                      老的堆栈信息
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  sigstack (struct sigstack *ss, struct sigstack *oss)
+{
+    stack_t     stackNew, stackOld;
+    
+    if (ss) {
+        stackNew.ss_sp    = ss->ss_sp;
+        stackNew.ss_size  = SIGSTKSZ;                                   /*  默认大小                    */
+        if (ss->ss_onstack) {
+            stackNew.ss_flags = SS_ONSTACK;
+        } else {
+            stackNew.ss_flags = SS_DISABLE;
+        }
+        if (sigaltstack(&stackNew, &stackOld)) {
+            return  (PX_ERROR);
+        }
+    
+    } else if (oss) {
+        sigaltstack(LW_NULL, &stackOld);
+    }
+        
+    if (oss) {
+        oss->ss_sp = stackOld.ss_sp;
+        if (stackOld.ss_flags & SS_ONSTACK) {
+            oss->ss_onstack = 1;
+        } else {
+            oss->ss_onstack = 0;
+        }
+    }
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: sigaltstack
+** 功能描述: 设置信号上下文的堆栈
+** 输　入  : ss                       新的堆栈信息
+**           oss                      老的堆栈信息
+** 输　出  : ERROR
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API 
+INT  sigaltstack (const stack_t *ss, stack_t *oss)
+{
+    PLW_CLASS_TCB           ptcbCur;
+    PLW_CLASS_SIGCONTEXT    psigctx;
+    stack_t                *pstack;
+    
+    if (ss && (ss->ss_flags & SS_ONSTACK)) {
+        if (!ss->ss_sp || 
+            !ALIGNED(ss->ss_sp, LW_CFG_HEAP_ALIGNMENT)) {               /*  必须满足对齐关系            */
+            _ErrorHandle(EINVAL);
+            return  (PX_ERROR);
+        }
+        if (ss->ss_size < MINSIGSTKSZ) {
+            _ErrorHandle(ENOMEM);
+            return  (PX_ERROR);
+        }
+    }
+    
+    LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
+    
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    psigctx = _signalGetCtx(ptcbCur);
+    if (oss) {
+        *oss = psigctx->SIGCTX_stack;
+    }
+    if (ss) {
+        pstack = &psigctx->SIGCTX_stack;
+        if (pstack->ss_flags & SS_ONSTACK) {                            /*  正在使用用户堆栈            */
+            if ((ptcbCur->TCB_pstkStackNow >= (PLW_STACK)pstack->ss_sp) && 
+                (ptcbCur->TCB_pstkStackNow <  (PLW_STACK)(pstack->ss_sp + pstack->ss_size))) {
+                _ErrorHandle(EPERM);                                    /*  正在信号上下文中使用此堆栈  */
+                __KERNEL_EXIT();                                        /*  退出内核                    */
+                return  (PX_ERROR);
+            }
+        }
+        *pstack = *ss;
+        pstack->ss_size &= ~(LW_CFG_HEAP_ALIGNMENT - 1);
+    }
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: kill

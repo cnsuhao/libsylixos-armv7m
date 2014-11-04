@@ -60,7 +60,9 @@ VOID  vprocItimerHook (PLW_CLASS_TCB  ptcb, PLW_CLASS_CPU  pcpu)
     
     sigeventTimer.sigev_notify          = SIGEV_SIGNAL;
     sigeventTimer.sigev_value.sival_ptr = LW_NULL;
-    siginfoTimer.si_code                = SI_TIMER;
+    
+    siginfoTimer.si_errno = ERROR_NONE;
+    siginfoTimer.si_code  = SI_TIMER;
     
     if (pcpu->CPU_iKernelCounter == 0) {                                /*  ITIMER_VIRTUAL ¶¨Ê±Æ÷       */
         pvptimer = &pvproc->VP_vptimer[ITIMER_VIRTUAL];

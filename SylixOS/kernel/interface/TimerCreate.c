@@ -80,7 +80,7 @@ LW_OBJECT_HANDLE  API_TimerCreate (CPCHAR             pcName,
         ptmr->TIMER_cTmrName[0] = PX_EOS;                               /*  清空名字                    */
     }
     
-    if (ulOption == LW_OPTION_ITIMER) {
+    if (ulOption & LW_OPTION_ITIMER) {                                  /*  应用级定时器                */
         ptmr->TIMER_ucType = LW_TYPE_TIMER_ITIMER;                      /*  定时器类型                  */
     } else {
         ptmr->TIMER_ucType = LW_TYPE_TIMER_HTIMER;

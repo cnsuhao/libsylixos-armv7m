@@ -68,6 +68,9 @@ __LW_RETU_FUNC_DECLARE(void, tzset, (void))
 __LW_RETU_FUNC_DECLARE(hrtime_t, gethrtime, (VOID))
 __LW_RETU_FUNC_DECLARE(hrtime_t, gethrvtime, (VOID))
 
+__LW_RETU_FUNC_DECLARE(size_t, strftime, (char *s, size_t maxsize, const char *format, const struct tm *t))
+__LW_RETU_FUNC_DECLARE(char *, strptime, (const char *buf, const char *fmt, struct tm *tm))
+
 /*********************************************************************************************************
   POSIX library
 *********************************************************************************************************/

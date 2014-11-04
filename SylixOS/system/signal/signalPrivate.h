@@ -72,6 +72,7 @@ typedef struct __sig_context {
     
     struct sigaction      SIGCTX_sigaction[NSIG];                       /*  所有的信号控制块            */
     LW_LIST_RING_HEADER   SIGCTX_pringSigQ[NSIG];                       /*  由于被屏蔽无法运行的信号排队*/
+    stack_t               SIGCTX_stack;                                 /*  用户指定的信号堆栈情况      */
 
     LW_CLASS_SIGWAIT     *SIGCTX_sigwait;                               /*  等待信息                    */
     
@@ -138,6 +139,13 @@ typedef LW_CLASS_SIGCTLMSG  *PLW_CLASS_SIGCTLMSG;
                                      __sigmask(SIGABRT) |       \
                                      __sigmask(SIGILL)  |       \
                                      __sigmask(SIGSEGV))
+                                     
+/*********************************************************************************************************
+  Is si_code is stop
+*********************************************************************************************************/
+
+#define __SI_CODE_STOP(code)        (((code) == CLD_STOPPED) || \
+                                     ((code) == CLD_CONTINUED))
 
 #endif                                                                  /*  LW_CFG_SIGNAL_EN > 0        */
 #endif                                                                  /*  __SIGNALPRIVATE_H           */

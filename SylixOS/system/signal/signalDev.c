@@ -220,7 +220,7 @@ static VOID  _sigfdInfo2FdInfor (INT                      iSigNo,
     lib_bzero(psigfdinfo, sizeof(struct signalfd_siginfo));
 
     psigfdinfo->ssi_signo   = (uint32_t)iSigNo;
-    psigfdinfo->ssi_errno   = 0;
+    psigfdinfo->ssi_errno   = (int32_t) psiginfo->si_errno;
     psigfdinfo->ssi_code    = (int32_t) psiginfo->si_code;
     psigfdinfo->ssi_pid     = (uint32_t)psiginfo->si_pid;
     psigfdinfo->ssi_uid     = (uint32_t)psiginfo->si_uid;

@@ -149,6 +149,7 @@ static INT      __yaffsIoctl(PLW_FD_ENTRY  pfdentry,
                              INT           iRequest,
                              LONG          lArg);
 static INT      __yaffsFlush(PLW_FD_ENTRY   pfdentry);
+static INT      __yaffsDataSync(PLW_FD_ENTRY  pfdentry);
 static INT      __yaffsFsSymlink(PYAFFS_FSLIB  pyaffs, 
                                  PCHAR         pcName, 
                                  CPCHAR        pcLinkDst);
@@ -887,6 +888,9 @@ static ssize_t  __yaffsWrite (PLW_FD_ENTRY  pfdentry,
     if (sstWriteNum >= 0) {
         if (pfdentry->FDENTRY_iFlag & O_SYNC) {                         /*  需要立即同步                */
             __yaffsFlush(pfdentry);
+        
+        } else if (pfdentry->FDENTRY_iFlag & O_DSYNC) {
+            __yaffsDataSync(pfdentry);
         }
     }
     
@@ -928,6 +932,9 @@ static ssize_t  __yaffsPWrite (PLW_FD_ENTRY  pfdentry,
     if (sstWriteNum >= 0) {
         if (pfdentry->FDENTRY_iFlag & O_SYNC) {                         /*  需要立即同步                */
             __yaffsFlush(pfdentry);
+        
+        } else if (pfdentry->FDENTRY_iFlag & O_DSYNC) {
+            __yaffsDataSync(pfdentry);
         }
     }
     

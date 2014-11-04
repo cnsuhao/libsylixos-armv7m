@@ -24,6 +24,7 @@
 2013.01.10  加入 waitid 函数.
 2013.06.07  加入 detach 函数, 用于解除子进程与父进程的关系.
 2014.05.04  加入 daemon 函数.
+2014.11.04  加入 reclaimchild 函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -243,11 +244,11 @@ static BOOL __haveThisChild (LW_LD_VPROC  *pvproc, pid_t  pidChild)
 ** 输　出  : 回收进程的数量 1: 回收一个 0: 没有回收 -1: 没有子进程
 ** 全局变量:
 ** 调用模块:
-** 注  意  : 参数 pid 有以下意义:
-             pid >  0      等待指定 PID 的子进程
-             pid == 0      子进程中组 ID 相同的
-             pid == -1     任何子进程
-             pid <  -1     子进程中组 ID 为 pid 绝对值的
+** 注  意  : 参数 pidChild 有以下意义:
+             pidChild >  0      等待指定 PID 的子进程
+             pidChild == 0      子进程中组 ID 相同的
+             pidChild == -1     任何子进程
+             pidChild <  -1     子进程中组 ID 为 pid 绝对值的
 *********************************************************************************************************/
 static INT __reclaimAChild (LW_LD_VPROC   *pvproc, 
                             pid_t          pidChild, 
@@ -653,6 +654,32 @@ pid_t wait4 (pid_t pid, int *stat_loc, int options, struct rusage *prusage)
     } while (1);
     
     return  (iError);
+}
+/*********************************************************************************************************
+** 函数名称: reclaimchild
+** 功能描述: reclaim child process
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+void reclaimchild (void)
+{
+    INT             iError;
+    pid_t           pidChld;
+    LW_LD_VPROC    *pvproc = __LW_VP_GET_CUR_PROC();
+    
+    __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
+    
+    do {
+        iError = __reclaimAChild(pvproc, -1, &pidChld, 
+                                 LW_NULL, 0, LW_NULL);                  /*  试图回收一个子进程          */
+        if (iError <= 0) {
+            break;
+        }
+    } while (1);
 }
 /*********************************************************************************************************
 ** 函数名称: detach

@@ -109,19 +109,24 @@
 #define  SIG_ERR               (PSIGNAL_HANDLE)-1                       /*  错误信号句柄                */
 #define  SIG_DFL               (PSIGNAL_HANDLE)0                        /*  默认信号句柄                */
 #define  SIG_IGN               (PSIGNAL_HANDLE)1                        /*　忽略的信号句柄　　　        */
+#define  SIG_CATCH             (PSIGNAL_HANDLE)2
+#define  SIG_HOLD              (PSIGNAL_HANDLE)3
 
 /*********************************************************************************************************
   sa_flag 参数
 *********************************************************************************************************/
 
-#define  SA_NOCLDSTOP          0x00000001                               /*  子进程被删除时不要产生      */
-                                                                        /*  SIGCHLD信号                 */
+#define  SA_NOCLDSTOP          0x00000001                               /*  子进程被删除时不要产生信号  */
+#define  SA_NOCLDWAIT          0x00000008                               /*  不产生僵尸进程              */
+
 #define  SA_SIGINFO            0x00000002                               /*  信号句柄需要 siginfo 参数   */
+#define  SA_ONSTACK            0x00000004                               /*  自定义堆栈                  */
 
 #define  SA_RESTART            0x10000000                               /*  执行信号句柄后, 重启调用    */
 #define  SA_INTERRUPT          0x20000000
 #define  SA_NOMASK             0x40000000                               /*  不阻止在指定信号处理句柄中  */
                                                                         /*  再收到信号                  */
+#define  SA_NODEFER            SA_NOMASK
 #define  SA_ONESHOT            0x80000000                               /*  信号句柄一旦被调用就恢复到  */
                                                                         /*  默认状态                    */
 
@@ -140,10 +145,12 @@
 *********************************************************************************************************/
 
 #define  SI_KILL               0                                        /* 使用 kill() 发送的信号       */
+#define  SI_USER               SI_KILL
 #define  SI_QUEUE              2                                        /* 使用 sigqueue() 发送的信号   */
 #define  SI_TIMER              3                                        /* POSIX 定时器发起的信号       */
 #define  SI_ASYNCIO            4                                        /* 异步 I/O 系统完成发送的信号  */
 #define  SI_MESGQ              5                                        /* 接收到一则消息产生的信号     */
+#define  SI_KERNEL             0x80
 
 /*********************************************************************************************************
   信号 code
@@ -171,7 +178,8 @@
 #define  FPE_FLTOVF            4                                        /* Floating-point overflow      */
 #define  FPE_FLTUND            5                                        /* Floating-point underflow     */
 #define  FPE_FLTRES            6                                        /* Floating-point inexact result*/
-#define  FPE_FLTSUB            7                                        /* Subscript out of range       */
+#define  FPE_FLTINV            7                                        /* inval floating point operate */
+#define  FPE_FLTSUB            8                                        /* Subscript out of range       */
 
 /*********************************************************************************************************
   SIGSEGV
@@ -246,46 +254,81 @@
                                                                         /*  thread whose ID is given in */
                                                                         /*  sigev_notify_thread_id      */
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
+
+/*********************************************************************************************************
+  信号独立堆栈支持 (推荐使用 sigaltstack() 函数, sigstack() 默认堆栈大小为 SIGSTKSZ)
+*********************************************************************************************************/
+
+#define MINSIGSTKSZ             4096
+#define	SIGSTKSZ                12288
+
+typedef struct sigaltstack {
+    char        *ss_sp;
+    int          ss_size;
+    int          ss_flags;
+} stack_t;
+
+#define SS_ONSTACK      0x00000001
+#define SS_DISABLE      0x00000002
+
+struct sigstack {
+    char        *ss_sp;                                                 /*  signal stack pointer        */
+    int          ss_onstack;                                            /*  current status              */
+};
+
+LW_API  INT             sigstack(struct sigstack *ss, struct sigstack *oss);
+LW_API  INT             sigaltstack(const stack_t *ss, stack_t *oss);
+
 /*********************************************************************************************************
   SIGNAL FUNCTION 
 *********************************************************************************************************/
 
-LW_API  VOID      (*signal(INT   iSigNo, PSIGNAL_HANDLE  pfuncHandler))(INT);
-LW_API  INT         raise(INT    iSigNo);
-LW_API  INT         kill(LW_OBJECT_HANDLE  ulId, INT   iSigNo);
-LW_API  INT         sigqueue(LW_OBJECT_HANDLE  ulId, INT   iSigNo, const union   sigval   sigvalue);
+LW_API  sighandler_t    bsd_signal(INT   iSigNo, PSIGNAL_HANDLE  pfuncHandler);
+LW_API  VOID          (*signal(INT   iSigNo, PSIGNAL_HANDLE  pfuncHandler))(INT);
+LW_API  INT             raise(INT    iSigNo);
+LW_API  INT             kill(LW_OBJECT_HANDLE  ulId, INT   iSigNo);
+LW_API  INT             sigqueue(LW_OBJECT_HANDLE  ulId, INT   iSigNo, const union   sigval   sigvalue);
 
-LW_API  INT         sigemptyset(sigset_t       *psigset);
-LW_API  INT         sigfillset(sigset_t        *psigset);
-LW_API  INT         sigaddset(sigset_t         *psigset, INT  iSigNo);
-LW_API  INT         sigdelset(sigset_t         *psigset, INT  iSigNo);
-LW_API  INT         sigismember(const sigset_t *psigset, INT  iSigNo);
+LW_API  INT             sigemptyset(sigset_t       *psigset);
+LW_API  INT             sigfillset(sigset_t        *psigset);
+LW_API  INT             sigaddset(sigset_t         *psigset, INT  iSigNo);
+LW_API  INT             sigdelset(sigset_t         *psigset, INT  iSigNo);
+LW_API  INT             sigismember(const sigset_t *psigset, INT  iSigNo);
 
-LW_API  INT         sigaction(INT  iSigNo, const struct sigaction  *psigactionNew,
-                              struct sigaction  *psigactionOld);
+LW_API  INT             sigaction(INT  iSigNo, const struct sigaction  *psigactionNew,
+                                  struct sigaction  *psigactionOld);
 
-LW_API  INT         sigsetmask(INT  iMask);                         /*  建议使用 sigprocmask       */
-LW_API  INT         sigblock(INT    iBlock);                        /*  建议使用 sigprocmask       */
+LW_API  INT             sigmask(INT  iSigNo);                           /*  建议使用 sigprocmask        */
+LW_API  INT             siggetmask(VOID);
+LW_API  INT             sigsetmask(INT  iMask);
+LW_API  INT             sigblock(INT    iBlock);
 
-LW_API  INT         sigprocmask(INT  iHow, const sigset_t *sigset, sigset_t *sigsetOld);
+LW_API  INT             sighold(INT  iSigNo);
+LW_API  INT             sigignore(INT  iSigNo);
+LW_API  INT             sigrelse(INT  iSigNo);
 
-LW_API  INT         sigvec(INT  iSigNo, const struct sigvec *pvec, struct sigvec *pvecOld);
+LW_API  sighandler_t    sigset(INT  iSigNo, sighandler_t  disp);
+LW_API  INT             siginterrupt(INT  iSigNo, INT  iFlag);
 
-LW_API  INT         sigpending(sigset_t  *sigset);
+LW_API  INT             sigprocmask(INT  iHow, const sigset_t *sigset, sigset_t *sigsetOld);
 
-LW_API  INT         sigsuspend(const sigset_t  *sigsetMask);
-LW_API  INT         pause(VOID);
-LW_API  INT         sigwait(const sigset_t      *sigset, INT  *piSig);
-LW_API  INT         sigtimedwait(const sigset_t *sigset, struct siginfo *__value,
-                                 const struct timespec *);
-LW_API  INT         sigwaitinfo(const sigset_t *sigset, struct  siginfo  *psiginfo);
+LW_API  INT             sigvec(INT  iSigNo, const struct sigvec *pvec, struct sigvec *pvecOld);
+
+LW_API  INT             sigpending(sigset_t  *sigset);
+
+LW_API  INT             sigsuspend(const sigset_t  *sigsetMask);
+LW_API  INT             pause(VOID);
+LW_API  INT             sigwait(const sigset_t      *sigset, INT  *piSig);
+LW_API  INT             sigtimedwait(const sigset_t *sigset, struct siginfo *__value,
+                                     const struct timespec *);
+LW_API  INT             sigwaitinfo(const sigset_t *sigset, struct  siginfo  *psiginfo);
 
 /*********************************************************************************************************
   SIGNAL 内核函数
 *********************************************************************************************************/
 
 #ifdef __SYLIXOS_KERNEL
-LW_API  INT         sigTrap(LW_OBJECT_HANDLE  ulId, const union sigval  sigvalue);
+LW_API  INT             sigTrap(LW_OBJECT_HANDLE  ulId, const union sigval  sigvalue);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  LW_CFG_SIGNAL_EN > 0        */

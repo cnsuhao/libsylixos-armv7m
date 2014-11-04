@@ -237,26 +237,26 @@
  Neither process nor thread sporadic server interfaces is available. 
 *********************************************************************************************************/
 
-#define _POSIX_SPORADIC_SERVER              -1
-#define _POSIX_THREAD_SPORADIC_SERVER       -1
+#undef _POSIX_SPORADIC_SERVER
+#undef _POSIX_THREAD_SPORADIC_SERVER
 
 /*********************************************************************************************************
  trace.h is not available. 
 *********************************************************************************************************/
 
-#define _POSIX_TRACE                        -1
-#define _POSIX_TRACE_EVENT_FILTER           -1
-#define _POSIX_TRACE_INHERIT                -1
-#define _POSIX_TRACE_LOG                    -1
+#undef _POSIX_TRACE
+#undef _POSIX_TRACE_EVENT_FILTER
+#undef _POSIX_TRACE_INHERIT
+#undef _POSIX_TRACE_LOG
 
 /*********************************************************************************************************
  Typed memory objects are not available. 
 *********************************************************************************************************/
 
-#define _POSIX_TYPED_MEMORY_OBJECTS         -1
+#undef _POSIX_TYPED_MEMORY_OBJECTS
 
 /*********************************************************************************************************
- No support for priority inheritance or protection so far. 
+ Support for priority inheritance or protection.
 *********************************************************************************************************/
 
 #define _POSIX_THREAD_PRIO_INHERIT          1
@@ -266,4 +266,3 @@
 /*********************************************************************************************************
   END
 *********************************************************************************************************/
-

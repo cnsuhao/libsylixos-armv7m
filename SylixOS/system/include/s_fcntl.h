@@ -28,12 +28,9 @@
 
 #define _FREAD                      0x0001                              /* read enabled                 */
 #define _FWRITE                     0x0002                              /* write enabled                */
-#define _FNDELAY                    0x0004                              /* non blocking I/O (4.2 style) */
 #define _FAPPEND                    0x0008                              /* append (writes guaranteed at */
                                                                         /* the end)                     */
-#define _FMARK                      0x0010                              /* internal; mark during gc()   */
-#define _FDEFER                     0x0020                              /* internal; defer for next gc  */
-                                                                        /* pass                         */
+#define _FDSYNC                     0x0020                              /* data sync                    */
 #define _FASYNC                     0x0040                              /* signal pgrp when data ready  */
 #define _FSHLOCK                    0x0080                              /* BSD flock() shared lock      */
                                                                         /* present                      */
@@ -82,6 +79,7 @@
 #define O_NDELAY                    _FNONBLOCK
 #define O_SYNC                      _FSYNC
 #define O_FSYNC                     _FSYNC
+#define O_DSYNC                     _FDSYNC
 #define O_ASYNC                     _FASYNC
 #define O_NOCTTY                    _FNOCTTY
 #define O_BINARY                    _FBINARY

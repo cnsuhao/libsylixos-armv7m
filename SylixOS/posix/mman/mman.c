@@ -1167,6 +1167,26 @@ VOID  mmapShow (VOID)
 }
 /*********************************************************************************************************
 ** 函数名称: shm_open
+** 功能描述: The posix_madvise() function shall advise the implementation on the expected behavior of the 
+             application with respect to the data in the memory starting at address addr, and continuing 
+             for len bytes. The implementation may use this information to optimize handling of the 
+             specified data. The posix_madvise() function shall have no effect on the semantics of 
+             access to memory in the specified range, although it may affect the performance of access.
+** 输　入  : addr      address
+**           len       length
+**           advice    advice
+** 输　出  : ERROR_NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+int  posix_madvise (void *addr, size_t len, int advice)
+{
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: shm_open
 ** 功能描述: establishes a connection between a shared memory object and a file descriptor.
 ** 输　入  : name      file name
 **           oflag     create flag like open()

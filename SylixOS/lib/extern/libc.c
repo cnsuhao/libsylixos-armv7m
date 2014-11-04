@@ -321,6 +321,8 @@ __LW_RETU_FUNC_DEFINE(char *, strpbrk, (const char *cpcS1, const char *cpcS2), (
 
 __LW_RETU_FUNC_DEFINE(size_t, strftime, (char *s, size_t maxsize, const char *format, const struct tm *t),
                       (s, maxsize, format, t))
+__LW_RETU_FUNC_DEFINE(char *, strptime, (const char *buf, const char *fmt, struct tm *tm),
+                      (buf, fmt, tm))
 __LW_RETU_FUNC_DEFINE(int, stricmp, (const char *s1, const char *s2), (s1, s2))
 __LW_RETU_FUNC_DEFINE(size_t, strspn, (const char *s1, const char *s2), (s1, s2))
 __LW_RETU_FUNC_DEFINE(char *, strtok, (char *s, const char *delim), (s, delim))

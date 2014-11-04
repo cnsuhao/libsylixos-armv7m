@@ -1559,13 +1559,19 @@ int  socket (int domain, int type, int protocol)
         }
         break;
     
-    default:
+    case AF_INET:                                                       /*  IPv4 / v6                   */
+    case AF_INET6:
         iLwipFd = lwip_socket(domain, type, protocol);
         if (iLwipFd < 0) {
             __KERNEL_SPACE_EXIT();
             goto    __error_handle;
         }
         break;
+        
+    default:
+        _ErrorHandle(EAFNOSUPPORT);
+        __KERNEL_SPACE_EXIT();
+        goto    __error_handle;
     }
     __KERNEL_SPACE_EXIT();
     

@@ -4,6 +4,9 @@ HISTORY
 
 ++ New features:
 
+    2014-11-15: han.hui
+    加入了一些 POSIX 接口函数.
+    
     2014-10-15: han.hui
     telnet 支持动态同步窗口大小.
 
@@ -573,6 +576,9 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-11-01: han.hui
+    修正定时器创建对类型的判断错误.
+    
     2014-10-12: han.hui
     free 命令改为查看系统内存信息，vardel 为删除环境变量
     修正 proc/net 下相关文件格式.

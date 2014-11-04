@@ -656,6 +656,7 @@ SylixOS/lib/libc/string/lib_strndup.c \
 SylixOS/lib/libc/string/lib_strnlen.c \
 SylixOS/lib/libc/string/lib_strnset.c \
 SylixOS/lib/libc/string/lib_strpbrk.c \
+SylixOS/lib/libc/string/lib_strptime.c \
 SylixOS/lib/libc/string/lib_strsignal.c \
 SylixOS/lib/libc/string/lib_strspn.c \
 SylixOS/lib/libc/string/lib_strstr.c \

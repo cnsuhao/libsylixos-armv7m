@@ -40,8 +40,7 @@ VOID  __sigsetjmpSetup (sigjmp_buf sigjmpEnv, INT iSaveSigs)
     sigjmpEnv[0].__mask_was_saved = iSaveSigs;
     
     if (iSaveSigs) {
-        (VOID)sigprocmask(SIG_BLOCK, LW_NULL, 
-					      &sigjmpEnv[0].__saved_mask);
+        sigprocmask(SIG_BLOCK, LW_NULL, &sigjmpEnv[0].__saved_mask);
     }
 }
 /*********************************************************************************************************
@@ -56,8 +55,7 @@ VOID  __sigsetjmpSetup (sigjmp_buf sigjmpEnv, INT iSaveSigs)
 VOID  __siglongjmpSetup (sigjmp_buf sigjmpEnv, INT iVal)
 {
     if (sigjmpEnv[0].__mask_was_saved) {
-        (VOID)sigprocmask(SIG_SETMASK, &sigjmpEnv[0].__saved_mask,
-                          (sigset_t *) NULL);
+        sigprocmask(SIG_SETMASK, &sigjmpEnv[0].__saved_mask, (sigset_t *) NULL);
     }
 }
 #endif                                                                  /*  LW_CFG_SIGNAL_EN > 0        */

@@ -728,7 +728,7 @@ static VOID  __vmmAbortKill (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
     
     case 0:
         sigeventAbort.sigev_signo = SIGKILL;                            /*  通过 SIGKILL 信号杀死任务   */
-        iSigCode = SI_KILL;
+        iSigCode = SI_KERNEL;
         break;
     
     case LW_VMM_ABORT_TYPE_FPE:
@@ -743,7 +743,7 @@ static VOID  __vmmAbortKill (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
         
     case LW_VMM_ABORT_TYPE_SYS:
         sigeventAbort.sigev_signo = SIGSYS;
-        iSigCode = SI_MESGQ;
+        iSigCode = SI_KERNEL;
         break;
         
     case LW_VMM_ABORT_TYPE_UNDEF:

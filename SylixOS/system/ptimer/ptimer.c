@@ -524,6 +524,7 @@ static VOID  __ptimerCallback (LW_OBJECT_ID  ulTimer)
 #endif                                                                  /*  LW_CFG_TIMERFD_EN > 0       */
 
     siginfoTimer.si_signo   = ptmr->TIMER_sigevent.sigev_signo;
+    siginfoTimer.si_errno   = ERROR_NONE;
     siginfoTimer.si_code    = SI_TIMER;
     siginfoTimer.si_timerid = (INT)ulTimer;
     

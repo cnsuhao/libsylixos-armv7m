@@ -208,6 +208,10 @@
 #define _XOPEN_VERSION              600
 #endif
 
+#ifndef _XOPEN_SOURCE
+#define _XOPEN_SOURCE               _XOPEN_VERSION
+#endif
+
 #ifndef _XOPEN_SOURCE_EXTENDED
 #define _XOPEN_SOURCE_EXTENDED      1
 #endif
