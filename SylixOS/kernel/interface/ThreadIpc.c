@@ -79,7 +79,7 @@ __wait_again:
         __ADD_TO_WAKEUP_LINE(ptcbCur);                                  /*  加入等待扫描链              */
     }
     
-    __KERNEL_TIME_GET(ulTimeSave, ULONG);                               /*  记录系统时间                */
+    __KERNEL_TIME_GET_NO_SPINLOCK(ulTimeSave, ULONG);                   /*  记录系统时间                */
     
     iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
     if (iSchedRet == LW_SIGNAL_EINTR) {
@@ -167,8 +167,7 @@ ULONG  API_ThreadIpcWakeup (LW_OBJECT_HANDLE  ulId)
         __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入就绪表                  */
     }
     
-    KN_INT_ENABLE(iregInterLevel);
-    __KERNEL_EXIT();                                                    /*  退出内核 (可能会调度)       */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ERROR_NONE);
 }

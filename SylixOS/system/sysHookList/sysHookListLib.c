@@ -210,18 +210,16 @@ VOID  _SysInitHook (LW_OBJECT_HANDLE  ulId, PLW_CLASS_TCB  ptcb)
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : 这里扫描时必须使用局部变量, 因为 SMP 系统多个 CPU 可能在同时执行 idle.
 *********************************************************************************************************/
 VOID  _SysIdleHook (VOID)
 {
     PLW_FUNC_NODE    pfuncnode;
+    PLW_LIST_LINE    pline = _G_hookcbIdle.HOOKCB_plineHookHeader;
     
-    _G_hookcbIdle.HOOKCB_plineHookOp = _G_hookcbIdle.HOOKCB_plineHookHeader;
-    while (_G_hookcbIdle.HOOKCB_plineHookOp) {
-    
-        pfuncnode = (PLW_FUNC_NODE)_G_hookcbIdle.HOOKCB_plineHookOp;
-        _G_hookcbIdle.HOOKCB_plineHookOp = 
-            _list_line_get_next(_G_hookcbIdle.HOOKCB_plineHookOp);
-        
+    while (pline) {
+        pfuncnode = (PLW_FUNC_NODE)pline;
+        pline     = _list_line_get_next(pline);
         (pfuncnode->FUNCNODE_hookfuncPtr)();
     }
 }

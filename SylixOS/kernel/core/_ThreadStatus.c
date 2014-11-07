@@ -42,7 +42,7 @@ static VOID  _ThreadWaitStatus (PLW_CLASS_TCB  ptcbCur, PLW_CLASS_TCB  ptcbDest,
 
     if (__LW_THREAD_IS_READY(ptcbCur)) {
         ppcb = _GetPcb(ptcbCur);
-        __DEL_FROM_READY_RING_NOLOCK(ptcbCur, ppcb);                    /*  从就绪表中删除              */
+        __DEL_FROM_READY_RING(ptcbCur, ppcb);                           /*  从就绪表中删除              */
     }
     
     ptcbCur->TCB_ptcbWaitStatus     = ptcbDest;
@@ -98,24 +98,22 @@ VOID  _ThreadUnwaitStatus (PLW_CLASS_TCB  ptcb)
 }
 /*********************************************************************************************************
 ** 函数名称: _ThreadStatusChangeCur
-** 功能描述: 改变当前线程状态
-** 输　入  : ptcbCur       当前线程控制块
+** 功能描述: 改变当前线程状态 (内核状态且关闭中断状态被调用)
+** 输　入  : ptcbCur       当前 CPU
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : 
 *********************************************************************************************************/
-VOID  _ThreadStatusChangeCur (PLW_CLASS_TCB  ptcbCur)
+VOID  _ThreadStatusChangeCur (PLW_CLASS_CPU    pcpuCur)
 {
-    INTREG         iregInterLevel;
+    PLW_CLASS_TCB  ptcbCur;
     PLW_CLASS_TCB  ptcb;
     PLW_CLASS_PCB  ppcb;
 
-    if (__THREAD_LOCK_GET(ptcbCur) > 0ul) {                             /*  目前不可抢占                */
-        return;
-    }
+    ptcbCur = pcpuCur->CPU_ptcbTCBCur;                                  /*  当前线程                    */
     
-    iregInterLevel = __KERNEL_ENTER_IRQ();
+    LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_STATUS_REQ_MSK);               /*  清除核间中断标记            */
     
     if (ptcbCur->TCB_plineStatusReqHeader) {                            /*  需要阻塞                    */
         if (__LW_THREAD_IS_READY(ptcbCur)) {
@@ -159,8 +157,6 @@ VOID  _ThreadStatusChangeCur (PLW_CLASS_TCB  ptcbCur)
             }
         } while (ptcbCur->TCB_plineStatusReqHeader);
     }
-    
-    __KERNEL_EXIT_IRQ(iregInterLevel);
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */
@@ -197,21 +193,18 @@ ULONG  _ThreadStatusChange (PLW_CLASS_TCB  ptcb, UINT  uiStatusReq)
             return  (ERROR_KERNEL_IN_ISR);                              /*  中断状态下无法完成此工作    */
         }
         
-        LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);                           /*  锁调度器 spinlock           */
         if (!__LW_THREAD_IS_RUNNING(ptcb)) {                            /*  目标任务不是正在执行        */
             ppcb = _GetPcb(ptcb);
-            __DEL_FROM_READY_RING_NOLOCK(ptcb, ppcb);                   /*  从就绪表中删除              */
-            LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);                     /*  解锁调度器 spinlock         */
+            __DEL_FROM_READY_RING(ptcb, ppcb);                          /*  从就绪表中删除              */
             goto    __change2;
         
         } else {                                                        /*  目标任务正在执行            */
             _SmpSendIpi(ptcb->TCB_ulCPUId, LW_IPI_STATUS_REQ, 0);       /*  发送核间中断通知改变状态    */
             _ThreadWaitStatus(ptcbCur, ptcb, uiStatusReq);              /*  设置等待对方完成状态        */
-            LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);                     /*  解锁调度器 spinlock         */
         }
         
         KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
-        return  (ERROR_NONE);
+        return  (ERROR_NONE);                                           /*  退出内核时开始等待          */
     }
     
 __change1:

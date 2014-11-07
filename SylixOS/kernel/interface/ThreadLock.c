@@ -52,9 +52,7 @@ VOID  API_ThreadLock (VOID)
         __THREAD_LOCK_INC(ptcbCur);
     }
     
-#if LW_CFG_SMP_EN > 0
     KN_SMP_MB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
 }
 /*********************************************************************************************************
   END

@@ -465,10 +465,7 @@ ULONG  API_MonitorUploadDelete (PVOID  pvMonitorUpload)
     }
     
     pmu->UPLOAD_bNeedDelete = LW_TRUE;
-    
-#if LW_CFG_SMP_EN > 0
     KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
     
     API_ThreadJoin(pmu->UPLOAD_hMonitorThread, LW_NULL);                /*  等待任务结束                */
     

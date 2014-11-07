@@ -140,8 +140,7 @@ ULONG  API_ThreadCleanupPushEx (LW_OBJECT_HANDLE  ulId, VOIDFUNCPTR  pfuncRoutin
     _LIST_MONO_LINK(&pcurNode->CUR_monoNext, ptex->TEX_pmonoCurHeader);
     ptex->TEX_pmonoCurHeader = &pcurNode->CUR_monoNext;
     
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
         
     return  (ERROR_NONE);
 }

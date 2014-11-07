@@ -74,6 +74,7 @@ typedef struct __lw_cpu {
     LW_SPINLOCK_DEFINE      (CPU_slIpi);                                /*  核间中断锁                  */
     PLW_LIST_RING            CPU_pringMsg;                              /*  自定义核间中断参数          */
     ULONG                    CPU_ulIPIVector;                           /*  核间中断向量                */
+    INT64                    CPU_iIPICnt;                               /*  核间中断次数                */
     volatile ULONG           CPU_ulIPIPend;                             /*  核间中断标志码              */
 
 #define LW_IPI_NOP              0                                       /*  测试用核间中断向量          */
@@ -170,14 +171,23 @@ extern LW_CLASS_CPU          _K_cpuTable[];                             /*  处理
         (pcpu->CPU_ulIPIPend)                                           /*  获取指定 CPU 核间中断 pend  */
         
 /*********************************************************************************************************
-  当前 CPU 中断信息
+  CPU 核间中断数量
+*********************************************************************************************************/
+
+#define LW_CPU_GET_IPI_CNT(id)          (_K_cpuTable[(id)].CPU_iIPICnt)
+
+/*********************************************************************************************************
+  CPU 中断信息
 *********************************************************************************************************/
 
 #define LW_CPU_GET_NESTING(id)          (_K_cpuTable[(id)].CPU_ulInterNesting)
 #define LW_CPU_GET_NESTING_MAX(id)      (_K_cpuTable[(id)].CPU_ulInterNestingMax)
 
-#define LW_CPU_GET_CUR_NESTING()        LW_CPU_GET_CUR()->CPU_ulInterNesting
-#define LW_CPU_GET_CUR_NESTING_MAX()    LW_CPU_GET_CUR()->CPU_ulInterNestingMax
+ULONG  _CpuGetNesting(VOID);
+ULONG  _CpuGetMaxNesting(VOID);
+
+#define LW_CPU_GET_CUR_NESTING()        _CpuGetNesting()
+#define LW_CPU_GET_CUR_NESTING_MAX()    _CpuGetMaxNesting()
 
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 

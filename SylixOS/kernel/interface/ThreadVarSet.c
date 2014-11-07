@@ -104,6 +104,7 @@ ULONG  API_ThreadVarSet (LW_OBJECT_HANDLE  ulId, ULONG  *pulAddr, ULONG  ulValue
     }
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
+    
     _DebugHandle(__ERRORMESSAGE_LEVEL, "var is not in thread context.\r\n");
     _ErrorHandle(ERROR_THREAD_VAR_NOT_EXIST);
     return  (ERROR_THREAD_VAR_NOT_EXIST);

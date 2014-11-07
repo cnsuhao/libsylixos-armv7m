@@ -83,16 +83,44 @@ FUNC_DEF(armMmuInitSysRom)
 ;*********************************************************************************************************/
 
 FUNC_DEF(armMmuEnable)
+#if __SYLIXOS_ARM_ARCH__ >= 7
+    ARM_DSB()
+    ARM_ISB()
+#else
+    NOP
+    NOP
+#endif
     MRC     p15, 0, R0, c1, c0, 0
     ORR     R0, R0, #P15_R1_M
     MCR     p15, 0, R0, c1, c0, 0
+#if __SYLIXOS_ARM_ARCH__ >= 7
+    ARM_DSB()
+    ARM_ISB()
+#else
+    NOP
+    NOP
+#endif
     BX      LR
     FUNC_END()
     
 FUNC_DEF(armMmuDisable)
+#if __SYLIXOS_ARM_ARCH__ >= 7
+    ARM_DSB()
+    ARM_ISB()
+#else
+    NOP
+    NOP
+#endif
     MRC     p15, 0, R0, c1, c0, 0
     BIC     R0, R0, #P15_R1_M
     MCR     p15, 0, R0, c1, c0, 0
+#if __SYLIXOS_ARM_ARCH__ >= 7
+    ARM_DSB()
+    ARM_ISB()
+#else
+    NOP
+    NOP
+#endif
     BX      LR
     FUNC_END()
     

@@ -76,19 +76,19 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
             _ErrorHandle(ENOSYS);
             return  (PX_ERROR);
         }
-        LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);
+        LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         __tickToTimespec(vproc->VP_clockUser + vproc->VP_clockSystem, tv);
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);
+        LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 #else
         _ErrorHandle(ENOSYS);
         return  (PX_ERROR);
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 
     } else if (clockid == CLOCK_THREAD_CPUTIME_ID) {
-        LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);
+        LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         LW_TCB_GET_CUR(ptcbCur);
         __tickToTimespec(ptcbCur->TCB_ulCPUTicks, tv);
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);
+        LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
     
     } else {
         _ErrorHandle(EINVAL);

@@ -74,9 +74,7 @@ ULONG  API_ThreadForceResume (LW_OBJECT_HANDLE    ulId)
     ppcb = _GetPcb(ptcb);
     
     if (ptcb->TCB_iDeleteProcStatus) {
-        KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         _DebugHandle(__ERRORMESSAGE_LEVEL, "thread has been deleted.\r\n");
         _ErrorHandle(ERROR_THREAD_OTHER_DELETE);
         return  (ERROR_THREAD_OTHER_DELETE);
@@ -84,9 +82,9 @@ ULONG  API_ThreadForceResume (LW_OBJECT_HANDLE    ulId)
     
     if (ptcb->TCB_ulSuspendNesting) {
         ptcb->TCB_ulSuspendNesting = 0;                                 /*  直接激活                    */
+    
     } else {
-        KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
-        __KERNEL_EXIT();                                                /*  退出内核                    */
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         return  (ERROR_NONE);
     }
     
@@ -97,8 +95,7 @@ ULONG  API_ThreadForceResume (LW_OBJECT_HANDLE    ulId)
         __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入就绪环                  */
     }
         
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    __KERNEL_EXIT();                                                    /*  退出内核 (可能调度)         */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ERROR_NONE);
 }

@@ -65,9 +65,7 @@ static VOID  __interStackInit (VOID)
 #else
         _K_pstkInterruptBase[i] = &_K_stkInterruptStack[i][(LW_CFG_INT_STK_SIZE / sizeof(LW_STACK)) - 1];
 #endif                                                                  /*  CPU_STK_GROWTH              */
-        lib_memset((PVOID)_K_stkInterruptStack[i], 
-                   LW_CFG_STK_EMPTY_FLAG, 
-                   LW_CFG_INT_STK_SIZE);                                /*  清空中断堆栈                */
+        lib_memset(_K_stkInterruptStack[i], LW_CFG_STK_EMPTY_FLAG, LW_CFG_INT_STK_SIZE);
     }
 }
 /*********************************************************************************************************
@@ -158,9 +156,8 @@ VOID _GlobalInit (VOID)
      *  内核关键性自旋锁初始化
      */
     LW_SPIN_INIT(&_K_slKernel);                                         /*  初始化内核自旋锁            */
-    LW_SPIN_INIT(&_K_slScheduler);                                      /*  初始化调度器自旋锁          */
     LW_SPIN_INIT(&_K_slAtomic);                                         /*  初始化原子操作自旋锁        */
-    LW_SPIN_INIT(&_K_slKernelTime);                                     /*  初始化 tick 自旋锁          */
+    LW_SPIN_INIT(&_K_tcbDummyKernel.TCB_slLock);                        /*  初始化自旋锁                */
 
     /*
      *  内核关键性数据结构初始化
@@ -196,4 +193,3 @@ VOID _GlobalInit (VOID)
 /*********************************************************************************************************
   END
 *********************************************************************************************************/
-

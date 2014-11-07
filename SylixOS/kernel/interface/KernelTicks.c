@@ -119,10 +119,10 @@ VOID  API_KernelTicks (VOID)
     __kernelTODTicks();                                                 /*  更新 TOD 时间               */
 #endif
 
-    LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);              /*  关闭中断同时锁住 spinlock   */
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  关闭中断同时锁住 spinlock   */
     _K_i64KernelTime++;                                                 /*  tick++                      */
     i64Tick = _K_i64KernelTime;
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);             /*  打开中断, 同时打开 spinlock */
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
     
 #if LW_CFG_TIME_TICK_HOOK_EN > 0
     bspTickHook(i64Tick);                                               /*  调用系统时钟钩子函数        */
@@ -153,8 +153,7 @@ VOID  API_KernelTicksContext (VOID)
              PLW_CLASS_CPU  pcpu;
              PLW_CLASS_TCB  ptcb;
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);              /*  关闭中断同时锁住 spinlock   */
-    LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  关闭中断同时锁住 spinlock   */
     
 #if LW_CFG_SMP_EN > 0
     for (i = 0; i < LW_NCPUS; i++) {                                    /*  遍历所有的核                */
@@ -179,8 +178,7 @@ VOID  API_KernelTicksContext (VOID)
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     
-    LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);             /*  打开中断, 同时打开 spinlock */
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
 
     _SchedTick();                                                       /*  处理所有 CPU 线程的时间片   */
 }

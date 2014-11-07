@@ -107,11 +107,11 @@ ULONG  API_TimerStatus (LW_OBJECT_HANDLE          ulId,
         *pulInterval = ptmr->TIMER_ulCounterSave;
     }
     
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ERROR_NONE);
 }
+
 #endif                                                                  /*  ((LW_CFG_HTIMER_EN > 0)     */
                                                                         /*  (LW_CFG_ITIMER_EN > 0))     */
                                                                         /*  (LW_CFG_MAX_TIMERS > 0)     */

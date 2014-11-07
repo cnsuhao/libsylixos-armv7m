@@ -147,8 +147,7 @@ ULONG  API_TimerStartEx (LW_OBJECT_HANDLE         ulId,
         _WakeupAdd(&_K_wuHTmr, &ptmr->TIMER_wunTimer);
     }
     
-    KN_INT_ENABLE(iregInterLevel);
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ERROR_NONE);
 }

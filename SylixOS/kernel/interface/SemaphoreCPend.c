@@ -139,7 +139,7 @@ __wait_again:
     } else {
         ptcbCur->TCB_ulDelay = ulTimeOut;                               /*  设置超时时间                */
     }
-    __KERNEL_TIME_GET(ulTimeSave, ULONG);                               /*  记录系统时间                */
+    __KERNEL_TIME_GET_NO_SPINLOCK(ulTimeSave, ULONG);                   /*  记录系统时间                */
     
     if (pevent->EVENT_ulOption & LW_OPTION_WAIT_PRIORITY) {             /*  按优先级等待                */
         _EVENT_INDEX_Q_PRIORITY(ptcbCur->TCB_ucPriority, ucPriorityIndex);

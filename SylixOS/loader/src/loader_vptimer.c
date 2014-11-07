@@ -144,7 +144,7 @@ INT  vprocSetitimer (INT        iWhich,
     
     pvptimer = &pvproc->VP_vptimer[iWhich];
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     if (pulCounter) {
         *pulCounter = pvptimer->VPT_ulCounter;
     }
@@ -153,7 +153,7 @@ INT  vprocSetitimer (INT        iWhich,
     }
     pvptimer->VPT_ulCounter  = ulCounter;
     pvptimer->VPT_ulInterval = ulInterval;
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
     
     return  (ERROR_NONE);
 }
@@ -184,14 +184,14 @@ INT  vprocGetitimer (INT        iWhich,
     
     pvptimer = &pvproc->VP_vptimer[iWhich];
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     if (pulCounter) {
         *pulCounter = pvptimer->VPT_ulCounter;
     }
     if (pulInterval) {
         *pulInterval = pvptimer->VPT_ulInterval;
     }
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
     
     return  (ERROR_NONE);
 }

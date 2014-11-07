@@ -65,7 +65,7 @@ ULONG  API_ThreadStop (LW_OBJECT_HANDLE  ulId)
 #if LW_CFG_SMP_EN > 0
     {
         PLW_CLASS_TCB  ptcbCur;
-        LW_TCB_GET_CUR(ptcbCur);
+        LW_TCB_GET_CUR_SAFE(ptcbCur);
         if (ptcbCur->TCB_uiStatusChangeReq) {                           /*  状态改变是否成功            */
             ptcbCur->TCB_uiStatusChangeReq = 0;
             ulError = ERROR_THREAD_NULL;                                /*  目标线程已经被删除或者重启  */
@@ -117,6 +117,7 @@ ULONG  API_ThreadContinue (LW_OBJECT_HANDLE  ulId)
     ulError = _ThreadContinue(ptcb, LW_FALSE);
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
     _ErrorHandle(ulError);
     return  (ulError);
 }

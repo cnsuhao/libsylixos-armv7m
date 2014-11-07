@@ -41,19 +41,13 @@
   scheduler bug trace
 *********************************************************************************************************/
 #ifdef  __LW_SCHEDULER_BUG_TRACE_EN
-#define __LW_SCHEDULER_BUG_TRACE(ptcb)  do {                                            \
-            if (ptcb == LW_NULL) {                                                      \
-                _DebugHandle(__ERRORMESSAGE_LEVEL,                                      \
-                             "scheduler candidate serious error, ptcb == NULL.\r\n");   \
-                for (;;);                                                               \
-            } else if (!__LW_THREAD_IS_READY(ptcb)) {                                   \
-                _DebugFormat(__ERRORMESSAGE_LEVEL,                                      \
-                             "scheduler candidate serious error, "                      \
-                             "ptcb %p, name \"%s\", status 0x%x.\r\n",                  \
-                             ptcb, ptcb->TCB_cThreadName, ptcb->TCB_usStatus);          \
-                for (;;);                                                               \
-            }                                                                           \
-        } while (0)
+#define __LW_SCHEDULER_BUG_TRACE(ptcb)  \
+        _BugHandle((ptcb == LW_NULL), LW_TRUE, \
+                   "scheduler candidate serious error, ptcb == NULL.\r\n"); \
+        _BugFormat((!__LW_THREAD_IS_READY(ptcb)), LW_TRUE,  \
+                   "scheduler candidate serious error, "    \
+                   "ptcb %p, name \"%s\", status 0x%x.\r\n",    \
+                   ptcb, ptcb->TCB_cThreadName, ptcb->TCB_usStatus)
 #else
 #define __LW_SCHEDULER_BUG_TRACE(ptcb)
 #endif                                                                  /*  __LW_SCHEDULER_BUG_TRACE_EN */
@@ -116,7 +110,7 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
     REGISTER PLW_CLASS_TCB  ptcbCur = pcpuCur->CPU_ptcbTCBCur;
     REGISTER ULONG          ulCPUId = pcpuCur->CPU_ulCPUId;
 
-    _CpuInactiveNoLock(pcpuCur);                                        /*  停止 CPU                    */
+    _CpuInactive(pcpuCur);                                              /*  停止 CPU                    */
     
     __LW_TASK_SAVE_VAR(ptcbCur);
     __LW_TASK_SAVE_FPU(ptcbCur, bIsIntSwtich);
@@ -125,12 +119,11 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
     
     LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_DOWN_MSK);                      /*  清除 CPU DOWN 中断标志      */
     
-    LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);                             /*  解锁调度器 spinlock         */
+    LW_SPIN_UNLOCK_IGNIRQ(&_K_slKernel);                                /*  解锁内核 spinlock           */
 
     bspCpuDown(ulCPUId);                                                /*  BSP 停止 CPU                */
     
-    bspDebugMsg("CPU Down error!\r\n");                                 /*  不会运行到这里              */
-    for (;;);
+    _BugHandle(LW_TRUE, LW_TRUE, "CPU Down error!\r\n")                 /*  不会运行到这里              */
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */
@@ -173,7 +166,7 @@ VOID _SchedSwp (PLW_CLASS_CPU pcpuCur)
 
     pcpuCur->CPU_ptcbTCBCur = ptcbHigh;                                 /*  切换任务                    */
 
-    LW_SPIN_UNLOCK_SCHED(&_K_slScheduler, ptcbCur);                     /*  解锁调度器 spinlock         */
+    LW_SPIN_UNLOCK_SCHED(&_K_slKernel, ptcbCur);                        /*  解锁内核 spinlock           */
     
     bspTaskSwapHook(ulCurId, ulHighId);
     __LW_THREAD_SWAP_HOOK(ulCurId, ulHighId);
@@ -203,36 +196,20 @@ VOID _SchedCrSwp (PLW_CLASS_CPU pcpuCur)
 
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */
 /*********************************************************************************************************
-** 函数名称: _Sched
-** 功能描述: 内核调度器
+** 函数名称: Schedule
+** 功能描述: 内核退出时, 会调用此调度函数 (进入内核状态并关中断被调用)
 ** 输　入  : NONE
 ** 输　出  : 线程上下文返回值
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  _Sched (VOID)
+INT  _Schedule (VOID)
 {
-             INTREG           iregInterLevel;
-             ULONG            ulCPUId;
-             PLW_CLASS_CPU    pcpuCur;
-             PLW_CLASS_TCB    ptcbCur;
-             PLW_CLASS_TCB    ptcbCand;
-#if LW_CFG_SMP_EN > 0
-             BOOL             bStatusReq = LW_FALSE;
-#endif                                                                  /*  LW_CFG_SMP_EN               */
-    REGISTER INT              iRetVal = ERROR_NONE;
-    
-    LW_TCB_GET_CUR_SAFE(ptcbCur);
-    _StackCheckGuard(ptcbCur);                                          /*  堆栈警戒检查                */
-
-#if LW_CFG_SMP_EN > 0
-__status_change:
-    if (bStatusReq) {
-        _ThreadStatusChangeCur(ptcbCur);
-    }
-#endif                                                                  /*  LW_CFG_SMP_EN               */
-
-    LW_SPIN_LOCK_QUICK(&_K_slScheduler, &iregInterLevel);               /*  锁调度器 spinlock 关闭中断  */
+    ULONG            ulCPUId;
+    PLW_CLASS_CPU    pcpuCur;
+    PLW_CLASS_TCB    ptcbCur;
+    PLW_CLASS_TCB    ptcbCand;
+    INT              iRetVal = ERROR_NONE;
     
     ulCPUId = LW_CPU_GET_CUR_ID();                                      /*  当前 CPUID                  */
     pcpuCur = LW_CPU_GET(ulCPUId);                                      /*  当前 CPU 控制块             */
@@ -241,25 +218,22 @@ __status_change:
 #if LW_CFG_SMP_EN > 0
     if (ptcbCur->TCB_plineStatusReqHeader) {                            /*  请求当前任务改变状态        */
         if (__THREAD_LOCK_GET(ptcbCur) <= 1ul) {                        /*  是否可以进行状态切换        */
-            LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);      /*  解锁调度器 spinlock 打开中断*/
-            bStatusReq = LW_TRUE;
-            goto    __status_change;
+            _ThreadStatusChangeCur(pcpuCur);                            /*  检查是否需要进行状态切换    */
         }
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-    
+
     ptcbCand = _SchedGetCand(pcpuCur, 1ul);                             /*  获得需要运行的线程          */
     if (ptcbCand != ptcbCur) {                                          /*  如果与当前运行的不同, 切换  */
         __LW_SCHEDULER_BUG_TRACE(ptcbCand);                             /*  调度器 BUG 检测             */
         pcpuCur->CPU_bIsIntSwtich = LW_FALSE;                           /*  非中断调度                  */
         pcpuCur->CPU_ptcbTCBHigh  = ptcbCand;
-        archTaskCtxSwitch(pcpuCur);                                     /*  线程切换,并释放调度器自旋锁 */
-        LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);                           /*  调度器自旋锁重新加锁        */
+        archTaskCtxSwitch(pcpuCur);                                     /*  线程切换,并释放内核自旋锁   */
+        LW_SPIN_LOCK_IGNIRQ(&_K_slKernel);                              /*  内核自旋锁重新加锁          */
     }
 #if LW_CFG_SMP_EN > 0                                                   /*  SMP 系统                    */
       else {
         _SchedSmpNotify(ulCPUId);                                       /*  SMP 调度通知                */
-        LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);          /*  解锁调度器 spinlock 打开中断*/
         return  (iRetVal);
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
@@ -269,86 +243,57 @@ __status_change:
     iRetVal = ptcbCur->TCB_iSchedRet;                                   /*  获得调度器信号的返回值      */
     ptcbCur->TCB_iSchedRet = ERROR_NONE;                                /*  清空                        */
     
-    LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);              /*  解锁调度器 spinlock 打开中断*/
-    
     return  (iRetVal);
 }
 /*********************************************************************************************************
-** 函数名称: _SchedInt
-** 功能描述: 内核调度器(普通中断调度, 不用处理当前任务上下文, 不获取调度器的返回值)
+** 函数名称: _ScheduleInt
+** 功能描述: 中断退出时, 会调用此调度函数 (进入内核状态并关中断被调用)
 ** 输　入  : NONE
-** 输　出  : 线程上下文返回值
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  _SchedInt (VOID)
+VOID  _ScheduleInt (VOID)
 {
-             INTREG           iregInterLevel;
-             ULONG            ulCPUId;
-             PLW_CLASS_CPU    pcpuCur;
-             PLW_CLASS_TCB    ptcbCur;
-             PLW_CLASS_TCB    ptcbCand;
-#if LW_CFG_SMP_EN > 0
-             BOOL             bStatusReq = LW_FALSE;
-#endif                                                                  /*  LW_CFG_SMP_EN               */
-    REGISTER INT              iRetVal = ERROR_NONE;
-    
-    LW_TCB_GET_CUR_SAFE(ptcbCur);
-    _StackCheckGuard(ptcbCur);                                          /*  堆栈警戒检查                */
-
-#if LW_CFG_SMP_EN > 0
-__status_change:
-    if (bStatusReq) {
-        _ThreadStatusChangeCur(ptcbCur);
-    }
-#endif                                                                  /*  LW_CFG_SMP_EN               */
-    
-    LW_SPIN_LOCK_QUICK(&_K_slScheduler, &iregInterLevel);               /*  锁调度器 spinlock 关闭中断  */
+    ULONG            ulCPUId;
+    PLW_CLASS_CPU    pcpuCur;
+    PLW_CLASS_TCB    ptcbCur;
+    PLW_CLASS_TCB    ptcbCand;
     
     ulCPUId = LW_CPU_GET_CUR_ID();                                      /*  当前 CPUID                  */
     pcpuCur = LW_CPU_GET(ulCPUId);                                      /*  当前 CPU 控制块             */
     ptcbCur = pcpuCur->CPU_ptcbTCBCur;
     
 #if LW_CFG_SMP_EN > 0
+    LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_SCHED_MSK);                     /*  清除核间调度中断标志        */
     if (ptcbCur->TCB_plineStatusReqHeader) {                            /*  请求当前任务改变状态        */
         if (__THREAD_LOCK_GET(ptcbCur) <= 1ul) {                        /*  是否可以进行状态切换        */
-            LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);      /*  解锁调度器 spinlock 打开中断*/
-            bStatusReq = LW_TRUE;
-            goto    __status_change;
+            _ThreadStatusChangeCur(pcpuCur);                            /*  检查是否需要进行状态切换    */
+            if (LW_CPU_GET_IPI_PEND(pcpuCur->CPU_ulCPUId) & 
+                LW_IPI_DOWN_MSK) {                                      /*  当前 CPU 需要停止           */
+                _SchedCpuDown(pcpuCur, LW_TRUE);
+            }
         }
     }
-    LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_SCHED_MSK);                     /*  清除核间调度中断标志        */
-    
-    if (LW_CPU_GET_IPI_PEND(pcpuCur->CPU_ulCPUId) & LW_IPI_DOWN_MSK) {  /*  当前 CPU 需要停止           */
-        _SchedCpuDown(pcpuCur, LW_TRUE);
-    }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-    
+
     ptcbCand = _SchedGetCand(pcpuCur, 1ul);                             /*  获得需要运行的线程          */
     if (ptcbCand != ptcbCur) {                                          /*  如果与当前运行的不同, 切换  */
         __LW_SCHEDULER_BUG_TRACE(ptcbCand);                             /*  调度器 BUG 检测             */
         pcpuCur->CPU_bIsIntSwtich = LW_TRUE;                            /*  中断调度                    */
         pcpuCur->CPU_ptcbTCBHigh  = ptcbCand;
         archIntCtxLoad(pcpuCur);                                        /*  中断上下文中线程切换        */
-        LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);                           /*  调度器自旋锁重新加锁        */
+        _BugHandle(LW_TRUE, LW_TRUE, "serious error!.\r\n");
     }
 #if LW_CFG_SMP_EN > 0                                                   /*  SMP 系统                    */
       else {
         _SchedSmpNotify(ulCPUId);                                       /*  SMP 调度通知                */
-        LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);          /*  解锁调度器 spinlock 打开中断*/
-        return  (iRetVal);
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-
-    iRetVal = ERROR_NONE;                                               /*  获得信号的返回值            */
-    
-    LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);              /*  解锁调度器 spinlock 打开中断*/
-    
-    return  (iRetVal);
 }
 /*********************************************************************************************************
 ** 函数名称: _SchedSetRet
-** 功能描述: 设置当前任务调度器返回值, 在产生主动调度时, 将获取这个值
+** 功能描述: 设置当前任务调度器返回值, 在产生主动调度时, 将获取这个值 (进入内核状态被调用)
 ** 输　入  : iSchedRet         调度器返回值
 ** 输　出  : NONE
 ** 全局变量: 
@@ -356,15 +301,12 @@ __status_change:
 *********************************************************************************************************/
 VOID  _SchedSetRet (INT  iSchedSetRet)
 {
-    INTREG           iregInterLevel;
     PLW_CLASS_TCB    ptcbCur;
     
-    LW_SPIN_LOCK_QUICK(&_K_slScheduler, &iregInterLevel);               /*  锁调度器 spinlock 关闭中断  */
     LW_TCB_GET_CUR(ptcbCur);
     if (ptcbCur->TCB_iSchedRet == ERROR_NONE) {
         ptcbCur->TCB_iSchedRet =  iSchedSetRet;
     }
-    LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);              /*  解锁调度器 spinlock 打开中断*/
 }
 /*********************************************************************************************************
 ** 函数名称: _SchedSetPrio
@@ -397,20 +339,17 @@ VOID  _SchedSetPrio (PLW_CLASS_TCB  ptcb, UINT8  ucPriority)
     ptcb->TCB_ucPriority = ucPriority;                                  /*  设置新的优先级              */
     
     if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  线程就绪                    */
-        LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);                           /*  调度器自旋锁加锁            */
         if (ptcb->TCB_bIsCand) {                                        /*  在候选表中                  */
             ppcbFrom->PCB_usThreadReadyCounter--;                       /*  先早优先级控制块就绪数量 -- */
             ppcbTo->PCB_usThreadReadyCounter++;                         /*  最新优先级控制块就绪数量 ++ */
-            
             ppcbFrom->PCB_usThreadCandCounter--;                        /*  先早优先级控制块候选数量 -- */
             ppcbTo->PCB_usThreadCandCounter++;                          /*  最新优先级控制块候选数量 ++ */
             LW_CAND_ROT(LW_CPU_GET(ptcb->TCB_ulCPUId)) =  LW_TRUE;      /*  退出内核时尝试抢占调度      */
         
         } else {                                                        /*  不在候选表中                */
-            __DEL_FROM_READY_RING_NOLOCK(ptcb, ppcbFrom);               /*  从就绪环中删除              */
-            __ADD_TO_READY_RING_NOLOCK(ptcb, ppcbTo);                   /*  加入新的就绪环              */
+            __DEL_FROM_READY_RING(ptcb, ppcbFrom);                      /*  从就绪环中删除              */
+            __ADD_TO_READY_RING(ptcb, ppcbTo);                          /*  加入新的就绪环              */
         }
-        LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);                         /*  调度器自旋锁解锁            */
     }
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */

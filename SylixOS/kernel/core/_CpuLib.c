@@ -22,24 +22,18 @@
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
 ** 函数名称: _CpuActive
-** 功能描述: 将 CPU 设置为激活状态 (关闭中断状态下被调用)
+** 功能描述: 将 CPU 设置为激活状态 (进入内核且关闭中断状态下被调用)
 ** 输　入  : pcpu      CPU 结构
 ** 输　出  : ERROR or OK
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : 必须保证 pcpu 当前执行线程有一个有效的 TCB 例如 _K_tcbDummyKernel 或者其他
+** 注  意  : 必须保证 pcpu 当前执行线程有一个有效的 TCB 例如 _K_tcbDummyKernel 或者其他.
 *********************************************************************************************************/
 INT  _CpuActive (PLW_CLASS_CPU   pcpu)
 {
-    PLW_CLASS_TCB   ptcbOrg;
-
     if (LW_CPU_IS_ACTIVE(pcpu)) {
         return  (PX_ERROR);
     }
-    
-    LW_TCB_GET_CUR(ptcbOrg);
-    
-    LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);
     
     pcpu->CPU_ulStatus |= LW_CPU_STATUS_ACTIVE;
     KN_SMP_MB();
@@ -49,19 +43,17 @@ INT  _CpuActive (PLW_CLASS_CPU   pcpu)
     pcpu->CPU_ptcbTCBCur  = LW_CAND_TCB(pcpu);
     pcpu->CPU_ptcbTCBHigh = LW_CAND_TCB(pcpu);
     
-    LW_SPIN_UNLOCK_SCHED(&_K_slScheduler, ptcbOrg);
-    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: _CpuInactiveNoLock
-** 功能描述: 将 CPU 设置为非激活状态 (锁定调度器并关闭中断状态下被调用)
+** 函数名称: _CpuInactive
+** 功能描述: 将 CPU 设置为非激活状态 (进入内核且关闭中断状态下被调用)
 ** 输　入  : pcpu      CPU 结构
 ** 输　出  : ERROR or OK
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  _CpuInactiveNoLock (PLW_CLASS_CPU   pcpu)
+INT  _CpuInactive (PLW_CLASS_CPU   pcpu)
 {
     INT             i;
     ULONG           ulCPUId = pcpu->CPU_ulCPUId;
@@ -94,6 +86,52 @@ INT  _CpuInactiveNoLock (PLW_CLASS_CPU   pcpu)
     }
     
     return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: _CpuGetNesting
+** 功能描述: 获取 CPU 当前中断嵌套值
+** 输　入  : NONE
+** 输　出  : 中断嵌套值
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+ULONG  _CpuGetNesting (VOID)
+{
+#if LW_CFG_SMP_EN > 0
+    INTREG          iregInterLevel;
+    ULONG           ulNesting;
+    
+    iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
+    ulNesting      = LW_CPU_GET_CUR()->CPU_ulInterNesting;
+    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
+    
+    return  (ulNesting);
+#else
+    return  (LW_CPU_GET_CUR()->CPU_ulInterNesting);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+}
+/*********************************************************************************************************
+** 函数名称: _CpuGetMaxNesting
+** 功能描述: 获取 CPU 最大中断嵌套值
+** 输　入  : NONE
+** 输　出  : 中断嵌套值
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+ULONG  _CpuGetMaxNesting (VOID)
+{
+#if LW_CFG_SMP_EN > 0
+    INTREG          iregInterLevel;
+    ULONG           ulNesting;
+    
+    iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
+    ulNesting      = LW_CPU_GET_CUR()->CPU_ulInterNestingMax;
+    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
+    
+    return  (ulNesting);
+#else
+    return  (LW_CPU_GET_CUR()->CPU_ulInterNestingMax);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 }
 /*********************************************************************************************************
   END

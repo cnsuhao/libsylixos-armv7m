@@ -29,7 +29,7 @@
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
 ** 函数名称: _RmsActive
-** 功能描述: 第一次激活 RMS 并开始对线程执行时间进行测量
+** 功能描述: 第一次激活 RMS 并开始对线程执行时间进行测量 (进入内核后被调用)
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
@@ -40,11 +40,11 @@
 VOID  _RmsActive (PLW_CLASS_RMS  prms)
 {
     prms->RMS_ucStatus = LW_RMS_ACTIVE;
-    __KERNEL_TIME_GET(prms->RMS_ulTickSave, ULONG);
+    __KERNEL_TIME_GET_NO_SPINLOCK(prms->RMS_ulTickSave, ULONG);
 }
 /*********************************************************************************************************
 ** 函数名称: _RmsGetExecTime
-** 功能描述: 计算任务执行的时间
+** 功能描述: 计算任务执行的时间 (进入内核后被调用)
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
@@ -55,7 +55,7 @@ ULONG   _RmsGetExecTime (PLW_CLASS_RMS  prms)
     REGISTER ULONG            ulThreadExecTime;
              ULONG            ulKernelTime;
     
-    __KERNEL_TIME_GET(ulKernelTime, ULONG);
+    __KERNEL_TIME_GET_NO_SPINLOCK(ulKernelTime, ULONG);
     ulThreadExecTime = (ulKernelTime >= prms->RMS_ulTickSave) ? 
                        (ulKernelTime -  prms->RMS_ulTickSave) :
                        (ulKernelTime + (__ARCH_ULONG_MAX - prms->RMS_ulTickSave) + 1);
@@ -64,7 +64,7 @@ ULONG   _RmsGetExecTime (PLW_CLASS_RMS  prms)
 }
 /*********************************************************************************************************
 ** 函数名称: _RmsInitExpire
-** 功能描述: 开始进行时间等待
+** 功能描述: 开始进行时间等待 (进入内核后被调用)
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
@@ -72,12 +72,9 @@ ULONG   _RmsGetExecTime (PLW_CLASS_RMS  prms)
 *********************************************************************************************************/
 ULONG  _RmsInitExpire (PLW_CLASS_RMS  prms, ULONG  ulPeriod, ULONG  *pulWaitTick)
 {
-             INTREG           iregInterLevel;
              PLW_CLASS_TCB    ptcbCur;
     REGISTER ULONG            ulThreadExecTime;                         /*  计算线程执行时间            */
              ULONG            ulKernelTime;
-    
-    LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);              /*  关闭中断同时锁住 spinlock   */
     
     LW_TCB_GET_CUR(ptcbCur);
     
@@ -88,14 +85,12 @@ ULONG  _RmsInitExpire (PLW_CLASS_RMS  prms, ULONG  ulPeriod, ULONG  *pulWaitTick
                           
     if (ulThreadExecTime > ulPeriod) {
         __KERNEL_TIME_GET_NO_SPINLOCK(prms->RMS_ulTickSave, ULONG);     /*  重新记录系统时钟            */
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);         /*  打开中断, 同时打开 spinlock */
         return  (ERROR_RMS_TICK);
     }
     
     if (ulThreadExecTime == ulPeriod) {
         *pulWaitTick = 0;
         __KERNEL_TIME_GET_NO_SPINLOCK(prms->RMS_ulTickSave, ULONG);     /*  重新记录系统时钟            */
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);         /*  打开中断, 同时打开 spinlock */
         return  (ERROR_NONE);
     }
     
@@ -108,13 +103,11 @@ ULONG  _RmsInitExpire (PLW_CLASS_RMS  prms, ULONG  ulPeriod, ULONG  *pulWaitTick
     prms->RMS_ulTickNext += *pulWaitTick;                               /*  计算下次到时时间            */
                                                                         /*  自然溢出                    */
     
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);             /*  打开中断, 同时打开 spinlock */
-    
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: _RmsEndExpire
-** 功能描述: 一个周期完毕，等待下一个周期
+** 功能描述: 一个周期完毕，等待下一个周期 (进入内核后被调用)
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
@@ -127,7 +120,7 @@ ULONG  _RmsEndExpire (PLW_CLASS_RMS  prms)
     }
     
     prms->RMS_ucStatus = LW_RMS_ACTIVE;                                 /*  改变状态                    */
-    __KERNEL_TIME_GET(prms->RMS_ulTickSave, ULONG);                     /*  重新记录系统时钟            */
+    __KERNEL_TIME_GET_NO_SPINLOCK(prms->RMS_ulTickSave, ULONG);         /*  重新记录系统时钟            */
     
     if (prms->RMS_ulTickNext != prms->RMS_ulTickSave) {                 /*  是否 TIME OUT               */
         return  (ERROR_THREAD_WAIT_TIMEOUT);

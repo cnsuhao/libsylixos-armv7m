@@ -70,6 +70,8 @@ static VOID __randInterHook (ULONG  ulVector, ULONG  ulNesting)
 *********************************************************************************************************/
 VOID __randInit (VOID)
 {
+    LW_SPIN_INIT(&_G_slRandLock);
+    
     if (_G_hRandSelMutex == LW_OBJECT_HANDLE_INVALID) {
         _G_hRandSelMutex = API_SemaphoreMCreate("randsel_lock", LW_PRIO_DEF_CEILING, 
                                                 LW_OPTION_WAIT_FIFO | 

@@ -185,21 +185,6 @@ VOID  _SmpCallFuncAllOther (FUNCPTR  pfunc, PVOID  pvArg)
     _SmpCallIpiAllOther(&ipim);
 }
 /*********************************************************************************************************
-** 函数名称: _SmpProcStatusChange
-** 功能描述: 修改当前任务状态.
-** 输　入  : pcpuCur       当前 CPU
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-static VOID  _SmpProcStatusChange (PLW_CLASS_CPU  pcpuCur)
-{
-    _ThreadStatusChangeCur(pcpuCur->CPU_ptcbTCBCur);
-    
-    KN_SMP_MB();
-    LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_STATUS_REQ_MSK);               /*  清除                        */
-}
-/*********************************************************************************************************
 ** 函数名称: _SmpProcFlushTlb
 ** 功能描述: 处理核间中断刷新 TLB 的操作
 ** 输　入  : pcpuCur       当前 CPU
@@ -291,9 +276,7 @@ static VOID  _SmpProcCallfunc (PLW_CLASS_CPU  pcpuCur)
 *********************************************************************************************************/
 VOID  _SmpProcIpi (PLW_CLASS_CPU  pcpuCur)
 {
-    if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_STATUS_REQ_MSK) {        /*  修改当前任务状态            */
-        _SmpProcStatusChange(pcpuCur);
-    }
+    pcpuCur->CPU_iIPICnt++;                                             /*  核间中断数量 ++             */
 
 #if LW_CFG_VMM_EN > 0
     if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_FLUSH_TLB_MSK) {         /*  更新 MMU 快表               */

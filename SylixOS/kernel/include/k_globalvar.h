@@ -77,7 +77,6 @@ __KERNEL_EXT  LW_JOB_MSG              _K_jobmsgKernel[LW_CFG_MAX_EXCEMSGS];
         遗留问题, 所以这里只能加入一个溢出计数器)
 *********************************************************************************************************/
 __KERNEL_EXT  INT64                   _K_i64KernelTime;                 /*  系统时间计数器              */
-__KERNEL_EXT  LW_SPINLOCK_DEFINE     (_K_slKernelTime);                 /*  内核 tick spinlock          */
 
 #if LW_CFG_THREAD_CPU_USAGE_CHK_EN > 0
 __KERNEL_EXT  ULONG                   _K_ulCPUUsageTicks;               /*  利用率测算计数器            */
@@ -238,7 +237,6 @@ __KERNEL_EXT  const  ULONG            _K_ulNCpus;
 __KERNEL_EXT  LW_CLASS_CPU            _K_cpuTable[LW_CFG_MAX_PROCESSORS];   
                                                                         /*  每个 CPU 的内容             */
 __KERNEL_EXT  LW_SPINLOCK_DEFINE     (_K_slKernel);                     /*  内核 spinlock               */
-__KERNEL_EXT  LW_SPINLOCK_DEFINE     (_K_slScheduler);                  /*  调度器 spinlock             */
 /*********************************************************************************************************
   原子操作锁
 *********************************************************************************************************/

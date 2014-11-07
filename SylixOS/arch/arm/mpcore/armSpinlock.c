@@ -68,6 +68,8 @@ INT  archSpinLock (spinlock_t  *psl)
 {
     if (psl->SL_pcpuOwner == LW_CPU_GET_CUR()) {
         psl->SL_ulCounter++;
+        _BugFormat((psl->SL_ulCounter > 10), LW_TRUE, 
+                   "spinlock RECURSIVE %lu!\r\n", psl->SL_ulCounter);
         return  (1);                                                    /*  重复调用                    */
     }
     
@@ -91,6 +93,8 @@ INT  archSpinTryLock (spinlock_t  *psl)
 {
     if (psl->SL_pcpuOwner == LW_CPU_GET_CUR()) {
         psl->SL_ulCounter++;
+        _BugFormat((psl->SL_ulCounter > 10), LW_TRUE, 
+                   "spinlock RECURSIVE %lu!\r\n", psl->SL_ulCounter);
         return  (1);                                                    /*  重复调用                    */
     }
     

@@ -89,16 +89,14 @@ ULONG  API_ThreadWakeup (LW_OBJECT_HANDLE  ulId)
             __ADD_TO_READY_RING(ptcb, ppcb);                            /*  加入就绪表                  */
         }
         
-        KN_INT_ENABLE(iregInterLevel);
-        __KERNEL_EXIT();                                                /*  退出内核 (可能会调度)       */
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         
         MONITOR_EVT_LONG1(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_WAKEUP, ulId, LW_NULL);
         
         return  (ERROR_NONE);
     
     } else {
-        KN_INT_ENABLE(iregInterLevel);
-        __KERNEL_EXIT();                                                /*  退出内核                    */
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         
         _DebugHandle(__ERRORMESSAGE_LEVEL, "thread is not in SLEEP mode.\r\n");
         _ErrorHandle(ERROR_THREAD_NOT_SLEEP);

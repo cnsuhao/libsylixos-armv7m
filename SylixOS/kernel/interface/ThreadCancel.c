@@ -79,19 +79,15 @@ ULONG  API_ThreadCancel (LW_OBJECT_HANDLE  *pulId)
     if (ptcbDel->TCB_iCancelState == LW_THREAD_CANCEL_ENABLE) {         /*  允许 CANCEL                 */
         if (ptcbDel->TCB_iCancelType == LW_THREAD_CANCEL_DEFERRED) {    /*  延迟 CANCEL                 */
             ptcbDel->TCB_bCancelRequest = LW_TRUE;                      /*  目标线程进入下一个 TEST 点  */
-            KN_INT_ENABLE(iregInterLevel);
-            __KERNEL_EXIT();                                            /*  退出内核                    */
+            __KERNEL_EXIT_IRQ(iregInterLevel);                          /*  退出内核并打开中断          */
         
         } else {                                                        /*  异步取消                    */
-            KN_INT_ENABLE(iregInterLevel);
-            __KERNEL_EXIT();                                            /*  退出内核                    */
+            __KERNEL_EXIT_IRQ(iregInterLevel);                          /*  退出内核并打开中断          */
             kill(ulId, SIGCANCEL);                                      /*  立即发送取消信号            */
         }
     
     } else {
-        KN_INT_ENABLE(iregInterLevel);
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         _ErrorHandle(ERROR_THREAD_DISCANCEL);                           /*  不允许 CACNCEL              */
         return  (ERROR_THREAD_DISCANCEL);
     }

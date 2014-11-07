@@ -59,16 +59,20 @@ extern INT  _cppRtInit(VOID);
 *********************************************************************************************************/
 static  VOID  _KernelPrimaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
 {
-    errno = ERROR_NONE;                                                 /*  清除错误                    */
-
-    pcpuCur->CPU_iKernelCounter = 0;                                    /*  允许调度                    */
+    PLW_CLASS_TCB   ptcbOrg;
     
+    LW_SPIN_LOCK_IGNIRQ(&_K_slKernel);
+    LW_TCB_GET_CUR(ptcbOrg);
     _CpuActive(pcpuCur);                                                /*  CPU 激活                    */
+    LW_SPIN_UNLOCK_SCHED(&_K_slKernel, ptcbOrg);
     
 #if LW_CFG_SMP_EN > 0
     KN_SMP_MB();                                                        /*  内存屏障, 确保之前操作已处理*/
     _K_bMultiTaskStart = LW_TRUE;                                       /*  通知从核可以进入多任务模式  */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
+
+    pcpuCur->CPU_iKernelCounter = 0;                                    /*  允许调度                    */
+    KN_SMP_MB();
 
     _DebugHandle(__LOGMESSAGE_LEVEL, "primary cpu multi-task start...\r\n");
     
@@ -76,6 +80,7 @@ static  VOID  _KernelPrimaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
     _ThreadFpuSwith(LW_FALSE);                                          /*  初始化将要运行任务 FPU 环境 */
 #endif
 
+    errno = ERROR_NONE;                                                 /*  清除错误                    */
     archTaskCtxStart(pcpuCur);                                          /*  当前 CPU 进入任务状态       */
 }
 /*********************************************************************************************************
@@ -90,17 +95,20 @@ static  VOID  _KernelPrimaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
 
 static  VOID  _KernelSecondaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
 {
-    ULONG   i;
+    ULONG           i;
+    PLW_CLASS_TCB   ptcbOrg;
     
     while (_K_bMultiTaskStart == LW_FALSE) {
         LW_SPINLOCK_DELAY();                                            /*  短延迟并释放总线            */
     }
-    
-    errno = ERROR_NONE;                                                 /*  清除错误                    */
+
+    LW_SPIN_LOCK_IGNIRQ(&_K_slKernel);
+    LW_TCB_GET_CUR(ptcbOrg);
+    _CpuActive(pcpuCur);                                                /*  CPU 激活                    */
+    LW_SPIN_UNLOCK_SCHED(&_K_slKernel, ptcbOrg);
     
     pcpuCur->CPU_iKernelCounter = 0;                                    /*  允许调度                    */
-    
-    _CpuActive(pcpuCur);                                                /*  CPU 激活                    */
+    KN_SMP_MB();
     
     for (i = 0; i < LW_NCPUS; i++) {
         if (!LW_CPU_IS_ACTIVE(LW_CPU_GET(i))) {
@@ -119,6 +127,7 @@ static  VOID  _KernelSecondaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
     _ThreadFpuSwith(LW_FALSE);                                          /*  初始化将要运行任务 FPU 环境 */
 #endif
 
+    errno = ERROR_NONE;                                                 /*  清除错误                    */
     archTaskCtxStart(pcpuCur);                                          /*  当前 CPU 进入任务状态       */
 }
 
@@ -190,7 +199,6 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 {
     INT             iError;
     PLW_CLASS_CPU   pcpuCur;
-    ULONG           ulCPUId;
 
     if (LW_SYS_STATUS_IS_RUNNING()) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "kernel is already start.\r\n");
@@ -232,10 +240,6 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
     
     _KernelHighLevelInit();                                             /*  内核高级初始化              */
     
-    ulCPUId = LW_CPU_GET_CUR_ID();
-    pcpuCur = LW_CPU_GET(ulCPUId);
-    pcpuCur->CPU_ptcbTCBCur = _K_ptcbIdle[ulCPUId];                     /*  设置当前线程为 idle 线程    */
-    
     iError = _cppRtInit();                                              /*  CPP 运行时库初始化          */
     if (iError != ERROR_NONE) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "c++ run time lib initialized error!\r\n");
@@ -256,6 +260,8 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
     _KernelBootSecondary();                                             /*  从核可以进行初始化操作      */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
+    pcpuCur = LW_CPU_GET_CUR();
+
     _KernelPrimaryEntry(pcpuCur);                                       /*  启动内核                    */
                                                                         /*  多核将在第一次调度被启用    */
 }
@@ -273,15 +279,13 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 VOID  API_KernelSecondaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 {
     PLW_CLASS_CPU   pcpuCur;
-    ULONG           ulCPUId;
 
     while (_K_ulHoldingPen != LW_HOLDING_PEN_START) {
         LW_SPINLOCK_DELAY();                                            /*  短延迟并释放总线            */
     }
     
-    ulCPUId = LW_CPU_GET_CUR_ID();
-    pcpuCur = LW_CPU_GET(ulCPUId);
-    pcpuCur->CPU_ptcbTCBCur = _K_ptcbIdle[ulCPUId];                     /*  设置当前线程为 idle 线程    */
+    pcpuCur = LW_CPU_GET_CUR();
+    pcpuCur->CPU_ptcbTCBCur = &_K_tcbDummyKernel;                       /*  伪内核线程                  */
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "kernel secondary cpu usrStartup...\r\n");
     if (pfuncStartHook) {                                               /*  用户是否要求需要初始化      */

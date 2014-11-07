@@ -82,7 +82,7 @@ __wait_again:
     ptcbCur->TCB_ulDelay = ulTick;
     __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
     
-    __KERNEL_TIME_GET(ulKernelTime, ULONG);                             /*  记录系统时间                */
+    __KERNEL_TIME_GET_NO_SPINLOCK(ulKernelTime, ULONG);                 /*  记录系统时间                */
     
     if (__KERNEL_EXIT_IRQ(iregInterLevel)) {                            /*  被信号激活                  */
         ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
@@ -133,7 +133,7 @@ __wait_again:
     ptcbCur->TCB_ulDelay = ulTick;
     __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
     
-    __KERNEL_TIME_GET(ulKernelTime, ULONG);                             /*  记录系统时间                */
+    __KERNEL_TIME_GET_NO_SPINLOCK(ulKernelTime, ULONG);                 /*  记录系统时间                */
     
     if (__KERNEL_EXIT_IRQ(iregInterLevel)) {                            /*  被信号激活                  */
         if (bSigRet) {
@@ -236,7 +236,7 @@ __wait_again:
     ptcbCur->TCB_ulDelay = ulTick;
     __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
     
-    __KERNEL_TIME_GET(ulKernelTime, ULONG);                             /*  记录系统时间                */
+    __KERNEL_TIME_GET_NO_SPINLOCK(ulKernelTime, ULONG);                 /*  记录系统时间                */
     
     iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
     if (iSchedRet == LW_SIGNAL_EINTR) {
@@ -315,7 +315,7 @@ __wait_again:
     ptcbCur->TCB_ulDelay = ulTick;
     __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
     
-    __KERNEL_TIME_GET(ulKernelTime, ULONG);                             /*  记录系统时间                */
+    __KERNEL_TIME_GET_NO_SPINLOCK(ulKernelTime, ULONG);                 /*  记录系统时间                */
     
     iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
     if (iSchedRet == LW_SIGNAL_EINTR) {

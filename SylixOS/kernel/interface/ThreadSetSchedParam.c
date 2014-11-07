@@ -79,8 +79,7 @@ ULONG  API_ThreadSetSchedParam (LW_OBJECT_HANDLE  ulId,
         ptcb->TCB_usSchedCounter = ptcb->TCB_usSchedSlice;              /*  不为零                      */
     }
     
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SCHED,
                       ulId, ucPolicy, ucActivatedMode, LW_NULL);

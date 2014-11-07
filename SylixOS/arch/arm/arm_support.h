@@ -328,7 +328,7 @@ VOID    bspReboot(INT  iRebootType, addr_t  ulStartAddress);
   系统关键信息打印 (打印信息不可依赖任何操作系统 api)
 *********************************************************************************************************/
 
-#if (LW_CFG_ERRORMESSAGE_EN > 0) || (LW_CFG_LOGMESSAGE_EN > 0)
+#if (LW_CFG_ERRORMESSAGE_EN > 0) || (LW_CFG_LOGMESSAGE_EN > 0) || (LW_CFG_BUGMESSAGE_EN > 0)
 VOID    bspDebugMsg(CPCHAR pcMsg);
 #endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
 

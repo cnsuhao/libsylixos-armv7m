@@ -72,7 +72,7 @@ VOID  _SchedTick (VOID)
     REGISTER UINT8          ucPriority;
              INT            i;
              
-    LW_SPIN_LOCK_QUICK(&_K_slScheduler, &iregInterLevel);               /*  锁调度器 spinlock 关闭中断  */
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  锁内核 spinlock 关闭中断    */
              
 #if LW_CFG_SMP_EN > 0
     for (i = 0; i < LW_NCPUS; i++) {
@@ -102,11 +102,11 @@ VOID  _SchedTick (VOID)
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     
-    LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);              /*  解锁调度器 spinlock 打开中断*/
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);                 /*  解锁内核 spinlock 打开中断  */
 }
 /*********************************************************************************************************
 ** 函数名称: _SchedYield
-** 功能描述: 指定线程主动让出 CPU 使用权, (同优先级内) (此函数被调用时中断已经关闭)
+** 功能描述: 指定线程主动让出 CPU 使用权, (同优先级内) (此函数被调用时已进入内核且中断已经关闭)
 ** 输　入  : ptcb          在就绪表中的线程
 **           ppcb          对应的优先级控制块
 ** 输　出  : NONE
@@ -119,7 +119,6 @@ VOID  _SchedYield (PLW_CLASS_TCB  ptcb, PLW_CLASS_PCB  ppcb)
 {
     REGISTER UINT8          ucPriority;
 
-    LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);                               /*  锁调度器 spinlock           */
     if (__LW_THREAD_IS_RUNNING(ptcb)) {                                 /*  必须正在执行                */
         ucPriority = _SchedSeekPriority();                              /*  就绪未运行任务的最高优先级  */
         if (LW_PRIO_IS_HIGH_OR_EQU(ucPriority,
@@ -128,7 +127,6 @@ VOID  _SchedYield (PLW_CLASS_TCB  ptcb, PLW_CLASS_PCB  ppcb)
             LW_CAND_ROT(LW_CPU_GET(ptcb->TCB_ulCPUId)) = LW_TRUE;       /*  下次调度时检查轮转          */
         }
     }
-    LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);                             /*  解锁调度器 spinlock         */
 }
 
 #endif                                                                  /*  LW_CFG_THREAD_SCHED_YIELD_EN*/

@@ -321,10 +321,7 @@ ULONG  API_ThreadDelete (LW_OBJECT_HANDLE  *pulId, PVOID  pvRetVal)
             _ThreadSafeSuspend(ptcbCur);                                /*  阻塞自己等待对方删除        */
         }
         
-        KN_INT_ENABLE(iregInterLevel);
-        
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         return  (ERROR_NONE);
     }
     

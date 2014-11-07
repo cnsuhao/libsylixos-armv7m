@@ -102,6 +102,7 @@ ULONG  API_ThreadVarDelete (LW_OBJECT_HANDLE  ulId, ULONG  *pulAddr)
     }
     
     __KERNEL_EXIT();                                                    /*  ÍË³öÄÚºË                    */
+    
     _DebugHandle(__ERRORMESSAGE_LEVEL, "var is not in thread context.\r\n");
     _ErrorHandle(ERROR_THREAD_VAR_NOT_EXIST);
     return  (ERROR_THREAD_VAR_NOT_EXIST);

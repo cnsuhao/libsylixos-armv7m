@@ -328,10 +328,7 @@ static VOID  _TyFlushRd (TY_DEV_ID  ptyDev)
     TYDEV_LOCK(ptyDev, return);                                         /*  等待设备使用权              */
     
     ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_TRUE;
-    
-#if LW_CFG_SMP_EN > 0
     KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
     
     rngFlush(ptyDev->TYDEV_vxringidRdBuf);                              /*  清除缓冲区                  */
     
@@ -341,10 +338,7 @@ static VOID  _TyFlushRd (TY_DEV_ID  ptyDev)
     ptyDev->TYDEV_ucInBytesLeft = 0;
     
     _TyRdXoff(ptyDev, LW_FALSE);                                        /*  可以允许对方发送            */
-    
-#if LW_CFG_SMP_EN > 0
     KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
     
     ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_FALSE;
     
@@ -590,9 +584,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
     case FIORBUFSET:                                                    /*  重新设置读缓冲的大小        */
         TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_TRUE;
-#if LW_CFG_SMP_EN > 0
         KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
         ringId = rngCreate((INT)lArg);                                  /*  重新建立缓冲区              */
         if (ringId) {
             if (ptyDev->TYDEV_vxringidRdBuf) {
@@ -602,9 +594,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
         } else {
             iStatus = PX_ERROR;
         }
-#if LW_CFG_SMP_EN > 0
         KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
         ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_FALSE;
         TYDEV_UNLOCK(ptyDev);                                           /*  释放设备使用权              */
         break;
@@ -612,9 +602,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
     case FIOWBUFSET:                                                    /*  重新设置写缓冲区            */
         TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_TRUE;
-#if LW_CFG_SMP_EN > 0
         KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
         ringId = rngCreate((INT)lArg);                                  /*  重新建立缓冲区              */
         if (ringId) {
             if (ptyDev->TYDEV_vxringidWrBuf) {
@@ -631,9 +619,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
                                         : ((INT)lArg);                  /*  确定写激活门限              */
             LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);
         }
-#if LW_CFG_SMP_EN > 0
         KN_SMP_WMB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
         ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_FALSE;
         
         API_SemaphoreBPost(ptyDev->TYDEV_hWrtSyncSemB);                 /*  释放信号量                  */

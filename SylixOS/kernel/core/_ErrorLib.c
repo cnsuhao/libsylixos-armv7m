@@ -68,9 +68,9 @@ errno_t *__errno (VOID)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断, 防止调度到其他 CPU*/
     
     pcpuCur = LW_CPU_GET_CUR();
-    
     if (pcpuCur->CPU_ulInterNesting) {
         perrno = (errno_t *)(&pcpuCur->CPU_ulInterError[pcpuCur->CPU_ulInterNesting]);
+    
     } else {
         ptcbCur = pcpuCur->CPU_ptcbTCBCur;
         if (ptcbCur) {
@@ -108,9 +108,9 @@ VOID  _ErrorHandle (ULONG  ulErrorCode)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断, 防止调度到其他 CPU*/
     
     pcpuCur = LW_CPU_GET_CUR();
-    
     if (pcpuCur->CPU_ulInterNesting) {
         pcpuCur->CPU_ulInterError[pcpuCur->CPU_ulInterNesting] = ulErrorCode;
+    
     } else {
         ptcbCur = pcpuCur->CPU_ptcbTCBCur;
         if (ptcbCur) {
@@ -135,6 +135,15 @@ VOID  _ErrorHandle (ULONG  ulErrorCode)
 *********************************************************************************************************/
 VOID  _DebugMessage (INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcString)
 {
+#if LW_CFG_BUGMESSAGE_EN > 0
+    if (_K_pfuncKernelDebugError && (iLevel & __BUGMESSAGE_LEVEL)) {
+        _K_pfuncKernelDebugError(pcPosition);
+        _K_pfuncKernelDebugError("() bug: ");
+        _K_pfuncKernelDebugError(pcString);
+        __ERROR_THREAD_SHOW();
+    }
+#endif
+
 #if LW_CFG_ERRORMESSAGE_EN > 0
     if (_K_pfuncKernelDebugError && (iLevel & __ERRORMESSAGE_LEVEL)) {
         _K_pfuncKernelDebugError(pcPosition);
@@ -551,6 +560,17 @@ static VOID  _DebugFmtPrint (VOIDFUNCPTR pfuncPrint, CPCHAR  pcFmt, va_list ap)
 VOID  _DebugFmtMsg (INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcFmt, ...)
 {
     va_list ap;
+
+#if LW_CFG_BUGMESSAGE_EN > 0
+    if (_K_pfuncKernelDebugError && (iLevel & __BUGMESSAGE_LEVEL)) {
+        _K_pfuncKernelDebugError(pcPosition);
+        _K_pfuncKernelDebugError("() bug: ");
+        va_start(ap, pcFmt);
+        _DebugFmtPrint(_K_pfuncKernelDebugError, pcFmt, ap);
+        va_end(ap);
+        __ERROR_THREAD_SHOW();
+    }
+#endif
 
 #if LW_CFG_ERRORMESSAGE_EN > 0
     if (_K_pfuncKernelDebugError && (iLevel & __ERRORMESSAGE_LEVEL)) {

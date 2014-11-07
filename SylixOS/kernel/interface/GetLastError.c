@@ -46,9 +46,9 @@ ULONG  API_GetLastError (VOID)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断, 防止调度到其他 CPU*/
     
     pcpuCur = LW_CPU_GET_CUR();
-    
     if (pcpuCur->CPU_ulInterNesting) {
         ulLastError = pcpuCur->CPU_ulInterError[pcpuCur->CPU_ulInterNesting];
+    
     } else {
         ptcbCur = pcpuCur->CPU_ptcbTCBCur;
         if (ptcbCur) {

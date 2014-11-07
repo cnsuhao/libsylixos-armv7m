@@ -69,10 +69,10 @@ VOID  _CandTableUpdate(PLW_CLASS_CPU  pcpu);
 VOID  _CandTableRemove(PLW_CLASS_CPU  pcpu);
 
 /*********************************************************************************************************
-  加入 / 退出就绪表, 不加调度器锁
+  加入 / 退出就绪表
 *********************************************************************************************************/
 
-#define __ADD_TO_READY_RING_NOLOCK(ptcb, ppcb)                  \
+#define __ADD_TO_READY_RING(ptcb, ppcb)                         \
         do {                                                    \
             (ppcb)->PCB_usThreadReadyCounter++;                 \
             if (!_CandTableTryAdd((ptcb), (ppcb))) {            \
@@ -80,31 +80,13 @@ VOID  _CandTableRemove(PLW_CLASS_CPU  pcpu);
             }                                                   \
         } while (0)
         
-#define __DEL_FROM_READY_RING_NOLOCK(ptcb, ppcb)                \
+#define __DEL_FROM_READY_RING(ptcb, ppcb)                       \
         do {                                                    \
             (ppcb)->PCB_usThreadReadyCounter--;                 \
             if (!(ptcb)->TCB_bIsCand) {                         \
                 _DelTCBFromReadyRing((ptcb), (ppcb));           \
             }                                                   \
             _CandTableTryDel((ptcb), (ppcb));                   \
-        } while (0)
-
-/*********************************************************************************************************
-  加入 / 退出就绪表, 带有调度器锁
-*********************************************************************************************************/
-
-#define __ADD_TO_READY_RING(ptcb, ppcb)                         \
-        do {                                                    \
-            LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);               \
-            __ADD_TO_READY_RING_NOLOCK(ptcb, ppcb);             \
-            LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);             \
-        } while (0)
-        
-#define __DEL_FROM_READY_RING(ptcb, ppcb)                       \
-        do {                                                    \
-            LW_SPIN_LOCK_IGNIRQ(&_K_slScheduler);               \
-            __DEL_FROM_READY_RING_NOLOCK(ptcb, ppcb);           \
-            LW_SPIN_UNLOCK_IGNIRQ(&_K_slScheduler);             \
         } while (0)
 
 #endif                                                                  /*  __K_SCHED_H                 */

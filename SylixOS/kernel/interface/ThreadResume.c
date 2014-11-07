@@ -89,26 +89,21 @@ ULONG  API_ThreadResume (LW_OBJECT_HANDLE    ulId)
         ptcb->TCB_ulSuspendNesting--;
     
     } else {
-        KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
-        __KERNEL_EXIT();                                                /*  退出内核                    */
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         return  (ERROR_NONE);
     }
     
     if (!ptcb->TCB_ulSuspendNesting) {                                  /*  最后一层解除挂起            */
         ptcb->TCB_usStatus &= (~LW_THREAD_STATUS_SUSPEND);
-        
         if (__LW_THREAD_IS_READY(ptcb)) {                               /*  就绪 ?                      */
             ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;         /*  中断激活方式                */
             __ADD_TO_READY_RING(ptcb, ppcb);                            /*  加入到相对优先级就绪环      */
         }
-        
-        KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
-        __KERNEL_EXIT();                                                /*  退出内核 (可能调度)         */
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         return  (ERROR_NONE);
         
     } else {                                                            /*  有嵌套                      */
-        KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
-        __KERNEL_EXIT();                                                /*  退出内核                    */
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         return  (ERROR_NONE);
     }
 }

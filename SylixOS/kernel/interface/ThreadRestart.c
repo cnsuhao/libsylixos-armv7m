@@ -186,8 +186,7 @@ static ULONG  __threadRestart (PLW_CLASS_TCB          ptcb,
     }
 #endif
     
-    KN_INT_ENABLE(iregInterLevel);
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     _DebugFormat(__LOGMESSAGE_LEVEL, "thread \"%s\" has been restart.\r\n", ptcb->TCB_cThreadName);
     

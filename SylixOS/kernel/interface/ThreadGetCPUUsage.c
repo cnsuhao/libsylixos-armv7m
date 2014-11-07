@@ -102,8 +102,7 @@ ULONG  API_ThreadGetCPUUsage (LW_OBJECT_HANDLE  ulId,
         *pucKernelUsage = (UINT8)(((_K_ulCPUUsageKernelTicks) * 100) / _K_ulCPUUsageTicks);
     }
     
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ERROR_NONE);
 }

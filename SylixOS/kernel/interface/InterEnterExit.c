@@ -59,7 +59,6 @@ static VOID  __fpuInterEnter (PLW_CLASS_CPU  pcpu)
         } else {
             __ARCH_FPU_ENABLE();                                        /*  使能当前中断下 FPU          */
         }
-    
     } else {
         REGISTER ULONG  ulOldNest = ulInterNesting - 1;
         __ARCH_FPU_SAVE(__INTER_FPU_CTX(ulOldNest));
@@ -112,14 +111,11 @@ ULONG    API_InterEnter (VOID)
     }
     
     pcpu = LW_CPU_GET_CUR();
-    
     if (pcpu->CPU_ulInterNesting != LW_CFG_MAX_INTER_SRC) {
         pcpu->CPU_ulInterNesting++;
     }
     
-#if LW_CFG_SMP_EN > 0
     KN_SMP_WMB();                                                       /*  等待以上操作完成            */
-#endif                                                                  /*  LW_CFG_SMP_EN               */
 
 #if LW_CFG_CPU_FPU_EN > 0
     if (_K_bInterFpuEn) {                                               /*  中断状态允许使用浮点运算    */
@@ -152,14 +148,11 @@ VOID    API_InterExit (VOID)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
     pcpu = LW_CPU_GET_CUR();
-    
     if (pcpu->CPU_ulInterNesting) {                                     /*  系统中断嵌套层数--          */
         pcpu->CPU_ulInterNesting--;
     }
     
-#if LW_CFG_SMP_EN > 0
     KN_SMP_WMB();                                                       /*  等待以上操作完成            */
-#endif                                                                  /*  LW_CFG_SMP_EN               */
     
     if (pcpu->CPU_ulInterNesting) {                                     /*  查看系统是否在中断嵌套中    */
 #if LW_CFG_CPU_FPU_EN > 0                                               /*  恢复上一等级中断 FPU CTX    */
@@ -171,7 +164,7 @@ VOID    API_InterExit (VOID)
         return;
     }
     
-    _SchedInt();                                                        /*  中断中的调度                */
+    __KERNEL_SCHED_INT();                                               /*  中断中的调度                */
     
 #if LW_CFG_CPU_FPU_EN > 0
     if (_K_bInterFpuEn) {

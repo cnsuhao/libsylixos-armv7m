@@ -72,9 +72,7 @@ ULONG  API_TimerCancel (LW_OBJECT_HANDLE  ulId)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
     if (ptmr->TIMER_ucStatus == LW_TIMER_STATUS_STOP) {                 /*  没有工作                    */
-        KN_INT_ENABLE(iregInterLevel);
-        __KERNEL_EXIT();                                                /*  退出内核                    */
-        
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         _ErrorHandle(ERROR_TIMER_TIME);
         return  (ERROR_TIMER_TIME);
     }
@@ -89,11 +87,11 @@ ULONG  API_TimerCancel (LW_OBJECT_HANDLE  ulId)
         _WakeupDel(&_K_wuHTmr, &ptmr->TIMER_wunTimer);
     }
     
-    KN_INT_ENABLE(iregInterLevel);
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ERROR_NONE);
 }
+
 #endif                                                                  /*  ((LW_CFG_HTIMER_EN > 0)     */
                                                                         /*  (LW_CFG_ITIMER_EN > 0))     */
                                                                         /*  (LW_CFG_MAX_TIMERS > 0)     */

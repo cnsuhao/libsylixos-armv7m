@@ -212,6 +212,8 @@ CPCHAR              __kernelEnterFunc(VOID);
 #define __KERNEL_ENTER_IRQ()                __kernelEnterIrq(__func__)
 #define __KERNEL_EXIT_IRQ(iregInterLevel)   __kernelExitIrq(iregInterLevel)
 
+
+
 #define __KERNEL_ISENTER()                  __kernelIsEnter()
 #define __KERNEL_OWNER()                    __kernelOwner()
 #define __KERNEL_ENTERFUNC()                __kernelEnterFunc()
@@ -223,15 +225,25 @@ CPCHAR              __kernelEnterFunc(VOID);
                                             } while (0)
                                             
 /*********************************************************************************************************
+  内核调度
+*********************************************************************************************************/
+
+INT                 __kernelSched(VOID);
+VOID                __kernelSchedInt(VOID);
+
+#define __KERNEL_SCHED()                    __kernelSched()
+#define __KERNEL_SCHED_INT()                __kernelSchedInt()
+                                            
+/*********************************************************************************************************
   内核 ticks
 *********************************************************************************************************/
 
 #define __KERNEL_TIME_GET(time, type)                                   \
         {                                                               \
             INTREG           iregInterLevel;                            \
-            LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);      \
+            LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);          \
             time = (type)_K_i64KernelTime;                              \
-            LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);     \
+            LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);         \
         }
         
 #define __KERNEL_TIME_GET_NO_SPINLOCK(time, type)   \
@@ -351,7 +363,7 @@ LW_OBJECT_ID   _MakeObjectId(UINT8  ucCls, UINT16  usNode, UINT16  usIndex);
 *********************************************************************************************************/
 
 INT            _CpuActive(PLW_CLASS_CPU   pcpu);
-INT            _CpuInactiveNoLock(PLW_CLASS_CPU   pcpu);
+INT            _CpuInactive(PLW_CLASS_CPU   pcpu);
 
 /*********************************************************************************************************
   调度器
@@ -369,8 +381,8 @@ VOID           _SchedSwp(PLW_CLASS_CPU pcpuCur);                        /*  任务
 VOID           _SchedCrSwp(PLW_CLASS_CPU pcpuCur);
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */
 
-INT            _Sched(VOID);                                            /*  任务态产生调度              */
-INT            _SchedInt(VOID);                                         /*  普通中断退出产生调度        */
+INT            _Schedule(VOID);
+VOID           _ScheduleInt(VOID);
 
 VOID           _SchedSetRet(INT  iSchedSetRet);
 VOID           _SchedSetPrio(PLW_CLASS_TCB  ptcb, UINT8  ucPriority);   /*  设置优先级                  */
@@ -460,7 +472,7 @@ INT            _ThreadSched(PLW_CLASS_TCB  ptcbCur);
 ULONG          _ThreadStatusChange(PLW_CLASS_TCB  ptcb, UINT  uiStatusReq);
 
 #if LW_CFG_SMP_EN > 0
-VOID           _ThreadStatusChangeCur(PLW_CLASS_TCB  ptcbCur);
+VOID           _ThreadStatusChangeCur(PLW_CLASS_CPU  pcpuCur);
 VOID           _ThreadUnwaitStatus(PLW_CLASS_TCB  ptcb);                /*  线程删除/重启时需要退出链表 */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 

@@ -125,7 +125,6 @@ VOID  _TCBBuild (UINT8                    ucPriority,
                  PLW_CLASS_TCB            ptcb,
                  PVOID                    pvArg)
 {
-             INTREG           iregInterLevel;
     REGISTER PLW_CLASS_PCB    ppcb;
     REGISTER PLW_CLASS_TCB    ptcbCur;
     
@@ -348,12 +347,8 @@ VOID  _TCBBuild (UINT8                    ucPriority,
     _K_ptcbTCBIdTable[_ObjectGetIndex(ulId)] = ptcb;                    /*  保存TCB控制块               */
     _List_Line_Add_Ahead(&ptcb->TCB_lineManage, 
                          &_K_plineTCBHeader);                           /*  进入 TCB 管理链表           */
-    
-    LW_SPIN_LOCK_QUICK(&_K_slScheduler, &iregInterLevel);
     ppcb = _GetPcb(ptcb);
     ppcb->PCB_usThreadCounter++;
-    LW_SPIN_UNLOCK_QUICK(&_K_slScheduler, iregInterLevel);
-    
     _LIST_RING_INIT_IN_CODE(ptcb->TCB_ringReady);
     __KERNEL_EXIT();                                                    /*  退出内核                    */
 

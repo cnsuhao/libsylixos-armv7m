@@ -111,7 +111,7 @@ INT  _ThreadSched (PLW_CLASS_TCB  ptcbCur)
 {
     LW_KERNEL_JOB_EXEC();                                               /*  尝试执行异步工作队列        */
     
-    return  (_Sched());
+    return  (__KERNEL_SCHED());                                         /*  尝试一次调度                */
 }
 /*********************************************************************************************************
 ** 函数名称: _ThreadStop

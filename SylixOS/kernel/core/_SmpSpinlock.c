@@ -37,7 +37,7 @@
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SmpSpinInit(spinlock_t *psl)
+VOID  _SmpSpinInit (spinlock_t *psl)
 {
     __ARCH_SPIN_INIT(psl);
     KN_SMP_WMB();

@@ -148,9 +148,8 @@ VOID   API_KernelRebootEx (INT  iRebootType, addr_t  ulStartAddress)
 
     archReboot(iRebootType, _K_ulRebootStartAddress);                   /*  调用体系架构重启操作        */
     
-    /*
-     *  理论上运行不到这里, CPU 就会自动复位
-     */
+    _BugHandle(LW_TRUE, LW_TRUE, "kernel reboot error!\r\n")            /*  不会运行到这里              */
+    
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核同时打开中断        */
 }
 /*********************************************************************************************************

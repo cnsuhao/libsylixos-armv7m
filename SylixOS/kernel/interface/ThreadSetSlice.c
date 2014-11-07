@@ -76,8 +76,7 @@ ULONG  API_ThreadSetSlice (LW_OBJECT_HANDLE  ulId, UINT16  usSlice)
     ptcb = _K_ptcbTCBIdTable[usIndex];
     ptcb->TCB_usSchedSlice = usSlice;
     
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLICE, 
                       ulId, usSlice, LW_NULL);

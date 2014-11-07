@@ -69,6 +69,39 @@ VOID  _DebugFmtMsg(INT  iLevel, CPCHAR  pcPosition, CPCHAR  pcFmt, ...);
 #define _DebugFormat(level, fmt, ...)
 #endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN > 0  */
                                                                         /*  LW_CFG_LOGMESSAGE_EN > 0    */
+/*********************************************************************************************************
+  BUG 打印
+*********************************************************************************************************/
+
+#if LW_CFG_BUGMESSAGE_EN > 0
+#define _BugHandle(cond, stop, msg) \
+        if (cond) {     \
+            _DebugMessage(__BUGMESSAGE_LEVEL, __func__, (msg)); \
+            if (stop) { \
+                for (;;);   \
+            }   \
+        }
+#else
+#define _BugHandle(cond, stop, msg) \
+        if (cond) { if (stop) { for (;;); }}
+#endif                                                                  /*  LW_CFG_BUGMESSAGE_EN > 0    */
+
+/*********************************************************************************************************
+  BUG 格式化打印
+*********************************************************************************************************/
+
+#if LW_CFG_BUGMESSAGE_EN > 0
+#define _BugFormat(cond, stop, fmt, ...)    \
+        if (cond) {     \
+            _DebugFmtMsg(__BUGMESSAGE_LEVEL, __func__, (fmt), ##__VA_ARGS__); \
+            if (stop) { \
+                for (;;);   \
+            }   \
+        }
+#else
+#define _BugFormat(cond, stop, fmt, ...)    \
+        if (cond) { if (stop) { for (;;); }}
+#endif                                                                  /*  LW_CFG_BUGMESSAGE_EN > 0    */
 
 #endif                                                                  /*  __INLERRORHANDLE_H          */
 /*********************************************************************************************************

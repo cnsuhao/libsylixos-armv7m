@@ -503,14 +503,14 @@ static VOID  __sigReturn (PLW_CLASS_SIGCONTEXT  psigctx, PLW_CLASS_SIGCTLMSG  ps
     
     __KERNEL_SPACE_SET(psigctlmsg->SIGCTLMSG_iKernelSpace);             /*  恢复成进入信号前的状态      */
     
+    _SchedSetRet(psigctlmsg->SIGCTLMSG_iSchedRet);                      /*  通知调度器返回的情况        */
+    
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
     /*
      *  从这里到代码返回任务堆栈上下文间隙处发生了抢占, 也不会造成 TCB_iSchedRet 被清零,
      *  因为任务只有主动的从调度器退出时, 才能真正的获得调度器的返回值, 中途任何时候被打断都没关系
      */
-    _SchedSetRet(psigctlmsg->SIGCTLMSG_iSchedRet);                      /*  通知调度器返回的情况        */
-    
     errno = psigctlmsg->SIGCTLMSG_iLastErrno;                           /*  恢复错误号                  */
     
     archSigCtxLoad(psigctlmsg->SIGCTLMSG_pvStackRet);                   /*  从信号上下文中返回          */
@@ -976,12 +976,12 @@ ULONG  _sigTimeOutRecalc (ULONG  ulOrgKernelTime, ULONG  ulOrgTimeOut)
         return  (ulOrgTimeOut);
     }
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelTime, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     __KERNEL_TIME_GET_NO_SPINLOCK(ulKernelTime, ULONG);
     ulTimeRun = (ulKernelTime >= ulOrgKernelTime) ?
                 (ulKernelTime -  ulOrgKernelTime) :
                 (ulKernelTime + (__ARCH_ULONG_MAX - ulOrgKernelTime) + 1);
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelTime, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
     
     if (ulTimeRun >= ulOrgTimeOut) {                                    /*  已经产生了超时              */
         return  (0);

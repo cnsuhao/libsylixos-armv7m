@@ -82,8 +82,7 @@ ULONG  API_ThreadGetNotePad (LW_OBJECT_HANDLE  ulId,
     
     ulValTemp = ptcb->TCB_notepadThreadNotePad.NOTEPAD_ulNotePad[ucNoteIndex];
     
-    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ulValTemp);
 }

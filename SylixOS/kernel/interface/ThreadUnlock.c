@@ -51,9 +51,7 @@ INT  API_ThreadUnlock (VOID)
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
-#if LW_CFG_SMP_EN > 0
     KN_SMP_MB();
-#endif                                                                  /*  LW_CFG_SMP_EN               */
     
     if (__THREAD_LOCK_GET(ptcbCur)) {
         __THREAD_LOCK_DEC(ptcbCur);                                     /*  Ω‚À¯»ŒŒÒ                    */

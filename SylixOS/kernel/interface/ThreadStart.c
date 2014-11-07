@@ -93,12 +93,9 @@ ULONG  API_ThreadStartEx (LW_OBJECT_HANDLE  ulId, BOOL  bJoin, PVOID  *ppvRetVal
         ptcb->TCB_usStatus &= (~LW_THREAD_STATUS_INIT);                 /*  清除标志位                  */
         
         if (__LW_THREAD_IS_READY(ptcb)) {                               /*  就绪                        */
-        
             _DebugFormat(__LOGMESSAGE_LEVEL, "thread \"%s\" has been start.\r\n",
                          ptcb->TCB_cThreadName);
-        
             ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_OTHER;
-            
             __ADD_TO_READY_RING(ptcb, ppcb);                            /*  加入到相对优先级就绪环      */
 
             KN_INT_ENABLE(iregInterLevel);                              /*  打开中断                    */
@@ -111,15 +108,12 @@ ULONG  API_ThreadStartEx (LW_OBJECT_HANDLE  ulId, BOOL  bJoin, PVOID  *ppvRetVal
             return  (ERROR_NONE);
 
         } else {
-            KN_INT_ENABLE(iregInterLevel);                              /*  打开中断                    */
-            __KERNEL_EXIT();                                            /*  退出内核                    */
+            __KERNEL_EXIT_IRQ(iregInterLevel);                          /*  退出内核并打开中断          */
             _ErrorHandle(ERROR_THREAD_NOT_READY);
             return  (ERROR_THREAD_NOT_READY);
         }
-       
     } else {
-        KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
-        __KERNEL_EXIT();                                                /*  退出内核                    */
+        __KERNEL_EXIT_IRQ(iregInterLevel);                              /*  退出内核并打开中断          */
         _DebugHandle(__ERRORMESSAGE_LEVEL, "thread not has this opt.\r\n");
         _ErrorHandle(ERROR_THREAD_NOT_INIT);
         return  (ERROR_THREAD_NOT_INIT);

@@ -54,8 +54,8 @@ static const CHAR   _G_cInterInfoHdr2[] = "\n\
 ---- -------------- -------- -------- -------- ------ --- ----------";
 #if LW_CFG_INTER_INFO > 0
 static const CHAR   _G_cNestingInfoHdr[] = "\n\
- CPU  MAX NESTING\n\
------ -----------\n";
+ CPU  MAX NESTING      IPI\n\
+----- ----------- -------------\n";
 #endif                                                                  /*  LW_CFG_INTER_INFO > 0       */
 /*********************************************************************************************************
 ** 函数名称: API_InterShow
@@ -140,7 +140,11 @@ VOID   API_InterShow (VOID)
     printf(_G_cNestingInfoHdr);                                         /*  打印欢迎信息                */
     
     for (i = 0; i < LW_NCPUS; i++) {
-        printf("%5d %11ld\n", i, LW_CPU_GET_NESTING_MAX(i));
+#if LW_CFG_SMP_EN > 0
+        printf("%5d %11ld %13lld\n", i, LW_CPU_GET_NESTING_MAX(i), LW_CPU_GET_IPI_CNT(i));
+#else
+        printf("%5d %11ld *\n", i, LW_CPU_GET_NESTING_MAX(i));
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     }
     
     printf("\ninterrupt vector base : 0x%08lx\n", 
