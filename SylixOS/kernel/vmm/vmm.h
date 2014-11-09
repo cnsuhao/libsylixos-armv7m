@@ -115,7 +115,7 @@ typedef struct __lw_vmm_status {
 typedef LW_VMM_STATUS       *PLW_VMM_STATUS;
 
 /*********************************************************************************************************
-  VMM 初始化, 只能放在 API_KernelStart 回调中, 
+  VMM 初始化, 只能放在 API_KernelStart 回调中
   
   当为 SMP 系统时, API_KernelPrimaryStart    对应启动回调调用 API_VmmLibPrimaryInit
                    API_KernelSecondaryStart  对应启动回调调用 API_VmmLibSecondaryInit
@@ -131,6 +131,14 @@ LW_API ULONG        API_VmmLibPrimaryInit(LW_VMM_ZONE_DESC      vmzone[],
 #if LW_CFG_SMP_EN > 0
 LW_API ULONG        API_VmmLibSecondaryInit(CPCHAR  pcMachineName);
 #endif                                                                  /*  LW_CFG_SMP_EN               */
+
+/*********************************************************************************************************
+  MMU 启动与停止
+*********************************************************************************************************/
+
+LW_API VOID         API_VmmMmuEnable(VOID);                             /*  MMU 启动                    */
+
+LW_API VOID         API_VmmMmuDisable(VOID);                            /*  MMU 停止                    */
 
 /*********************************************************************************************************
   VMM API (以下分配函数可以分配出确定的, 可供直接访问的内存空间)

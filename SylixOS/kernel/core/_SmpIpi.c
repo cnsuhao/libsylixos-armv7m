@@ -52,7 +52,7 @@ VOID  _SmpSendIpi (ULONG  ulCPUId, ULONG  ulIPIVec, INT  iWait)
     
     archMpInt(ulCPUId);
     
-    if (iWait & (ulIPIVec != LW_IPI_SCHED)) {
+    if (iWait && (ulIPIVec != LW_IPI_SCHED)) {
         while (LW_CPU_GET_IPI_PEND(ulCPUId) & ulMask) {                 /*  等待结束                    */
             LW_SPINLOCK_DELAY();
         }
@@ -91,7 +91,7 @@ VOID  _SmpSendIpiAllOther (ULONG  ulIPIVec, INT  iWait)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  _SmpCallIpi (ULONG  ulCPUId, PLW_IPI_MSG  pipim)
+static INT  _SmpCallIpi (ULONG  ulCPUId, PLW_IPI_MSG  pipim)
 {
     PLW_CLASS_CPU   pcpuDst = LW_CPU_GET(ulCPUId);
     
@@ -125,7 +125,7 @@ INT  _SmpCallIpi (ULONG  ulCPUId, PLW_IPI_MSG  pipim)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SmpCallIpiAllOther (PLW_IPI_MSG  pipim)
+static VOID  _SmpCallIpiAllOther (PLW_IPI_MSG  pipim)
 {
     ULONG   i;
     ULONG   ulCPUId;
@@ -146,20 +146,28 @@ VOID  _SmpCallIpiAllOther (PLW_IPI_MSG  pipim)
 ** 功能描述: 利用核间中断让指定的 CPU 运行指定的函数
              关中断情况下被调用, 必须保证其他 CPU 已经运行.
 ** 输　入  : ulCPUId       CPU ID
-**           pfunc         执行函数
-**           pvArg         参数
+**           pfunc         同步执行函数
+**           pvArg         同步参数
+**           pfuncAsync    异步执行函数
+**           pvAsync       异步执行参数
 ** 输　出  : 调用返回值
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-INT  _SmpCallFunc (ULONG  ulCPUId, FUNCPTR  pfunc, PVOID  pvArg)
+INT  _SmpCallFunc (ULONG        ulCPUId, 
+                   FUNCPTR      pfunc, 
+                   PVOID        pvArg,
+                   VOIDFUNCPTR  pfuncAsync,
+                   PVOID        pvAsync)
 {
     LW_IPI_MSG  ipim;
     
-    ipim.IPIM_pfuncCall = pfunc;
-    ipim.IPIM_pvArg     = pvArg;
-    ipim.IPIM_iRet      = -1;
-    ipim.IPIM_iWait     = 1;
+    ipim.IPIM_pfuncCall      = pfunc;
+    ipim.IPIM_pvArg          = pvArg;
+    ipim.IPIM_pfuncAsyncCall = pfuncAsync;
+    ipim.IPIM_pvAsyncArg     = pvAsync;
+    ipim.IPIM_iRet           = -1;
+    ipim.IPIM_iWait          = 1;
     
     return  (_SmpCallIpi(ulCPUId, &ipim));
 }
@@ -167,20 +175,27 @@ INT  _SmpCallFunc (ULONG  ulCPUId, FUNCPTR  pfunc, PVOID  pvArg)
 ** 函数名称: _SmpCallFunc
 ** 功能描述: 利用核间中断让指定的 CPU 运行指定的函数
              关中断情况下被调用, 必须保证其他 CPU 已经运行.
-** 输　入  : pfunc         执行函数
-**           pvArg         参数
+** 输　入  : pfunc         同步执行函数
+**           pvArg         同步参数
+**           pfuncAsync    异步执行函数
+**           pvAsync       异步执行参数
 ** 输　出  : NONE (无法确定返回值)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SmpCallFuncAllOther (FUNCPTR  pfunc, PVOID  pvArg)
+VOID  _SmpCallFuncAllOther (FUNCPTR      pfunc, 
+                            PVOID        pvArg,
+                            VOIDFUNCPTR  pfuncAsync,
+                            PVOID        pvAsync)
 {
     LW_IPI_MSG  ipim;
     
-    ipim.IPIM_pfuncCall = pfunc;
-    ipim.IPIM_pvArg     = pvArg;
-    ipim.IPIM_iRet      = -1;
-    ipim.IPIM_iWait     = 1;
+    ipim.IPIM_pfuncCall      = pfunc;
+    ipim.IPIM_pvArg          = pvArg;
+    ipim.IPIM_pfuncAsyncCall = pfuncAsync;
+    ipim.IPIM_pvAsyncArg     = pvAsync;
+    ipim.IPIM_iRet           = -1;
+    ipim.IPIM_iWait          = 1;
     
     _SmpCallIpiAllOther(&ipim);
 }
@@ -230,6 +245,19 @@ static VOID  _SmpProcFlushCache (PLW_CLASS_CPU  pcpuCur)
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 /*********************************************************************************************************
+** 函数名称: _SmpProcBoot
+** 功能描述: 处理核间中断其他核正在启动 (当前未处理)
+** 输　入  : pcpuCur       当前 CPU
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  _SmpProcBoot (PLW_CLASS_CPU  pcpuCur)
+{
+    KN_SMP_MB();
+    LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_BOOT_MSK);                     /*  清除                        */
+}
+/*********************************************************************************************************
 ** 函数名称: _SmpProcCallfunc
 ** 功能描述: 处理核间中断调用函数
 ** 输　入  : pcpuCur       当前 CPU
@@ -241,24 +269,33 @@ static VOID  _SmpProcCallfunc (PLW_CLASS_CPU  pcpuCur)
 {
     PLW_IPI_MSG     pipim;
     PLW_LIST_RING   pringTemp;
+    VOIDFUNCPTR     pfuncAsync;
+    PVOID           pvAsync;
     
     LW_SPIN_LOCK(&pcpuCur->CPU_slIpi);
     
     while (pcpuCur->CPU_pringMsg) {
         pringTemp = pcpuCur->CPU_pringMsg;
-        _List_Ring_Del(&pipim->IPIM_ringManage, &pcpuCur->CPU_pringMsg);
+        _List_Ring_Del(pringTemp, &pcpuCur->CPU_pringMsg);
         
         LW_SPIN_UNLOCK(&pcpuCur->CPU_slIpi);
         
         pipim = _LIST_ENTRY(pringTemp, LW_IPI_MSG, IPIM_ringManage);
         if (pipim->IPIM_pfuncCall) {
-            pipim->IPIM_iRet = pipim->IPIM_pfuncCall(pipim->IPIM_pvArg);
+            pipim->IPIM_iRet = pipim->IPIM_pfuncCall(pipim->IPIM_pvArg);/*  执行同步调用                */
         }
+        
+        pfuncAsync = pipim->IPIM_pfuncAsyncCall;
+        pvAsync    = pipim->IPIM_pvAsyncArg;
         
         KN_SMP_MB();
         pipim->IPIM_iWait = 0;                                          /*  调用结束                    */
         
         LW_SPIN_LOCK(&pcpuCur->CPU_slIpi);
+        
+        if (pfuncAsync) {
+            pfuncAsync(pvAsync);                                        /*  执行异步调用                */
+        }
     }
     
     KN_SMP_MB();
@@ -295,6 +332,10 @@ VOID  _SmpProcIpi (PLW_CLASS_CPU  pcpuCur)
     KN_SMP_MB();
     LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_FLUSH_CACHE_MSK);
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
+
+    if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_BOOT_MSK) {              /*  其他核正在启动              */
+        _SmpProcBoot(pcpuCur);
+    }
     
     if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_CALL_MSK) {              /*  自定义调用 ?                */
         _SmpProcCallfunc(pcpuCur);

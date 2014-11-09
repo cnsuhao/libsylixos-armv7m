@@ -285,7 +285,7 @@ VOID  API_KernelSecondaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
     }
     
     pcpuCur = LW_CPU_GET_CUR();
-    pcpuCur->CPU_ptcbTCBCur = &_K_tcbDummyKernel;                       /*  伪内核线程                  */
+    pcpuCur->CPU_ptcbTCBCur = &_K_tcbDummy[pcpuCur->CPU_ulCPUId];       /*  伪内核线程                  */
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "kernel secondary cpu usrStartup...\r\n");
     if (pfuncStartHook) {                                               /*  用户是否要求需要初始化      */

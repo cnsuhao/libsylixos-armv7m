@@ -1021,6 +1021,14 @@ LW_API ULONG            API_KernelHookGet(LW_HOOK_FUNC   hookfuncPtr, ULONG  ulO
                                                                         /*  获得系统钩子函数            */
 
 LW_API ULONG            API_KernelHookDelete(ULONG  ulOpt);             /*  删除系统钩子函数            */
+
+#if LW_CFG_SMP_EN > 0                                                   /*  核间中断调用                */
+LW_API INT              API_KernelSmpCall(ULONG  ulCPUId, FUNCPTR  pfunc, PVOID  pvArg,
+                                          VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync);
+
+LW_API VOID             API_KernelSmpCallAllOther(FUNCPTR  pfunc, PVOID  pvArg,
+                                                  VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 /*********************************************************************************************************

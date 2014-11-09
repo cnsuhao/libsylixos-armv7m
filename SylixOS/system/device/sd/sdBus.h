@@ -228,8 +228,8 @@ typedef struct lw_sd_data {
 #define SD_DAT_IS_WRITE(pSdDat)     (((pSdDat)->SDDAT_uiFlags & SD_DAT_WRITE) == SD_DAT_WRITE)
 #define SD_DAT_IS_READ(pSdDat)      (((pSdDat)->SDDAT_uiFlags & SD_DAT_READ)  == SD_DAT_READ)
 #define SD_DAT_IS_BOTHRW(pSdDat)    (((pSdDat)->SDDAT_uiFlags &           \
-                                      (SD_DAT_STREAM | SD_DAT_STREAM)) == \
-                                      (SD_DAT_STREAM | SD_DAT_STREAM))
+                                      (SD_DAT_WRITE | SD_DAT_READ)) == \
+                                      (SD_DAT_WRITE | SD_DAT_READ))
 
 /*********************************************************************************************************
   SD 总线传输控制结构
@@ -290,8 +290,10 @@ typedef struct lw_sd_funcs {
 #define SDBUS_CTRL_DELAYCLK       5
 #define SDBUS_CTRL_GETOCR         6                                     /*  获得适配器的电压情况        */
 
-#define SDARG_SETCLK_NORMAL       0
-#define SDARG_SETCLK_MAX          1
+#define SDARG_SETCLK_LOW          400000
+#define SDARG_SETCLK_NORMAL       25000000
+#define SDARG_SETCLK_MAX          50000000
+
 #define SDARG_SETBUSWIDTH_1       SDBUS_WIDTH_1
 #define SDARG_SETBUSWIDTH_4       SDBUS_WIDTH_4
 

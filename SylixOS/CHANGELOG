@@ -576,6 +576,13 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-11-09: han.hui
+    MMU 的启停不再放在 VMM LIB 初始化中.
+    相应的 BSP 要做修改.
+    
+    2014-11-08: han.hui
+    支持 newlib 使用 SMP 模式获取任务上下文.
+
     2014-11-06: han.hui
     修正 SMP 调度器与内核锁之间冗余的关系.
     

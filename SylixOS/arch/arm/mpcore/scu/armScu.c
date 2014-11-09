@@ -38,6 +38,7 @@ typedef struct {
     volatile UINT32     SCU_uiConfigure;                /*  SCU Configuration Register.                 */
     volatile UINT32     SCU_uiCpuPowerStatus;           /*  SCU CPU Power Status Register.              */
     volatile UINT32     SCU_uiInvalidateAll;            /*  SCU Invalidate All Registers in Secure State*/
+    volatile UINT32     SCU_uiReserves[12];             /*  Reserves.                                   */
     volatile UINT32     SCU_uiFilteringStart;           /*  Filtering Start Address Register.           */
     volatile UINT32     SCU_uiFilteringEnd;             /*  Filtering End Address Register.             */
     volatile UINT32     SCU_uiSAC;                      /*  SCU Access Control (SAC) Register.          */
@@ -69,7 +70,7 @@ VOID  armScuFeatureEnable (UINT32  uiFeatures)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    pScu->SCU_uiControl |= uiFeatures;
+    write32(read32((addr_t)&pScu->SCU_uiControl) | uiFeatures, (addr_t)&pScu->SCU_uiControl);
 }
 /*********************************************************************************************************
 ** 函数名称: armScuFeatureDisable
@@ -83,7 +84,7 @@ VOID  armScuFeatureDisable (UINT32  uiFeatures)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    pScu->SCU_uiControl &= ~uiFeatures;
+    write32(read32((addr_t)&pScu->SCU_uiControl) & (~uiFeatures), (addr_t)&pScu->SCU_uiControl);
 }
 /*********************************************************************************************************
 ** 函数名称: armScuFeatureGet
@@ -97,7 +98,7 @@ UINT32  armScuFeatureGet (VOID)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    return  (pScu->SCU_uiControl);
+    return  (read32((addr_t)&pScu->SCU_uiControl));
 }
 /*********************************************************************************************************
 ** 函数名称: armScuTagRamSize
@@ -122,7 +123,7 @@ UINT32  armScuTagRamSize (VOID)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    return  ((pScu->SCU_uiConfigure >> 8) & 0xFF);
+    return  ((read32((addr_t)&pScu->SCU_uiConfigure) >> 8) & 0xFF);
 }
 /*********************************************************************************************************
 ** 函数名称: armScuCpuMpStatus
@@ -145,7 +146,7 @@ UINT32  armScuCpuMpStatus (VOID)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    return  ((pScu->SCU_uiConfigure >> 4) & 0xF);
+    return  ((read32((addr_t)&pScu->SCU_uiConfigure) >> 4) & 0xF);
 }
 /*********************************************************************************************************
 ** 函数名称: armScuCpuNumber
@@ -159,7 +160,7 @@ UINT32  armScuCpuNumber (VOID)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    return  (((pScu->SCU_uiConfigure >> 0) & 0x3) + 1);
+    return  (((read32((addr_t)&pScu->SCU_uiConfigure) >> 0) & 0x3) + 1);
 }
 /*********************************************************************************************************
 ** 函数名称: armScuSecureInvalidateAll
@@ -181,7 +182,7 @@ VOID  armScuSecureInvalidateAll (UINT32  uiCpuId,  UINT32  uiWays)
     case 2:
     case 3:
         uiWays &= 0xF;
-        pScu->SCU_uiInvalidateAll = (uiWays << (uiCpuId * 4));
+        write32(uiWays << (uiCpuId * 4), (addr_t)&pScu->SCU_uiInvalidateAll);
         break;
 
     default:
@@ -201,8 +202,8 @@ VOID  armScuFilteringSet (UINT32  uiStart,  UINT32  uiEnd)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    pScu->SCU_uiFilteringStart = uiStart;
-    pScu->SCU_uiFilteringEnd   = uiEnd;
+    write32(uiStart, (addr_t)&pScu->SCU_uiFilteringStart);
+    write32(uiEnd,   (addr_t)&pScu->SCU_uiFilteringEnd);
 }
 /*********************************************************************************************************
 ** 函数名称: armScuAccessCtrlSet
@@ -216,7 +217,35 @@ VOID  armScuAccessCtrlSet (UINT32  uiCpuBits)
 {
     REGISTER SCU_REGS  *pScu = armScuGet();
 
-    pScu->SCU_uiSAC = uiCpuBits;
+    write32(uiCpuBits, (addr_t)&pScu->SCU_uiSAC);
+}
+/*********************************************************************************************************
+** 函数名称: armScuNonAccessCtrlSet
+** 功能描述: 设置 SCU 非安全模式访问控制
+** 输　入  : uiValue           值
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+VOID  armScuNonAccessCtrlSet (UINT32  uiValue)
+{
+    REGISTER SCU_REGS  *pScu = armScuGet();
+
+    write32(uiValue, (addr_t)&pScu->SCU_uiSNSAC);
+}
+/*********************************************************************************************************
+** 函数名称: armScuCpuPowerStatusGet
+** 功能描述: 获得 CPU 电源状态
+** 输　入  : NONE
+** 输　出  : CPU 电源状态
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+UINT32  armScuCpuPowerStatusGet (VOID)
+{
+    REGISTER SCU_REGS  *pScu = armScuGet();
+
+    return  (read32((addr_t)&pScu->SCU_uiCpuPowerStatus));
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */

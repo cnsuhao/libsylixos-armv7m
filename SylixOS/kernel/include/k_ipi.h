@@ -24,13 +24,17 @@
 
 /*********************************************************************************************************
   核间中断自定义消息类型
+  
+  同步执行函数为 IPI Call 必须等待其执行完毕才能退出, 异步执行函数为不需要等待的函数.
 *********************************************************************************************************/
 
 typedef struct __ipi_msg {
     LW_LIST_RING     IPIM_ringManage;                                   /*  管理链表                    */
-    FUNCPTR          IPIM_pfuncCall;                                    /*  执行函数                    */
-    PVOID            IPIM_pvArg;                                        /*  执行参数                    */
-    INT              IPIM_iRet;                                         /*  返回值                      */
+    FUNCPTR          IPIM_pfuncCall;                                    /*  同步执行函数                */
+    PVOID            IPIM_pvArg;                                        /*  同步执行参数                */
+    VOIDFUNCPTR      IPIM_pfuncAsyncCall;                               /*  异步执行函数                */
+    PVOID            IPIM_pvAsyncArg;                                   /*  异步执行参数                */
+    INT              IPIM_iRet;                                         /*  同步执行函数返回值          */
     volatile INT     IPIM_iWait;                                        /*  等待信息                    */
 } LW_IPI_MSG;
 typedef LW_IPI_MSG  *PLW_IPI_MSG;
@@ -39,12 +43,10 @@ typedef LW_IPI_MSG  *PLW_IPI_MSG;
   核间中断短等待时间
 *********************************************************************************************************/
 
-#ifdef __SYLIXOS_KERNEL
 #define LW_SPINLOCK_DELAY() \
         {   volatile INT i; \
             for (i = 0; i < 10; i++);    \
         }
-#endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  __K_IPI_H                   */
 /*********************************************************************************************************

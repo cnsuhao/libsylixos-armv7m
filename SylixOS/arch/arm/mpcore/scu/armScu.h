@@ -43,6 +43,8 @@ UINT32  armScuCpuNumber(VOID);
 VOID    armScuSecureInvalidateAll(UINT32  uiCpuId,  UINT32  uiWays);
 VOID    armScuFilteringSet(UINT32  uiStart,  UINT32  uiEnd);
 VOID    armScuAccessCtrlSet(UINT32  uiCpuBits);
+VOID    armScuNonAccessCtrlSet(UINT32  uiValue);
+UINT32  armScuCpuPowerStatusGet(VOID);
 
 #endif                                                                  /*  __ARMSCU_H                  */
 /*********************************************************************************************************

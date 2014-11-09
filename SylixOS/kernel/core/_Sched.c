@@ -90,6 +90,9 @@ static VOID  _SchedSmpNotify (ULONG  ulCPUIdCur)
     for (i = 0; i < LW_NCPUS; i++) {                                    /*  遍历 CPU 检查是否需要调度   */
         if (ulCPUIdCur != i) {
             pcpu = LW_CPU_GET(i);
+            if (!LW_CPU_IS_ACTIVE(pcpu)) {                              /*  目标 CPU 必须是激活状态     */
+                continue;
+            }
             if ((__SHOULD_SCHED(pcpu, 0)) && LW_CAND_ROT(pcpu) &&
                 ((LW_CPU_GET_IPI_PEND(i) & LW_IPI_SCHED_MSK) == 0)) {
                 _SmpSendIpi(i, LW_IPI_SCHED, 0);                        /*  产生核间中断                */
@@ -117,7 +120,8 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
     
     _SchedSmpNotify(ulCPUId);                                           /*  请求其他 CPU 调度           */
     
-    LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_DOWN_MSK);                      /*  清除 CPU DOWN 中断标志      */
+    KN_SMP_MB();
+    LW_CPU_CLR_IPI_PEND(ulCPUId, ((ULONG)~0));                          /*  清除所有中断标志            */
     
     LW_SPIN_UNLOCK_IGNIRQ(&_K_slKernel);                                /*  解锁内核 spinlock           */
 

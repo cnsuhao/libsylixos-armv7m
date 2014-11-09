@@ -69,6 +69,7 @@ ULONG  API_CpuUp (ULONG  ulCPUId)
 LW_API  
 ULONG  API_CpuDown (ULONG  ulCPUId)
 {
+    INTREG          iregInterLevel;
     PLW_CLASS_CPU   pcpu;
 
     if ((ulCPUId == 0) || (ulCPUId >= LW_NCPUS)) {
@@ -83,7 +84,11 @@ ULONG  API_CpuDown (ULONG  ulCPUId)
         return  (ERROR_NONE);
     }
     
+    iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
+    
     _SmpSendIpi(ulCPUId, LW_IPI_DOWN, 1);                               /*  使用核间中断通知 CPU 停止   */
+    
+    KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
     
     return  (ERROR_NONE);
 }

@@ -10,23 +10,24 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: core.c
+** 文   件   名: sdcore.c
 **
 ** 创   建   人: Zeng.Bo (曾波)
 **
 ** 文件创建日期: 2010 年 11 月 23 日
 **
-** 描        述: sd卡内核协议层接口源文件
+** 描        述: sd 卡内核协议层接口源文件
 
 ** BUG:
-2010.11.25  增加对SPI设备的封装.增加几个设备信息查看API.
-2010.12.08  增加对SDHC的支持.
-2011.01.10  增加对SPI的支持.
-2011.02.21  增加API_SdCoreSpiSendIfCond函数.该函数只能用于spi模式下.
-2011.02.21  增SPI下设备寄存器的读取函数: API_SdCoreSpiRegisterRead().
-2011.02.22  增SPI下crc校验.
-2011.03.25  修改API_SdCoreDevCreate(), 用于底层驱动安装上层的回调.
-2011.04.02  全面修改SPI模式下的相关函数,使用新的SPI模型.
+2010.11.25  增加对 SPI 设备的封装.增加几个设备信息查看 API.
+2010.12.08  增加对 SDHC 的支持.
+2011.01.10  增加对 SPI 的支持.
+2011.02.21  增加 API_SdCoreSpiSendIfCond 函数.该函数只能用于 SPI 模式下.
+2011.02.21  增 SPI 下设备寄存器的读取函数: API_SdCoreSpiRegisterRead().
+2011.02.22  增 SPI 下 CRC 校验.
+2011.03.25  修改 API_SdCoreDevCreate(), 用于底层驱动安装上层的回调.
+2011.04.02  全面修改 SPI 模式下的相关函数,使用新的 SPI 模型.
+2014.11.05  设备的状态增加自旋锁保护.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -35,8 +36,9 @@
   加入裁剪支持
 *********************************************************************************************************/
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SDCARD_EN > 0)
-#include "spec_sd.h"
+#include "sdstd.h"
 #include "sdcrc.h"
+#include "sdcore.h"
 /*********************************************************************************************************
   SPI通信配置
 *********************************************************************************************************/
@@ -85,111 +87,56 @@ typedef struct __core_spi_dev {
 /*********************************************************************************************************
   私有接口声明
 *********************************************************************************************************/
-static INT __sdCoreSpiDevTransfer(PVOID pvDevHandle, PLW_SD_MESSAGE psdmsg, INT iNum);
-static INT __sdCoreSdDevTransfer(PVOID pvDevHandle, PLW_SD_MESSAGE psdmsg, INT iNum);
+static INT  __sdCoreSpiDevTransfer(PVOID pvDevHandle, PLW_SD_MESSAGE psdmsg, INT iNum);
+static INT  __sdCoreSdDevTransfer(PVOID pvDevHandle, PLW_SD_MESSAGE psdmsg, INT iNum);
 
-static INT __sdCoreSpiDevCtl(PVOID  pvDevHandle, INT  iCmd, LONG lArg);
-static INT __sdCoreSdDevCtl(PVOID  pvDevHandle, INT  iCmd, LONG lArg);
+static INT  __sdCoreSpiDevCtl(PVOID  pvDevHandle, INT  iCmd, LONG lArg);
+static INT  __sdCoreSdDevCtl(PVOID  pvDevHandle, INT  iCmd, LONG lArg);
 
-static INT __sdCoreSpiDevDelet(PVOID pvDevHandle);
-static INT __sdCoreSdDevDelet(PVOID pvDevHandle);
+static INT  __sdCoreSpiDevDelet(PVOID pvDevHandle);
+static INT  __sdCoreSdDevDelet(PVOID pvDevHandle);
 
-static INT __sdCoreSpiCallbackCheckDev(PVOID pvDevHandle, INT iDevSta);
-static INT __sdCoreSdCallbackCheckDev(PVOID pvDevHandle, INT iDevSta);
+static INT  __sdCoreSpiCallbackCheckDev(PVOID pvDevHandle, INT iDevSta);
+static INT  __sdCoreSdCallbackCheckDev(PVOID pvDevHandle, INT iDevSta);
 
-static INT __sdCoreDevSwitchToApp(PLW_SDCORE_DEVICE psdcoredevice, BOOL bIsBc);
+static INT  __sdCoreCallbackCheckDev(PLW_SDCORE_DEVICE psdcoredevice, INT iDevSta);
+
+static INT  __sdCoreDevSwitchToApp(PLW_SDCORE_DEVICE psdcoredevice, BOOL bIsBc);
 /*********************************************************************************************************
   以下私有接口为sd对spi传输控制的封装
 *********************************************************************************************************/
-static INT __sdCoreSpiCmd(__PCORE_SPI_DEV pcspidevice, LW_SD_COMMAND *psdcmd);
-static INT __sdCoreSpiDataRd(__PCORE_SPI_DEV pcspidevice,
-                             UINT32          uiBlkNum,
-                             UINT32          uiBlkLen,
-                             UINT8          *pucRdBuff);
-static INT __sdCoreSpiDataWrt(__PCORE_SPI_DEV pcspidevice,
+static INT  __sdCoreSpiCmd(__PCORE_SPI_DEV pcspidevice, LW_SD_COMMAND *psdcmd);
+static INT  __sdCoreSpiDataRd(__PCORE_SPI_DEV pcspidevice,
                               UINT32          uiBlkNum,
                               UINT32          uiBlkLen,
-                              UINT8          *pucWrtBuff);
+                              UINT8          *pucRdBuff);
+static INT  __sdCoreSpiDataWrt(__PCORE_SPI_DEV pcspidevice,
+                               UINT32          uiBlkNum,
+                               UINT32          uiBlkLen,
+                               UINT8          *pucWrtBuff);
 
-static INT __sdCoreSpiBlkRd(__PCORE_SPI_DEV pcspidevice,
-                            UINT32          uiBlkLen,
-                            UINT8          *pucRdBuff);
-static INT __sdCoreSpiBlkWrt(__PCORE_SPI_DEV pcspidevice,
+static INT  __sdCoreSpiBlkRd(__PCORE_SPI_DEV pcspidevice,
                              UINT32          uiBlkLen,
-                             UINT8          *pucWrtBuff,
-                             BOOL            bIsMul);
-
-static INT __sdCoreSpiByteRd(__PCORE_SPI_DEV pcspidevice,
-                             UINT32          uiLen,
                              UINT8          *pucRdBuff);
-static INT __sdCoreSpiByteWrt(__PCORE_SPI_DEV pcspidevice,
+static INT  __sdCoreSpiBlkWrt(__PCORE_SPI_DEV pcspidevice,
+                              UINT32          uiBlkLen,
+                              UINT8          *pucWrtBuff,
+                              BOOL            bIsMul);
+
+static INT  __sdCoreSpiByteRd(__PCORE_SPI_DEV pcspidevice,
                               UINT32          uiLen,
-                              UINT8          *pucWrtBuff);
-static INT __sdCoreSpiWaitBusy(__PCORE_SPI_DEV pcspidevice);
+                              UINT8          *pucRdBuff);
+static INT  __sdCoreSpiByteWrt(__PCORE_SPI_DEV pcspidevice,
+                               UINT32          uiLen,
+                               UINT8          *pucWrtBuff);
+static INT  __sdCoreSpiWaitBusy(__PCORE_SPI_DEV pcspidevice);
+
 /*********************************************************************************************************
-  INLINE FUNCTIONS
+  SPI 工具函数
 *********************************************************************************************************/
-VOID  __sdCoreSpiParamConvert (UINT8 *pucParam, UINT32 uiParam)
-{
-    pucParam[0] = (UINT8)(uiParam >> 24);
-    pucParam[1] = (UINT8)(uiParam >> 16);
-    pucParam[2] = (UINT8)(uiParam >> 8);
-    pucParam[3] = (UINT8)(uiParam);
-}
-
-VOID  __sdCoreSpiRespConvert (UINT32 *puiResp, const UINT8 *pucResp, INT iRespLen)
-{
-    switch (iRespLen) {
-
-    case 1:
-        *puiResp = *pucResp;
-        break;
-
-    case 2:
-        *puiResp = *pucResp++;
-        *puiResp = (*puiResp << 8) | *pucResp;
-        break;
-
-    case 5:
-        *puiResp++ = *pucResp++;                                        /*  resp[0]                     */
-        *puiResp   = *pucResp++;                                        /*  resp[1]                     */
-        *puiResp   = (*puiResp << 8) | *pucResp++;
-        *puiResp   = (*puiResp << 8) | *pucResp++;
-        *puiResp   = (*puiResp << 8) | *pucResp;
-        break;
-
-    default:
-        return ;
-    }
-}
-
-INT  __sdCoreSpiRespLen (UINT32   uiCmdFlg)
-{
-    INT    iRspLen = 0;
-
-    switch (SD_RSP_SPI_MASK & uiCmdFlg) {
-
-    case SD_RSP_SPI_R1:
-    case SD_RSP_SPI_R1B:
-        iRspLen = 1;
-        break;
-
-    case SD_RSP_SPI_R2:                                                 /*  same as SD_RSP_SPI_R5:      */
-        iRspLen = 2;
-        break;
-
-    case SD_RSP_SPI_R3:                                                 /*  same as SD_RSP_SPI_R4:      */
-                                                                        /*  same as SD_RSP_SPI_R7:      */
-        iRspLen = 5;
-        break;
-
-    default:
-        iRspLen = -1;
-        break;
-    }
-
-    return  (iRspLen);
-}
+static VOID  __sdCoreSpiParamConvert(UINT8 *pucParam, UINT32 uiParam);
+static VOID  __sdCoreSpiRespConvert(UINT32 *puiResp, const UINT8 *pucResp, INT iRespLen);
+static INT   __sdCoreSpiRespLen(UINT32   uiCmdFlg);
 /*********************************************************************************************************
 ** 函数名称: API_SdCoreDevCreate
 ** 功能描述: 创建一个核心SD设备
@@ -224,7 +171,7 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
         if (!psddevice) {
             goto __createdev_failed;
         }
-        psddevice->SDDEV_uiState = SD_DEVSTA_EXIST;                     /*  该设备已经存在(此处很关键)  */
+        psddevice->SDDEV_uiState |= SD_STATE_EXIST;                     /*  该设备已经存在(此处很关键)  */
 
         psdcoredevice = (PLW_SDCORE_DEVICE)__SHEAP_ALLOC(sizeof(LW_SDCORE_DEVICE));
         if (!psdcoredevice) {
@@ -239,11 +186,13 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
         psdcoredevice->COREDEV_pfuncCoreDevDelet  = __sdCoreSdDevDelet;
         psdcoredevice->COREDEV_iAdapterType       = SDADAPTER_TYPE_SD;
 
+        LW_SPIN_INIT(&psdcoredevice->COREDEV_slLock);
+
         if (SDCORE_CHAN_INSTALL(psdcorechan)) {                         /*  安装回调                    */
             SDCORE_CHAN_CBINSTALL(psdcorechan,
                                   SD_CALLBACK_CHECK_DEV,
-                                  __sdCoreSdCallbackCheckDev,
-                                  psddevice);
+                                  __sdCoreCallbackCheckDev,
+                                  psdcoredevice);
         } else {
             __SHEAP_FREE(psdcoredevice);
             API_SdDeviceDelete(psddevice);
@@ -286,7 +235,6 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
         pcspidevice->CSPIDEV_cbCsEn     = SDCORE_CHAN_SPICSEN(psdcorechan);
         pcspidevice->CSPIDEV_cbCsDis    = SDCORE_CHAN_SPICSDIS(psdcorechan);
                                                                         /*  保存片选回调                */
-
         lib_bzero(psdcoredevice, sizeof(LW_SDCORE_DEVICE));
         
         psdcoredevice->COREDEV_pvDevHandle        = (PVOID)pcspidevice;
@@ -295,11 +243,13 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
         psdcoredevice->COREDEV_pfuncCoreDevDelet  = __sdCoreSpiDevDelet;
         psdcoredevice->COREDEV_iAdapterType       = SDADAPTER_TYPE_SPI;
 
+        LW_SPIN_INIT(&psdcoredevice->COREDEV_slLock);
+
         if (SDCORE_CHAN_INSTALL(psdcorechan)) {                         /*  安装回调函数                */
             SDCORE_CHAN_CBINSTALL(psdcorechan,
                                   SD_CALLBACK_CHECK_DEV,
-                                  __sdCoreSpiCallbackCheckDev,
-                                  pcspidevice);
+                                  __sdCoreCallbackCheckDev,
+                                  psdcoredevice);
         } else {
             __SHEAP_FREE(psdcoredevice);
             __SHEAP_FREE(pcspidevice);
@@ -383,6 +333,12 @@ LW_API INT  API_SdCoreDevCtl (PLW_SDCORE_DEVICE    psdcoredevice,
         return  (PX_ERROR);
     }
 
+    iError = API_SdCoreDevStaView(psdcoredevice);
+    if (iError == SD_DEVSTA_UNEXIST) {
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "dev is not exist.\r\n");
+        return  (PX_ERROR);
+    }
+
     iError = __CORE_DEV_CTL(psdcoredevice, iCmd, lArg);
 
     if (iError != ERROR_NONE) {
@@ -411,6 +367,12 @@ LW_API INT  API_SdCoreDevTransfer (PLW_SDCORE_DEVICE  psdcoredevice,
 
     if (!psdcoredevice || !psdmsg) {
         _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+
+    iError = API_SdCoreDevStaView(psdcoredevice);
+    if (iError == SD_DEVSTA_UNEXIST) {
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "dev is not exist.\r\n");
         return  (PX_ERROR);
     }
 
@@ -502,6 +464,44 @@ LW_API INT   API_SdCoreDevAppCmd (PLW_SDCORE_DEVICE psdcoredevice,
     }
 
     return  (iError);
+}
+/*********************************************************************************************************
+** 函数名称: API_SdCoreDevAdapterName
+** 功能描述: 返回对应的总线适配器名称
+** 输    入: psdcoredevice  设备结构指针
+** 输    出:
+** 返    回: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+LW_API CPCHAR  API_SdCoreDevAdapterName (PLW_SDCORE_DEVICE psdcoredevice)
+{
+    PLW_SD_DEVICE    psddevice;
+    __PCORE_SPI_DEV  pcspidevice;
+    LW_BUS_ADAPTER  *pBusAdapter;
+
+    if (!psdcoredevice) {
+        return  (NULL);
+    }
+
+    switch (psdcoredevice->COREDEV_iAdapterType) {
+
+    case SDADAPTER_TYPE_SD:
+        psddevice   = (PLW_SD_DEVICE)psdcoredevice->COREDEV_pvDevHandle;
+        pBusAdapter = &psddevice->SDDEV_psdAdapter->SDADAPTER_busadapter;
+        break;
+
+    case SDADAPTER_TYPE_SPI:
+        pcspidevice = (__PCORE_SPI_DEV)psdcoredevice->COREDEV_pvDevHandle;
+        pBusAdapter = &pcspidevice->CSPIDEV_pspiDev->SPIDEV_pspiadapter->SPIADAPTER_pbusadapter;
+        break;
+
+    default:
+        return  (NULL);
+        break;
+    }
+
+    return  ((CPCHAR)pBusAdapter->BUSADAPTER_cName);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdCoreDevCsdView
@@ -786,19 +786,27 @@ LW_API INT   API_SdCoreDevStaView (PLW_SDCORE_DEVICE  psdcoredevice)
     PLW_SD_DEVICE    psddevice;
     __PCORE_SPI_DEV  pcspidevice;
     INT              iSta;
+    INTREG           iregInterLevel;
 
     if (!psdcoredevice) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
 
+    LW_SPIN_LOCK_QUICK(&psdcoredevice->COREDEV_slLock, &iregInterLevel);
     if (COREDEV_IS_SD(psdcoredevice)) {
         psddevice = (PLW_SD_DEVICE)psdcoredevice->COREDEV_pvDevHandle;
-        iSta = psddevice->SDDEV_uiState;
+        if (psddevice->SDDEV_uiState & SD_STATE_EXIST) {
+            iSta = SD_DEVSTA_EXIST;
+        } else {
+            iSta = SD_DEVSTA_UNEXIST;
+        }
+
     } else {
         pcspidevice = (__PCORE_SPI_DEV)psdcoredevice->COREDEV_pvDevHandle;
         iSta = pcspidevice->CSPIDEV_uiState;
     }
+    LW_SPIN_UNLOCK_QUICK(&psdcoredevice->COREDEV_slLock, iregInterLevel);
 
     return  (iSta);
 }
@@ -865,7 +873,7 @@ LW_API VOID  API_SdCoreSpiMulWrtStop (PLW_SDCORE_DEVICE psdcoredevice)
 LW_API INT  API_SdCoreSpiSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
 {
     UINT8           ucBuf[6] = {
-                         8+0x40,                                        /*  命令                        */
+                         8 + 0x40,                                      /*  命令                        */
                          0x00, 0x00, 0x01, 0xaa,                        /*  参数                        */
                          0x87,                                          /*  crc                         */
                     };
@@ -1109,14 +1117,8 @@ static INT __sdCoreSdDevTransfer (PVOID          pvDevHandle,
                                   PLW_SD_MESSAGE psdmsg,
                                   INT            iNum)
 {
-    PLW_SD_DEVICE   psddevice;
+    PLW_SD_DEVICE   psddevice = (PLW_SD_DEVICE)pvDevHandle;
     INT             iError;
-
-    psddevice = (PLW_SD_DEVICE)pvDevHandle;
-    if (psddevice->SDDEV_uiState != SD_DEVSTA_EXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
-       return  (PX_ERROR);
-    }
 
     iError = API_SdDeviceTransfer(psddevice, psdmsg, iNum);
 
@@ -1142,18 +1144,12 @@ static INT __sdCoreSdDevCtl (PVOID      pvDevHandle,
                              INT        iCmd,
                              LONG       lArg)
 {
-    PLW_SD_DEVICE   psddevice;
+    PLW_SD_DEVICE   psddevice = (PLW_SD_DEVICE)pvDevHandle;
     INT             iError;
 
     if (!pvDevHandle) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
-    }
-
-    psddevice = (PLW_SD_DEVICE)pvDevHandle;
-    if (psddevice->SDDEV_uiState != SD_DEVSTA_EXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
-       return  (PX_ERROR);
     }
 
     iError = API_SdDeviceCtl(psddevice, iCmd, lArg);
@@ -1212,7 +1208,50 @@ static INT __sdCoreSdCallbackCheckDev (PVOID  pvDevHandle, INT iDevSta)
     }
 
     psddevice = (PLW_SD_DEVICE)pvDevHandle;
-    psddevice->SDDEV_uiState = iDevSta;
+    if (iDevSta == SD_DEVSTA_UNEXIST) {
+        psddevice->SDDEV_uiState &= ~SD_STATE_EXIST;
+    } else {
+        psddevice->SDDEV_uiState |= SD_STATE_EXIST;
+    }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdCoreSdCallbackCheckDev
+** 功能描述: sd设备状态检测(旨在更新内部状态标识)
+** 输    入: pvDevHandle  设备句柄
+**           iDevSta      设备状态
+** 输    出: NONE
+** 返    回: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT __sdCoreCallbackCheckDev (PLW_SDCORE_DEVICE psdcoredevice, INT iDevSta)
+{
+    INTREG  iregInterLevel;
+
+    if (!psdcoredevice) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+
+    switch (psdcoredevice->COREDEV_iAdapterType) {
+
+    case SDADAPTER_TYPE_SD:
+        LW_SPIN_LOCK_QUICK(&psdcoredevice->COREDEV_slLock, &iregInterLevel);
+        __sdCoreSdCallbackCheckDev(psdcoredevice->COREDEV_pvDevHandle, iDevSta);
+        LW_SPIN_UNLOCK_QUICK(&psdcoredevice->COREDEV_slLock, iregInterLevel);
+        break;
+
+    case SDADAPTER_TYPE_SPI:
+        LW_SPIN_LOCK_QUICK(&psdcoredevice->COREDEV_slLock, &iregInterLevel);
+        __sdCoreSpiCallbackCheckDev(psdcoredevice->COREDEV_pvDevHandle, iDevSta);
+        LW_SPIN_UNLOCK_QUICK(&psdcoredevice->COREDEV_slLock, iregInterLevel);
+        break;
+
+    default:
+        return  (PX_ERROR);
+    }
 
     return  (ERROR_NONE);
 }
@@ -1229,7 +1268,7 @@ static INT __sdCoreSdCallbackCheckDev (PVOID  pvDevHandle, INT iDevSta)
 *********************************************************************************************************/
 static INT __sdCoreSpiDevTransfer (PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, INT iNum)
 {
-    __PCORE_SPI_DEV  pcspidevice;
+    __PCORE_SPI_DEV  pcspidevice = (__PCORE_SPI_DEV)pvDevHandle;
     PLW_SD_COMMAND   psdcmd;
     PLW_SD_DATA      psddat;
     INT              iError;
@@ -1239,11 +1278,6 @@ static INT __sdCoreSpiDevTransfer (PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, IN
         _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
-    }
-    pcspidevice = (__PCORE_SPI_DEV)pvDevHandle;
-    if (pcspidevice->CSPIDEV_uiState != SD_DEVSTA_EXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
-       return  (PX_ERROR);
     }
 
     while (i < iNum && psdmsg != NULL) {
@@ -1344,18 +1378,13 @@ __spibus_release:
 *********************************************************************************************************/
 static INT __sdCoreSpiDevCtl (PVOID  pvDevHandle, INT  iCmd, LONG lArg)
 {
-    __PCORE_SPI_DEV  pcspidevice;
+    __PCORE_SPI_DEV  pcspidevice = (__PCORE_SPI_DEV)pvDevHandle;
     UINT8            ucWrtBuf;
     INT              iError = ERROR_NONE;
 
     if (!pvDevHandle) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
-    }
-    pcspidevice = (__PCORE_SPI_DEV)pvDevHandle;
-    if (pcspidevice->CSPIDEV_uiState != SD_DEVSTA_EXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
-       return  (PX_ERROR);
     }
 
     switch (iCmd) {
@@ -2074,6 +2103,95 @@ static INT __sdCoreSpiWaitBusy (__PCORE_SPI_DEV pcspidevice)
      */
     _DebugHandle(__ERRORMESSAGE_LEVEL, "programing data timeout.\r\n");
     return  (PX_ERROR);
+}
+/*********************************************************************************************************
+** 函数名称: __sdCoreSpiParamConvert
+** 功能描述: SPI 参数转换
+** 输    入: pucParam     保存转换后的参数
+**           uiParam      上层传入的原始参数
+** 输    出: NONE
+** 返    回: 成功,返回设备设备指针,否则返回LW_NULL
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID  __sdCoreSpiParamConvert (UINT8 *pucParam, UINT32 uiParam)
+{
+    pucParam[0] = (UINT8)(uiParam >> 24);
+    pucParam[1] = (UINT8)(uiParam >> 16);
+    pucParam[2] = (UINT8)(uiParam >> 8);
+    pucParam[3] = (UINT8)(uiParam);
+}
+/*********************************************************************************************************
+** 函数名称: __sdCoreSpiRespConvert
+** 功能描述: SPI 应答转换
+** 输    入: puiResp     保存转换后的应答
+**           pucResp     原始应答数据缓冲
+**           iRespLen    应答的长度
+** 输    出: NONE
+** 返    回: 成功,返回设备设备指针,否则返回LW_NULL
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID  __sdCoreSpiRespConvert (UINT32 *puiResp, const UINT8 *pucResp, INT iRespLen)
+{
+    switch (iRespLen) {
+
+    case 1:
+        *puiResp = *pucResp;
+        break;
+
+    case 2:
+        *puiResp = *pucResp++;
+        *puiResp = (*puiResp << 8) | *pucResp;
+        break;
+
+    case 5:
+        *puiResp++ = *pucResp++;                                        /*  resp[0]                     */
+        *puiResp   = *pucResp++;                                        /*  resp[1]                     */
+        *puiResp   = (*puiResp << 8) | *pucResp++;
+        *puiResp   = (*puiResp << 8) | *pucResp++;
+        *puiResp   = (*puiResp << 8) | *pucResp;
+        break;
+
+    default:
+        return ;
+    }
+}
+/*********************************************************************************************************
+** 函数名称: __sdCoreSpiRespLen
+** 功能描述: 更加命令标记判断 SPI 应答的长度
+** 输    入: uiCmdFlg     命令标志
+** 输    出: NONE
+** 返    回: 成功,返回设备设备指针,否则返回LW_NULL
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdCoreSpiRespLen (UINT32   uiCmdFlg)
+{
+    INT    iRspLen = 0;
+
+    switch (SD_RSP_SPI_MASK & uiCmdFlg) {
+
+    case SD_RSP_SPI_R1:
+    case SD_RSP_SPI_R1B:
+        iRspLen = 1;
+        break;
+
+    case SD_RSP_SPI_R2:                                                 /*  same as SD_RSP_SPI_R5:      */
+        iRspLen = 2;
+        break;
+
+    case SD_RSP_SPI_R3:                                                 /*  same as SD_RSP_SPI_R4:      */
+                                                                        /*  same as SD_RSP_SPI_R7:      */
+        iRspLen = 5;
+        break;
+
+    default:
+        iRspLen = -1;
+        break;
+    }
+
+    return  (iRspLen);
 }
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0)      */
                                                                         /*  (LW_CFG_SDCARD_EN > 0)      */

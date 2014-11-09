@@ -345,6 +345,7 @@ SylixOS/kernel/interface/KernelGetThreadNum.c \
 SylixOS/kernel/interface/KernelHeapInfo.c \
 SylixOS/kernel/interface/KernelHook.c \
 SylixOS/kernel/interface/KernelHookDelete.c \
+SylixOS/kernel/interface/KernelIpi.c \
 SylixOS/kernel/interface/KernelIsRunning.c \
 SylixOS/kernel/interface/KernelMisc.c \
 SylixOS/kernel/interface/KernelObject.c \
@@ -1011,10 +1012,16 @@ SylixOS/system/device/pty/ptyHost.c \
 SylixOS/system/device/rand/randDev.c \
 SylixOS/system/device/rand/randDevLib.c \
 SylixOS/system/device/sd/sdLib.c \
+SylixOS/system/device/sdcard/client/sdiobaseDrv.c \
 SylixOS/system/device/sdcard/client/sdmemory.c \
-SylixOS/system/device/sdcard/core/core.c \
-SylixOS/system/device/sdcard/core/coresdLib.c \
+SylixOS/system/device/sdcard/client/sdmemoryDrv.c \
+SylixOS/system/device/sdcard/core/sdcore.c \
+SylixOS/system/device/sdcard/core/sdcoreLib.c \
 SylixOS/system/device/sdcard/core/sdcrc.c \
+SylixOS/system/device/sdcard/core/sddrvm.c \
+SylixOS/system/device/sdcard/core/sdiocoreLib.c \
+SylixOS/system/device/sdcard/core/sdiodrvm.c \
+SylixOS/system/device/sdcard/core/sdutil.c \
 SylixOS/system/device/sdcard/host/sdhci.c \
 SylixOS/system/device/shm/shm.c \
 SylixOS/system/device/spi/spiLib.c \

@@ -106,9 +106,7 @@
 #include "../SylixOS/system/device/sd/sdDev.h"                          /*  sd 总线符号仅对内核开放     */
 #include "../SylixOS/system/device/pci/pciDev.h"                        /*  pci 总线符号仅对内核开放    */
 #include "../SylixOS/system/device/pci/pciScan.h"                       /*  pci 总线自动扫描安装对应驱动*/
-#include "../SylixOS/system/device/sdcard/core/core.h"                  /*  sd 卡核心设备支持 API       */
-#include "../SylixOS/system/device/sdcard/client/sdmemory.h"            /*  sd 存储卡支持 API           */
-#include "../SylixOS/system/device/sdcard/host/sdhci.h"                 /*  sd 标准控制器类驱动         */
+#include "../SylixOS/system/device/sdcard/include/sdcardLib.h"          /*  sd 卡相关驱动框架           */
 #include "../SylixOS/system/device/mem/memDev.h"                        /*  VxWorks memDev              */
 #include "../SylixOS/system/device/mii/miiDev.h"                        /*  mii phy 接口驱动            */
 #include "../SylixOS/system/device/eventfd/eventfdDev.h"                /*  eventfd 设备                */

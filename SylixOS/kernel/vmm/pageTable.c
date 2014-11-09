@@ -127,9 +127,7 @@ ULONG  __vmmLibPrimaryInit (PLW_MMU_GLOBAL_DESC  pmmugdesc, CPCHAR  pcMachineNam
     }
     
     __VMM_MMU_MAKE_CURCTX(pmmuctx);                                     /*  设置页表基地址              */
-    
     KN_SMP_MB();
-    __VMM_MMU_ENABLE();                                                 /*  启动 MMU                    */
     
     return  (ERROR_NONE);
     

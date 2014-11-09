@@ -10,26 +10,26 @@
 **
 **--------------ÎÄ¼þÐÅÏ¢--------------------------------------------------------------------------------
 **
-** ÎÄ   ¼þ   Ãû: coresdLib.c
+** ÎÄ   ¼þ   Ãû: sdcoreLib.c
 **
 ** ´´   ½¨   ÈË: Zeng.Bo (Ôø²¨)
 **
 ** ÎÄ¼þ´´½¨ÈÕÆÚ: 2010 Äê 11 ÔÂ 23 ÈÕ
 **
-** Ãè        Êö: sd¿¨ÌØÊâ²Ù×÷½Ó¿ÚÔ´ÎÄ¼þ
+** Ãè        Êö: sd ¿¨ÌØÊâ²Ù×÷½Ó¿ÚÔ´ÎÄ¼þ
 
 ** BUG:
-2010.11.23 ÐÞ¸Ä__sdCoreDevSendIfCond(),ÔÚSPIºÍSDÄ£Ê½ÏÂ,¼ìÑéÂëÔÚÓ¦´ðÖÐµÄÎ»ÖÃ²»Í¬.
-2010.11.27 Ôö¼ÓÁË¼¸¸öAPI.
-2010.12.02 ÓÉÓÚ×î³õ²âÊÔ²»ÖÜÃÜ, ·¢ÏÖ__getBits() º¯ÊýÓÐ´íÎó,¸ÄÕýÖ®.
-2011.02.12 ¸ü¸ÄSD¿¨¸´Î»º¯Êý__sdCoreDevReset().¶ÔÆäÔö¼ÓSPIÄ£Ê½ÏÂµÄ¸´Î»²Ù×÷.
-2011.02.21 ¸ü¸Ä__sdCoreDevSendAllCSD() ºÍ __sdCoreDevSendAllCID()ÒÔÊÊÓ¦spiÄ£Ê½.
-2011.02.21 ¸ü¸Ä__sdCoreDevGetStatus()º¯Êý.½ñÌì²Å·¢ÏÖcmd13ÊÇÒ»¸öappÃüÁî,¶ÔÒ»Ð©¿¨À´Ëµ,cmd13¿ÉÒÔµ±×÷Ò»°ãÃüÁî
-           ·¢ËÍÃ»ÓÐÎÊÌâ,µ«ÓÐµÄ¿¨¾Í²»ÐÐÁË.
-2011.03.30 Ôö¼Ó__sdCoreDevMmcSetRelativeAddr () ÒÔÖ§³ÖMMC.
-2011.03.30 ÐÞ¸Ä__sdCoreDecodeCID(),¼ÓÈë¶ÔMMC¿¨CIDµÄ½âÎö
-2011.04.12 ÐÞ¸Ä__sdCoreDevSendAppOpCond().Æä´«ÈëµÄ²ÎÊýuiOCRÎªÖ÷¿ØÖ§³ÖµÄµçÑ¹,µ«ÊÇ¶ÔÓÚmemory¿¨,Æä¿¨µçÑ¹ÊÇ
-           ÓÐÒ»¶¨·¶Î§ÒªÇóµÄ.ËùÒÔÔÚ·¢ËÍÃüÁîÊ±,½«uiOCR½øÐÐ´¦ÀíºóÔÙ×÷Îª²ÎÊý·¢ËÍ.
+2010.11.23  ÐÞ¸Ä __sdCoreDevSendIfCond(), ÔÚ SPI ºÍ SD Ä£Ê½ÏÂ,¼ìÑéÂëÔÚÓ¦´ðÖÐµÄÎ»ÖÃ²»Í¬.
+2010.11.27  Ôö¼ÓÁË¼¸¸ö API.
+2010.12.02  ÓÉÓÚ×î³õ²âÊÔ²»ÖÜÃÜ, ·¢ÏÖ __getBits() º¯ÊýÓÐ´íÎó,¸ÄÕýÖ®.
+2011.02.12  ¸ü¸Ä SD ¿¨¸´Î»º¯Êý __sdCoreDevReset() .¶ÔÆäÔö¼Ó SPI Ä£Ê½ÏÂµÄ¸´Î»²Ù×÷.
+2011.02.21  ¸ü¸Ä __sdCoreDevSendAllCSD() ºÍ __sdCoreDevSendAllCID()ÒÔÊÊÓ¦spiÄ£Ê½.
+2011.02.21  ¸ü¸Ä __sdCoreDevGetStatus()º¯Êý.½ñÌì²Å·¢ÏÖ cmd13 ÊÇÒ»¸ö app ÃüÁî,¶ÔÒ»Ð©¿¨À´Ëµ,cmd13 ¿ÉÒÔµ±×÷
+            Ò»°ãÃüÁî·¢ËÍÃ»ÓÐÎÊÌâ,µ«ÓÐµÄ¿¨¾Í²»ÐÐÁË.
+2011.03.30  Ôö¼Ó __sdCoreDevMmcSetRelativeAddr () ÒÔÖ§³Ö MMC.
+2011.03.30  ÐÞ¸Ä __sdCoreDecodeCID(), ¼ÓÈë¶Ô MMC ¿¨ CID µÄ½âÎö
+2011.04.12  ÐÞ¸Ä __sdCoreDevSendAppOpCond(). Æä´«ÈëµÄ²ÎÊý uiOCR Îª Ö÷¿ØÖ§³ÖµÄµçÑ¹,µ«ÊÇ¶ÔÓÚ memory ¿¨,Æä¿¨
+            µçÑ¹ÊÇÓÐÒ»¶¨·¶Î§ÒªÇóµÄ.ËùÒÔÔÚ·¢ËÍÃüÁîÊ±,½« uiOCR ½øÐÐ´¦ÀíºóÔÙ×÷Îª²ÎÊý·¢ËÍ.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -38,25 +38,26 @@
   ¼ÓÈë²Ã¼ôÖ§³Ö
 *********************************************************************************************************/
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SDCARD_EN > 0)
-#include "spec_sd.h"
+#include "sdcore.h"
+#include "sdstd.h"
 /*********************************************************************************************************
  CSD ÖÐTACCÓòÖÐµÄÖ¸ÊýÖµ(ÒÔÄÉÃëÎªµ¥Î»)ºÍÏµÊý(ÎªÁË±ÜÃâÊ¹ÓÃ¸¡µã,ÒÑ¾­³ËÒÔÁË10)²éÕÒ±í
 *********************************************************************************************************/
-static const UINT32    CSD_TACC_EXP[] = {
+static const UINT32    _G_puiCsdTaccExp[] = {
         1, 10, 100, 1000, 10000, 100000, 1000000, 10000000
 };
-static const UINT32    CSD_TACC_MNT[] = {
+static const UINT32    _G_puiCsdTaccMnt[] = {
         0,  10, 12, 13, 15, 20, 25, 30,
         35, 40, 45, 50, 55, 60, 70, 80
 };
 /*********************************************************************************************************
  CSD ÖÐTRAN_SPEEDÓòÖÐµÄÖ¸Êý(ÒÔbit/sÎªµ¥Î»)ÖµºÍÏµÊý(ÎªÁË±ÜÃâÊ¹ÓÃ¸¡µã,ÒÑ¾­³ËÒÔÁË10)²éÕÒ±í
 *********************************************************************************************************/
-static const UINT32    CSD_TRSP_EXP[] = {
+static const UINT32    _G_CsdTrspExp[] = {
         10000, 100000, 1000000, 10000000,
             0,      0,       0,        0
 };
-static const UINT32    CSD_TRSP_MNT[] = {
+static const UINT32    _G_CsdTrspMnt[] = {
         0,  10, 12, 13, 15, 20, 25, 30,
         35, 40, 45, 50, 55, 60, 70, 80
 };
@@ -272,12 +273,12 @@ __decsd_mmc_sd:                                                         /*  mmcÓ
         /*
          * ÕâÀï³ýÒÔ10,ÊÇÒòÎªÔÚ²éÕÒ±íÀïÃæ³ËÁË10
          */
-        psdcsdDec->DEVCSD_uiTaccNs   = (CSD_TACC_EXP[uiExp] * CSD_TACC_MNT[uiMnt] + 9) / 10;
+        psdcsdDec->DEVCSD_uiTaccNs   = (_G_puiCsdTaccExp[uiExp] * _G_puiCsdTaccMnt[uiMnt] + 9) / 10;
         psdcsdDec->DEVCSD_usTaccClks = __getBits(pRawCSD, 104, 8) * 100;
 
         uiMnt = __getBits(pRawCSD, 99, 4);
         uiExp = __getBits(pRawCSD, 96, 3);
-        psdcsdDec->DEVCSD_uiTranSpeed = CSD_TRSP_EXP[uiExp] * CSD_TRSP_MNT[uiMnt] ;
+        psdcsdDec->DEVCSD_uiTranSpeed = _G_CsdTrspExp[uiExp] * _G_CsdTrspMnt[uiMnt] ;
         psdcsdDec->DEVCSD_usCmdclass  = __getBits(pRawCSD, 84, 12);
 
         uiExp = __getBits(pRawCSD, 47, 3);
@@ -314,7 +315,7 @@ __decsd_mmc_sd:                                                         /*  mmcÓ
     case CSD_STRUCT_VER_2_0:
         uiMnt = __getBits(pRawCSD, 99, 4);
         uiExp = __getBits(pRawCSD, 96, 3);
-        psdcsdDec->DEVCSD_uiTranSpeed = CSD_TRSP_EXP[uiExp] *  CSD_TRSP_MNT[uiMnt];
+        psdcsdDec->DEVCSD_uiTranSpeed = _G_CsdTrspExp[uiExp] *  _G_CsdTrspMnt[uiMnt];
         psdcsdDec->DEVCSD_usCmdclass  = __getBits(pRawCSD, 84, 12);
 
         uiMnt = __getBits(pRawCSD, 48, 22);
@@ -529,7 +530,7 @@ INT __sdCoreDevSendAppOpCond (PLW_SDCORE_DEVICE  psdcoredevice,
             }
         }
 
-        SD_DELAYMS(1);
+        SD_DELAYMS(2);
     }
 
     if (i >= SD_OPCOND_DELAY_CONTS) {                                   /*  sd¿¨Ê¶±ðÊ§°Ü                */

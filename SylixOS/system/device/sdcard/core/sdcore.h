@@ -10,23 +10,23 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: core.h
+** 文   件   名: sdcore.h
 **
 ** 创   建   人: Zeng.Bo (曾波)
 **
 ** 文件创建日期: 2010 年 11 月 23 日
 **
-** 描        述: sd卡内核协议层接口头文件
+** 描        述: sd 卡内核协议层接口头文件
 
 ** BUG:
-2011.01.12  增加对SPI的支持(SPI下的特殊工具函数).
-2011.02.21  增加API_SdCoreSpiSendIfCond函数.该函数只能用于spi模式下.
-2011.02.21  增SPI下设备寄存器的读取函数: API_SdCoreSpiRegisterRead().
-2011.03.25  修改API_SdCoreDevCreate(), 用于底层驱动安装上层的回调.
+2011.01.12  增加对 SPI 的支持(SPI 下的特殊工具函数).
+2011.02.21  增加 API_SdCoreSpiSendIfCond 函数.该函数只能用于 SPI 模式下.
+2011.02.21  增 SPI 下设备寄存器的读取函数: API_SdCoreSpiRegisterRead().
+2011.03.25  修改 API_SdCoreDevCreate(), 用于底层驱动安装上层的回调.
 *********************************************************************************************************/
 
-#ifndef __CORE_H
-#define __CORE_H
+#ifndef __SDCORE_H
+#define __SDCORE_H
 
 /*********************************************************************************************************
   一般宏定义
@@ -51,8 +51,15 @@
 typedef struct lw_sdcore_device {
     PVOID      COREDEV_pvDevHandle;                                     /*  设备句柄                    */
     INT        COREDEV_iAdapterType;                                    /*  所在的适配器类型            */
-#define COREDEV_IS_SD(pcdev)     (pcdev->COREDEV_iAdapterType == SDADAPTER_TYPE_SD)
-#define COREDEV_IS_SPI(pcdev)    (pcdev->COREDEV_iAdapterType == SDADAPTER_TYPE_SPI)
+#define COREDEV_IS_SD(pcdev)            (pcdev->COREDEV_iAdapterType == SDADAPTER_TYPE_SD)
+#define COREDEV_IS_SPI(pcdev)           (pcdev->COREDEV_iAdapterType == SDADAPTER_TYPE_SPI)
+
+    INT        COREDEV_iDevSta;
+#define COREDEV_STA_HIGHSPEED_EN        (1 << 0)
+#define COREDEV_HIGHSPEED_SET(pcdev)    (pcdev->COREDEV_iDevSta |= COREDEV_STA_HIGHSPEED_EN)
+#define COREDEV_IS_HIGHSPEED(pcdev)     (pcdev->COREDEV_iDevSta & COREDEV_STA_HIGHSPEED_EN)
+
+    spinlock_t COREDEV_slLock;
 
     INT      (*COREDEV_pfuncCoreDevXfer)(PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, INT iNum);
     INT      (*COREDEV_pfuncCoreDevCtl)(PVOID   pvDevHandle, INT iCmd, LONG lArg);
@@ -144,6 +151,8 @@ LW_API INT              API_SdCoreDevAppCmd(PLW_SDCORE_DEVICE psdcoredevice,
                                             BOOL              bIsBc,
                                             UINT32            uiRetry);
 
+LW_API CPCHAR           API_SdCoreDevAdapterName(PLW_SDCORE_DEVICE psdcoredevice);
+
 /*********************************************************************************************************
   以下API只是去 查看/设置 内核结构中的成员变量,并未对设备进行实际上的命令操作
 *********************************************************************************************************/
@@ -175,7 +184,7 @@ LW_API INT              API_SdCoreSpiRegisterRead(PLW_SDCORE_DEVICE  psdcoredevi
                                                   UINT8             *pucReg,
                                                   UINT               uiLen);
 
-#endif                                                                  /*  __CORE_H                    */
+#endif                                                                  /*  __SDCORE_H                  */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

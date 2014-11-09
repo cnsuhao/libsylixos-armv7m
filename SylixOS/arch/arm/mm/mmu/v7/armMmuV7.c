@@ -807,8 +807,6 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
     REGISTER LW_PGD_TRANSENTRY  *p_pgdentry;
 
     if (LW_NCPUS > 1) {
-        _G_uiVMSAShareBit = 1;                                          /*  多核设置为可共享            */
-
         /*
          *  Set location of level 1 page table
          * ------------------------------------
@@ -829,8 +827,6 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
                    | (1 << 1)
                    | (0 << 0));
     } else {
-        _G_uiVMSAShareBit = 0;                                          /*  单核设置为非可共享，否则运行*/
-                                                                        /*  速度会非常慢                */
         /*
          *  Set location of level 1 page table
          * ------------------------------------
@@ -864,7 +860,7 @@ static VOID  armMmuMakeCurCtx (PLW_MMU_CONTEXT  pmmuctx)
 *********************************************************************************************************/
 VOID  armMmuV7Init (LW_MMU_OP *pmmuop, CPCHAR  pcMachineName)
 {
-    pmmuop->MMUOP_ulOption        = 0ul;
+    pmmuop->MMUOP_ulOption = 0ul;
 
     pmmuop->MMUOP_pfuncMemInit    = armMmuMemInit;
     pmmuop->MMUOP_pfuncGlobalInit = armMmuGlobalInit;
@@ -894,6 +890,13 @@ VOID  armMmuV7Init (LW_MMU_OP *pmmuop, CPCHAR  pcMachineName)
     pmmuop->MMUOP_pfuncInvalidateTLB = armMmuInvalidateTLB;
     pmmuop->MMUOP_pfuncSetEnable     = armMmuEnable;
     pmmuop->MMUOP_pfuncSetDisable    = armMmuDisable;
+    
+    if (LW_NCPUS > 1) {
+        _G_uiVMSAShareBit = 1;                                          /*  多核设置为可共享            */
+    
+    } else {
+        _G_uiVMSAShareBit = 0;                                          /*  单核设置为非可共享, 否则慢  */
+    }
 }
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */

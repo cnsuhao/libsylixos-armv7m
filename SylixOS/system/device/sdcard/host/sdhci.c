@@ -19,10 +19,10 @@
 ** 描        述: sd标准主控制器驱动源文件(SD Host Controller Simplified Specification Version 2.00).
 
 ** BUG:
-** 2011.03.02  增加主控传输模式查看\设置函数.允许动态改变传输模式(主控上不存在设备的情况下).
-** 2011.04.07  增加SDMA传输功能.
-** 2011.04.07  考虑到SD控制器在不同平台上其寄存器可能在IO空间,也可能在内存空间,所以读写寄存器的6个函数申明
-**             为外部函数,由具体平台的驱动实现.
+2011.03.02  增加主控传输模式查看\设置函数.允许动态改变传输模式(主控上不存在设备的情况下).
+2011.04.07  增加 SDMA 传输功能.
+2011.04.07  考虑到 SD 控制器在不同平台上其寄存器可能在 IO 空间,也可能在内存空间,所以读写寄存器的
+            6个函数申明为外部函数,由具体平台的驱动实现.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -31,6 +31,7 @@
   加入裁剪支持
 *********************************************************************************************************/
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SDCARD_EN > 0)
+#include "sdhci.h"
 /*********************************************************************************************************
   内部宏
 *********************************************************************************************************/
@@ -182,7 +183,7 @@ static VOID __sdhciIntStaShow(PLW_SDHCI_HOST_ATTR psdhcihostattr);
 static LW_INLINE INT __sdhciCmdRespType (PLW_SD_COMMAND psdcmd)
 {
     UINT32  uiRespFlag = SD_RESP_TYPE(psdcmd);
-    INT     iType = 0;
+    INT     iType      = 0;
 
     if (!(uiRespFlag & SD_RSP_PRESENT)) {
         iType = SDHCI_CMD_RESP_TYPE_NONE;
@@ -196,14 +197,12 @@ static LW_INLINE INT __sdhciCmdRespType (PLW_SD_COMMAND psdcmd)
 
     return  (iType);
 }
-
 static LW_INLINE VOID __sdhciSdmaAddrUpdate (__PSDHCI_HOST psdhcihost, LONG lSysAddr)
 {
     SDHCI_WRITEL(&psdhcihost->SDHCIHS_hostattr,
                  SDHCI_SYS_SDMA,
                  (UINT32)lSysAddr);
 }
-
 static LW_INLINE VOID __sdhciHostRest (__PSDHCI_HOST psdhcihost)
 {
     SDHCI_WRITEB(&psdhcihost->SDHCIHS_hostattr,
@@ -273,7 +272,7 @@ LW_API PVOID  API_SdhciHostCreate (CPCHAR               pcAdapterName,
         __SHEAP_FREE(psdhcihost);
         return  ((PVOID)LW_NULL);
     }
-    psdhcihost->SDHCIHS_pucDmaBuf              = (UINT8 *)pvDmaBuf;
+    psdhcihost->SDHCIHS_pucDmaBuf = (UINT8 *)pvDmaBuf;
 #endif
 
     lib_memcpy(&psdhcihost->SDHCIHS_hostattr, psdhcihostattr, sizeof(LW_SDHCI_HOST_ATTR));

@@ -16,16 +16,16 @@
 **
 ** 文件创建日期: 2010 年 11 月 25 日
 **
-** 描        述: sd记忆卡客户应用驱动源文件
+** 描        述: sd 记忆卡客户应用驱动源文件
 
 ** BUG:
-2010.12.08  优化了__sdmemTestBusy()函数.
-2010.12.08  SD设备结构中加入块寻址标记,以支持SDHC卡.
-2011.01.12  增加对SPI的支持.
-2011.03.25  修改__sdMemIoctl()函数, 增加设备状态检测.
-2011.03.25  修改API_SdMemDevCreate(), 用于底层驱动安装上层的回调.
+2010.12.08  优化了 __sdmemTestBusy() 函数.
+2010.12.08  SD 设备结构中加入块寻址标记,以支持 SDHC 卡.
+2011.01.12  增加对 SPI 的支持.
+2011.03.25  修改 __sdMemIoctl() 函数, 增加设备状态检测.
+2011.03.25  修改 API_SdMemDevCreate(), 用于底层驱动安装上层的回调.
 2011.04.03  将 API_SdMemDevShowInfo() 改为 API_SdMemDevShow() 统一 SylxiOS Show 函数.
-2011.04.03  更改block io层回调函数的参数.
+2011.04.03  更改 block io 层回调函数的参数.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -35,8 +35,10 @@
   加入裁剪支持
 *********************************************************************************************************/
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SDCARD_EN > 0)
-#include "../core/coresdLib.h"
-#include "../core/spec_sd.h"
+#include "sdmemory.h"
+#include "../core/sdcore.h"
+#include "../core/sdcoreLib.h"
+#include "../core/sdstd.h"
 /*********************************************************************************************************
   sd 块设备内部结构
 *********************************************************************************************************/
@@ -44,6 +46,11 @@ typedef struct __sd_blk_dev {
     LW_BLK_DEV            SDBLKDEV_blkDev;
     PLW_SDCORE_DEVICE     SDBLKDEV_pcoreDev;
     BOOL                  SDBLKDEV_bIsBlockAddr;                        /*  是否是块寻址                */
+
+    /*
+     * 增加SDM后, 为了保持API不变，增加以下成员
+     */
+    BOOL                  SDBLKDEV_bCoreDevSelf;                       /*  coredev 是自己创建(非SDM给)  */
 } __SD_BLK_DEV, *__PSD_BLK_DEV;
 /*********************************************************************************************************
   内部宏
@@ -120,21 +127,28 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
     __PSD_BLK_DEV       psdblkdevice    = LW_NULL;
     PLW_BLK_DEV         pblkdevice      = LW_NULL;
     PLW_SDCORE_CHAN     psdcorechan     = LW_NULL;
+    BOOL                bCoreDevSelf    = TRUE;
 
     LW_SDDEV_CSD        sddevcsd;
     BOOL                bBlkAddr;
     INT                 iError;
 
-    if (!pcAdapterName || !pcDeviceName) {
-        _ErrorHandle(EINVAL);
-        return  (LW_NULL);
+    /*
+     * 增加了SDM后, 约定：当适配器名称和设备名称为空时, 表示coredev 由 sdm创建
+     * 此时, psdmemchan 指向对应的coredev
+     */
+    if (!pcAdapterName && !pcDeviceName) {
+        psdcoredevice = (PLW_SDCORE_DEVICE)psdmemchan;
+        bCoreDevSelf = FALSE;
+
+    } else {
+        psdcorechan   = (PLW_SDCORE_CHAN)psdmemchan;
+        psdcoredevice = API_SdCoreDevCreate(iAdapterType,
+                                            pcAdapterName,
+                                            pcDeviceName,
+                                            psdcorechan);
     }
 
-    psdcorechan   = (PLW_SDCORE_CHAN)psdmemchan;
-    psdcoredevice = API_SdCoreDevCreate(iAdapterType,
-                                        pcAdapterName,
-                                        pcDeviceName,
-                                        psdcorechan);
     if (!psdcoredevice) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "create coredevice failed.\r\n");
         return  (LW_NULL);
@@ -146,13 +160,20 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
     iError = __sdMemInit(psdcoredevice);
     if (iError != ERROR_NONE) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "do memory initialize failed.\r\n");
-        API_SdCoreDevDelete(psdcoredevice);
+
+        if (bCoreDevSelf) {
+            API_SdCoreDevDelete(psdcoredevice);
+        }
+
         return  (LW_NULL);
     }
 
     psdblkdevice  = (__PSD_BLK_DEV)__SHEAP_ALLOC(sizeof(__SD_BLK_DEV));
     if (!psdblkdevice) {
-        API_SdCoreDevDelete(psdcoredevice);
+        if (bCoreDevSelf) {
+            API_SdCoreDevDelete(psdcoredevice);
+        }
+
         _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (LW_NULL);
@@ -163,7 +184,11 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
     if (iError != ERROR_NONE) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "view csd of device failed.\r\n");
         __SHEAP_FREE(psdblkdevice);
-        API_SdCoreDevDelete(psdcoredevice);
+
+        if (bCoreDevSelf) {
+            API_SdCoreDevDelete(psdcoredevice);
+        }
+
         return  (LW_NULL);
     }
 
@@ -171,12 +196,17 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
     if (iError != ERROR_NONE) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "unkonwn address access way.\r\n");
         __SHEAP_FREE(psdblkdevice);
-        API_SdCoreDevDelete(psdcoredevice);
+
+        if (bCoreDevSelf) {
+            API_SdCoreDevDelete(psdcoredevice);
+        }
+
         return  (LW_NULL);
     }
 
-    psdblkdevice->SDBLKDEV_bIsBlockAddr = bBlkAddr;                     /*  设置寻址方式                */
-    psdblkdevice->SDBLKDEV_pcoreDev     = psdcoredevice;                /*  连接核心设备                */
+    psdblkdevice->SDBLKDEV_bIsBlockAddr  = bBlkAddr;                    /*  设置寻址方式                */
+    psdblkdevice->SDBLKDEV_pcoreDev      = psdcoredevice;               /*  连接核心设备                */
+    psdblkdevice->SDBLKDEV_bCoreDevSelf = bCoreDevSelf;
 
     pblkdevice = &psdblkdevice->SDBLKDEV_blkDev;
 
@@ -223,10 +253,10 @@ LW_API INT  API_SdMemDevDelete (PLW_BLK_DEV pblkdevice)
         return  (PX_ERROR);
     }
 
-    psdblkdevice   = (__PSD_BLK_DEV)pblkdevice;
+    psdblkdevice  = (__PSD_BLK_DEV)pblkdevice;
     psdcoredevice = psdblkdevice->SDBLKDEV_pcoreDev;
 
-    if (psdcoredevice) {
+    if (psdcoredevice && psdblkdevice->SDBLKDEV_bCoreDevSelf) {
         iError = API_SdCoreDevDelete(psdcoredevice);                    /*  先删除core设备              */
         if (iError != ERROR_NONE) {
             _DebugHandle(__ERRORMESSAGE_LEVEL, "delet coredevice failed.\r\n");
@@ -368,9 +398,12 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
     switch (psdcoredevice->COREDEV_iAdapterType) {
 
     case SDADAPTER_TYPE_SD:
+
+        API_SdCoreDevCtl(psdcoredevice, SDBUS_CTRL_POWERON, 0);
+
         iError = API_SdCoreDevCtl(psdcoredevice,
                                   SDBUS_CTRL_SETCLK,
-                                  SDARG_SETCLK_NORMAL);                 /*  初始化时 低速时钟           */
+                                  SDARG_SETCLK_LOW);                    /*  初始化时 低速时钟           */
 
         if (iError != ERROR_NONE) {
             pcError = "set clock to normal failed.\r\n";
@@ -392,7 +425,7 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
         iError = __sdCoreDevSendIfCond(psdcoredevice);                  /*  cmd8 (v2.0以上的卡必须这个) */
                                                                         /*  v2.0以下的卡无应答,忽略错误 */
 
-        if(iError == ERROR_NONE){                                       /*  SDHC卡初始化支持            */
+        if(iError == ERROR_NONE) {                                      /*  SDHC卡初始化支持            */
             uiOCR |= SD_OCR_HCS ;
         }
 
@@ -441,7 +474,10 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
 
         iError = API_SdCoreDevCtl(psdcoredevice,
                                   SDBUS_CTRL_SETCLK,
-                                  SDARG_SETCLK_MAX);                    /*  时钟设置到最大              */
+                                  SDARG_SETCLK_NORMAL);                 /*  时钟设置到全速              */
+        /*
+         * TODO: 根据卡类型设置为高速
+         */
         if (iError != ERROR_NONE) {
             pcError = "set clock to max failed.\r\n";
             goto __error_handle;
@@ -464,21 +500,21 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
                 pcError = "set bus width error.\r\n";
                 goto __error_handle;
             }
-
             API_SdCoreDevCtl(psdcoredevice, SDBUS_CTRL_SETBUSWIDTH, SDARG_SETBUSWIDTH_4);
         } else {                                                        /*  mmc 只有一位总线            */
             API_SdCoreDevCtl(psdcoredevice, SDBUS_CTRL_SETBUSWIDTH, SDARG_SETBUSWIDTH_1);
         }
-
         return  (ERROR_NONE);
 
     case SDADAPTER_TYPE_SPI:
+
+        API_SdCoreDevCtl(psdcoredevice, SDBUS_CTRL_POWERON, 0);
 
         SD_DELAYMS(3);
 
         iError = API_SdCoreDevCtl(psdcoredevice,
                                   SDBUS_CTRL_SETCLK,
-                                  SDARG_SETCLK_NORMAL);                 /*  初始化时 低速时钟           */
+                                  SDARG_SETCLK_LOW);                    /*  初始化时 低速时钟           */
 
         if (iError != ERROR_NONE) {
             pcError = "set clock to normal failed.\r\n";
@@ -545,11 +581,10 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
 
         iError = API_SdCoreDevCtl(psdcoredevice,
                                   SDBUS_CTRL_SETCLK,
-                                  SDARG_SETCLK_MAX);                    /*  设置为高速时钟              */
+                                  SDARG_SETCLK_NORMAL);                 /*  设置为全速时钟              */
         if (iError != ERROR_NONE) {
             pcError = "set to high clock mode failed.\r\n";
         }
-
         return  (ERROR_NONE);
 
     default:
@@ -883,7 +918,9 @@ static INT __sdMemBlkWrt(__PSD_BLK_DEV   psdblkdevice,
     }
 
 __error_handle:
-    __sdCoreDevDeSelect(psdcoredevice);                                 /*  取消设备                    */
+    if (COREDEV_IS_SD(psdcoredevice)) {
+        __sdCoreDevDeSelect(psdcoredevice);                                 /*  取消设备                    */
+    }
 
     return  (iError);
 }
@@ -960,7 +997,9 @@ static INT __sdMemBlkRd (__PSD_BLK_DEV   psdblkdevice,
     }
 
 __error_handle:
-    __sdCoreDevDeSelect(psdcoredevice);                                 /*  取消设备                    */
+    if (COREDEV_IS_SD(psdcoredevice)) {
+        __sdCoreDevDeSelect(psdcoredevice);                             /*  取消设备                    */
+    }
 
     return  (iError);
 }
@@ -979,7 +1018,8 @@ static INT __sdMemIoctl (__PSD_BLK_DEV    psdblkdevice,
                          INT              iCmd,
                          LONG             lArg)
 {
-    INT iDevSta;
+    INT          iDevSta;
+    LW_SDDEV_CSD sdcsd;
 
     if (!psdblkdevice) {
         _ErrorHandle(EINVAL);
@@ -1004,9 +1044,17 @@ static INT __sdMemIoctl (__PSD_BLK_DEV    psdblkdevice,
         *((LONG *)lArg) = SD_MEM_DEFAULT_BLKSIZE;
         break;
 
+    case LW_BLKD_GET_SECNUM:
+        API_SdCoreDevCsdView(psdblkdevice->SDBLKDEV_pcoreDev, &sdcsd);
+        *((UINT32 *)lArg) = sdcsd.DEVCSD_uiCapacity;
+        break;
+
     case FIOWTIMEOUT:
     case FIORTIMEOUT:
+        break;
+
     default:
+        return  (ENOSYS);
         break;
     }
 

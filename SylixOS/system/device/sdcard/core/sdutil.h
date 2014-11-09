@@ -10,50 +10,41 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: ThreadLock.c
+** 文   件   名: sdutil.h
 **
-** 创   建   人: Han.Hui (韩辉)
+** 创   建   人: Zeng.Bo (曾波)
 **
-** 文件创建日期: 2006 年 12 月 18 日
+** 文件创建日期: 2014 年 10 月 27 日
 **
-** 描        述: 任务锁定调度器.
+** 描        述: sd 工具库.
 
-** BUG
-2007.11.04  将 0xFFFFFFFF 改为 __ARCH_ULONG_MAX
-2008.01.20  将全局锁改为局部锁.
-2013.07.18  兼容 SMP 系统.
+** BUG:
 *********************************************************************************************************/
-#define  __SYLIXOS_KERNEL
-#include "../SylixOS/kernel/include/k_kernel.h"
+
+#ifndef __SDUTIL_H
+#define __SDUTIL_H
+
 /*********************************************************************************************************
-** 函数名称: API_ThreadLock
-** 功能描述: 任务锁定当前 CPU 调度器
-** 输　入  : 
-** 输　出  : 
-** 全局变量: 
-** 调用模块: 
-** 注  意  : 此 API 仅对当前 CPU 生效, 并不会影响其他 CPU 调度. 在任务锁定状态不得使用阻塞函数.
-
-                                           API 函数
+  操作宏
 *********************************************************************************************************/
-LW_API
-VOID  API_ThreadLock (VOID)
-{
-    PLW_CLASS_TCB   ptcbCur;
-    
-    if (!LW_SYS_STATUS_IS_RUNNING()) {                                  /*  系统必须已经启动            */
-        _ErrorHandle(ERROR_KERNEL_NOT_RUNNING);
-        return;
-    }
-    
-    LW_TCB_GET_CUR_SAFE(ptcbCur);
-    
-    if (__THREAD_LOCK_GET(ptcbCur) != __ARCH_ULONG_MAX) {
-        __THREAD_LOCK_INC(ptcbCur);
-    }
-    
-    KN_SMP_MB();
-}
+
+#ifndef __OFFSET_OF
+#define __OFFSET_OF(type, member)           ((ULONG)((CHAR *)&((type *)0)->member - (CHAR *)(type *)0))
+#endif
+#ifndef __CONTAINER_OF
+#define __CONTAINER_OF(ptr, type, member)   ((type *)((CHAR *)ptr - __OFFSET_OF(type, member)))
+#endif
+
+/*********************************************************************************************************
+  工具函数
+*********************************************************************************************************/
+
+VOID *__sdUnitPoolCreate(VOID);
+VOID  __sdUnitPoolDelete(VOID *pvUnitPool);
+INT   __sdUnitGet(VOID *pvUnitPool);
+VOID  __sdUnitPut(VOID *pvUnitPool, INT iUnit);
+
+#endif                                                              /*   __SDUTIL_H                     */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

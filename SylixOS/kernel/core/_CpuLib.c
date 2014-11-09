@@ -57,7 +57,9 @@ INT  _CpuInactive (PLW_CLASS_CPU   pcpu)
 {
     INT             i;
     ULONG           ulCPUId = pcpu->CPU_ulCPUId;
+    PLW_CLASS_CPU   pcpuOther;
     PLW_CLASS_TCB   ptcb;
+    PLW_CLASS_TCB   ptcbCand;
 
     if (!LW_CPU_IS_ACTIVE(pcpu)) {
         return  (PX_ERROR);
@@ -76,8 +78,11 @@ INT  _CpuInactive (PLW_CLASS_CPU   pcpu)
     
     for (i = 0; i < LW_NCPUS; i++) {                                    /*  请求其他 CPU 调度           */
         if (ulCPUId != i) {
-            PLW_CLASS_CPU   pcpuOther = LW_CPU_GET(i);
-            PLW_CLASS_TCB   ptcbCand  = LW_CAND_TCB(pcpuOther);
+            pcpuOther = LW_CPU_GET(i);
+            if (!LW_CPU_IS_ACTIVE(pcpuOther)) {                         /*  CPU 必须是激活状态          */
+                continue;
+            }
+            ptcbCand  = LW_CAND_TCB(pcpuOther);
             if (LW_PRIO_IS_HIGH(ptcb->TCB_ucPriority,
                                 ptcbCand->TCB_ucPriority)) {            /*  当前退出的任务优先级高      */
                 LW_CAND_ROT(pcpuOther) = LW_TRUE;

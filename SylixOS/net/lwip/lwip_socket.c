@@ -41,6 +41,7 @@
             修正 __ifIoctl() 对 if_indextoname 加锁的错误.
 2014.05.03  加入获取网络类型的接口.
 2014.05.07  __ifIoctlIf() 优先使用 netif ioctl.
+2014.11.07  AF_PACKET ioctl() 支持基本网口操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -375,16 +376,15 @@ static INT __ifReq6Size (struct in6_ifreq  *pifreq6)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __ifIoctlIf
+** 函数名称: __ifSubIoctlIf
 ** 功能描述: 网络接口 ioctl 操作 (针对网卡接口)
-** 输　入  : iLwipFd   lwip 文件
-**           iCmd      命令
+** 输　入  : iCmd      命令
 **           pvArg     参数
 ** 输　出  : 处理结果
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT  __ifIoctlIf (INT iLwipFd, INT  iCmd, PVOID  pvArg)
+static INT  __ifSubIoctlIf (INT  iCmd, PVOID  pvArg)
 {
     INT              iRet   = PX_ERROR;
     struct ifreq    *pifreq = LW_NULL;
@@ -503,16 +503,15 @@ static INT  __ifIoctlIf (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     return  iRet;
 }
 /*********************************************************************************************************
-** 函数名称: __ifIoctl4
+** 函数名称: __ifSubIoctl4
 ** 功能描述: 网络接口 ioctl 操作 (针对 ipv4)
-** 输　入  : iLwipFd   lwip 文件
-**           iCmd      命令
+** 输　入  : iCmd      命令
 **           pvArg     参数
 ** 输　出  : 处理结果
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT  __ifIoctl4 (INT iLwipFd, INT  iCmd, PVOID  pvArg)
+static INT  __ifSubIoctl4 (INT  iCmd, PVOID  pvArg)
 {
            INT           iRet   = PX_ERROR;
     struct ifreq        *pifreq = LW_NULL;
@@ -623,16 +622,15 @@ static INT  __ifIoctl4 (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     return  iRet;
 }
 /*********************************************************************************************************
-** 函数名称: __ifIoctl6
+** 函数名称: __ifSubIoctl6
 ** 功能描述: 网络接口 ioctl 操作 (针对 ipv6)
-** 输　入  : iLwipFd   lwip 文件
-**           iCmd      命令
+** 输　入  : iCmd      命令
 **           pvArg     参数
 ** 输　出  : 处理结果
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT  __ifIoctl6 (INT iLwipFd, INT  iCmd, PVOID  pvArg)
+static INT  __ifSubIoctl6 (INT  iCmd, PVOID  pvArg)
 {
 #define __LWIP_GET_IPV6_FROM_NETIF() \
         pifr6addr->ifr6a_addr.un.u32_addr[0] = pnetif->ip6_addr[i].addr[0]; \
@@ -758,16 +756,53 @@ static INT  __ifIoctl6 (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     return  iRet;
 }
 /*********************************************************************************************************
-** 函数名称: __ifIoctl
-** 功能描述: 网络接口 ioctl 操作
-** 输　入  : iLwipFd   lwip 文件
-**           iCmd      命令
+** 函数名称: __ifSubIoctlCommon
+** 功能描述: 通用网络接口 ioctl 操作
+** 输　入  : iCmd      命令
 **           pvArg     参数
 ** 输　出  : 处理结果
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
+static INT  __ifSubIoctlCommon (INT  iCmd, PVOID  pvArg)
+{
+    INT     iRet = PX_ERROR;
+    
+    switch (iCmd) {
+    
+    case SIOCGIFCONF: {                                                 /*  获得网卡列表                */
+            struct ifconf *pifconf = (struct ifconf *)pvArg;
+            __ifConf(pifconf);
+            iRet = ERROR_NONE;
+            break;
+        }
+    
+    case SIOCGSIZIFCONF: {                                              /*  SIOCGIFCONF 所需缓冲大小    */
+            INT  *piSize = (INT *)pvArg;
+            __ifConfSize(piSize);
+            iRet = ERROR_NONE;
+            break;
+        }
+    
+    case SIOCGSIZIFREQ6: {                                              /*  获得指定网口 ipv6 地址数量  */
+            struct in6_ifreq *pifreq6 = (struct in6_ifreq *)pvArg;
+            iRet = __ifReq6Size(pifreq6);
+            break;
+        }
+    }
+    
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: __ifIoctlInet
+** 功能描述: INET 网络接口 ioctl 操作
+** 输　入  : iCmd      命令
+**           pvArg     参数
+** 输　出  : 处理结果
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __ifIoctlInet (INT  iCmd, PVOID  pvArg)
 {
     INT     iRet = PX_ERROR;
     
@@ -776,33 +811,8 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
         return  (iRet);
     }
     
-    if (iCmd == SIOCGIFCONF) {                                          /*  获得网卡列表                */
-        struct ifconf *pifconf = (struct ifconf *)pvArg;
-        
-        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
-        __ifConf(pifconf);
-        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
-        return  (ERROR_NONE);
-        
-    } else if (iCmd == SIOCGSIZIFCONF) {                                /*  SIOCGIFCONF 所需缓冲大小    */
-        INT  *piSize = (INT *)pvArg;
-        
-        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
-        __ifConfSize(piSize);
-        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
-        return  (ERROR_NONE);
-        
-    } else if (iCmd == SIOCGSIZIFREQ6) {                                /*  获得指定网口 ipv6 地址数量  */
-        struct in6_ifreq *pifreq6 = (struct in6_ifreq *)pvArg;
-        
-        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
-        iRet = __ifReq6Size(pifreq6);
-        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
-        return  (iRet);
-        
-    } else if (iCmd == SIOCGIFNAME) {                                   /*  获得网卡名                  */
+    if (iCmd == SIOCGIFNAME) {                                          /*  获得网卡名                  */
         struct ifreq *pifreq = (struct ifreq *)pvArg;
-        
         if (if_indextoname(pifreq->ifr_ifindex, pifreq->ifr_name)) {
             iRet = ERROR_NONE;
         }
@@ -810,6 +820,14 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     }
     
     switch (iCmd) {                                                     /*  命令预处理                  */
+    
+    case SIOCGIFCONF:                                                   /*  通用网络接口操作            */
+    case SIOCGSIZIFCONF:
+    case SIOCGSIZIFREQ6:
+        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
+        iRet = __ifSubIoctlCommon(iCmd, pvArg);
+        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
+        break;
     
     case SIOCSIFFLAGS:                                                  /*  基本网络接口操作            */
     case SIOCGIFFLAGS:
@@ -820,7 +838,7 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     case SIOCGIFHWADDR:
     case SIOCSIFHWADDR:
         LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
-        iRet = __ifIoctlIf(iLwipFd, iCmd, pvArg);
+        iRet = __ifSubIoctlIf(iCmd, pvArg);
         LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
         break;
     
@@ -833,7 +851,7 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     case SIOCSIFDSTADDR:
     case SIOCSIFBRDADDR:
         LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
-        iRet = __ifIoctl4(iLwipFd, iCmd, pvArg);
+        iRet = __ifSubIoctl4(iCmd, pvArg);
         LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
         break;
         
@@ -845,7 +863,7 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
     case SIOCSIFDSTADDR6:
     case SIOCDIFADDR6:
         LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
-        iRet = __ifIoctl6(iLwipFd, iCmd, pvArg);
+        iRet = __ifSubIoctl6(iCmd, pvArg);
         LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
         break;
     
@@ -865,6 +883,62 @@ static INT  __ifIoctl (INT iLwipFd, INT  iCmd, PVOID  pvArg)
         {
             _ErrorHandle(ENOSYS);
         }
+        break;
+    }
+    
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: __ifIoctlPacket
+** 功能描述: PACKET 网络接口 ioctl 操作
+** 输　入  : iCmd      命令
+**           pvArg     参数
+** 输　出  : 处理结果
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static INT  __ifIoctlPacket (INT  iCmd, PVOID  pvArg)
+{
+    INT     iRet = PX_ERROR;
+    
+    if (pvArg == LW_NULL) {
+        _ErrorHandle(EINVAL);
+        return  (iRet);
+    }
+    
+    if (iCmd == SIOCGIFNAME) {                                          /*  获得网卡名                  */
+        struct ifreq *pifreq = (struct ifreq *)pvArg;
+        if (if_indextoname(pifreq->ifr_ifindex, pifreq->ifr_name)) {
+            iRet = ERROR_NONE;
+        }
+        return  (iRet);
+    }
+    
+    switch (iCmd) {                                                     /*  命令预处理                  */
+    
+    case SIOCGIFCONF:                                                   /*  通用网络接口操作            */
+    case SIOCGSIZIFCONF:
+    case SIOCGSIZIFREQ6:
+        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
+        iRet = __ifSubIoctlCommon(iCmd, pvArg);
+        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
+        break;
+    
+    case SIOCSIFFLAGS:                                                  /*  基本网络接口操作            */
+    case SIOCGIFFLAGS:
+    case SIOCGIFTYPE:
+    case SIOCGIFINDEX:
+    case SIOCGIFMTU:
+    case SIOCSIFMTU:
+    case SIOCGIFHWADDR:
+    case SIOCSIFHWADDR:
+        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
+        iRet = __ifSubIoctlIf(iCmd, pvArg);
+        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
+        break;
+    
+    default:
+        _ErrorHandle(ENOSYS);
         break;
     }
     
@@ -1154,6 +1228,20 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
                 SEL_WAKE_NODE_DELETE(&psock->SOCK_selwulist, (PLW_SEL_WAKEUPNODE)pvArg);
                 iRet = ERROR_NONE;
                 break;
+            
+            case SIOCGIFCONF:                                           /*  通用网络接口操作            */
+            case SIOCGSIZIFCONF:
+            case SIOCGSIZIFREQ6:
+            case SIOCSIFFLAGS:
+            case SIOCGIFFLAGS:
+            case SIOCGIFTYPE:
+            case SIOCGIFINDEX:
+            case SIOCGIFMTU:
+            case SIOCSIFMTU:
+            case SIOCGIFHWADDR:
+            case SIOCSIFHWADDR:
+                iRet = __ifIoctlPacket(iCmd, pvArg);
+                break;
                 
             default:
                 iRet = packet_ioctl(psock->SOCK_pafpacket, (long)iCmd, pvArg);
@@ -1231,14 +1319,14 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
             case SIOCGIFNETMASK6:
             case SIOCGIFDSTADDR6:
             case SIOCDIFADDR6:
-                iRet = __ifIoctl(psock->SOCK_iLwipFd, iCmd, pvArg);
+                iRet = __ifIoctlInet(iCmd, pvArg);
                 break;
             
             default:
 #if LW_CFG_NET_WIRELESS_EN > 0
                 if ((iCmd >= SIOCIWFIRST) &&
                     (iCmd <= SIOCIWLASTPRIV)) {                         /*  无线连接设置                */
-                    iRet = __ifIoctl(psock->SOCK_iLwipFd, iCmd, pvArg);
+                    iRet = __ifIoctlInet(iCmd, pvArg);
                 } else 
 #endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
                 {

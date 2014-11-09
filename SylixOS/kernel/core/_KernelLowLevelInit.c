@@ -72,7 +72,7 @@ VOID  _KernelLowLevelInit (VOID)
      *  注意, 当前是关闭中断状态, 当前的 CPU ID 作为启动 CPU.
      */
     pcpuCur = LW_CPU_GET_CUR();
-    pcpuCur->CPU_ptcbTCBCur = &_K_tcbDummyKernel;                       /*  伪内核线程                  */
+    pcpuCur->CPU_ptcbTCBCur = &_K_tcbDummy[pcpuCur->CPU_ulCPUId];       /*  伪内核线程                  */
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "kernel heap build...\r\n");
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE > 0

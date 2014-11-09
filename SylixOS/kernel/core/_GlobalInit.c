@@ -82,6 +82,7 @@ static VOID  __cpuInit (VOID)
     
     for (i = 0; i < LW_CFG_MAX_PROCESSORS; i++) {
         LW_CPU_GET(i)->CPU_ulStatus = LW_CPU_STATUS_INACTIVE;           /*  CPU INACTIVE                */
+        LW_SPIN_INIT(&_K_tcbDummy[i].TCB_slLock);                       /*  初始化自旋锁                */
     }
 }
 /*********************************************************************************************************
@@ -157,7 +158,6 @@ VOID _GlobalInit (VOID)
      */
     LW_SPIN_INIT(&_K_slKernel);                                         /*  初始化内核自旋锁            */
     LW_SPIN_INIT(&_K_slAtomic);                                         /*  初始化原子操作自旋锁        */
-    LW_SPIN_INIT(&_K_tcbDummyKernel.TCB_slLock);                        /*  初始化自旋锁                */
 
     /*
      *  内核关键性数据结构初始化

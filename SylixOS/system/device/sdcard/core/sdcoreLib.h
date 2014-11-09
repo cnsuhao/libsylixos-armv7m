@@ -10,21 +10,21 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: coresdLib.h
+** 文   件   名: sdcoreLib.h
 **
 ** 创   建   人: Zeng.Bo (曾波)
 **
 ** 文件创建日期: 2010 年 11 月 23 日
 **
-** 描        述: sd卡特殊操作接口头文件
+** 描        述: sd 卡特殊操作接口头文件
 
 ** BUG:
-2010.11.27 增加了几个API.
-2010.03.30 增加__sdCoreDevMmcSetRelativeAddr(),以支持MMC卡.
+2010.11.27 增加了几个 API.
+2010.03.30 增加 __sdCoreDevMmcSetRelativeAddr(), 以支持 MMC 卡.
 *********************************************************************************************************/
 
-#ifndef __CORESD_LIB_H
-#define __CORESD_LIB_H
+#ifndef __SDCORE_LIB_H
+#define __SDCORE_LIB_H
 
 INT __sdCoreDecodeCID(LW_SDDEV_CID  *psdcidDec, UINT32 *pRawCID, UINT8 ucType);
 INT __sdCoreDecodeCSD(LW_SDDEV_CSD  *psdcsdDec, UINT32 *pRawCSD, UINT8 ucType);
@@ -50,7 +50,7 @@ INT __sdCoreDevSpiCrcEn(PLW_SDCORE_DEVICE psdcoredevice, BOOL bEnable);
 
 INT __sdCoreDevMmcSetRelativeAddr(PLW_SDCORE_DEVICE psdcoredevice, UINT32 uiRCA);
 
-#endif                                                                  /*  __CORESD_LIB_H              */
+#endif                                                                  /*  __SDCORE_LIB_H              */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

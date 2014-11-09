@@ -462,7 +462,7 @@ int iw_handler_get_iwstats (struct netif             *dev,
 *********************************************************************************************************/
 static iw_handler get_handler (struct netif *dev, unsigned int cmd)
 {
-    int  index;
+    unsigned int  index;                                                /* *MUST* be unsigned           */
     const struct iw_handler_def *handlers = NULL;
     
     if (dev->wireless_handlers) {

@@ -143,7 +143,7 @@ VOID   API_KernelRebootEx (INT  iRebootType, addr_t  ulStartAddress)
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 
 #if LW_CFG_VMM_EN > 0
-    __VMM_MMU_DISABLE();                                                /*  关闭 MMU                    */
+    API_VmmMmuDisable();                                                /*  关闭 MMU                    */
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 
     archReboot(iRebootType, _K_ulRebootStartAddress);                   /*  调用体系架构重启操作        */

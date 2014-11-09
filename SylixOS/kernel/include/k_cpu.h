@@ -29,8 +29,8 @@
   CPU 工作状态 (目前只支持 ACTIVE 模式)
 *********************************************************************************************************/
 
-#define LW_CPU_STATUS_ACTIVE            0x80000000                      /*  CPU 有效                    */
-#define LW_CPU_STATUS_INACTIVE          0x00000000                      /*  CPU 无效                    */
+#define LW_CPU_STATUS_ACTIVE            0x80000000                      /*  CPU 激活                    */
+#define LW_CPU_STATUS_INACTIVE          0x00000000                      /*  CPU 未激活                  */
 
 /*********************************************************************************************************
   CPU 内容 (全部使用 ulong 和 指针型, 使移植方便)
@@ -50,7 +50,7 @@ typedef struct __lw_cpu {
     PLW_CLASS_COROUTINE      CPU_pcrcbCur;                              /*  当前协程                    */
     PLW_CLASS_COROUTINE      CPU_pcrcbNext;                             /*  需要切换的目标协程          */
 #else
-    PVOID                    CPU_pvNull[2];                             /*  保存下面成员偏移量一致      */
+    PVOID                    CPU_pvNull[2];                             /*  保证下面成员地址偏移量一致  */
 #endif                                                                  /*  LW_CFG_COROUTINE_EN > 0     */
 
     /*
@@ -78,14 +78,16 @@ typedef struct __lw_cpu {
     volatile ULONG           CPU_ulIPIPend;                             /*  核间中断标志码              */
 
 #define LW_IPI_NOP              0                                       /*  测试用核间中断向量          */
-#define LW_IPI_SCHED            1                                       /*  调度请求                    */
-#define LW_IPI_STATUS_REQ       2                                       /*  任务状态切换请求            */
-#define LW_IPI_FLUSH_TLB        3                                       /*  更新页表                    */
-#define LW_IPI_FLUSH_CACHE      4                                       /*  回写 CACHE                  */
-#define LW_IPI_DOWN             5                                       /*  CPU 停止工作                */
-#define LW_IPI_CALL             6                                       /*  自定义调用 (有参数可选等待) */
+#define LW_IPI_BOOT             1                                       /*  通知其他核本核正在启动      */
+#define LW_IPI_SCHED            2                                       /*  调度请求                    */
+#define LW_IPI_STATUS_REQ       3                                       /*  任务状态切换请求            */
+#define LW_IPI_FLUSH_TLB        4                                       /*  更新页表                    */
+#define LW_IPI_FLUSH_CACHE      5                                       /*  回写 CACHE                  */
+#define LW_IPI_DOWN             6                                       /*  CPU 停止工作                */
+#define LW_IPI_CALL             7                                       /*  自定义调用 (有参数可选等待) */
 
 #define LW_IPI_NOP_MSK          (1 << LW_IPI_NOP)
+#define LW_IPI_BOOT_MSK         (1 << LW_IPI_BOOT)
 #define LW_IPI_SCHED_MSK        (1 << LW_IPI_SCHED)
 #define LW_IPI_STATUS_REQ_MSK   (1 << LW_IPI_STATUS_REQ)
 #define LW_IPI_FLUSH_TLB_MSK    (1 << LW_IPI_FLUSH_TLB)
