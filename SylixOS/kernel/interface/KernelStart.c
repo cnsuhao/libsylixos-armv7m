@@ -229,10 +229,10 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
         _DebugHandle(__LOGMESSAGE_LEVEL,   "some error occur, kernel is not initialize.\r\n");
         return;
     }
-    _KernelLowLevelInit(pvKernelHeapMem, stKernelHeapSize,
-                        pvSystemHeapMem, stSystemHeapSize);             /*  内核底层初始化              */
+    _KernelPrimaryLowLevelInit(pvKernelHeapMem, stKernelHeapSize,
+                               pvSystemHeapMem, stSystemHeapSize);      /*  内核底层初始化              */
 #else
-    _KernelLowLevelInit();                                              /*  内核底层初始化              */
+    _KernelPrimaryLowLevelInit();                                       /*  内核底层初始化              */
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "kernel interrupt vector initialize...\r\n");
@@ -291,6 +291,8 @@ VOID  API_KernelSecondaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
     if (pfuncStartHook) {                                               /*  用户是否要求需要初始化      */
         pfuncStartHook();                                               /*  用户系统初始化              */
     }
+
+    _KernelSecondaryLowLevelInit();                                     /*  从核底层初始化              */
 
     _KernelSecondaryCoreStartup(pcpuCur);                               /*  主核初始化完毕直接启动多任务*/
 }

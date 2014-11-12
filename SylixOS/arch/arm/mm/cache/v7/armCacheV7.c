@@ -17,6 +17,9 @@
 ** 文件创建日期: 2013 年 12 月 09 日
 **
 ** 描        述: ARMv7 体系构架 CACHE 驱动.
+**
+** BUG:
+2014.11.12  L2 CACHE 只有 CPU 0 才能操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -68,19 +71,24 @@ static INT  armCacheV7Enable (LW_CACHE_TYPE  cachetype)
     if (cachetype == INSTRUCTION_CACHE) {
         armICacheEnable();
 #if LW_CFG_ARM_CACHE_L2 > 0
-        iCacheStatus |= L1_CACHE_I_EN;
+        if (LW_CPU_GET_CUR_ID() == 0) {
+            iCacheStatus |= L1_CACHE_I_EN;
+        }
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
         armBranchPredictionEnable();
 
     } else {
         armDCacheEnable();
 #if LW_CFG_ARM_CACHE_L2 > 0
-        iCacheStatus |= L1_CACHE_D_EN;
+        if (LW_CPU_GET_CUR_ID() == 0) {
+            iCacheStatus |= L1_CACHE_D_EN;
+        }
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
     }
     
 #if LW_CFG_ARM_CACHE_L2 > 0
-    if ((iCacheStatus == L1_CACHE_EN) && !armL2IsEnable()) {
+    if ((LW_CPU_GET_CUR_ID() == 0) && 
+        (iCacheStatus == L1_CACHE_EN)) {
         armL2Enable();
     }
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
@@ -100,24 +108,25 @@ static INT  armCacheV7Disable (LW_CACHE_TYPE  cachetype)
     if (cachetype == INSTRUCTION_CACHE) {
         armICacheDisable();
 #if LW_CFG_ARM_CACHE_L2 > 0
-        iCacheStatus &= ~L1_CACHE_I_EN;
+        if (LW_CPU_GET_CUR_ID() == 0) {
+            iCacheStatus &= ~L1_CACHE_I_EN;
+        }
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
         armBranchPredictionDisable();
         
     } else {
         armDCacheV7Disable();
 #if LW_CFG_ARM_CACHE_L2 > 0
-        iCacheStatus &= ~L1_CACHE_D_EN;
+        if (LW_CPU_GET_CUR_ID() == 0) {
+            iCacheStatus &= ~L1_CACHE_D_EN;
+        }
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
     }
     
 #if LW_CFG_ARM_CACHE_L2 > 0
-    if ((iCacheStatus == L1_CACHE_DIS) && armL2IsEnable()) {
-#if LW_CFG_SMP_EN > 0
-        if (LW_CPU_GET_CUR_ID() == 0) {                                 /*  只有 CPU 0 退出时才关闭 L2  */
-            armL2Disable();
-        }
-#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+    if ((LW_CPU_GET_CUR_ID() == 0) && 
+        (iCacheStatus == L1_CACHE_DIS)) {
+        armL2Disable();
     }
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
      

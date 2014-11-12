@@ -23,8 +23,13 @@
 #define  __K_KERNELINIT_H
 
 /*********************************************************************************************************
-  kernel module
+  kernel init
 *********************************************************************************************************/
+
+VOID  _GlobalPrimaryInit(VOID);                                         /*  全局变量                    */
+#if LW_CFG_SMP_EN > 0
+VOID  _GlobalSecondaryInit(VOID);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 
 VOID  _InterVectInit(VOID);                                             /*  中断向量表初始化            */
 VOID  _ThreadIdInit(VOID);                                              /*  线程 ID 控制块初始化        */
@@ -34,7 +39,6 @@ VOID  _PriorityInit(VOID);                                              /*  优先
 VOID  _EventSetInit(VOID);                                              /*  事件集初始化                */
 VOID  _EventInit(VOID);                                                 /*  事件初始化                  */
 VOID  _ThreadVarInit(VOID);                                             /*  线程私有变量初始化          */
-VOID  _GlobalInit(VOID);                                                /*  全局变量                    */
 VOID  _HeapInit(VOID);                                                  /*  堆控制块初始化              */
 VOID  _MsgQueueInit(VOID);                                              /*  消息队列初始化              */
 VOID  _TimerInit(VOID);                                                 /*  定时器初始化                */
@@ -61,13 +65,17 @@ VOID  _HeapSystemInit(VOID);                                            /*  系统
 *********************************************************************************************************/
 
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE > 0
-VOID  _KernelLowLevelInit(PVOID     pvKernelHeapMem,
-                          size_t    stKernelHeapSize,
-                          PVOID     pvSystemHeapMem,
-                          size_t    stSystemHeapSize);                  /*  系统低端初始化              */
+VOID  _KernelPrimaryLowLevelInit(PVOID     pvKernelHeapMem,
+                                 size_t    stKernelHeapSize,
+                                 PVOID     pvSystemHeapMem,
+                                 size_t    stSystemHeapSize);           /*  系统低端初始化              */
 #else
-VOID  _KernelLowLevelInit(VOID);                                        /*  系统低端初始化              */
+VOID  _KernelPrimaryLowLevelInit(VOID);                                 /*  系统低端初始化              */
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
+
+#if LW_CFG_SMP_EN > 0
+VOID  _KernelSecondaryLowLevelInit(VOID);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 
 VOID  _KernelHighLevelInit(VOID);                                       /*  系统高端初始化              */
 

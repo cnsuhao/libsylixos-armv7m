@@ -48,14 +48,14 @@ LW_STACK    _K_stkInterruptStack[LW_CFG_MAX_PROCESSORS][LW_CFG_INT_STK_SIZE / si
 PLW_STACK   _K_pstkInterruptBase[LW_CFG_MAX_PROCESSORS];                /*  中断处理时的堆栈基地址      */
                                                                         /*  通过 CPU_STK_GROWTH 判断    */
 /*********************************************************************************************************
-** 函数名称: __interStackInit
+** 函数名称: __interPrimaryStackInit
 ** 功能描述: 初始化中断堆栈, (SylixOS 在 SMP 中每一个 CPU 都可以接受中断)
-** 输　入  : 
-** 输　出  : 
+** 输　入  : NONE
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  __interStackInit (VOID)
+static VOID  __interPrimaryStackInit (VOID)
 {
     REGISTER INT        i;
     
@@ -69,14 +69,30 @@ static VOID  __interStackInit (VOID)
     }
 }
 /*********************************************************************************************************
-** 函数名称: __cpuInit
-** 功能描述: 操作系统 CPU 控制块结构初始化
-** 输　入  : 
-** 输　出  : 
+** 函数名称: __interSecondaryStackInit
+** 功能描述: 初始化中断堆栈
+** 输　入  : ulCPUId   CPU ID
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  __cpuInit (VOID)
+#if LW_CFG_SMP_EN > 0
+
+static VOID  __interSecondaryStackInit (ULONG   ulCPUId)
+{
+    lib_memset(_K_stkInterruptStack[ulCPUId], LW_CFG_STK_EMPTY_FLAG, LW_CFG_INT_STK_SIZE);
+}
+
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+/*********************************************************************************************************
+** 函数名称: __cpuPrimaryInit
+** 功能描述: 操作系统 CPU 控制块结构初始化
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __cpuPrimaryInit (VOID)
 {
     REGISTER INT        i;
     
@@ -86,14 +102,31 @@ static VOID  __cpuInit (VOID)
     }
 }
 /*********************************************************************************************************
-** 函数名称: __miscSmpInit
-** 功能描述: 与 SMP 有关的全局变量初始化
-** 输　入  : 
-** 输　出  : 
+** 函数名称: __cpuSecondaryInit
+** 功能描述: 操作系统 CPU 控制块结构初始化
+** 输　入  : ulCPUId   CPU ID
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  __miscSmpInit (VOID)
+#if LW_CFG_SMP_EN > 0
+
+static VOID  __cpuSecondaryInit (ULONG   ulCPUId)
+{
+    LW_CPU_GET(ulCPUId)->CPU_ulStatus = LW_CPU_STATUS_INACTIVE;         /*  CPU INACTIVE                */
+    LW_SPIN_INIT(&_K_tcbDummy[ulCPUId].TCB_slLock);                     /*  初始化自旋锁                */
+}
+
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+/*********************************************************************************************************
+** 函数名称: __miscPrimarySmpInit
+** 功能描述: 与 SMP 有关的全局变量初始化
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __miscPrimarySmpInit (VOID)
 {
     REGISTER INT            i;
              PLW_CLASS_CPU  pcpu;
@@ -110,6 +143,29 @@ static VOID  __miscSmpInit (VOID)
         LW_SPIN_INIT(&pcpu->CPU_slIpi);                                 /*  初始化 CPU spinlock         */
     }
 }
+/*********************************************************************************************************
+** 函数名称: __miscSecondarySmpInit
+** 功能描述: 与 SMP 有关的全局变量初始化
+** 输　入  : ulCPUId   CPU ID
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_SMP_EN > 0
+
+static VOID  __miscSecondarySmpInit (ULONG   ulCPUId)
+{
+    PLW_CLASS_CPU  pcpu = LW_CPU_GET(ulCPUId);
+    
+    LW_CAND_TCB(pcpu) = LW_NULL;                                        /*  候选运行表为空              */
+    LW_CAND_ROT(pcpu) = LW_FALSE;                                       /*  没有优先级卷绕              */
+    
+    pcpu->CPU_iKernelCounter = 1;                                       /*  初始化 1, 当前不允许调度    */
+    pcpu->CPU_ulIPIVector    = __ARCH_ULONG_MAX;                        /*  目前不确定核间中断向量      */
+    LW_SPIN_INIT(&pcpu->CPU_slIpi);                                     /*  初始化 CPU spinlock         */
+}
+
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 /*********************************************************************************************************
 ** 函数名称: __hookInit
 ** 功能描述: hook 初始化
@@ -142,14 +198,14 @@ static VOID  __hookInit (VOID)
     _K_hookKernel.HOOK_CpuIntExit   = LW_NULL;                          /*  CPU 退出中断(异常)模式      */
 }
 /*********************************************************************************************************
-** 函数名称: _GlobalInit
+** 函数名称: _GlobalPrimaryInit
 ** 功能描述: 初始化零散全局变量
-** 输　入  : 
-** 输　出  : 
+** 输　入  : NONE
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID _GlobalInit (VOID)
+VOID _GlobalPrimaryInit (VOID)
 {
     LW_SYS_STATUS_SET(LW_SYS_STATUS_INIT);                              /*  系统状态为初始化状态        */
 
@@ -162,9 +218,9 @@ VOID _GlobalInit (VOID)
     /*
      *  内核关键性数据结构初始化
      */
-    __cpuInit();                                                        /*  CPU 结构初始化              */
-    __interStackInit();                                                 /*  首先初始化中断堆栈          */
-    __miscSmpInit();                                                    /*  SMP 相关初始化              */
+    __cpuPrimaryInit();                                                 /*  CPU 结构初始化              */
+    __interPrimaryStackInit();                                          /*  首先初始化中断堆栈          */
+    __miscPrimarySmpInit();                                             /*  SMP 相关初始化              */
     __hookInit();                                                       /*  hook 初始化                 */
     
     /*
@@ -190,6 +246,26 @@ VOID _GlobalInit (VOID)
     __LW_TICK_CPUUSAGE_ENABLE();                                        /*  启动 CPU 利用率测试         */
 #endif                                                                  /*  LW_CFG_THREAD_CPU_USAGE_... */
 }
+/*********************************************************************************************************
+** 函数名称: _GlobalSecondaryInit
+** 功能描述: 初始化零散全局变量
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_SMP_EN > 0
+
+VOID _GlobalSecondaryInit (VOID)
+{
+    ULONG   ulCPUId = LW_CPU_GET_CUR_ID();
+    
+    __cpuSecondaryInit(ulCPUId);                                        /*  CPU 结构初始化              */
+    __interSecondaryStackInit(ulCPUId);                                 /*  首先初始化中断堆栈          */
+    __miscSecondarySmpInit(ulCPUId);                                    /*  SMP 相关初始化              */
+}
+
+#endif
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

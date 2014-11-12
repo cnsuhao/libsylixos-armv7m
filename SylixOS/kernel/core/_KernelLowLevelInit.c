@@ -24,11 +24,12 @@
 2007.11.08  将用户堆改为内核堆.
 2008.01.24  修改了启动顺序.
 2009.04.06  加入了堆栈检查初始化.
+2014.11.12  内核底层初始化改为主从核分开.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-** 函数名称: _KernelLowLevelInit
+** 函数名称: _KernelPrimaryLowLevelInit
 ** 功能描述: 内核底层初始化
 ** 输　入  : pvKernelHeapMem   内核堆首地址
 **           stKernelHeapSize  内核堆大小
@@ -39,19 +40,19 @@
 ** 调用模块: 
 *********************************************************************************************************/
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE > 0
-VOID  _KernelLowLevelInit (PVOID     pvKernelHeapMem,
-                           size_t    stKernelHeapSize,
-                           PVOID     pvSystemHeapMem,
-                           size_t    stSystemHeapSize)
+VOID  _KernelPrimaryLowLevelInit (PVOID     pvKernelHeapMem,
+                                  size_t    stKernelHeapSize,
+                                  PVOID     pvSystemHeapMem,
+                                  size_t    stSystemHeapSize)
 #else
-VOID  _KernelLowLevelInit (VOID)
+VOID  _KernelPrimaryLowLevelInit (VOID)
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
 {
     PLW_CLASS_CPU   pcpuCur;
 
     _DebugHandle(__LOGMESSAGE_LEVEL, "kernel low level initialize...\r\n");
     
-    _GlobalInit();                                                      /*  全局变量初始化              */
+    _GlobalPrimaryInit();                                               /*  全局变量初始化              */
     _StackCheckInit();                                                  /*  堆栈检查初始化              */
     _InterVectInit();                                                   /*  初始化中断向量表            */
     _ReadyTableInit();                                                  /*  就绪表初始化                */
@@ -90,6 +91,22 @@ VOID  _KernelLowLevelInit (VOID)
 
     LW_KERNEL_JOB_INIT();                                               /*  初始化内核工作队列          */
 }
+/*********************************************************************************************************
+** 函数名称: _KernelSecondaryLowLevelInit
+** 功能描述: 内核底层初始化
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_SMP_EN > 0
+
+VOID  _KernelSecondaryLowLevelInit (VOID)
+{
+    _GlobalSecondaryInit();                                             /*  全局变量初始化              */
+}
+
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/

@@ -85,7 +85,7 @@ VOID   API_InterShow (VOID)
     printf("interrupt vector show >>\n");
     printf(_G_cInterInfoHdr1);                                          /*  ¥Ú”°ª∂”≠–≈œ¢                */
     for (i = 0; i < LW_NCPUS; i++) {
-        printf("     CPU%2d   ", i);
+        printf("     CPU%2d    ", i);
     }
     
     printf(_G_cInterInfoHdr2);
