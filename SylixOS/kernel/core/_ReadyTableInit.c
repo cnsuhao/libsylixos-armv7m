@@ -23,29 +23,22 @@
 /*********************************************************************************************************
 ** 函数名称: _ReadyTableInit
 ** 功能描述: 初始化就绪表
-** 输　入  : 
-** 输　出  : 
+** 输　入  : NONE
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
 VOID  _ReadyTableInit (VOID)
 {
-    REGISTER UINT8    ucI;
-    REGISTER UINT8    ucJ;
-    REGISTER UINT8   *pucReadyTable;
-
-    _K_ucThreadReadyBank = 0x00;                                        /*  没有任务就绪                */
-
-    for (ucI = 0; ucI < __BANK_NUM; ucI++) {
-        _K_ucThreadReadyGroup[ucI] = 0x00;
+#if LW_CFG_SMP_EN > 0
+    REGISTER ULONG    i;
+    
+    for (i = 0; i < LW_CFG_MAX_PROCESSORS; i++) {
+        _BitmapInit(LW_CPU_RDY_BMAP(LW_CPU_GET(i)));
     }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 
-    pucReadyTable = &_K_ucThreadReadyTable[0][0];
-    for (ucJ = 0; ucJ < __BANK_NUM; ucJ++) {
-        for (ucJ = 0; ucJ < __RDY_TBL_SIZE; ucJ++) {
-            *pucReadyTable++ = 0x00;
-        }
-    }
+    _BitmapInit(LW_GLOBAL_RDY_BMAP());
 }
 /*********************************************************************************************************
   END

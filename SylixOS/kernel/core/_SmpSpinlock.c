@@ -345,7 +345,7 @@ VOID  _SmpSpinUnlockIrqQuick (spinlock_t *psl, INTREG  iregInterLevel)
 }
 /*********************************************************************************************************
 ** 函数名称: _SmpSpinUnlockSched
-** 功能描述: SMP 调度器切换完成后专用释放函数
+** 功能描述: SMP 调度器切换完成后专用释放函数 (关中断状态下被调用)
 ** 输　入  : psl           自旋锁
 **           ptcbOwner     锁的持有者
 ** 输　出  : NONE

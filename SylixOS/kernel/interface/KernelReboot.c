@@ -62,10 +62,21 @@ static addr_t   _K_ulRebootStartAddress;                                /*  重新
 static VOID  __makeOtherDown (VOID)
 {
     ULONG   i;
+    BOOL    bNeedWait;
     
     for (i = 1; i < LW_NCPUS; i++) {                                    /*  除 0 以外的其他 CPU         */
         API_CpuDown(i);
     }
+    
+    do {
+        bNeedWait = LW_FALSE;
+        for (i = 1; i < LW_NCPUS; i++) {
+            if (API_CpuIsUp(i)) {                                       /*  确保除 0 核外, 其他 CPU 全关*/
+                bNeedWait = LW_TRUE;
+            }
+        }
+        LW_SPINLOCK_DELAY();
+    } while (bNeedWait);
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */

@@ -463,6 +463,16 @@ ULONG          _ThreadUserGet(LW_HANDLE  ulId, uid_t  *puid, gid_t  *pgid);
 INT            _ThreadSched(PLW_CLASS_TCB  ptcbCur);
 
 /*********************************************************************************************************
+  线程锁定 CPU 操作
+*********************************************************************************************************/
+
+#if LW_CFG_SMP_EN > 0
+VOID           _ThreadSetAffinity(PLW_CLASS_TCB  ptcb, size_t stSize, const PLW_CLASS_CPUSET  pcpuset);
+VOID           _ThreadGetAffinity(PLW_CLASS_TCB  ptcb, size_t stSize, PLW_CLASS_CPUSET  pcpuset);
+VOID           _ThreadOffAffinity(PLW_CLASS_CPU  pcpu);
+#endif                                                                  /*  LW_CFG_SMP_EN               */
+
+/*********************************************************************************************************
   强制改变线程状态
 *********************************************************************************************************/
 

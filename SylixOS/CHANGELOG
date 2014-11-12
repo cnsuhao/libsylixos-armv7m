@@ -4,7 +4,10 @@ HISTORY
 
 ++ New features:
 
-    2014-11-15: han.hui
+    2014-11-11: han.hui
+    加入了调度亲和度模型, 当前支持将指定的线程或进程锁定到指定的 CPU.
+
+    2014-11-05: han.hui
     加入了一些 POSIX 接口函数.
     
     2014-10-15: han.hui

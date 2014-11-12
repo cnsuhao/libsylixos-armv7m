@@ -34,6 +34,7 @@
 2011.05.20  当 __vmmLibGetFlag() 获得非有效映射时, 必须返回映射无效错误.
 2013.08.20  无效快表时, 需要通知其他的 CPU 无效快表.
 2013.07.20  加入主从核分离的 MMU 初始化.
+2014.11.09  VMM LIB 初始化不再启动 MMU.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -162,9 +163,7 @@ ULONG  __vmmLibSecondaryInit (CPCHAR  pcMachineName)
     }
     
     __VMM_MMU_MAKE_CURCTX(pmmuctx);                                     /*  设置页表位置                */
-    
     KN_SMP_MB();
-    __VMM_MMU_ENABLE();                                                 /*  启动 MMU                    */
     
     return  (ERROR_NONE);
 }

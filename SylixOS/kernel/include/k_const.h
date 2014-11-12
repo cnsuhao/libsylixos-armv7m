@@ -26,11 +26,12 @@
 #define  __K_CONST_H
 
 /*********************************************************************************************************
-  READY TABLE
+  全局就绪表
 *********************************************************************************************************/
 
-#define __BANK_NUM                  4                                   /*  调度表分区数                */
-#define __RDY_TBL_SIZE              8                                   /*  就续表位图大小              */
+#define LW_GLOBAL_RDY_PCBBMAP()     (&(_K_pcbbmapGlobalReady))
+#define LW_GLOBAL_RDY_BMAP()        (&(_K_pcbbmapGlobalReady.PCBM_bmap))
+#define LW_GLOBAL_RDY_PPCB(prio)    (&(_K_pcbbmapGlobalReady.PCBM_pcb[prio]))
 
 /*********************************************************************************************************
   TCB 的字节数定义，相对于字对齐的字节数

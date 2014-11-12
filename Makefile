@@ -261,6 +261,7 @@ SylixOS/gui/input_device/input_device.c
 #*********************************************************************************************************
 KERN_SRCS = \
 SylixOS/kernel/cache/cache.c \
+SylixOS/kernel/core/_BitmapLib.c \
 SylixOS/kernel/core/_CandTable.c \
 SylixOS/kernel/core/_CoroutineLib.c \
 SylixOS/kernel/core/_CoroutineShell.c \
@@ -291,6 +292,7 @@ SylixOS/kernel/core/_PartitionLib.c \
 SylixOS/kernel/core/_PriorityInit.c \
 SylixOS/kernel/core/_ReadyRing.c \
 SylixOS/kernel/core/_ReadyTableInit.c \
+SylixOS/kernel/core/_ReadyTableLib.c \
 SylixOS/kernel/core/_RmsInit.c \
 SylixOS/kernel/core/_RmsLib.c \
 SylixOS/kernel/core/_RtcInit.c \
@@ -299,6 +301,7 @@ SylixOS/kernel/core/_SchedCand.c \
 SylixOS/kernel/core/_SmpIpi.c \
 SylixOS/kernel/core/_SmpSpinlock.c \
 SylixOS/kernel/core/_StackCheckInit.c \
+SylixOS/kernel/core/_ThreadAffinity.c \
 SylixOS/kernel/core/_ThreadFpu.c \
 SylixOS/kernel/core/_ThreadIdInit.c \
 SylixOS/kernel/core/_ThreadInit.c \
@@ -425,6 +428,7 @@ SylixOS/kernel/interface/SemaphoreMStatusEx.c \
 SylixOS/kernel/interface/SemaphorePend.c \
 SylixOS/kernel/interface/SemaphorePost.c \
 SylixOS/kernel/interface/SemaphorePostPend.c \
+SylixOS/kernel/interface/ThreadAffinity.c \
 SylixOS/kernel/interface/ThreadAttrBuild.c \
 SylixOS/kernel/interface/ThreadCancel.c \
 SylixOS/kernel/interface/ThreadCancelWatchDog.c \
@@ -716,6 +720,7 @@ SylixOS/lib/nl_compatible/nl_reent.c
 LOADER_SRCS = \
 SylixOS/loader/elf/elf_loader.c \
 SylixOS/loader/src/loader.c \
+SylixOS/loader/src/loader_affinity.c \
 SylixOS/loader/src/loader_exec.c \
 SylixOS/loader/src/loader_file.c \
 SylixOS/loader/src/loader_malloc.c \

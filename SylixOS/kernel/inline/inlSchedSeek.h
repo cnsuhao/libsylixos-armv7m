@@ -26,20 +26,41 @@
   调度器查询有就绪线程的最高优先级内联函数
 *********************************************************************************************************/
 
-static LW_INLINE UINT8  _SchedSeekPriority (VOID)
+static LW_INLINE PLW_CLASS_PCBBMAP  _SchedSeekPriority (PLW_CLASS_CPU  pcpu, UINT8 *ucPriority)
 {
-    REGISTER UINT8    ucX;
-    REGISTER UINT8    ucY;
-    REGISTER UINT8    ucZ;
-    REGISTER UINT8    ucPriority;
+#if LW_CFG_SMP_EN > 0
+    UINT8               ucLocal, ucGlobal;
+    PLW_CLASS_PCBBMAP   ppcbbmap;
     
-    ucZ = _K_ucLsbBitmap[_K_ucThreadReadyBank];
-    ucY = _K_ucLsbBitmap[_K_ucThreadReadyGroup[ucZ]];
-    ucX = _K_ucLsbBitmap[_K_ucThreadReadyTable[ucZ][ucY]];
+    if (_BitmapIsEmpty(LW_CPU_RDY_BMAP(pcpu))) {
+        ppcbbmap    = LW_GLOBAL_RDY_PCBBMAP();
+        ucGlobal    = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
+        *ucPriority = ucGlobal;
     
-    ucPriority = (UINT8)((ucZ << 6) + (ucY << 3) + ucX);
+    } else if (_BitmapIsEmpty(LW_GLOBAL_RDY_BMAP())) {
+        ppcbbmap    = LW_CPU_RDY_PCBBMAP(pcpu);
+        ucGlobal    = _BitmapHigh(LW_CPU_RDY_BMAP(pcpu));
+        *ucPriority = ucGlobal;
+        
+    } else {
+        ucLocal  = _BitmapHigh(LW_CPU_RDY_BMAP(pcpu));
+        ucGlobal = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
+        if (LW_PRIO_IS_HIGH(ucLocal, ucGlobal)) {
+            ppcbbmap    = LW_CPU_RDY_PCBBMAP(pcpu);
+            *ucPriority = ucLocal;
+        
+        } else {
+            ppcbbmap    = LW_GLOBAL_RDY_PCBBMAP();
+            *ucPriority = ucGlobal;
+        }
+    }
     
-    return  (ucPriority);
+    return  (ppcbbmap);
+#else
+    *ucPriority = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
+    
+    return  (LW_GLOBAL_RDY_PCBBMAP());
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 }
 
 #endif                                                                  /*  __INLSCHEDSEEK_H            */

@@ -618,7 +618,7 @@ pid_t  vprocGetPidByTcbdesc (PLW_CLASS_TCB_DESC  ptcbdesc)
 *********************************************************************************************************/
 LW_OBJECT_HANDLE vprocMainThread (pid_t pid)
 {
-    LW_OBJECT_HANDLE  lId = LW_HANDLE_INVALID;
+    LW_OBJECT_HANDLE  lId = LW_OBJECT_HANDLE_INVALID;
     
     if (pid > 0 && pid < LW_CFG_MAX_THREADS) {
         LW_LD_LOCK();
@@ -1442,7 +1442,8 @@ INT  vprocThreadNum (pid_t pid, ULONG  *pulCnt)
 ** 函数名称: vprocThreadTraversal
 ** 功能描述: 遍历进程内的所有线程
 ** 输　入  : pvVProc    进程控制块指针
-**           ptcb       线程控制块
+**           pfunc      回调函数
+**           pvArg0 ~ 5 回调参数
 ** 输　出  : NONE
 ** 全局变量:
 ** 调用模块:
@@ -1469,6 +1470,50 @@ VOID  vprocThreadTraversal (PVOID          pvVProc,
         pfunc(ptcb->TCB_ulId, pvArg0, pvArg1, pvArg2, pvArg3, pvArg4, pvArg5);
     }
     LW_VP_UNLOCK(pvproc);
+}
+/*********************************************************************************************************
+** 函数名称: vprocThreadTraversal
+** 功能描述: 遍历进程内的所有线程
+** 输　入  : pid        进程
+**           pfunc      回调函数
+**           pvArg0 ~ 5 回调参数
+** 输　出  : ERROR
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+INT  vprocThreadTraversal2 (pid_t          pid, 
+                            VOIDFUNCPTR    pfunc, 
+                            PVOID          pvArg0,
+                            PVOID          pvArg1,
+                            PVOID          pvArg2,
+                            PVOID          pvArg3,
+                            PVOID          pvArg4,
+                            PVOID          pvArg5)
+{
+    LW_LD_VPROC    *pvproc;
+    PLW_LIST_LINE   plineTemp;
+    PLW_CLASS_TCB   ptcb;
+    
+    LW_LD_LOCK();
+    pvproc = vprocGet(pid);
+    if (!pvproc) {
+        LW_LD_UNLOCK();
+        _ErrorHandle(ESRCH);
+        return  (PX_ERROR);
+    }
+    
+    LW_VP_LOCK(pvproc);
+    for (plineTemp  = pvproc->VP_plineThread;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {
+    
+        ptcb = _LIST_ENTRY(plineTemp, LW_CLASS_TCB, TCB_lineProcess);
+        pfunc(ptcb->TCB_ulId, pvArg0, pvArg1, pvArg2, pvArg3, pvArg4, pvArg5);
+    }
+    LW_VP_UNLOCK(pvproc);
+    LW_LD_UNLOCK();
+    
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: vprocModuleFind

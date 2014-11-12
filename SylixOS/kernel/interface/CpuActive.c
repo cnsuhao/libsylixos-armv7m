@@ -17,6 +17,8 @@
 ** 文件创建日期: 2014 年 07 月 21 日
 **
 ** 描        述: SMP 系统开启/关闭一个 CPU.
+**
+** 注        意: 对 CPU 的启动和停止不可重入.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -44,10 +46,10 @@ ULONG  API_CpuUp (ULONG  ulCPUId)
         return  (EINVAL);
     }
     
-    pcpu = LW_CPU_GET(ulCPUId);
-    
     KN_SMP_MB();
-    if (LW_CPU_IS_ACTIVE(pcpu)) {
+    pcpu = LW_CPU_GET(ulCPUId);
+    if (LW_CPU_IS_ACTIVE(pcpu) || 
+        (LW_CPU_GET_IPI_PEND2(pcpu) & LW_IPI_DOWN_MSK)) {
         return  (ERROR_NONE);
     }
     
@@ -59,7 +61,7 @@ ULONG  API_CpuUp (ULONG  ulCPUId)
 }
 /*********************************************************************************************************
 ** 函数名称: API_CpuDown
-** 功能描述: 关闭一个 CPU. (非 0 号 CPU)
+** 功能描述: 关闭一个 CPU. (非 0 号 CPU, 调用后并不是马上关闭, 需要延迟使用 API_CpuIsUp 探测)
 ** 输　入  : ulCPUId       CPU ID
 ** 输　出  : ERROR
 ** 全局变量: 
@@ -77,17 +79,20 @@ ULONG  API_CpuDown (ULONG  ulCPUId)
         return  (EINVAL);
     }
     
+    __KERNEL_ENTER();
     pcpu = LW_CPU_GET(ulCPUId);
-    
-    KN_SMP_MB();
-    if (!LW_CPU_IS_ACTIVE(pcpu)) {
+    if (!LW_CPU_IS_ACTIVE(pcpu) || 
+        (LW_CPU_GET_IPI_PEND2(pcpu) & LW_IPI_DOWN_MSK)) {
+        __KERNEL_EXIT();
         return  (ERROR_NONE);
     }
     
+    LW_CPU_ADD_IPI_PEND2(pcpu, LW_IPI_DOWN_MSK);
+    _ThreadOffAffinity(pcpu);                                           /*  关闭与此 CPU 有关的亲和度   */
+    __KERNEL_EXIT();
+    
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
-    
-    _SmpSendIpi(ulCPUId, LW_IPI_DOWN, 1);                               /*  使用核间中断通知 CPU 停止   */
-    
+    _SmpSendIpi(ulCPUId, LW_IPI_DOWN, 0);                               /*  使用核间中断通知 CPU 停止   */
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
     
     return  (ERROR_NONE);
@@ -111,9 +116,8 @@ BOOL  API_CpuIsUp (ULONG  ulCPUId)
         return  (LW_FALSE);
     }
     
-    pcpu = LW_CPU_GET(ulCPUId);
-    
     KN_SMP_MB();
+    pcpu = LW_CPU_GET(ulCPUId);
     if (LW_CPU_IS_ACTIVE(pcpu)) {
         return  (LW_TRUE);
     

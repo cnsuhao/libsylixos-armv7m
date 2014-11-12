@@ -10,56 +10,61 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: KernelGetThreadNum.c
+** 文   件   名: _ReadyTableLib.c
 **
 ** 创   建   人: Han.Hui (韩辉)
 **
-** 文件创建日期: 2007 年 05 月 11 日
+** 文件创建日期: 2014 年 11 月 11 日
 **
-** 描        述: 用户可以调用这个 API 获得当前线程数量
-
-** BUG
-2008.05.18  使用 __KERNEL_ENTER() 代替 ThreadLock();
-2008.05.31  改为关闭中断方式.
+** 描        述: 这是系统就绪表操作函数库。
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-** 函数名称: API_KernelGetThreadNum
-** 功能描述: 获得当前线程数量
-** 输　入  : NONE
-** 输　出  : 当前线程数量
+** 函数名称: _ReadyTableAdd
+** 功能描述: 指定线程加入就绪表
+** 输　入  : ptcb      线程控制块
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-                                           API 函数
 *********************************************************************************************************/
-LW_API  
-UINT16  API_KernelGetThreadNum (VOID)
+VOID  _ReadyTableAdd (PLW_CLASS_TCB  ptcb)
 {
-    REGISTER UINT16     usThreadNum;
+    PLW_CLASS_PCBBMAP   ppcbbmap;
     
-    __KERNEL_ENTER();                                                   /*  进入内核                    */
-    usThreadNum = _K_usThreadCounter;
-    __KERNEL_EXIT();                                                    /*  退出内核                    */
-
-    return  (usThreadNum);
+#if LW_CFG_SMP_EN > 0
+    if (ptcb->TCB_bCPULock) {
+        ppcbbmap = LW_CPU_RDY_PCBBMAP(LW_CPU_GET(ptcb->TCB_ulCPULock));
+    } else 
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */    
+    {
+        ppcbbmap = LW_GLOBAL_RDY_PCBBMAP();
+    }
+    
+    _BitmapAdd(&ppcbbmap->PCBM_bmap, ptcb->TCB_ucPriority);
 }
 /*********************************************************************************************************
-** 函数名称: API_KernelGetThreadNumByPriority
-** 功能描述: 获得内核指定优先级的线程数量
-** 输　入  : NONE
-** 输　出  : 内核指定优先级的线程数量
+** 函数名称: _ReadyTableDel
+** 功能描述: 指定线程退出就绪表
+** 输　入  : ptcb      线程控制块
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : 从 1.0.0-rc44 版本开始, 不再支持此函数.
-
-                                           API 函数
 *********************************************************************************************************/
-LW_API  
-UINT16  API_KernelGetThreadNumByPriority (UINT8  ucPriority)
+VOID  _ReadyTableDel (PLW_CLASS_TCB  ptcb)
 {
-    _ErrorHandle(ENOSYS);
-    return  (0);
+    PLW_CLASS_PCBBMAP   ppcbbmap;
+    
+#if LW_CFG_SMP_EN > 0
+    if (ptcb->TCB_bCPULock) {
+        ppcbbmap = LW_CPU_RDY_PCBBMAP(LW_CPU_GET(ptcb->TCB_ulCPULock));
+    } else 
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */    
+    {
+        ppcbbmap = LW_GLOBAL_RDY_PCBBMAP();
+    }
+    
+    _BitmapDel(&ppcbbmap->PCBM_bmap, ptcb->TCB_ucPriority);
 }
 /*********************************************************************************************************
   END

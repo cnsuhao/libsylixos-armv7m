@@ -69,7 +69,7 @@ VOID  _SchedTick (VOID)
              INTREG         iregInterLevel;
     REGISTER PLW_CLASS_CPU  pcpu;
     REGISTER PLW_CLASS_TCB  ptcb;
-    REGISTER UINT8          ucPriority;
+             UINT8          ucPriority;
              INT            i;
              
     LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  锁内核 spinlock 关闭中断    */
@@ -86,7 +86,7 @@ VOID  _SchedTick (VOID)
             if (ptcb->TCB_ucSchedPolicy == LW_OPTION_SCHED_RR) {        /*  round-robin 线程            */
                 if (ptcb->TCB_usSchedCounter == 0) {                    /*  时间片已经耗尽              */
                     if (LW_CAND_ROT(pcpu) == LW_FALSE) {
-                        ucPriority = _SchedSeekPriority();              /*  就绪未运行任务的最高优先级  */
+                        _SchedSeekPriority(pcpu, &ucPriority);          /*  就绪未运行任务的最高优先级  */
                         if (LW_PRIO_IS_HIGH_OR_EQU(ucPriority,
                                                    ptcb->TCB_ucPriority)) {
                             LW_CAND_ROT(pcpu) = LW_TRUE;                /*  下次调度时检查轮转          */
@@ -117,10 +117,12 @@ VOID  _SchedTick (VOID)
 
 VOID  _SchedYield (PLW_CLASS_TCB  ptcb, PLW_CLASS_PCB  ppcb)
 {
-    REGISTER UINT8          ucPriority;
+             UINT8          ucPriority;
+    REGISTER PLW_CLASS_CPU  pcpu;
 
     if (__LW_THREAD_IS_RUNNING(ptcb)) {                                 /*  必须正在执行                */
-        ucPriority = _SchedSeekPriority();                              /*  就绪未运行任务的最高优先级  */
+        pcpu = LW_CPU_GET_CUR();
+        _SchedSeekPriority(pcpu, &ucPriority);                          /*  就绪未运行任务的最高优先级  */
         if (LW_PRIO_IS_HIGH_OR_EQU(ucPriority,
                                    ptcb->TCB_ucPriority)) {
             ptcb->TCB_usSchedCounter = 0;                               /*  没收剩余时间片              */

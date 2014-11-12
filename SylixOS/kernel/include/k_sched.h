@@ -74,7 +74,6 @@ VOID  _CandTableRemove(PLW_CLASS_CPU  pcpu);
 
 #define __ADD_TO_READY_RING(ptcb, ppcb)                         \
         do {                                                    \
-            (ppcb)->PCB_usThreadReadyCounter++;                 \
             if (!_CandTableTryAdd((ptcb), (ppcb))) {            \
                 _AddTCBToReadyRing((ptcb), (ppcb), LW_FALSE);   \
             }                                                   \
@@ -82,7 +81,6 @@ VOID  _CandTableRemove(PLW_CLASS_CPU  pcpu);
         
 #define __DEL_FROM_READY_RING(ptcb, ppcb)                       \
         do {                                                    \
-            (ppcb)->PCB_usThreadReadyCounter--;                 \
             if (!(ptcb)->TCB_bIsCand) {                         \
                 _DelTCBFromReadyRing((ptcb), (ppcb));           \
             }                                                   \

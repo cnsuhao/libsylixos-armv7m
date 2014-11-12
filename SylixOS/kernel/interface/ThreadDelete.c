@@ -141,9 +141,6 @@ ULONG  __threadDelete (PLW_CLASS_TCB  ptcbDel, BOOL  bIsInSafe,
         ptcbDel->TCB_ulWatchDog = 0ul;
     }
 #endif
-    
-    ppcbDel->PCB_usThreadCounter--;                                     /*  存在线程数目--              */
-    
     KN_INT_ENABLE(iregInterLevel);
     
     pvFreeLowAddr = (PVOID)ptcbDel->TCB_pstkStackLowAddr;               /*  记录地址                    */

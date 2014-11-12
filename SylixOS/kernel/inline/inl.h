@@ -35,7 +35,7 @@
 #include "../SylixOS/kernel/inline/inlObject.h"
 #include "../SylixOS/kernel/inline/inlWordAlign.h"
 #include "../SylixOS/kernel/inline/inlObjectCheck.h"
-#include "../SylixOS/kernel/inline/inlGetPCB.h"
+#include "../SylixOS/kernel/inline/inlGetPcb.h"
 #include "../SylixOS/kernel/inline/inlSearchEventQueue.h"
 #include "../SylixOS/kernel/inline/inlResourceRecord.h"
 #include "../SylixOS/kernel/inline/inlThreadExist.h"

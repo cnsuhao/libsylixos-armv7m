@@ -466,6 +466,12 @@ typedef struct __lw_tcb {
      *  新型 SMP 调度器元素
      */
     LW_SPINLOCK_DEFINE   (TCB_slLock);                                  /*  自旋锁                      */
+    
+#if LW_CFG_SMP_EN > 0
+    BOOL                  TCB_bCPULock;                                 /*  是否锁定运行 CPU ID         */
+    ULONG                 TCB_ulCPULock;                                /*  锁定运行的 CPU ID           */
+#endif                                                                  /*  LW_CFG_SMP_EN               */
+
     ULONG                 TCB_ulCPUId;                                  /*  优先使用的 CPU 号           */
                                                                         /*  如果正在运行, 表示运行 CPU  */
     BOOL                  TCB_bIsCand;                                  /*  是否在候选运行表中          */
@@ -733,28 +739,34 @@ typedef struct __lw_tcb_desc {
 typedef LW_CLASS_TCB_DESC   *PLW_CLASS_TCB_DESC;
 
 /*********************************************************************************************************
-*                                        优先级控制块
+  位图表
+*********************************************************************************************************/
+
+typedef struct {
+    UINT32                BMAP_uiMap;                                   /*  主位图掩码                  */
+    UINT32                BMAP_uiSubMap[(LW_PRIO_LOWEST >> 5) + 1];     /*  辅位图掩码                  */
+} LW_CLASS_BMAP;
+typedef LW_CLASS_BMAP    *PLW_CLASS_BMAP;
+
+/*********************************************************************************************************
+  优先级控制块
 *********************************************************************************************************/
 
 typedef struct {
     LW_LIST_RING_HEADER   PCB_pringReadyHeader;                         /*  就绪非运行线程环表          */
-    
     UINT8                 PCB_ucPriority;                               /*  优先级                      */
-    UINT16                PCB_usThreadCounter;                          /*  当前优先级线程数量          */
-    UINT16                PCB_usThreadReadyCounter;                     /*  就绪线程数量                */
-    UINT16                PCB_usThreadCandCounter;                      /*  在候选运行表中的线程数量    */
-    
-    UINT8                 PCB_ucX;                                      /*  当前优先级在就绪表中的位置  */
-    UINT8                 PCB_ucY;
-    UINT8                 PCB_ucZ;
-    
-    UINT8                 PCB_ucMaskBitX;                               /*  当前优先级位掩码            */
-    UINT8                 PCB_ucMaskBitY;
-    UINT8                 PCB_ucMaskBitZ;
-    
-    LW_SPINLOCK_DEFINE   (PCB_slLock);                                  /*  自旋锁                      */
 } LW_CLASS_PCB;
 typedef LW_CLASS_PCB     *PLW_CLASS_PCB;
+
+/*********************************************************************************************************
+  就绪表
+*********************************************************************************************************/
+
+typedef struct {
+    LW_CLASS_BMAP         PCBM_bmap;
+    LW_CLASS_PCB          PCBM_pcb[LW_PRIO_LOWEST + 1];
+} LW_CLASS_PCBBMAP;
+typedef LW_CLASS_PCBBMAP *PLW_CLASS_PCBBMAP;
 
 /*********************************************************************************************************
   RATE MONO SCHEDLER

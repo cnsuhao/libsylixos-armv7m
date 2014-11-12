@@ -749,24 +749,36 @@ int  pthread_int_unlock_np (pthread_int_t irqctx)
 }
 /*********************************************************************************************************
 ** 函数名称: pthread_setaffinity_np
-** 功能描述: 设置进程调度的 CPU 集合
+** 功能描述: 设置线程调度的 CPU 集合
 ** 输　入  : pid           进程 / 线程 ID
 **           setsize       CPU 集合大小
 **           set           CPU 集合
 ** 输　出  : ERROR or OK
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : SylixOS 目前仅支持将任务锁定到一个 CPU, 所以这里只能将线程锁定到指定的最小 CPU 号上.
+**
                                            API 函数
 *********************************************************************************************************/
 LW_API 
 int  pthread_setaffinity_np (pthread_t  thread, size_t setsize, const cpu_set_t *set)
 {
-    _ErrorHandle(ENOSYS);
-    return  (PX_ERROR);
+#if LW_CFG_SMP_EN > 0
+    if (!setsize || !set) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
+    }
+    if (API_ThreadSetAffinity(thread, setsize, (PLW_CLASS_CPUSET)set)) {
+        _ErrorHandle(ESRCH);
+        return  (ESRCH);
+    }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: pthread_getaffinity_np
-** 功能描述: 获取进程调度的 CPU 集合
+** 功能描述: 获取线程调度的 CPU 集合
 ** 输　入  : pid           进程 / 线程 ID
 **           setsize       CPU 集合大小
 **           set           CPU 集合
@@ -778,22 +790,16 @@ int  pthread_setaffinity_np (pthread_t  thread, size_t setsize, const cpu_set_t 
 LW_API 
 int  pthread_getaffinity_np (pthread_t  thread, size_t setsize, cpu_set_t *set)
 {
-    ULONG   i;
-    
-    if (!set || (setsize < sizeof(cpu_set_t))) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
-    }
-    
-    for (i = 0; i < LW_NCPUS; i++) {
 #if LW_CFG_SMP_EN > 0
-        if (API_CpuIsUp(i)) {
-            CPU_SET(i, set);
-        }
-#else
-        CPU_SET(i, set);
-#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+    if ((setsize < sizeof(cpu_set_t)) || !set) {
+        _ErrorHandle(EINVAL);
+        return  (EINVAL);
     }
+    if (API_ThreadGetAffinity(thread, setsize, set)) {
+        _ErrorHandle(ESRCH);
+        return  (ESRCH);
+    }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     
     return  (ERROR_NONE);
 }

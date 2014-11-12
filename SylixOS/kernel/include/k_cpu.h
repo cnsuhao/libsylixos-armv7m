@@ -64,6 +64,12 @@ typedef struct __lw_cpu {
     LW_CLASS_CAND            CPU_cand;                                  /*  候选运行的线程              */
 
     /*
+     *  当前核就绪表
+     */
+#if LW_CFG_SMP_EN > 0
+    LW_CLASS_PCBBMAP         CPU_pcbbmapReady;                          /*  当前 CPU 就绪表             */
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+    /*
      *  内核锁定状态
      */
     volatile INT             CPU_iKernelCounter;                        /*  内核状态计数器              */
@@ -129,6 +135,24 @@ typedef struct __lw_cpu {
 typedef LW_CLASS_CPU        *PLW_CLASS_CPU;
 
 /*********************************************************************************************************
+  CPU 集合
+*********************************************************************************************************/
+
+#define LW_CPU_SETSIZE      2048
+#define LW_NCPUBITS         (sizeof(ULONG) * 8)                         /*  每一个单位掩码的位数        */
+#define LW_NCPUULONG        (LW_CPU_SETSIZE / LW_NCPUBITS)
+
+typedef struct {
+    ULONG                   cpus_bits[LW_NCPUULONG];
+} LW_CLASS_CPUSET;
+typedef LW_CLASS_CPUSET    *PLW_CLASS_CPUSET;
+
+#define LW_CPU_SET(n, p)    ((p)->cpus_bits[(n) / LW_NCPUBITS] |= (ULONG)( (1u << ((n) % LW_NCPUBITS))))
+#define LW_CPU_CLR(n, p)    ((p)->cpus_bits[(n) / LW_NCPUBITS] &= (ULONG)(~(1u << ((n) % LW_NCPUBITS))))
+#define LW_CPU_ISSET(n, p)  ((p)->cpus_bits[(n) / LW_NCPUBITS] &  (ULONG)( (1u << ((n) % LW_NCPUBITS))))
+#define LW_CPU_ZERO(p)      lib_bzero((PVOID)(p), sizeof(*(p)))
+
+/*********************************************************************************************************
   当前 CPU 信息 LW_NCPUS 决不能大于 LW_CFG_MAX_PROCESSORS
 *********************************************************************************************************/
 
@@ -146,6 +170,16 @@ ULONG   archMpCur(VOID);
 extern LW_CLASS_CPU          _K_cpuTable[];                             /*  处理器表                    */
 #define LW_CPU_GET_CUR()     (&_K_cpuTable[LW_CPU_GET_CUR_ID()])        /*  获得当前 CPU 结构           */
 #define LW_CPU_GET(id)       (&_K_cpuTable[(id)])                       /*  获得指定 CPU 结构           */
+
+/*********************************************************************************************************
+  CPU 就绪表
+*********************************************************************************************************/
+
+#if LW_CFG_SMP_EN > 0
+#define LW_CPU_RDY_PCBBMAP(pcpu)        (&(pcpu->CPU_pcbbmapReady))
+#define LW_CPU_RDY_BMAP(pcpu)           (&(pcpu->CPU_pcbbmapReady.PCBM_bmap))
+#define LW_CPU_RDY_PPCB(pcpu, prio)     (&(pcpu->CPU_pcbbmapReady.PCBM_pcb[prio]))
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 
 /*********************************************************************************************************
   CPU 状态

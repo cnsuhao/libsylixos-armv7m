@@ -374,8 +374,18 @@ int  sched_rr_get_interval (pid_t  pid, struct timespec  *interval)
 LW_API 
 int  sched_setaffinity (pid_t pid, size_t setsize, const cpu_set_t *set)
 {
-    _ErrorHandle(ENOSYS);
-    return  (PX_ERROR);
+#if LW_CFG_SMP_EN > 0
+    if (!setsize || !set) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    if (vprocSetAffinity(pid, setsize, (PLW_CLASS_CPUSET)set)) {
+        _ErrorHandle(ESRCH);
+        return  (PX_ERROR);
+    }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: sched_getaffinity
@@ -391,22 +401,16 @@ int  sched_setaffinity (pid_t pid, size_t setsize, const cpu_set_t *set)
 LW_API 
 int  sched_getaffinity (pid_t pid, size_t setsize, cpu_set_t *set)
 {
-    ULONG   i;
-    
-    if (!set || (setsize < sizeof(cpu_set_t))) {
+#if LW_CFG_SMP_EN > 0
+    if ((setsize < sizeof(cpu_set_t)) || !set) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
-    
-    for (i = 0; i < LW_NCPUS; i++) {
-#if LW_CFG_SMP_EN > 0
-        if (API_CpuIsUp(i)) {
-            CPU_SET(i, set);
-        }
-#else
-        CPU_SET(i, set);
-#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+    if (vprocGetAffinity(pid, setsize, set)) {
+        _ErrorHandle(ESRCH);
+        return  (PX_ERROR);
     }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     
     return  (ERROR_NONE);
 }

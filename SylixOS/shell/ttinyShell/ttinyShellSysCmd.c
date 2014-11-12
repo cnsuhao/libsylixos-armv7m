@@ -62,6 +62,7 @@
 2014.10.10  help 命令支持通配符匹配.
 2014.10.12  将环境变量删除命令改为 vardel.
             free 命令为显示当前内存使用情况.
+2014.11.11  加入 CPU 亲和度设置.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -82,6 +83,9 @@
 #include "../SylixOS/shell/ttinyVar/ttinyVarLib.h"
 #include "../SylixOS/posix/include/px_resource.h"
 #if LW_CFG_POSIX_EN > 0
+#include "pthread.h"
+#include "pthread_np.h"
+#include "sched.h"
 #include "fnmatch.h"
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
 /*********************************************************************************************************
@@ -1899,6 +1903,89 @@ static INT  __tshellSysCmdLspci (INT  iArgC, PCHAR  ppcArgV[])
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __tshellSysCmdAffinity
+** 功能描述: 系统命令 "affinity"
+** 输　入  : iArgC         参数个数
+**           ppcArgV       参数表
+** 输　出  : 0
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if (LW_CFG_SMP_EN > 0) && (LW_CFG_POSIX_EN > 0)
+
+static INT  __tshellSysCmdAffinity (INT  iArgC, PCHAR  ppcArgV[])
+{
+    LW_OBJECT_HANDLE  ulId = LW_OBJECT_HANDLE_INVALID;
+    cpu_set_t         cpuset;
+    BOOL              bProcess = LW_FALSE;
+    PCHAR             pcTarget;
+    ULONG             ulCPUId;
+    INT               iRet;
+    
+    CPU_ZERO(&cpuset);
+    
+    if (iArgC != 3) {
+        printf("arguments error.\n");
+        return  (-1);
+    }
+    
+    if (ppcArgV[1][0] < '0' ||
+        ppcArgV[1][0] > '9') {
+        printf("option error.\n");
+        return  (-1);
+    }
+    
+    sscanf(ppcArgV[1], "%lx", &ulId);
+    if (API_ObjectGetClass(ulId) != _OBJECT_THREAD) {
+        sscanf(ppcArgV[1], "%ld", &ulId);                               /*  进程 id                     */
+        bProcess = LW_TRUE;
+        pcTarget = "process";
+    
+    } else {
+        pcTarget = "thread";
+    }
+    
+    if (ppcArgV[2][0] == 'c') {
+        if (bProcess) {
+            iRet = sched_setaffinity((INT)ulId, sizeof(cpu_set_t), &cpuset);
+        } else {
+            iRet = pthread_setaffinity_np((INT)ulId, sizeof(cpu_set_t), &cpuset);
+        }
+        if (iRet == ERROR_NONE) {
+            printf("affinity clear %s 0x%lx ok.\n", pcTarget, ulId);
+        } else {
+            printf("affinity clear %s 0x%lx fail: %s.\n", 
+                   pcTarget, ulId, lib_strerror(errno));
+        }
+    
+    } else {
+        sscanf(ppcArgV[2], "%ld", &ulCPUId);
+        CPU_SET(ulCPUId, &cpuset);
+        if (bProcess) {
+            iRet = sched_setaffinity((INT)ulId, sizeof(cpu_set_t), &cpuset);
+        } else {
+            iRet = pthread_setaffinity_np((INT)ulId, sizeof(cpu_set_t), &cpuset);
+        }
+        if (iRet == ERROR_NONE) {
+            printf("affinity set %s 0x%lx to cpu %ld ok.\n", 
+                   pcTarget, ulId, ulCPUId);
+        } else {
+            printf("affinity set %s 0x%lx to cpu %ld fail: %s.\n", 
+                   pcTarget, ulId, ulCPUId, lib_strerror(errno));
+        }
+    }
+        
+    if (iRet) {
+        return  (PX_ERROR);
+    
+    } else {
+        return  (ERROR_NONE);
+    }
+}
+
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+                                                                        /*  LW_CFG_POSIX_EN > 0         */
+/*********************************************************************************************************
 ** 函数名称: __tshellSysCmdInit
 ** 功能描述: 初始化系统命令集
 ** 输　入  : NONE
@@ -2167,6 +2254,15 @@ VOID  __tshellSysCmdInit (VOID)
                                     
     API_TShellKeywordAdd("lspci", __tshellSysCmdLspci);
     API_TShellHelpAdd("lspci", "show PCI Bus message.\n");
+    
+#if (LW_CFG_SMP_EN > 0) && (LW_CFG_POSIX_EN > 0)
+    API_TShellKeywordAdd("affinity", __tshellSysCmdAffinity);
+    API_TShellFormatAdd("affinity", " [pid | thread id] [cpu id | 'clear']");
+    API_TShellHelpAdd("affinity", "set / clear process or thread cpu affinity.\n"
+                                  "affinity 1 0         set process 1 affinity to cpu 1\n"
+                                  "affinity 1 clear     clear process 1 affinity\n");
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+                                                                        /*  LW_CFG_POSIX_EN > 0         */
 }
 #endif                                                                  /*  LW_CFG_SHELL_EN > 0         */
 /*********************************************************************************************************

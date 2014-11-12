@@ -118,12 +118,21 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
     __LW_TASK_SAVE_VAR(ptcbCur);
     __LW_TASK_SAVE_FPU(ptcbCur, bIsIntSwtich);
     
+    LW_CPU_CLR_IPI_PEND(ulCPUId, ((ULONG)~0));                          /*  清除所有中断标志            */
+    KN_SMP_MB();
+    
     _SchedSmpNotify(ulCPUId);                                           /*  请求其他 CPU 调度           */
     
-    KN_SMP_MB();
-    LW_CPU_CLR_IPI_PEND(ulCPUId, ((ULONG)~0));                          /*  清除所有中断标志            */
+#if LW_CFG_CACHE_EN > 0
+    API_CacheDisable(DATA_CACHE);                                       /*  禁能 CACHE                  */
+    API_CacheDisable(INSTRUCTION_CACHE);
+#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
+
+#if LW_CFG_VMM_EN > 0
+    API_VmmMmuDisable();                                                /*  关闭 MMU                    */
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
     
-    LW_SPIN_UNLOCK_IGNIRQ(&_K_slKernel);                                /*  解锁内核 spinlock           */
+    LW_SPIN_UNLOCK_SCHED(&_K_slKernel, ptcbCur);                        /*  解锁内核 spinlock           */
 
     bspCpuDown(ulCPUId);                                                /*  BSP 停止 CPU                */
     
@@ -270,13 +279,13 @@ VOID  _ScheduleInt (VOID)
     
 #if LW_CFG_SMP_EN > 0
     LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_SCHED_MSK);                     /*  清除核间调度中断标志        */
-    if (ptcbCur->TCB_plineStatusReqHeader) {                            /*  请求当前任务改变状态        */
-        if (__THREAD_LOCK_GET(ptcbCur) <= 1ul) {                        /*  是否可以进行状态切换        */
+    if (__THREAD_LOCK_GET(ptcbCur) <= 1ul) {                            /*  是否可以进行状态切换        */
+        if (ptcbCur->TCB_plineStatusReqHeader) {                        /*  请求当前任务改变状态        */
             _ThreadStatusChangeCur(pcpuCur);                            /*  检查是否需要进行状态切换    */
-            if (LW_CPU_GET_IPI_PEND(pcpuCur->CPU_ulCPUId) & 
-                LW_IPI_DOWN_MSK) {                                      /*  当前 CPU 需要停止           */
-                _SchedCpuDown(pcpuCur, LW_TRUE);
-            }
+        }
+        if (LW_CPU_GET_IPI_PEND(pcpuCur->CPU_ulCPUId) & 
+            LW_IPI_DOWN_MSK) {                                          /*  当前 CPU 需要停止           */
+            _SchedCpuDown(pcpuCur, LW_TRUE);
         }
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
@@ -330,24 +339,17 @@ VOID  _SchedSetPrio (PLW_CLASS_TCB  ptcb, UINT8  ucPriority)
     PLW_CLASS_PCB    ppcbTo;
     
     ppcbFrom = _GetPcb(ptcb);
-    ppcbTo   = _GetPcbByPrio(ucPriority);
+    ppcbTo   = _GetPcbEx(ptcb, ucPriority);
     
     MONITOR_EVT_LONG3(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_PRIO,
                       ptcb->TCB_ulId, ptcb->TCB_ucPriority, ucPriority, LW_NULL);
                       
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
-    ppcbFrom->PCB_usThreadCounter--;                                    /*  先早优先级控制块线程数量 -- */
-    ppcbTo->PCB_usThreadCounter++;                                      /*  最新优先级控制块线程数量 ++ */
-    
     ptcb->TCB_ucPriority = ucPriority;                                  /*  设置新的优先级              */
     
     if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  线程就绪                    */
         if (ptcb->TCB_bIsCand) {                                        /*  在候选表中                  */
-            ppcbFrom->PCB_usThreadReadyCounter--;                       /*  先早优先级控制块就绪数量 -- */
-            ppcbTo->PCB_usThreadReadyCounter++;                         /*  最新优先级控制块就绪数量 ++ */
-            ppcbFrom->PCB_usThreadCandCounter--;                        /*  先早优先级控制块候选数量 -- */
-            ppcbTo->PCB_usThreadCandCounter++;                          /*  最新优先级控制块候选数量 ++ */
             LW_CAND_ROT(LW_CPU_GET(ptcb->TCB_ulCPUId)) =  LW_TRUE;      /*  退出内核时尝试抢占调度      */
         
         } else {                                                        /*  不在候选表中                */

@@ -37,6 +37,7 @@
            例如: 1. 可抢占
                  2. 基于优先级, (eg. 一个四核处理器的四个 CPU 总是运行四个最高优先级的线程).(单一就绪队列)
                  3: 调度算法<相对于线程数量>时间复杂度为 O(1).
+2014.11.10 更新位图算法, 占用更小的内存空间.
 *********************************************************************************************************/
 
 #ifndef __K_BITMAP_H
@@ -73,35 +74,25 @@ extern UINT8  const  _K_ucMsbBitmap[];
 #endif                                                                  /*  __LW_BITMAP                 */
 
 /*********************************************************************************************************
-  删除"就绪"位图中的指定优先级
+  位图基本操作
 *********************************************************************************************************/
 
-#define	__DEL_RDY_MAP(ppcb) do {                                                                        \
-            _K_ucThreadReadyTable[ppcb->PCB_ucZ][ppcb->PCB_ucY] =                                       \
-                (UINT8)(_K_ucThreadReadyTable[ppcb->PCB_ucZ][ppcb->PCB_ucY] & (~ppcb->PCB_ucMaskBitX)); \
-            if (_K_ucThreadReadyTable[ppcb->PCB_ucZ][ppcb->PCB_ucY] == 0x00) {                          \
-                _K_ucThreadReadyGroup[ppcb->PCB_ucZ] =                                                  \
-                    (UINT8)(_K_ucThreadReadyGroup[ppcb->PCB_ucZ] & (~ppcb->PCB_ucMaskBitY));            \
-                if (_K_ucThreadReadyGroup[ppcb->PCB_ucZ] == 0x00) {                                     \
-                    _K_ucThreadReadyBank =                                                              \
-                        (UINT8)(_K_ucThreadReadyBank & (~ppcb->PCB_ucMaskBitZ));                        \
-                }                                                                                       \
-            }                                                                                           \
-        } while (0)
+VOID  _BitmapInit(PLW_CLASS_BMAP  pbmap);
+VOID  _BitmapAdd(PLW_CLASS_BMAP   pbmap, UINT8  ucPriority);
+VOID  _BitmapDel(PLW_CLASS_BMAP   pbmap, UINT8  ucPriority);
+UINT8 _BitmapHigh(PLW_CLASS_BMAP  pbmap);
+BOOL  _BitmapIsEmpty(PLW_CLASS_BMAP  pbmap);
 
 /*********************************************************************************************************
-  将指定优先级任务加入"就绪"位图中
+  就绪位图操作
 *********************************************************************************************************/
 
-#define	__ADD_RDY_MAP(ppcb) do {                                                                        \
-            _K_ucThreadReadyBank =                                                                      \
-                (UINT8)(_K_ucThreadReadyBank | ppcb->PCB_ucMaskBitZ);                                   \
-            _K_ucThreadReadyGroup[ppcb->PCB_ucZ] =                                                      \
-                (UINT8)(_K_ucThreadReadyGroup[ppcb->PCB_ucZ] | ppcb->PCB_ucMaskBitY);                   \
-            _K_ucThreadReadyTable[ppcb->PCB_ucZ][ppcb->PCB_ucY] =                                       \
-                (UINT8)(_K_ucThreadReadyTable[ppcb->PCB_ucZ][ppcb->PCB_ucY] | ppcb->PCB_ucMaskBitX);    \
-        } while (0)
-        
+VOID  _ReadyTableAdd(PLW_CLASS_TCB  ptcb);
+VOID  _ReadyTableDel(PLW_CLASS_TCB  ptcb);
+
+#define	__ADD_RDY_MAP(ptcb)             _ReadyTableAdd(ptcb)
+#define __DEL_RDY_MAP(ptcb)             _ReadyTableDel(ptcb)
+
 #endif                                                                  /*  __K_BITMAP_H                */
 /*********************************************************************************************************
   END

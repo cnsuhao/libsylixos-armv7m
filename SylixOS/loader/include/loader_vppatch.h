@@ -91,10 +91,27 @@ VOID                vprocThreadTraversal(PVOID          pvVProc,
                                          PVOID          pvArg3,
                                          PVOID          pvArg4,
                                          PVOID          pvArg5);
-                                         
+INT                 vprocThreadTraversal2(pid_t          pid, 
+                                          VOIDFUNCPTR    pfunc, 
+                                          PVOID          pvArg0,
+                                          PVOID          pvArg1,
+                                          PVOID          pvArg2,
+                                          PVOID          pvArg3,
+                                          PVOID          pvArg4,
+                                          PVOID          pvArg5);
+
 #if LW_CFG_GDB_EN > 0
 ssize_t             vprocGetModsInfo(pid_t  pid, PCHAR  pcBuff, size_t stMaxLen);
 #endif                                                                  /*  LW_CFG_GDB_EN > 0           */
+
+/*********************************************************************************************************
+  进程 CPU 亲和度
+*********************************************************************************************************/
+
+#if LW_CFG_SMP_EN > 0
+INT                 vprocSetAffinity(pid_t  pid, size_t  stSize, const PLW_CLASS_CPUSET  pcpuset);
+INT                 vprocGetAffinity(pid_t  pid, size_t  stSize, PLW_CLASS_CPUSET  pcpuset);
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 
 /*********************************************************************************************************
   vprocess 文件描述符操作

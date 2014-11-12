@@ -125,7 +125,6 @@ VOID  _TCBBuild (UINT8                    ucPriority,
                  PLW_CLASS_TCB            ptcb,
                  PVOID                    pvArg)
 {
-    REGISTER PLW_CLASS_PCB    ppcb;
     REGISTER PLW_CLASS_TCB    ptcbCur;
     
 #if LW_CFG_THREAD_NOTE_PAD_EN > 0
@@ -251,6 +250,12 @@ VOID  _TCBBuild (UINT8                    ucPriority,
     ptcb->TCB_ptcbJoin = LW_NULL;                                       /*  没有合并到其他线程          */
 
     LW_SPIN_INIT(&ptcb->TCB_slLock);                                    /*  初始化自旋锁                */
+    
+#if LW_CFG_SMP_EN > 0
+    ptcb->TCB_bCPULock  = ptcbCur->TCB_bCPULock;
+    ptcb->TCB_ulCPULock = ptcbCur->TCB_ulCPULock;                       /*  没有锁定 CPU                */
+#endif                                                                  /*  LW_CFG_SMP_EN               */
+
     ptcb->TCB_ulCPUId = 0ul;                                            /*  默认使用 0 号 CPU           */
     ptcb->TCB_bIsCand = LW_FALSE;                                       /*  没有加入运行表              */
     
@@ -347,8 +352,6 @@ VOID  _TCBBuild (UINT8                    ucPriority,
     _K_ptcbTCBIdTable[_ObjectGetIndex(ulId)] = ptcb;                    /*  保存TCB控制块               */
     _List_Line_Add_Ahead(&ptcb->TCB_lineManage, 
                          &_K_plineTCBHeader);                           /*  进入 TCB 管理链表           */
-    ppcb = _GetPcb(ptcb);
-    ppcb->PCB_usThreadCounter++;
     _LIST_RING_INIT_IN_CODE(ptcb->TCB_ringReady);
     __KERNEL_EXIT();                                                    /*  退出内核                    */
 

@@ -68,18 +68,14 @@ LW_API int              sched_rr_get_interval(pid_t  pid, struct timespec  *inte
   sched affinity (由于与应适时调度算法产生冲突, 所以这里不支持, 只是为了兼容性要求声明相关结构)
 *********************************************************************************************************/
 
-#define CPU_SETSIZE     2048
-typedef ULONG           cpu_mask;
-#define NCPUBITS        (sizeof(cpu_mask) * NBBY)                       /*  每一个单位掩码的位数        */
+#define CPU_SETSIZE     LW_CPU_SETSIZE
+#define NCPUBITS        LW_NCPUBITS
+typedef LW_CLASS_CPUSET cpu_set_t;
 
-typedef struct {
-    cpu_mask            cpus_bits[__HOWMANY(CPU_SETSIZE, NCPUBITS)];
-} cpu_set_t;
-
-#define CPU_SET(n, p)   ((p)->cpus_bits[(n) / NCPUBITS] |= (ULONG)( (1u << ((n) % NCPUBITS))))
-#define CPU_CLR(n, p)   ((p)->cpus_bits[(n) / NCPUBITS] &= (ULONG)(~(1u << ((n) % NCPUBITS))))
-#define CPU_ISSET(n, p) ((p)->cpus_bits[(n) / NCPUBITS] &  (ULONG)( (1u << ((n) % NCPUBITS))))
-#define CPU_ZERO(p)     lib_bzero((PVOID)(p), sizeof(*(p)))             /*  编译时兼容不同的 FD_SETSIZE */
+#define CPU_SET(n, p)   LW_CPU_SET(n, p)
+#define CPU_CLR(n, p)   LW_CPU_CLR(n, p)
+#define CPU_ISSET(n, p) LW_CPU_ISSET(n, p)
+#define CPU_ZERO(p)     LW_CPU_ZERO(p)
 
 LW_API int              sched_setaffinity(pid_t pid, size_t setsize, const cpu_set_t *set);
 LW_API int              sched_getaffinity(pid_t pid, size_t setsize, cpu_set_t *set);

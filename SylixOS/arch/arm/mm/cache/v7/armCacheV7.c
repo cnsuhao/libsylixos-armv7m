@@ -113,7 +113,11 @@ static INT  armCacheV7Disable (LW_CACHE_TYPE  cachetype)
     
 #if LW_CFG_ARM_CACHE_L2 > 0
     if ((iCacheStatus == L1_CACHE_DIS) && armL2IsEnable()) {
-        armL2Disable();
+#if LW_CFG_SMP_EN > 0
+        if (LW_CPU_GET_CUR_ID() == 0) {                                 /*  只有 CPU 0 退出时才关闭 L2  */
+            armL2Disable();
+        }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     }
 #endif                                                                  /*  LW_CFG_ARM_CACHE_L2 > 0     */
      

@@ -137,6 +137,17 @@ LW_API ULONG            API_ObjectGetIndex(LW_OBJECT_HANDLE  ulId);     /*  获得
   THREAD
 *********************************************************************************************************/
 
+#if LW_CFG_SMP_EN > 0
+LW_API ULONG            API_ThreadSetAffinity(LW_OBJECT_HANDLE        ulId, 
+                                              size_t                  stSize, 
+                                              const PLW_CLASS_CPUSET  pcpuset);
+                                                                        /*  设置线程 CPU 亲和度         */
+LW_API ULONG            API_ThreadGetAffinity(LW_OBJECT_HANDLE        ulId, 
+                                              size_t                  stSize, 
+                                              PLW_CLASS_CPUSET        pcpuset);
+                                                                        /*  获取线程 CPU 亲和度         */
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+
 LW_API  
 LW_CLASS_THREADATTR     API_ThreadAttrGetDefault(VOID);                 /*  获得默认线程属性块          */
 

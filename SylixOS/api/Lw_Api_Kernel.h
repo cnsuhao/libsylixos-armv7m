@@ -52,6 +52,9 @@
   THREAD
 *********************************************************************************************************/
 
+#define Lw_Thread_SetAffinity                   API_ThreadSetAffinity
+#define Lw_Thread_GetAffinity                   API_ThreadGetAffinity
+
 #define Lw_ThreadAttr_GetDefault                API_ThreadAttrGetDefault
 #define Lw_ThreadAttr_Get                       API_ThreadAttrGet
 
