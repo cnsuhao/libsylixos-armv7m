@@ -3,14 +3,18 @@ setlocal enabledelayedexpansion
 
 set srcfile=libsylixos.a
 
-nm %srcfile% | find " T " > func.txt
-nm %srcfile% | find " D " > obj.txt
-nm %srcfile% | find " B "    >> obj.txt
-nm %srcfile% | find " R "    >> obj.txt
-nm %srcfile% | find " S "    >> obj.txt
-nm %srcfile% | find " C "    >> obj.txt
-nm %srcfile% | find " W "    >> obj.txt
-nm %srcfile% | find " V "    >> obj.txt
+nm %srcfile% > %srcfile%_nm
+
+find " T "   < %srcfile%_nm    > func.txt
+find " D "   < %srcfile%_nm    > obj.txt
+find " B "   < %srcfile%_nm   >> obj.txt
+find " R "   < %srcfile%_nm   >> obj.txt
+find " S "   < %srcfile%_nm   >> obj.txt
+find " C "   < %srcfile%_nm   >> obj.txt
+find " W "   < %srcfile%_nm   >> obj.txt
+find " V "   < %srcfile%_nm   >> obj.txt
+
+del %srcfile%_nm
 
 set num=0
 

@@ -87,7 +87,7 @@
 
 #define LW_CFG_LWIP_NUM_PBUFS           256                             /*  系统总 pbuf 数量            */
 #define LW_CFG_LWIP_NUM_NETBUF          256                             /*  缓冲网络分组 netbuf 数量    */
-#define LW_CFG_LWIP_NUM_POOLS           512                             /*  等长缓冲总数量(高速缓冲)    */
+#define LW_CFG_LWIP_NUM_POOLS           LW_CFG_LWIP_MSG_SIZE            /*  等长缓冲总数量(高速缓冲)    */
                                                                         /*  驱动程序与 AF_PACKET 使用   */
                                                                         
 /*********************************************************************************************************

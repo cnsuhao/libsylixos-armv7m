@@ -75,7 +75,7 @@
 *********************************************************************************************************/
 
 #define LW_CFG_NET_FTPD_EN                          1                   /*  是否使能 ftp 服务器         */
-#define LW_CFG_NET_FTPD_LOG_EN                      1                   /*  是否使能 ftp 服务器打印 log */
+#define LW_CFG_NET_FTPD_LOG_EN                      0                   /*  是否使能 ftp 服务器打印 log */
 #define LW_CFG_NET_FTPD_STK_SIZE                    (12 * LW_CFG_KB_SIZE)
                                                                         /*  ftp 线程堆栈                */
 #define LW_CFG_NET_FTPD_MAX_LINKS                   10                  /*  ftp 最大客户机连接数        */

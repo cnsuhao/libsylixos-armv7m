@@ -191,8 +191,6 @@ __can_cand:
             goto    __can_cand;
         }
     }
-    
-    return  (LW_FALSE);
 
 __can_not_cand:
 #endif                                                                  /*  LW_CFG_SMP_EN               */

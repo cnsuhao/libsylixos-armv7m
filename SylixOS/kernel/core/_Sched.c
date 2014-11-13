@@ -118,9 +118,6 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
     __LW_TASK_SAVE_VAR(ptcbCur);
     __LW_TASK_SAVE_FPU(ptcbCur, bIsIntSwtich);
     
-    LW_CPU_CLR_IPI_PEND(ulCPUId, ((ULONG)~0));                          /*  清除所有中断标志            */
-    KN_SMP_MB();
-    
     _SchedSmpNotify(ulCPUId);                                           /*  请求其他 CPU 调度           */
     
 #if LW_CFG_CACHE_EN > 0
@@ -131,6 +128,9 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
 #if LW_CFG_VMM_EN > 0
     API_VmmMmuDisable();                                                /*  关闭 MMU                    */
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+    
+    LW_CPU_CLR_IPI_PEND(ulCPUId, ((ULONG)~0));                          /*  清除所有中断标志            */
+    KN_SMP_MB();
     
     LW_SPIN_UNLOCK_SCHED(&_K_slKernel, ptcbCur);                        /*  解锁内核 spinlock           */
 
@@ -346,16 +346,19 @@ VOID  _SchedSetPrio (PLW_CLASS_TCB  ptcb, UINT8  ucPriority)
                       
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
-    ptcb->TCB_ucPriority = ucPriority;                                  /*  设置新的优先级              */
-    
     if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  线程就绪                    */
         if (ptcb->TCB_bIsCand) {                                        /*  在候选表中                  */
             LW_CAND_ROT(LW_CPU_GET(ptcb->TCB_ulCPUId)) =  LW_TRUE;      /*  退出内核时尝试抢占调度      */
-        
+            ptcb->TCB_ucPriority = ucPriority;                          /*  直接设置新的优先级          */
+            
         } else {                                                        /*  不在候选表中                */
             __DEL_FROM_READY_RING(ptcb, ppcbFrom);                      /*  从就绪环中删除              */
+            
+            ptcb->TCB_ucPriority = ucPriority;                          /*  设置新的优先级              */
             __ADD_TO_READY_RING(ptcb, ppcbTo);                          /*  加入新的就绪环              */
         }
+    } else {
+        ptcb->TCB_ucPriority = ucPriority;                              /*  直接设置新的优先级          */
     }
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */

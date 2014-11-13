@@ -157,6 +157,8 @@ VOID  _SmpSpinUnlockSched(spinlock_t *psl, struct __lw_tcb *ptcbOwner);
   单处理器系统
 *********************************************************************************************************/
 
+VOID    _UpSpinInit(spinlock_t *psl);
+
 VOID    _UpSpinLock(spinlock_t *psl);
 BOOL    _UpSpinTryLock(spinlock_t *psl);
 INT     _UpSpinUnlock(spinlock_t *psl);
@@ -170,7 +172,7 @@ BOOL    _UpSpinTryLockIrq(spinlock_t *psl, INTREG  *piregInterLevel);
 INT     _UpSpinUnlockIrq(spinlock_t *psl, INTREG  iregInterLevel);
 VOID    _UpSpinUnlockIrqQuick(spinlock_t *psl, INTREG  iregInterLevel);
 
-#define LW_SPIN_INIT(psl)
+#define LW_SPIN_INIT(psl)                   _UpSpinInit(psl)
 
 #define LW_SPIN_LOCK(psl)                   _UpSpinLock(psl)
 #define LW_SPIN_TRYLOCK(psl)                _UpSpinTryLock(psl)

@@ -40,8 +40,17 @@ extern "C" {
 *********************************************************************************************************/
 
 struct sched_param {
-    int         sched_priority;                                         /*  调度优先级                  */
-    ULONG       sched_pad[4];                                           /*  扩展保留                    */
+    int                 sched_priority;                                 /*  POSIX 调度优先级            */
+                                                                        /*  SCHED_SPORADIC parameter    */
+    int                 sched_ss_low_priority;                          /*  Low scheduling priority for */
+                                                                        /*  sporadic server.            */
+    struct timespec     sched_ss_repl_period;                           /*  Replenishment period for    */
+                                                                        /*  sporadic server.            */
+    struct timespec     sched_ss_init_budget;                           /*  Initial budget for sporadic */
+                                                                        /*  server.                     */
+    int                 sched_ss_max_repl;                              /*  Max pending replenishments  */
+                                                                        /*  for sporadic server.        */
+    ULONG               sched_pad[12];                                  /*  扩展保留                    */
 };
 
 #ifdef __cplusplus
