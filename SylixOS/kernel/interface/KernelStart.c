@@ -197,8 +197,7 @@ LW_API
 VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
 {
-    INT             iError;
-    PLW_CLASS_CPU   pcpuCur;
+    INT     iError;
 
     if (LW_SYS_STATUS_IS_RUNNING()) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "kernel is already start.\r\n");
@@ -260,9 +259,7 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
     _KernelBootSecondary();                                             /*  从核可以进行初始化操作      */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
-    pcpuCur = LW_CPU_GET_CUR();
-
-    _KernelPrimaryEntry(pcpuCur);                                       /*  启动内核                    */
+    _KernelPrimaryEntry(LW_CPU_GET_CUR());                              /*  启动内核                    */
                                                                         /*  多核将在第一次调度被启用    */
 }
 /*********************************************************************************************************
@@ -278,23 +275,18 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 
 VOID  API_KernelSecondaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 {
-    PLW_CLASS_CPU   pcpuCur;
-
     while (_K_ulHoldingPen != LW_HOLDING_PEN_START) {
         LW_SPINLOCK_DELAY();                                            /*  短延迟并释放总线            */
     }
     
-    pcpuCur = LW_CPU_GET_CUR();
-    pcpuCur->CPU_ptcbTCBCur = &_K_tcbDummy[pcpuCur->CPU_ulCPUId];       /*  伪内核线程                  */
+    _KernelSecondaryLowLevelInit();                                     /*  从核底层初始化              */
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "kernel secondary cpu usrStartup...\r\n");
     if (pfuncStartHook) {                                               /*  用户是否要求需要初始化      */
         pfuncStartHook();                                               /*  用户系统初始化              */
     }
 
-    _KernelSecondaryLowLevelInit();                                     /*  从核底层初始化              */
-
-    _KernelSecondaryCoreStartup(pcpuCur);                               /*  主核初始化完毕直接启动多任务*/
+    _KernelSecondaryCoreStartup(LW_CPU_GET_CUR());                      /*  主核初始化完毕直接启动多任务*/
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */

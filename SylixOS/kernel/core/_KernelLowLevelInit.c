@@ -103,7 +103,14 @@ VOID  _KernelPrimaryLowLevelInit (VOID)
 
 VOID  _KernelSecondaryLowLevelInit (VOID)
 {
+    PLW_CLASS_CPU   pcpuCur;
+
+    _DebugHandle(__LOGMESSAGE_LEVEL, "kernel secondary low level initialize...\r\n");
+    
     _GlobalSecondaryInit();                                             /*  全局变量初始化              */
+    
+    pcpuCur = LW_CPU_GET_CUR();
+    pcpuCur->CPU_ptcbTCBCur = &_K_tcbDummy[pcpuCur->CPU_ulCPUId];       /*  伪内核线程                  */
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
