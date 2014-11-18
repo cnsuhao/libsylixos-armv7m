@@ -271,7 +271,7 @@ static void null_rdc_input (struct lowpanif *lowpanif, struct pbuf *p)
   }
   
   /* If this is a IEEE802.15.4 format packet */
-  hdrlen = ieee802154_frame_parse((u8_t *)p->payload, (u8_t)p->len, &frame);
+  hdrlen = ieee802154_frame_parse((u8_t *)p->payload, p->len, &frame);
   if (hdrlen == 0) {
     LWIP_DEBUGF(NETIF_DEBUG, ("null_rdc_input: hdrlen == 0\n"));
     pbuf_free(p);

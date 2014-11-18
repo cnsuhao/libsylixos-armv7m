@@ -132,6 +132,6 @@ typedef struct {
 u8_t ieee802154_frame_hdrlen(ieee802154_frame_t *pframe);
 u8_t ieee802154_frame_create_hdr(ieee802154_frame_t *pframe, u8_t *hdr_buf, u8_t buf_len);
 u8_t ieee802154_frame_create_ack(u8_t *data, u8_t len, u8_t seqno);
-u8_t ieee802154_frame_parse(u8_t *data, u8_t len, ieee802154_frame_t *pframe);
+u8_t ieee802154_frame_parse(u8_t *data, u16_t len, ieee802154_frame_t *pframe);
 
 #endif /* __IEEE802154_FRAME_H */

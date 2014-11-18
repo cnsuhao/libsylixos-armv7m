@@ -257,7 +257,7 @@ u8_t ieee802154_frame_create_ack (u8_t *data, u8_t len, u8_t seqno)
  * @param pframe The ieee802154_frame_t struct to store the parsed frame information.
  * @return header length if successful
  */
-u8_t ieee802154_frame_parse (u8_t *data, u8_t len, ieee802154_frame_t *pframe)
+u8_t ieee802154_frame_parse (u8_t *data, u16_t len, ieee802154_frame_t *pframe)
 {
   u8_t *p;
   ieee802154_frame_fcf_t fcf;
@@ -288,7 +288,7 @@ u8_t ieee802154_frame_parse (u8_t *data, u8_t len, ieee802154_frame_t *pframe)
   /* Destination address, if any */
   if (fcf.dest_addr_mode) {
     /* Destination PAN */
-    pframe->dest_pid = p[0] + (p[1] << 8);
+    pframe->dest_pid = p[1] + (p[0] << 8);
     p += 2;
     
     if (fcf.dest_addr_mode == IEEE802154_SHORTADDRMODE) {
