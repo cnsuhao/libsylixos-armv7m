@@ -117,6 +117,8 @@ VOID  _ThreadOffAffinity (PLW_CLASS_CPU  pcpu)
                         __ADD_RDY_MAP(ptcb);
                     }
                 }
+            } else {
+                ptcb->TCB_bCPULock = LW_FALSE;                          /*  关闭 CPU 锁定               */
             }
         }
         KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */

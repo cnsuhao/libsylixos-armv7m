@@ -40,6 +40,7 @@
 2013.08.26  shell 系统命令添加 format 和 help 第二个参数为 const char *.
 2014.07.10  shell 系统加入对新的颜色系统的初始化.
             shell 去除老式色彩控制函数.
+2014.11.22  加入选项设置函数.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -280,6 +281,8 @@ LW_OBJECT_HANDLE  API_TShellCreateEx (INT  iTtyFd, ULONG  ulOption, FUNCPTR  pfu
             return  (0);
         }
         ulOption |= LW_OPTION_TSHELL_CLOSE_FD;                          /*  执行完毕后需要关闭文件      */
+        pfuncRunCallback = LW_NULL;                                     /*  进程创建不得安装回调        */
+    
     } else {
         iKernelFile = iTtyFd;
     }
@@ -328,6 +331,89 @@ LW_API
 LW_OBJECT_HANDLE  API_TShellCreate (INT  iTtyFd, ULONG  ulOption)
 {
     return  (API_TShellCreateEx(iTtyFd, ulOption, LW_NULL));
+}
+/*********************************************************************************************************
+** 函数名称: API_TShellSetOption
+** 功能描述: 设置新的 shell 选项.
+** 输　入  : hTShellHandle   shell 线程
+**           ulNewOpt        新的 shell 选项
+** 输　出  : 错误代码.
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  API_TShellSetOption (LW_OBJECT_HANDLE  hTShellHandle, ULONG  ulNewOpt)
+{
+    PLW_CLASS_TCB   ptcbShell;
+    UINT16          usIndex;
+    
+    usIndex = _ObjectGetIndex(hTShellHandle);
+    
+#if LW_CFG_ARG_CHK_EN > 0
+    if (!_ObjectClassOK(hTShellHandle, _OBJECT_THREAD)) {               /*  检查 ID 类型有效性          */
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "thread handle invalidate.\r\n");
+        _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);
+        return  (PX_ERROR);
+    }
+#endif
+
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (_Thread_Invalid(usIndex)) {
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+        _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);
+        return  (PX_ERROR);
+    }
+    
+    ptcbShell = __GET_TCB_FROM_INDEX(usIndex);
+    __TTINY_SHELL_SET_OPT(ptcbShell, ulNewOpt);
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_TShellGetOption
+** 功能描述: 获取新的 shell 选项.
+** 输　入  : hTShellHandle   shell 线程
+**           pulOpt          shell 选项
+** 输　出  : 错误代码.
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+INT  API_TShellGetOption (LW_OBJECT_HANDLE  hTShellHandle, ULONG  *pulOpt)
+{
+    PLW_CLASS_TCB   ptcbShell;
+    UINT16          usIndex;
+    
+    if (!pulOpt) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    usIndex = _ObjectGetIndex(hTShellHandle);
+    
+#if LW_CFG_ARG_CHK_EN > 0
+    if (!_ObjectClassOK(hTShellHandle, _OBJECT_THREAD)) {               /*  检查 ID 类型有效性          */
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "thread handle invalidate.\r\n");
+        _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);
+        return  (PX_ERROR);
+    }
+#endif
+
+    __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (_Thread_Invalid(usIndex)) {
+        __KERNEL_EXIT();                                                /*  退出内核                    */
+        _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);
+        return  (PX_ERROR);
+    }
+    
+    ptcbShell = __GET_TCB_FROM_INDEX(usIndex);
+    *pulOpt   = __TTINY_SHELL_GET_OPT(ptcbShell);
+    __KERNEL_EXIT();                                                    /*  退出内核                    */
+    
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_TShellGetUserName

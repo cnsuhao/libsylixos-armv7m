@@ -1881,7 +1881,6 @@ __resp_accept:
         _DebugHandle(__ERRORMESSAGE_LEVEL, "crc error.\r\n");
         goto __error_out;
     }
-
 #endif
 
     __SD_SPI_CSDIS(pcspidevice);

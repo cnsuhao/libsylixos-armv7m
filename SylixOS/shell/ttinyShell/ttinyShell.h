@@ -59,7 +59,6 @@ LW_API LW_OBJECT_HANDLE     API_TShellCreateEx(INT      iTtyFd,
                                                ULONG    ulOption,
                                                FUNCPTR  pfuncRunCallback);
                                                                         /*  创建一个 tshell 终端扩展    */
-
 LW_API INT                  API_TShellGetUserName(uid_t  uid, PCHAR  pcName, size_t  stSize);
                                                                         /*  通过 shell 缓冲获取用户名   */
 LW_API INT                  API_TShellGetGrpName(gid_t  gid, PCHAR  pcName, size_t  stSize);
@@ -83,6 +82,23 @@ LW_API INT                  API_TShellExecBg(CPCHAR  pcCommandExec, INT  iFd[3],
                                              BOOL  bIsJoin, LW_OBJECT_HANDLE *pulSh);
                                                                         /*  背景执行一条 shell 命令     */
                                                                         
+/*********************************************************************************************************
+  内核使用 API
+*********************************************************************************************************/
+
+#ifdef __SYLIXOS_KERNEL
+LW_API INT                  API_TShellSetOption(LW_OBJECT_HANDLE  hTShellHandle, 
+                                                ULONG             ulNewOpt);
+                                                                        /*  设置新的 tshell 选项        */
+LW_API INT                  API_TShellGetOption(LW_OBJECT_HANDLE  hTShellHandle, 
+                                                ULONG            *pulOpt);
+                                                                        /*  获取当前 shell 选项         */
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
+
+/*********************************************************************************************************
+  API macro
+*********************************************************************************************************/
+
 #define tshellInit          API_TShellInit
 #define tshellSetStackSize  API_TShellSetStackSize
 #define tshellSigEvent      API_TShellSigEvent

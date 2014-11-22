@@ -334,7 +334,7 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
         return (PX_ERROR);
     }
 
-#if LW_CFG_SDCARD_CRC_EN
+#if LW_CFG_SDCARD_CRC_EN > 0
     if (COREDEV_IS_SPI(psdcoredev)) {
         __sdCoreDevSpiCrcEn(psdcoredev, LW_TRUE);
     }

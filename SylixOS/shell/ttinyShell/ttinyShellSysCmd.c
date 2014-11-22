@@ -1925,8 +1925,26 @@ static INT  __tshellSysCmdAffinity (INT  iArgC, PCHAR  ppcArgV[])
     CPU_ZERO(&cpuset);
     
     if (iArgC != 3) {
-        printf("arguments error.\n");
-        return  (-1);
+        INT     iFd;
+        CHAR    cBuffer[512];
+        ssize_t sstNum;
+        
+        iFd = open("/proc/kernel/affinity", O_RDONLY);
+        if (iFd < 0) {
+            printf("can not open /proc/kernel/affinity : %s\n", lib_strerror(errno));
+            return  (PX_ERROR);
+        }
+        
+        do {
+            sstNum = read(iFd, cBuffer, sizeof(cBuffer));
+            if (sstNum > 0) {
+                write(STDOUT_FILENO, cBuffer, (size_t)sstNum);
+            }
+        } while (sstNum > 0);
+        
+        close(iFd);
+        
+        return  (ERROR_NONE);
     }
     
     if (ppcArgV[1][0] < '0' ||

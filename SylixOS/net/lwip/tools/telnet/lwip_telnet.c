@@ -159,6 +159,16 @@ static INT __telnetIacProcesser (LW_OBJECT_HANDLE   ulShell,
         }
         return  (pucTemp - pucIACBuff);                                 /*  计算参数长度                */
 
+    case LW_IAC_USER_SDK:                                               /*  关闭颜色显示和回显          */
+        {
+            ULONG  ulOpt;
+            API_TShellGetOption(ulShell, &ulOpt);
+            ulOpt &= ~LW_OPTION_TSHELL_VT100;
+            ulOpt |=  LW_OPTION_TSHELL_NOECHO;
+            API_TShellSetOption(ulShell, ulOpt);
+        }
+        return  (2);
+
     default:
         return  (2);
     }

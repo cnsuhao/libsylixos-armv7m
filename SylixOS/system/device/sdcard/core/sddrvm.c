@@ -534,11 +534,7 @@ static VOID __sdmDevDelete (__SDM_HOST *psdmhost)
 *********************************************************************************************************/
 static VOID __sdmSdioIntHandle (__SDM_HOST *psdmhost)
 {
-    /*
-     * 如果不支持SDIO，则只需删除以下代码即可
-     */
 #if (LW_CFG_SDCARD_SDIO_EN > 0)
-
     __SDM_SD_DEV    *psdmdev;
 
     INT  __sdiobaseDevIrqHandle(SD_DRV *psddrv,  VOID *pvDevPriv);

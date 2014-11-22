@@ -1005,6 +1005,7 @@ PVOID   __tshellThread (PVOID  pcArg)
              PLW_CLASS_TCB  ptcbCur;
     REGISTER INT            iTtyFd = (INT)pcArg;
              INT            iRetValue;
+             BOOL           bEcho;
              
              CHAR           cRecvBuffer[LW_CFG_SHELL_MAX_COMMANDLEN + 1];
              INT            iReadNum;
@@ -1051,8 +1052,10 @@ PVOID   __tshellThread (PVOID  pcArg)
     if (__TTINY_SHELL_GET_OPT(ptcbCur) & LW_OPTION_TSHELL_NOECHO) {     /*  不需要回显                  */
         iRetValue = ioctl(iTtyFd, FIOSETOPTIONS, 
                           (OPT_TERMINAL & (~OPT_ECHO)));                /*  设置为终端模式              */
+        bEcho     = LW_FALSE;
     } else {
         iRetValue = ioctl(iTtyFd, FIOSETOPTIONS, OPT_TERMINAL);         /*  设置为终端模式              */
+        bEcho     = LW_TRUE;
     }
     if (iRetValue < 0) {
         perror("shell can not change into a TERMINAL mode");
@@ -1101,7 +1104,19 @@ PVOID   __tshellThread (PVOID  pcArg)
     ioctl(iTtyFd, FIOABORTFUNC, __tshellRestart);                       /*  control-C 行为              */
     
     for (;;) {
-    
+        if (__TTINY_SHELL_GET_OPT(ptcbCur) & LW_OPTION_TSHELL_NOECHO) { /*  是否有 ECHO 属性改变        */
+            if (bEcho) {
+                ioctl(iTtyFd, FIOSETOPTIONS, 
+                      (OPT_TERMINAL & (~OPT_ECHO)));
+                bEcho = LW_FALSE;
+            }
+        } else {
+            if (bEcho == LW_FALSE) {
+                ioctl(iTtyFd, FIOSETOPTIONS, OPT_TERMINAL);
+                bEcho = LW_TRUE;
+            }
+        }
+        
         if (bIsCommandOver) {                                           /*  单条命令结束后发送命令提示符*/
             __tshellShowPrompt();                                       /*  显示命令提示符              */
         } else {
@@ -1129,7 +1144,6 @@ PVOID   __tshellThread (PVOID  pcArg)
         }
         
         if (iTotalNum > 0) {
-            
             if (lib_strstr(cRecvBuffer, __TTINY_SHELL_FORCE_ABORT)) {
                 break;                                                  /*  强制退出 shell              */
             }

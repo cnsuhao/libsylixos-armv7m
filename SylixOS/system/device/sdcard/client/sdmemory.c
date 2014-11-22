@@ -549,7 +549,7 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
 
         API_SdCoreDevTypeSet(psdcoredevice, ucType);                    /*  ÉèÖÃtypeÓò                  */
 
-#if LW_CFG_SDCARD_CRC_EN
+#if LW_CFG_SDCARD_CRC_EN > 0
         __sdCoreDevSpiCrcEn(psdcoredevice, LW_TRUE);                    /*  Ê¹ÄÜcrc                     */
 #endif
 

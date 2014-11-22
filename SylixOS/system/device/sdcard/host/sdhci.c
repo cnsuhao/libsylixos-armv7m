@@ -83,7 +83,7 @@ typedef struct __sdhci_host {
 
     UINT32              SDHCIHS_ucTransferMod;                          /*  主控使用的传输模式          */
 
-#if LW_CFG_VMM_EN
+#if LW_CFG_VMM_EN > 0
     UINT8              *SDHCIHS_pucDmaBuf;                              /*  使用DMA传输开启cache时需要  */
 #endif
 
@@ -265,7 +265,7 @@ LW_API PVOID  API_SdhciHostCreate (CPCHAR               pcAdapterName,
     psdhcihost->SDHCIHS_pfuncMasterXfer        = __sdhciTransferNorm;
     psdhcihost->SDHCIHS_ucTransferMod          = SDHCIHOST_TMOD_SET_NORMAL;
                                                                         /*  默认使用一般传输            */
-#if LW_CFG_VMM_EN
+#if LW_CFG_VMM_EN > 0
     pvDmaBuf = API_VmmDmaAlloc(__SDHCI_DMA_BOUND_LEN);
     if (!pvDmaBuf) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
@@ -316,7 +316,7 @@ LW_API INT  API_SdhciHostDelete (PVOID  pvHost)
 
     API_SdAdapterDelete(__SDHCI_HOST_NAME(psdhcihost));
 
-#if LW_CFG_VMM_EN
+#if LW_CFG_VMM_EN > 0
     API_VmmDmaFree(psdhcihost->SDHCIHS_pucDmaBuf);
 #endif
 
@@ -1210,7 +1210,6 @@ static INT  __sdhciSendCmd (__PSDHCI_HOST   psdhcihost,
          * 并且其应答字节序与上层规定的相反,作相应的转换.
          */
         if (uiRespFlag & SD_RSP_136) {
-
             UINT32   uiRsp0;
             UINT32   uiRsp1;
             UINT32   uiRsp2;
@@ -1317,7 +1316,7 @@ static VOID __sdhciDataPrepareSdma (__PSDHCI_HOST  psdhcihost, PLW_SD_MESSAGE ps
         return;
     }
 
-#if LW_CFG_VMM_EN
+#if LW_CFG_VMM_EN > 0
     pucSdma = psdhcihost->SDHCIHS_pucDmaBuf;
     if (SD_DAT_IS_WRITE(psddata)) {                                     /*  如果是DMA写,先把用户数据拷贝*/
         lib_memcpy(pucSdma,
@@ -1541,7 +1540,7 @@ static INT __sdhciDataFinishSdma (__PSDHCI_HOST   psdhcihost,  PLW_SD_MESSAGE ps
     PLW_SD_DATA          psddat         = psdmsg->SDMSG_psdData;
     UINT8               *pucSdma;
 
-#if LW_CFG_VMM_EN
+#if LW_CFG_VMM_EN > 0
     UINT8               *pucDst;
 #endif
 
@@ -1551,7 +1550,7 @@ static INT __sdhciDataFinishSdma (__PSDHCI_HOST   psdhcihost,  PLW_SD_MESSAGE ps
     struct timespec      tvOld;
     struct timespec      tvNow;
 
-#if LW_CFG_VMM_EN
+#if LW_CFG_VMM_EN > 0
     if (SD_DAT_IS_READ(psddat)) {
         pucDst = psdmsg->SDMSG_pucRdBuffer;
     }
@@ -1599,7 +1598,7 @@ static INT __sdhciDataFinishSdma (__PSDHCI_HOST   psdhcihost,  PLW_SD_MESSAGE ps
     /*
      * 如果开启了VMM,则需要把DMA物理区数据拷贝到用户区带cache的数据区
      */
-#if LW_CFG_VMM_EN
+#if LW_CFG_VMM_EN > 0
      if (SD_DAT_IS_READ(psddat)) {
          lib_memcpy(pucDst, pucSdma, psddat->SDDAT_uiBlkNum * psddat->SDDAT_uiBlkSize);
      }
