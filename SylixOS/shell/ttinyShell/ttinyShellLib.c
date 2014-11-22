@@ -1124,15 +1124,29 @@ PVOID   __tshellThread (PVOID  pcArg)
             fflush(stdout);                                             /*  保证 stdout 的输出          */
         }
         
-        iReadNum = (INT)__tshellReadline(0, &cRecvBuffer[iTotalNum], 
-                             LW_CFG_SHELL_MAX_COMMANDLEN - iTotalNum);  /*  接收字符串                  */
+        if (bEcho) {
+            iReadNum = (INT)__tshellReadline(0, &cRecvBuffer[iTotalNum], 
+                                             LW_CFG_SHELL_MAX_COMMANDLEN - 
+                                             iTotalNum);                /*  接收字符串                  */
+        } else {
+            iReadNum = (INT)read(0, &cRecvBuffer[iTotalNum], 
+                                 LW_CFG_SHELL_MAX_COMMANDLEN - 
+                                 iTotalNum);                            /*  接收字符串                  */
+        }
+        
         if (iReadNum > 0) {
             iTotalNum += iReadNum;                                      /*  记录总个数                  */
-            
+            if (cRecvBuffer[iTotalNum - 1] == '\n') {
+                cRecvBuffer[iTotalNum - 1] =  PX_EOS;
+                iTotalNum -= 1;
+                if (cRecvBuffer[iTotalNum - 1] == '\r') {               /*  过滤 \r\n                   */
+                    cRecvBuffer[iTotalNum - 1] =  PX_EOS;
+                    iTotalNum -= 1;
+                }
+            }
             if (cRecvBuffer[iTotalNum - 1] == '\\') {                   /*  用户需要续写命令            */
                 iTotalNum -= 1;
                 bIsCommandOver = LW_FALSE;
-                
                 if ((LW_CFG_SHELL_MAX_COMMANDLEN - iTotalNum) <= 1) {   /*  没有空闲, 不能接收          */
                     printf("command is too long.\n");
                     iTotalNum      = 0;                                 /*  该命令失效                  */
