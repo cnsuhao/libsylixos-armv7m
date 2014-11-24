@@ -29,6 +29,7 @@
 /*********************************************************************************************************
   前置声明
 *********************************************************************************************************/
+
 struct sdio_drv;
 struct sdio_dev_id;
 struct sdio_cccr;
@@ -46,6 +47,7 @@ typedef struct sdio_init_data   SDIO_INIT_DATA;
 /*********************************************************************************************************
   sdio 设备 相关定义
 *********************************************************************************************************/
+
 struct sdio_dev_id {
     UINT8    DEVID_ucClass;                                         /* Std interface or SDIO_ANY_ID     */
     UINT16   DEVID_usVendor;                                        /* Vendor or SDIO_ANY_ID            */
@@ -99,8 +101,9 @@ struct sdio_init_data {
 /*********************************************************************************************************
   sdio 驱动
 *********************************************************************************************************/
+
 struct sdio_drv {
-    LW_LIST_LINE  SDIODRV_lineManage;                               /*  驱动挂载链                        */
+    LW_LIST_LINE  SDIODRV_lineManage;                               /*  驱动挂载链                      */
     CPCHAR        SDIODRV_cpcName;
 
     INT         (*SDIODRV_pfuncDevCreate)
@@ -124,6 +127,7 @@ struct sdio_drv {
 /*********************************************************************************************************
   API
 *********************************************************************************************************/
+
 LW_API INT   API_SdmSdioLibInit(VOID);
 LW_API INT   API_SdmSdioDrvRegister(SDIO_DRV *psdiodrv);
 LW_API INT   API_SdmSdioDrvUnRegister(SDIO_DRV *psdiodrv);

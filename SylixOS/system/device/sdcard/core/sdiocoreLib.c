@@ -33,6 +33,7 @@
 #include "sdiodrvm.h"
 #include "sdcore.h"
 #include "sdiocoreLib.h"
+#include "../include/sddebug.h"
 /*********************************************************************************************************
  SDIO CIS 相关数据结构
 *********************************************************************************************************/
@@ -74,12 +75,12 @@ static const UINT32 _G_puiSpeedUnit[8] = {
 static const __CIS_TPL_PARSER _G_cistplparserFunceTbl[] = {
     {0x00,   4,          __cistplParseFunceCommon, "funce comme"   },
     {0x01,   0,          __cistplParseFunceFuncN,  "funce func1_7" },
-    {0x04,   1 + 1 + 6,  NULL,                     "unknow"},
+    {0x04,   1 + 1 + 6,  LW_NULL,                  "unknow"},
 };
 static const __CIS_TPL_PARSER _G_cistplparserTbl[] = {
     {0x15,   3,  __cistplParseVers_1, "version_1" },
     {0x20,   4,  __cistplParseManfid, "manfid"    },
-    {0x21,   2,  NULL               , "null"      },
+    {0x21,   2,  LW_NULL            , "null"      },
     {0x22,   0,  __cistplParseFunce , "funce"     },
 };
 #define __NELE(array)       (sizeof(array) / sizeof(array[0]))
@@ -106,7 +107,7 @@ INT __sdioCoreDevReset (PLW_SDCORE_DEVICE   psdcoredev)
         ucAbort |= 0x08;
     }
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_ABORT, ucAbort, NULL);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_ABORT, ucAbort, LW_NULL);
 
     return  (iRet);
 }
@@ -215,7 +216,7 @@ INT __sdioCoreDevWriteByte (PLW_SDCORE_DEVICE   psdcoredev,
 {
     INT iRet;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, uiFn, uiAddr, ucByte, NULL);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, uiFn, uiAddr, ucByte, LW_NULL);
 
     return  (iRet);
 }
@@ -259,24 +260,24 @@ INT __sdioCoreDevFuncEn (PLW_SDCORE_DEVICE   psdcoredev,
     UINT8   ucReg;
     ULONG   ulTimeOut;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEx, 0, &ucReg);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEX, 0, &ucReg);
     if (iRet) {
-        goto __err;
+        goto    __err;
     }
 
     ucReg |= 1 << psdiofunc->FUNC_uiNum;
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEx, ucReg, NULL);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEX, ucReg, LW_NULL);
     if (iRet) {
-        goto __err;
+        goto    __err;
     }
 
     ulTimeOut = psdiofunc->FUNC_uiEnableTimeOut;
     ulTimeOut = LW_MSECOND_TO_TICK_1(ulTimeOut) + lib_clock();
 
     while (1) {
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IORx, 0, &ucReg);
+        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IORX, 0, &ucReg);
         if (iRet) {
-            goto __err;
+            goto    __err;
         }
 
         if (ucReg & (1 << psdiofunc->FUNC_uiNum)) {
@@ -286,14 +287,14 @@ INT __sdioCoreDevFuncEn (PLW_SDCORE_DEVICE   psdcoredev,
         iRet = PX_ERROR;
 
         if (lib_clock() > ulTimeOut) {
-            goto __err;
+            goto    __err;
         }
     }
 
     return  (ERROR_NONE);
 
 __err:
-    _DebugFormat(__ERRORMESSAGE_LEVEL, "enable func(%d) failed.\r\n", psdiofunc->FUNC_uiNum);
+    SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "enable func(%d) failed.\r\n", psdiofunc->FUNC_uiNum);
 
     return  (iRet);
 }
@@ -312,21 +313,21 @@ INT __sdioCoreDevFuncDis (PLW_SDCORE_DEVICE   psdcoredev,
     INT     iRet;
     UINT8   ucReg;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEx, 0, &ucReg);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEX, 0, &ucReg);
     if (iRet) {
-        goto __err;
+        goto    __err;
     }
 
     ucReg &= ~(1 << psdiofunc->FUNC_uiNum);
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEx, ucReg, NULL);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEX, ucReg, LW_NULL);
     if (iRet) {
-        goto __err;
+        goto    __err;
     }
 
     return  (ERROR_NONE);
 
 __err:
-    _DebugFormat(__ERRORMESSAGE_LEVEL, "enable func(%d) failed.\r\n", psdiofunc->FUNC_uiNum);
+    SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "enable func(%d) failed.\r\n", psdiofunc->FUNC_uiNum);
     return  (PX_ERROR);
 }
 /*********************************************************************************************************
@@ -346,7 +347,7 @@ INT __sdioCoreDevFuncBlkSzSet (PLW_SDCORE_DEVICE   psdcoredev,
     UINT32  uiMaxBlkSz;
 
     if (!psdcoredev || !psdiofunc) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -361,14 +362,14 @@ INT __sdioCoreDevFuncBlkSzSet (PLW_SDCORE_DEVICE   psdcoredev,
 
     iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0,
                                  SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_BLKSIZE,
-                                 uiBlkSz & 0xff, NULL);
+                                 uiBlkSz & 0xff, LW_NULL);
     if (iRet != ERROR_NONE) {
         return  (iRet);
     }
 
     iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0,
                                  SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_BLKSIZE + 1,
-                                 (uiBlkSz >> 8) & 0xff, NULL);
+                                 (uiBlkSz >> 8) & 0xff, LW_NULL);
     if (iRet != ERROR_NONE) {
         return  (iRet);
     }
@@ -401,12 +402,12 @@ INT __sdioCoreDevRwDirect (PLW_SDCORE_DEVICE   psdcoredev,
     INT            iError;
 
     if (!psdcoredev || (uiFn > 7)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         return  (PX_ERROR);
     }
 
     if (uiAddr & (~0x1ffff)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "addr not available.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "addr not available.\r\n");
         return  (PX_ERROR);
     }
 
@@ -429,15 +430,15 @@ INT __sdioCoreDevRwDirect (PLW_SDCORE_DEVICE   psdcoredev,
 
     } else {
         if (sdcmd.SDCMD_uiResp[0] & R5_ERROR) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "unknow error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unknow error.\r\n");
             return  (PX_ERROR);
         }
         if (sdcmd.SDCMD_uiResp[0] & R5_FUNCTION_NUM) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "function num inval.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "function num inval.\r\n");
             return  (PX_ERROR);
         }
         if (sdcmd.SDCMD_uiResp[0] & R5_OUT_OF_RANGE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "arg out of range.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "arg out of range.\r\n");
             return  (PX_ERROR);
         }
     }
@@ -487,18 +488,18 @@ INT __sdioCoreDevRwExtend (PLW_SDCORE_DEVICE   psdcoredev,
         ((uiBlkCnt == 1) && (uiBlkSz > 512))  ||
         (uiBlkCnt  == 0)                      ||
         (uiBlkSz   == 0)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         return  (PX_ERROR);
     }
 
     if (uiAddr & (~0x1ffff)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "addr not available.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "addr not available.\r\n");
         return  (PX_ERROR);
     }
 
     iDevSta = API_SdCoreDevStaView(psdcoredev);
     if (iDevSta != SD_DEVSTA_EXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
         return  (PX_ERROR);
     }
 
@@ -525,13 +526,13 @@ INT __sdioCoreDevRwExtend (PLW_SDCORE_DEVICE   psdcoredev,
 
     sdmsg.SDMSG_pucWrtBuffer = pucBuf;
     sdmsg.SDMSG_pucRdBuffer  = pucBuf;
-    sdmsg.SDMSG_psdData      = &sddat;
+    sdmsg.SDMSG_psddata      = &sddat;
     sdmsg.SDMSG_psdcmdCmd    = &sdcmd;
     sdmsg.SDMSG_psdcmdStop   = LW_NULL;
 
     iError = API_SdCoreDevTransfer(psdcoredev, &sdmsg, 1);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "request error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "request error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -539,15 +540,15 @@ INT __sdioCoreDevRwExtend (PLW_SDCORE_DEVICE   psdcoredev,
 
     } else {
         if (sdcmd.SDCMD_uiResp[0] & R5_ERROR) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "unknow error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unknow error.\r\n");
             return  (PX_ERROR);
         }
         if (sdcmd.SDCMD_uiResp[0] & R5_FUNCTION_NUM) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "function num inval.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "function num inval.\r\n");
             return  (PX_ERROR);
         }
         if (sdcmd.SDCMD_uiResp[0] & R5_OUT_OF_RANGE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "arg out of range.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "arg out of range.\r\n");
             return  (PX_ERROR);
         }
     }
@@ -592,18 +593,18 @@ INT __sdioCoreDevRwExtendX (PLW_SDCORE_DEVICE   psdcoredev,
         ((uiBlkCnt == 1) && (uiBlkSz > 512)) ||
         (uiBlkCnt  == 0)                     ||
         (uiBlkSz   == 0)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         return  (PX_ERROR);
     }
 
     if (uiAddr & (~0x1ffff)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "addr not available.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "addr not available.\r\n");
         return  (PX_ERROR);
     }
 
     iDevSta = API_SdCoreDevStaView(psdcoredev);
     if (iDevSta != SD_DEVSTA_EXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device is not exist.\r\n");
         return  (PX_ERROR);
     }
 
@@ -630,13 +631,13 @@ INT __sdioCoreDevRwExtendX (PLW_SDCORE_DEVICE   psdcoredev,
 
     sdmsg.SDMSG_pucWrtBuffer = pucBuf;
     sdmsg.SDMSG_pucRdBuffer  = pucBuf;
-    sdmsg.SDMSG_psdData      = &sddat;
+    sdmsg.SDMSG_psddata      = &sddat;
     sdmsg.SDMSG_psdcmdCmd    = &sdcmd;
     sdmsg.SDMSG_psdcmdStop   = LW_NULL;
 
     iError = API_SdCoreDevTransfer(psdcoredev, &sdmsg, 1);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "request error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "request error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -644,15 +645,15 @@ INT __sdioCoreDevRwExtendX (PLW_SDCORE_DEVICE   psdcoredev,
 
     } else {
         if (sdcmd.SDCMD_uiResp[0] & R5_ERROR) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "unknow error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unknow error.\r\n");
             return  (PX_ERROR);
         }
         if (sdcmd.SDCMD_uiResp[0] & R5_FUNCTION_NUM) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "function num inval.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "function num inval.\r\n");
             return  (PX_ERROR);
         }
         if (sdcmd.SDCMD_uiResp[0] & R5_OUT_OF_RANGE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "arg out of range.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "arg out of range.\r\n");
             return  (PX_ERROR);
         }
     }
@@ -682,7 +683,7 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
      * have the same offset.
      */
     if (!psdcoredev || !psdiofunc) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -701,7 +702,7 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
 
     ppsdiofunctplPrev = &psdiofunc->FUNC_ptupleListHeader;
     if (*ppsdiofunctplPrev) {
-        _DebugHandle(__LOGMESSAGE_LEVEL, " warning: tuple header init not-null.\r\n");
+        SDCARD_DEBUG_MSG(__LOGMESSAGE_LEVEL, " warning: tuple header init not-null.\r\n");
     }
 
     do {
@@ -732,6 +733,7 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
 
         psdiofunctplThis = (SDIO_FUNC_TUPLE *)__SHEAP_ALLOC(sizeof(*psdiofunctplThis) + ucTplLink - 1);
         if (!psdiofunctplThis) {
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
             return  (-ENOMEM);
         }
 
@@ -764,7 +766,7 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
              * The tuple is unknown or known but not parsed.
              * Queue the tuple for the function driver.
              */
-            psdiofunctplThis->TUPLE_ptupleNext  = NULL;
+            psdiofunctplThis->TUPLE_ptupleNext  = LW_NULL;
             psdiofunctplThis->TUPLE_ucCode      = ucTplCode;
             psdiofunctplThis->TUPLE_ucSize      = ucTplLink;
 
@@ -815,7 +817,7 @@ INT __sdioCoreDevReadFbr (PLW_SDCORE_DEVICE  psdcoredev, SDIO_FUNC *psdiofunc)
                                  SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_STD_IF,
                                  0, &ucData);
     if (iRet != ERROR_NONE) {
-        goto __err;
+        goto    __err;
     }
 
     ucData &= 0x0f;
@@ -824,7 +826,7 @@ INT __sdioCoreDevReadFbr (PLW_SDCORE_DEVICE  psdcoredev, SDIO_FUNC *psdiofunc)
                                      SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_STD_IF_EXT,
                                      0, &ucData);
         if (iRet != ERROR_NONE) {
-            goto __err;
+            goto    __err;
         }
     }
 
@@ -852,58 +854,57 @@ INT __sdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
 
     iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_CCCR, 0, &ucData);
     if (iRet != ERROR_NONE) {
-        goto __err;
+        goto    __err;
     }
 
     iCccrVsn = ucData & 0x0f;
 
     if (iCccrVsn > SDIO_CCCR_REV_1_20) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unrecognised CCCR vsn.\r\n");
-
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unrecognised CCCR vsn.\r\n");
         return  (PX_ERROR);
     }
     psdiocccr->CCCR_uiSdioVsn = (ucData & 0xf0) >> 4;
 
     iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SD, 0, &ucData);
     if (iRet != ERROR_NONE) {
-        goto __err;
+        goto    __err;
     }
     psdiocccr->CCCR_uiSdVsn = ucData & 0x0f;
 
 
     iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_CAPS, 0, &ucData);
     if (iRet != ERROR_NONE) {
-        goto __err;
+        goto    __err;
     }
 
     if (ucData & SDIO_CCCR_CAP_SMB) {
-        psdiocccr->CCCR_bMulBlk = TRUE;
+        psdiocccr->CCCR_bMulBlk = LW_TRUE;
     }
     if (ucData & SDIO_CCCR_CAP_LSC) {
-        psdiocccr->CCCR_bLowSpeed = TRUE;
+        psdiocccr->CCCR_bLowSpeed = LW_TRUE;
     }
     if (ucData & SDIO_CCCR_CAP_4BLS) {
-        psdiocccr->CCCR_bWideBus = TRUE;
+        psdiocccr->CCCR_bWideBus = LW_TRUE;
     }
 
     if (iCccrVsn >= SDIO_CCCR_REV_1_10) {
         iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_POWER, 0, &ucData);
         if (iRet) {
-            goto __err;
+            goto    __err;
         }
 
         if (ucData & SDIO_POWER_SMPC) {
-            psdiocccr->CCCR_bHighPwr = TRUE;
+            psdiocccr->CCCR_bHighPwr = LW_TRUE;
         }
     }
 
     if (iCccrVsn >= SDIO_CCCR_REV_1_20) {
         iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SPEED, 0, &ucData);
         if (iRet) {
-            goto __err;
+            goto    __err;
         }
         if (ucData & SDIO_SPEED_SHS) {
-            psdiocccr->CCCR_bHighSpeed = TRUE;
+            psdiocccr->CCCR_bHighSpeed = LW_TRUE;
         }
     }
 
@@ -971,7 +972,7 @@ INT __sdioCoreDevHighSpeedEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocc
     }
 
     ucSpeed |= SDIO_SPEED_EHS;
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_SPEED, ucSpeed, NULL);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_SPEED, ucSpeed, LW_NULL);
     if (iRet) {
         return  (iRet);
     }
@@ -1018,7 +1019,7 @@ INT __sdioCoreDevWideBusEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr
     }
 
     ucWidth |= SDIO_BUS_WIDTH_4BIT;
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IF, ucWidth, NULL);
+    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IF, ucWidth, LW_NULL);
     if (iRet) {
         return  (iRet);
     }
@@ -1027,7 +1028,7 @@ INT __sdioCoreDevWideBusEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr
                             SDBUS_CTRL_SETBUSWIDTH,
                             SDARG_SETBUSWIDTH_4);
     if (iRet != ERROR_NONE) {
-        _DebugHandle(__LOGMESSAGE_LEVEL, " warning: dev widebuse en,but host set not succ.\r\n");
+        SDCARD_DEBUG_MSG(__LOGMESSAGE_LEVEL, " warning: dev widebuse en,but host set not succ.\r\n");
     }
 
     return  (ERROR_NONE);
@@ -1073,10 +1074,10 @@ static INT __cistplParse (SDIO_FUNC                 *psdiofunc,
         }
 
         if (iRet && (iRet != -EILSEQ) && (iRet != -ENOENT)) {
-            _DebugFormat(__LOGMESSAGE_LEVEL,
-                         " warning: parser[%s]"
-                         " with bad tuple code[0x%02x] size[%u].\r\n",
-                         cpParser->PARSER_cpcDesc, ucCode, uiSize);
+            SDCARD_DEBUG_MSGX(__LOGMESSAGE_LEVEL,
+                              "warning: parser[%s] "
+                              "with bad tuple code[0x%02x] size[%u].\r\n",
+                              cpParser->PARSER_cpcDesc, ucCode, uiSize);
         }
 
     } else {
@@ -1098,7 +1099,7 @@ static INT __cistplParse (SDIO_FUNC                 *psdiofunc,
 static INT __cistplParseFunceCommon (SDIO_FUNC *psdiofunc, const UINT8 *cpucData, UINT32 uiSize)
 {
     if (!psdiofunc || psdiofunc->FUNC_uiNum != 0) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "just func0 available.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "just func0 available.\r\n");
         return  (-EINVAL);
     }
 
@@ -1163,7 +1164,7 @@ static INT __cistplParseFunce (SDIO_FUNC *psdiofunc, const UINT8 *cpucData, UINT
     INT   iRet;
 
     if (uiSize < 1) {
-        _DebugFormat(__ERRORMESSAGE_LEVEL, "data size(%u) not available.\r\n", uiSize);
+        SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "data size(%u) not available.\r\n", uiSize);
         return  (-EINVAL);
     }
 

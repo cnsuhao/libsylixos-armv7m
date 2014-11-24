@@ -20,6 +20,7 @@
 
 ** BUG:
 2011.01.10  增加SPI模式下的相关定义.
+2014.11.16  增加两个适配器 ioctl 命令, 用户停止/启动时钟.
 *********************************************************************************************************/
 
 #ifndef __SDBUS_H
@@ -237,7 +238,7 @@ typedef struct lw_sd_data {
 
 typedef struct lw_sd_message {
     LW_SD_COMMAND  *SDMSG_psdcmdCmd;                                    /*  发送命令                    */
-    LW_SD_DATA     *SDMSG_psdData;                                      /*  数据传输属性                */
+    LW_SD_DATA     *SDMSG_psddata;                                      /*  数据传输属性                */
     LW_SD_COMMAND  *SDMSG_psdcmdStop;                                   /*  停止命令                    */
     UINT8          *SDMSG_pucRdBuffer;                                  /*  请求缓冲(读缓冲)            */
     UINT8          *SDMSG_pucWrtBuffer;                                 /*  请求缓冲(写缓冲)            */
@@ -287,8 +288,10 @@ typedef struct lw_sd_funcs {
 #define SDBUS_CTRL_POWERON        2
 #define SDBUS_CTRL_SETBUSWIDTH    3                                     /*  硬件级(I\O)总线设置         */
 #define SDBUS_CTRL_SETCLK         4
-#define SDBUS_CTRL_DELAYCLK       5
-#define SDBUS_CTRL_GETOCR         6                                     /*  获得适配器的电压情况        */
+#define SDBUS_CTRL_STOPCLK        5
+#define SDBUS_CTRL_STARTCLK       6
+#define SDBUS_CTRL_DELAYCLK       7
+#define SDBUS_CTRL_GETOCR         8                                     /*  获得适配器的电压情况        */
 
 #define SDARG_SETCLK_LOW          400000
 #define SDARG_SETCLK_NORMAL       25000000

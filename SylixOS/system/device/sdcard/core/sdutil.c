@@ -47,7 +47,7 @@ VOID *__sdUnitPoolCreate (VOID)
 {
     __UNIT_POOL *punitpool =  (__UNIT_POOL *)__SHEAP_ALLOC(sizeof(__UNIT_POOL));
     if (!punitpool) {
-        return  (NULL);
+        return  (LW_NULL);
     }
 
     punitpool->UNITPOOL_uiSpace = 0;

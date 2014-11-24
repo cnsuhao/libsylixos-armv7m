@@ -16,15 +16,19 @@
 **
 ** 文件创建日期: 2011 年 01 月 17 日
 **
-** 描        述: sd标准主控制器驱动源文件(SD Host Controller Simplified Specification Version 2.00).
+** 描        述: SD 标准主控制器驱动源文件(SD Host Controller Simplified Specification Version 2.00).
 
 ** BUG:
 2011.03.02  增加主控传输模式查看\设置函数.允许动态改变传输模式(主控上不存在设备的情况下).
 2011.04.07  增加 SDMA 传输功能.
 2011.04.07  考虑到 SD 控制器在不同平台上其寄存器可能在 IO 空间,也可能在内存空间,所以读写寄存器的
-            6个函数申明为外部函数,由具体平台的驱动实现.
+            6 个函数申明为外部函数,由具体平台的驱动实现.
+2014.11.13  修改一般传输模式为中断方式, 同时支持 SDIO 中断处理
+2014.11.15  增加 SDHCI 注册到 SDM 的相关功能函数
+2014.11.24  修正 SDIO 中断服务线程的一个 BUG, 在等到中断信号量后再获取 SDHCI 控制器对象.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
+#define  __SYLIXOS_IO
 #include "../SylixOS/kernel/include/k_kernel.h"
 #include "../SylixOS/system/include/s_system.h"
 /*********************************************************************************************************
@@ -32,32 +36,51 @@
 *********************************************************************************************************/
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SDCARD_EN > 0)
 #include "sdhci.h"
+#include "../include/sddebug.h"
+#include "../core/sddrvm.h"
 /*********************************************************************************************************
   内部宏
 *********************************************************************************************************/
 #define __SDHCI_HOST_DEVNUM_MAX   1                                     /*  一个控制器支持的槽数量      */
 #define __SDHCI_MAX_BASE_CLK      102400000                             /*  主控允许最大基时钟102.4Mhz  */
-#define __SDHCI_MAX_CLK           48000000                              /*  最大时钟25Mhz               */
-#define __SDHCI_NOR_CLK           100000                                /*  一般时钟400Khz              */
 
 #define __SDHCI_CMD_TOUT_SEC      2                                     /*  命令超时物理时间(经验值)    */
-#define __SDHCI_READ_TOUT_SEC     2                                     /*  读超时物理时间(经验值)      */
-#define __SDHCI_WRITE_TOUT_SEC    2                                     /*  写超时物理时间(经验值)      */
-#define __SDHCI_SDMARW_TOUT_SEC   2                                     /*  SDMA超时物理时间(经验值)    */
+#define __SDHCI_CMD_RETRY         20000                                 /*  命令超时计数                */
 
-#define __SDHCI_CMD_RETRY         0x40000000                            /*  命令超时计数                */
-#define __SDHCI_READ_RETRY        0x40000000                            /*  读超时计数                  */
-#define __SDHCI_WRITE_RETRY       0x40000000                            /*  写超时计数                  */
-#define __SDHCI_SDMARW_RETRY      50                                    /*  SDMA读写超时计数            */
-
-#define __SDHCI_DMA_BOUND_LEN     (2 << (12 + __SDHCI_DMA_BOUND_NBITS))
+#define __SDHCI_DMA_BOUND_LEN     (1 << (12 + __SDHCI_DMA_BOUND_NBITS))
 #define __SDHCI_DMA_BOUND_NBITS   7                                     /*  系统连续内存边界位指示      */
                                                                         /*  当前设定值为 7 (最大):      */
-                                                                        /*  2 << (12 + 7) = 512k        */
+                                                                        /*  1 << (12 + 7) = 512k        */
                                                                         /*  当数据搬移时超过512K边界,需 */
                                                                         /*  要更新DMA地址               */
 #define __SDHCI_HOST_NAME(phs)    \
-        (phs->SDHCIHS_psdadapter->SDADAPTER_busadapter.BUSADAPTER_cName)
+        ((phs)->SDHCIHS_psdadapter->SDADAPTER_busadapter.BUSADAPTER_cName)
+/*********************************************************************************************************
+  传输事务线程相关
+*********************************************************************************************************/
+#define __SDHCI_SDIOINTSVR_PRIO   197
+#define __SDHCI_SDIOINTSVR_STKSZ  (8 * 1024)
+/*********************************************************************************************************
+  传输事务线操作宏定义
+*********************************************************************************************************/
+#define __SDHCI_TRANS_LOCK(pt)    LW_SPIN_LOCK_IRQ(&pt->SDHCITS_slLock, &iregInterLevel)
+#define __SDHCI_TRANS_UNLOCK(pt)  LW_SPIN_UNLOCK_IRQ(&pt->SDHCITS_slLock, iregInterLevel)
+
+#define __SDHCI_SDIO_WAIT(pt)     API_SemaphoreCPend(pt->SDHCITS_hSdioIntSem, LW_OPTION_WAIT_INFINITE)
+#define __SDHCI_SDIO_NOTIFY(pt)   API_SemaphoreCPost(pt->SDHCITS_hSdioIntSem)
+/*********************************************************************************************************
+  前置声明
+*********************************************************************************************************/
+struct __sdhci_trans;
+struct __sdhci_host;
+struct __sdhci_sdm_host;
+
+typedef struct __sdhci_trans      __SDHCI_TRANS;
+typedef struct __sdhci_host       __SDHCI_HOST;
+typedef struct __sdhci_sdm_host   __SDHCI_SDM_HOST;
+typedef struct __sdhci_trans     *__PSDHCI_TRANS;
+typedef struct __sdhci_host      *__PSDHCI_HOST;
+typedef struct __sdhci_sdm_host  *__PSDHCI_SDM_HOST;
 /*********************************************************************************************************
   标准主控器功能描述结构
 *********************************************************************************************************/
@@ -66,43 +89,109 @@ typedef struct __sdhci_capab {
     UINT32      SDHCICAP_uiMaxBlkSize;                                  /*  支持的最大块长度            */
     UINT32      SDHCICAP_uiVoltage;                                     /*  电压支持情况                */
 
-    BOOL        SDHCICAP_bCanSdma;                                      /*  是否支持SDMA                */
-    BOOL        SDHCICAP_bCanAdma;                                      /*  是否支持ADMA                */
+    BOOL        SDHCICAP_bCanSdma;                                      /*  是否支持 SDMA               */
+    BOOL        SDHCICAP_bCanAdma;                                      /*  是否支持 ADMA               */
     BOOL        SDHCICAP_bCanHighSpeed;                                 /*  是否支持高速传输            */
     BOOL        SDHCICAP_bCanSusRes;                                    /*  是否支持挂起\恢复功能       */
 }__SDHCI_CAPAB, *__PSDHCI_CAPAB;
 /*********************************************************************************************************
-  标准主控器HOST结构
+  SD 标准控制器规范中, 其块大小最大为 2048(SDIO 设备最大块也是 2048), 最大块计数为 65535.
+  同时, 在 DMA 传输中, 单次最大传输 512KB.
+  1. 一般传输模式:
+     该模式只用到 BlkSize 和 BlkCnt 寄存器. 用户请求的 BlkSize 一定是不超过 2048 的, 但是 BlkCnt 可能
+     超过65535. 此时就需要对数据进行拆分.
+     比如用户数据 BlkSize 为32, BlkCnt 为 80000, 则需要拆分为两次传输.
+
+  2. DMA 传输:
+     此时不仅要考虑 1 的情况, 还应该将用户数据拆分为 N 个 512KB 进行 DMA 传输.
+     比如用户数据 BlkSize 为2048, BlkCnt 为256. 则需要拆分为 2 个 512 KB 的 DMA 传输.
+
+  3. 在实际使用中, 上述情形及其少见(为了传输的稳定和减少出错). 因此, 当前版本不支持上面情况的特殊处理
+
+  标准主控器传输事务控制块
+  这里将用户提交的单次请求(包括发送命令、数据读写、读取应答等一整套流程操作)称作一次事务
 *********************************************************************************************************/
-typedef struct __sdhci_host {
-    LW_SD_FUNCS         SDHCIHS_sdfunc;                                 /*  对应的驱动函数              */
-    PLW_SD_ADAPTER      SDHCIHS_psdadapter;                             /*  对应的总线适配器            */
-    LW_SDHCI_HOST_ATTR  SDHCIHS_hostattr;                               /*  主控属性                    */
-    __SDHCI_CAPAB       SDHCIHS_sdhcicap;                               /*  主控功能                    */
-    atomic_t            SDHCIHS_atomicDevCnt;                           /*  设备计数                    */
-
-    UINT32              SDHCIHS_ucTransferMod;                          /*  主控使用的传输模式          */
-
+struct __sdhci_trans {
+    __PSDHCI_HOST         SDHCITS_psdhcihost;
 #if LW_CFG_VMM_EN > 0
-    UINT8              *SDHCIHS_pucDmaBuf;                              /*  使用DMA传输开启cache时需要  */
+    UINT8                *SDHCITS_pucDmaBuffer;
 #endif
+    LW_OBJECT_HANDLE      SDHCITS_hFinishSync;                          /*  传输事务完成同步信号        */
 
-    INT               (*SDHCIHS_pfuncMasterXfer)                        /*  主控当前使用的传输函数      */
-                      (
-                        struct __sdhci_host *psdhcihost,
-                        PLW_SD_DEVICE        psddev,
-                        PLW_SD_MESSAGE       psdmsg,
-                        INT                  iNum
-                      );
-} __SDHCI_HOST, *__PSDHCI_HOST;
+    BOOL                  SDHCITS_bCmdFinish;
+    BOOL                  SDHCITS_bDatFinish;
+    INT                   SDHCITS_iCmdError;
+    INT                   SDHCITS_iDatError;                            /*  事务状态控制                */
+
+    UINT8                *SDHCITS_pucDatBuffCurr;
+    UINT32                SDHCITS_uiBlkSize;
+    UINT32                SDHCITS_uiBlkCntRemain;
+    BOOL                  SDHCITS_bIsRead;                              /*  事务传输状态控制            */
+
+    INT                   SDHCITS_iTransType;
+#define __SDHIC_TRANS_NORMAL    0
+#define __SDHIC_TRANS_SDMA      1
+#define __SDHIC_TRANS_ADMA      2
+
+    LW_OBJECT_HANDLE      SDHCITS_hSdioIntThread;                       /*  负责 SDIO 中断处理线程      */
+    LW_OBJECT_HANDLE      SDHCITS_hSdioIntSem;                          /*  SDIO 中断同步信号           */
+
+    UINT32                SDHCITS_uiIntSta;
+
+    LW_SD_COMMAND        *SDHCITS_psdcmd;
+    LW_SD_DATA           *SDHCITS_psddat;                               /*  对用户请求的引用            */
+
+    LW_SPINLOCK_DEFINE   (SDHCITS_slLock);
+};
+/*********************************************************************************************************
+  标准主控器 HOST结构
+*********************************************************************************************************/
+struct __sdhci_host {
+    LW_SD_FUNCS             SDHCIHS_sdfunc;                             /*  对应的驱动函数              */
+    PLW_SD_ADAPTER          SDHCIHS_psdadapter;                         /*  对应的总线适配器            */
+    LW_SDHCI_HOST_ATTR      SDHCIHS_sdhcihostattr;                      /*  主控属性                    */
+    __SDHCI_CAPAB           SDHCIHS_sdhcicap;                           /*  主控功能                    */
+    atomic_t                SDHCIHS_atomicDevCnt;                       /*  设备计数                    */
+
+    UINT32                  SDHCIHS_ucTransferMod;                      /*  主控使用的传输模式          */
+    INT                   (*SDHCIHS_pfuncMasterXfer)                    /*  主控当前使用的传输函数      */
+                          (
+                          __PSDHCI_HOST        psdhcihost,
+                          PLW_SD_DEVICE        psddev,
+                          PLW_SD_MESSAGE       psdmsg,
+                          INT                  iNum
+                          );
+
+    __PSDHCI_TRANS          SDHCIHS_psdhcitrans;                        /*  传输事务控制块对象          */
+    __PSDHCI_SDM_HOST       SDHCIHS_psdhcisdmhost;                      /*  SDM 层 HOST 信息            */
+
+    UINT32                  SDHCIHS_uiClkCurr;
+    BOOL                    SDHCIHS_bClkEnable;
+    BOOL                    SDHCIHS_bSdioIntEnable;
+    UINT8                   SDHCIHS_ucDevType;                          /*  当前设备的类型              */
+};
 /*********************************************************************************************************
   标准主控器设备内部结构
 *********************************************************************************************************/
 typedef struct __sdhci_dev {
-    PLW_SD_DEVICE       SDHCIDEV_psddevice;                             /*  对应的SD设备                */
-    __PSDHCI_HOST       SDHCIDEV_psdhcihost;                            /*  对应的HOST                  */
-    CHAR                SDHCIDEV_pcDevName[LW_CFG_OBJECT_NAME_SIZE];    /*  设备名称(与对应SD设备相同)  */
+    PLW_SD_DEVICE       SDHCIDEV_psddevice;                             /*  对应的 SD 设备              */
+    __PSDHCI_HOST       SDHCIDEV_psdhcihost;                            /*  对应的 HOST                 */
+    CHAR                SDHCIDEV_pcDevName[LW_CFG_OBJECT_NAME_SIZE];    /*  设备名称(与对应 SD 设备相同)*/
 } __SDHCI_DEVICE, *__PSDHCI_DEVICE;
+/*********************************************************************************************************
+  标准主控器注册到 SDM 模块的数据结构
+*********************************************************************************************************/
+struct __sdhci_sdm_host {
+    SD_HOST         SDHCISDMH_sdhost;
+    __PSDHCI_HOST   SDHCISDMH_psdhcihost;
+    SD_CALLBACK     SDHCISDMH_callbackChkDev;
+    PVOID           SDHCISDMH_pvCallBackArg;
+    PVOID           SDHCISDMH_pvDevAttached;
+};
+/*********************************************************************************************************
+  全局变量
+*********************************************************************************************************/
+static SDHCI_DRV_FUNCS _G_sdhcidrvfuncTbl[2];
 /*********************************************************************************************************
   私有函数申明
 *********************************************************************************************************/
@@ -121,12 +210,30 @@ static INT __sdhciIoCtl(PLW_SD_ADAPTER  psdadapter,
   FOR I\O CONTROL PRIVATE
 *********************************************************************************************************/
 static INT __sdhciClockSet(__PSDHCI_HOST     psdhcihost, UINT32 uiSetClk);
+static INT __sdhciClockStop(__PSDHCI_HOST    psdhcihost);
 static INT __sdhciBusWidthSet(__PSDHCI_HOST  psdhcihost, UINT32 uiBusWidth);
 static INT __sdhciPowerOn(__PSDHCI_HOST      psdhcihost);
 static INT __sdhciPowerOff(__PSDHCI_HOST     psdhcihost);
 static INT __sdhciPowerSetVol(__PSDHCI_HOST  psdhcihost,
                               UINT8          ucVol,
-                              BOOL           uiVol);
+                              BOOL           bIsOn);
+static INT __sdhciHighSpeedEn(__PSDHCI_HOST  psdhcihost,  BOOL bEnable);
+/*********************************************************************************************************
+  FOR SDM LAYER
+*********************************************************************************************************/
+static __SDHCI_SDM_HOST *__sdhciSdmHostNew(__PSDHCI_HOST      psdhcihost);
+static INT               __sdhciSdmHostDel(__SDHCI_SDM_HOST  *psdhcisdmhost);
+
+static INT               __sdhciSdmCallBackInstall(SD_HOST          *psdhost,
+                                                   INT               iCallbackType,
+                                                   SD_CALLBACK       callback,
+                                                   PVOID             pvCallbackArg);
+static INT               __sdhciSdmCallBackUnInstall(SD_HOST          *psdhost,
+                                                     INT               iCallbackType);
+static VOID              __sdhciSdmSdioIntEn(SD_HOST *psdhost, BOOL bEnable);
+
+static VOID              __sdhciSdmDevAttach(SD_HOST *psdhost, CPCHAR cpcDevName);
+static VOID              __sdhciSdmDevDetach(SD_HOST *psdhost);
 /*********************************************************************************************************
   FOR TRANSFER PRIVATE
 *********************************************************************************************************/
@@ -142,31 +249,66 @@ static INT __sdhciTransferAdma(__PSDHCI_HOST       psdhcihost,
                                PLW_SD_DEVICE       psddev,
                                PLW_SD_MESSAGE      psdmsg,
                                INT                 iNum);
-
-static INT  __sdhciSendCmd(__PSDHCI_HOST   psdhcihost,
+static INT  __sdhciCmdSend(__PSDHCI_HOST   psdhcihost,
                            PLW_SD_COMMAND  psdcmd,
                            PLW_SD_DATA     psddat);
 
-static VOID __sdhciTransferModSet(__PSDHCI_HOST   psdhcihost, PLW_SD_DATA    psddat);
-static VOID __sdhciDataPrepareNorm(__PSDHCI_HOST  psdhcihost, PLW_SD_DATA    psddat);
-static VOID __sdhciDataPrepareSdma(__PSDHCI_HOST  psdhcihost, PLW_SD_MESSAGE psdmsg);
-static VOID __sdhciDataPrepareAdma(__PSDHCI_HOST  psdhcihost, PLW_SD_DATA    psddat);
-
-static INT __sdhciDataReadNorm(__PSDHCI_HOST  psdhcihost,
-                               UINT32         uiBlkSize,
-                               UINT32         uiBlkNum,
-                               PUCHAR         pucRdBuff);
-static INT __sdhciDataWriteNorm(__PSDHCI_HOST  psdhcihost,
-                                UINT32         uiBlkSize,
-                                UINT32         uiBlkNum,
-                                PUCHAR         pucWrtBuff);
-
-static INT __sdhciDataFinishSdma(__PSDHCI_HOST   psdhcihost, PLW_SD_MESSAGE psdmsg);
+static VOID __sdhciTransferModSet(__PSDHCI_HOST   psdhcihost);
+static VOID __sdhciDataPrepareNorm(__PSDHCI_HOST  psdhcihost);
+static VOID __sdhciDataPrepareSdma(__PSDHCI_HOST  psdhcihost);
+static VOID __sdhciDataPrepareAdma(__PSDHCI_HOST  psdhcihost);
 
 static VOID __sdhciTransferIntSet(__PSDHCI_HOST  psdhcihost);
 static VOID __sdhciIntDisAndEn(__PSDHCI_HOST     psdhcihost,
                                UINT32            uiDisMask,
                                UINT32            uiEnMask);
+static VOID __sdhciSdioIntEn(__PSDHCI_HOST     psdhcihost, BOOL bEnable);
+/*********************************************************************************************************
+  FOR TRANSACTION
+*********************************************************************************************************/
+static __SDHCI_TRANS *__sdhciTransNew(__PSDHCI_HOST  psdhcihost);
+static VOID           __sdhciTransDel(__SDHCI_TRANS *psdhcitrans);
+static INT            __sdhciTransTaskInit(__SDHCI_TRANS *psdhcitrans);
+static INT            __sdhciTransTaskDeInit(__SDHCI_TRANS *psdhcitrans);
+
+static INT            __sdhciTransPrepare(__SDHCI_TRANS *psdhcitrans,
+                                          LW_SD_MESSAGE *psdmsg,
+                                          INT            iTransType);
+static INT            __sdhciTransStart(__SDHCI_TRANS *psdhcitrans);
+static INT            __sdhciTransFinishWait(__SDHCI_TRANS *psdhcitrans);
+static VOID           __sdhciTransFinish(__SDHCI_TRANS *psdhcitrans);
+static INT            __sdhciTransClean(__SDHCI_TRANS *psdhcitrans);
+
+static irqreturn_t    __sdhciTransIrq(VOID *pvArg, ULONG ulVector);
+static PVOID          __sdhciSdioIntSvr(VOID *pvArg);
+
+static INT            __sdhciTransCmdHandle(__SDHCI_TRANS *psdhcitrans, UINT32 uiIntSta);
+static INT            __sdhciTransDatHandle(__SDHCI_TRANS *psdhcitrans, UINT32 uiIntSta);
+
+static INT            __sdhciTransCmdFinish(__SDHCI_TRANS *psdhcitrans);
+static INT            __sdhciTransDatFinish(__SDHCI_TRANS *psdhcitrans);
+
+static INT            __sdhciDataReadNorm(__PSDHCI_TRANS    psdhcitrans);
+static INT            __sdhciDataWriteNorm(__PSDHCI_TRANS    psdhcitrans);
+/*********************************************************************************************************
+  FOR IO ACCESS DRV
+*********************************************************************************************************/
+static UINT32 __sdhciIoReadL(ULONG ulAddr);
+static UINT16 __sdhciIoReadW(ULONG ulAddr);
+static UINT8  __sdhciIoReadB(ULONG ulAddr);
+
+static VOID   __sdhciIoWriteL(ULONG ulAddr, UINT32 uiLword);
+static VOID   __sdhciIoWriteW(ULONG ulAddr, UINT16 usWord);
+static VOID   __sdhciIoWriteB(ULONG ulAddr, UINT8 ucByte);
+
+static UINT32 __sdhciMemReadL(ULONG ulAddr);
+static UINT16 __sdhciMemReadW(ULONG ulAddr);
+static UINT8  __sdhciMemReadB(ULONG ulAddr);
+static VOID   __sdhciMemWriteL(ULONG ulAddr, UINT32 uiLword);
+static VOID   __sdhciMemWriteW(ULONG ulAddr, UINT16 usWord);
+static VOID   __sdhciMemWriteB(ULONG ulAddr, UINT8 ucByte);
+
+static INT    __sdhciRegAccessDrvInit(PLW_SDHCI_HOST_ATTR  psdhcihostattr);
 /*********************************************************************************************************
   FOR DEBUG
 *********************************************************************************************************/
@@ -199,31 +341,44 @@ static LW_INLINE INT __sdhciCmdRespType (PLW_SD_COMMAND psdcmd)
 }
 static LW_INLINE VOID __sdhciSdmaAddrUpdate (__PSDHCI_HOST psdhcihost, LONG lSysAddr)
 {
-    SDHCI_WRITEL(&psdhcihost->SDHCIHS_hostattr,
+    SDHCI_WRITEL(&psdhcihost->SDHCIHS_sdhcihostattr,
                  SDHCI_SYS_SDMA,
                  (UINT32)lSysAddr);
 }
 static LW_INLINE VOID __sdhciHostRest (__PSDHCI_HOST psdhcihost)
 {
-    SDHCI_WRITEB(&psdhcihost->SDHCIHS_hostattr,
+    SDHCI_WRITEB(&psdhcihost->SDHCIHS_sdhcihostattr,
                  SDHCI_SOFTWARE_RESET,
                  (SDHCI_SFRST_CMD | SDHCI_SFRST_DATA));
+}
+static LW_INLINE VOID __sdhciDmaSelect (__PSDHCI_HOST psdhcihost, UINT8 ucDmaType)
+{
+    UINT8 ucHostCtrl;
+
+    ucHostCtrl = SDHCI_READB(&psdhcihost->SDHCIHS_sdhcihostattr,
+                             SDHCI_HOST_CONTROL);
+    ucHostCtrl = (ucHostCtrl & (~SDHCI_HCTRL_DMA_MASK)) | ucDmaType;
+    SDHCI_WRITEB(&psdhcihost->SDHCIHS_sdhcihostattr,
+                 SDHCI_HOST_CONTROL,
+                 ucHostCtrl);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdhciHostCreate
 ** 功能描述: 创建SD标准主控制器
-** 输    入: psdAdapter     所对应的SD总线适配器名称
+** 输    入: psdAdapter     所对应的 SD 总线适配器名称
 **           psdhcihostattr 主控器属性
-** 输    出: NONE
-** 返    回: 成功,返回主控指针.失败,返回NULL.
+** 输    出: 成功: 返回主控对象指针. 失败: 返回 NULL.
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 LW_API PVOID  API_SdhciHostCreate (CPCHAR               pcAdapterName,
                                    PLW_SDHCI_HOST_ATTR  psdhcihostattr)
 {
-    PLW_SD_ADAPTER  psdadapter  = LW_NULL;
-    __PSDHCI_HOST   psdhcihost  = LW_NULL;
-    PVOID           pvDmaBuf;
-    INT             iError;
+    PLW_SD_ADAPTER    psdadapter    = LW_NULL;
+    __PSDHCI_HOST     psdhcihost    = LW_NULL;
+    __PSDHCI_TRANS    psdhcitrans   = LW_NULL;
+    __PSDHCI_SDM_HOST psdhcisdmhost = LW_NULL;
+    INT               iError;
 
     if (!pcAdapterName || !psdhcihostattr) {
         _ErrorHandle(EINVAL);
@@ -231,14 +386,20 @@ LW_API PVOID  API_SdhciHostCreate (CPCHAR               pcAdapterName,
     }
 
     if (psdhcihostattr->SDHCIHOST_uiMaxClock > __SDHCI_MAX_BASE_CLK) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "max clock must be less than 102.4Mhz.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "max clock must be less than 102.4Mhz.\r\n");
         _ErrorHandle(EINVAL);
+        return  ((PVOID)LW_NULL);
+    }
+
+    iError = __sdhciRegAccessDrvInit(psdhcihostattr);                   /*  寄存器访问驱动初始化        */
+    if (iError != ERROR_NONE) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "register access drv init failed.\r\n");
         return  ((PVOID)LW_NULL);
     }
 
     psdhcihost = (__PSDHCI_HOST)__SHEAP_ALLOC(sizeof(__SDHCI_HOST));   /*  分配HOST                     */
     if (!psdhcihost) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  ((PVOID)LW_NULL);
     }
@@ -246,57 +407,71 @@ LW_API PVOID  API_SdhciHostCreate (CPCHAR               pcAdapterName,
 
     __sdhciHostCapDecode(psdhcihostattr, &psdhcihost->SDHCIHS_sdhcicap);/*  主控功能解析                */
 
-    API_SdLibInit();                                                    /*  初始化sd组建库              */
-
     psdhcihost->SDHCIHS_sdfunc.SDFUNC_pfuncMasterXfer = __sdhciTransfer;
     psdhcihost->SDHCIHS_sdfunc.SDFUNC_pfuncMasterCtl  = __sdhciIoCtl;   /*  初始化驱动函数              */
 
     iError = API_SdAdapterCreate(pcAdapterName, &psdhcihost->SDHCIHS_sdfunc);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "create sd adapter error.\r\n");
-        __SHEAP_FREE(psdhcihost);
-        return  ((PVOID)LW_NULL);
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create sd adapter error.\r\n");
+        goto    __err0;
     }
 
     psdadapter = API_SdAdapterGet(pcAdapterName);                       /*  获得适配器                  */
 
-    psdhcihost->SDHCIHS_psdadapter             = psdadapter;
-    psdhcihost->SDHCIHS_atomicDevCnt.counter   = 0;                     /*  初始设备数为0               */
-    psdhcihost->SDHCIHS_pfuncMasterXfer        = __sdhciTransferNorm;
-    psdhcihost->SDHCIHS_ucTransferMod          = SDHCIHOST_TMOD_SET_NORMAL;
-                                                                        /*  默认使用一般传输            */
-#if LW_CFG_VMM_EN > 0
-    pvDmaBuf = API_VmmDmaAlloc(__SDHCI_DMA_BOUND_LEN);
-    if (!pvDmaBuf) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
-        __SHEAP_FREE(psdhcihost);
-        return  ((PVOID)LW_NULL);
-    }
-    psdhcihost->SDHCIHS_pucDmaBuf = (UINT8 *)pvDmaBuf;
-#endif
-
-    lib_memcpy(&psdhcihost->SDHCIHS_hostattr, psdhcihostattr, sizeof(LW_SDHCI_HOST_ATTR));
+    psdhcihost->SDHCIHS_psdadapter           = psdadapter;
+    psdhcihost->SDHCIHS_atomicDevCnt.counter = 0;                       /*  初始设备数为0               */
+    psdhcihost->SDHCIHS_pfuncMasterXfer      = __sdhciTransferNorm;
+    psdhcihost->SDHCIHS_ucTransferMod        = SDHCIHOST_TMOD_SET_NORMAL;
+    lib_memcpy(&psdhcihost->SDHCIHS_sdhcihostattr,
+               psdhcihostattr, sizeof(LW_SDHCI_HOST_ATTR));
                                                                         /*  保存属性域                  */
+    __sdhciIntDisAndEn(psdhcihost, SDHCI_INT_ALL_MASK, 0);              /*  禁止所有中断                */
+
+    psdhcitrans = __sdhciTransNew(psdhcihost);
+    if (!psdhcitrans) {
+        goto    __err1;
+    }
+    psdhcihost->SDHCIHS_psdhcitrans = psdhcitrans;                      /*  创建传输事务                */
+
+    psdhcisdmhost = __sdhciSdmHostNew(psdhcihost);
+    if (!psdhcisdmhost) {
+        goto    __err2;
+    }
+    psdhcihost->SDHCIHS_psdhcisdmhost = psdhcisdmhost;                  /*  创建 SDM 层 HOST 对象       */
+
     __sdhciHostRest(psdhcihost);
     __sdhciPowerSetVol(psdhcihost, SDHCI_POWCTL_330, LW_TRUE);          /*  3.3v                        */
-    SDHCI_WRITEB(&psdhcihost->SDHCIHS_hostattr, SDHCI_TIMEOUT_CONTROL, 0xe);
-                                                                        /*  使用最大超时                */
+    SDHCI_WRITEB(&psdhcihost->SDHCIHS_sdhcihostattr,
+                 SDHCI_TIMEOUT_CONTROL, 0xe);                           /*  使用最大超时                */
+
     __sdhciIntDisAndEn(psdhcihost,
                        SDHCI_INT_ALL_MASK,
                        SDHCI_INT_BUS_POWER | SDHCI_INT_DATA_END_BIT |
                        SDHCI_INT_DATA_CRC  | SDHCI_INT_DATA_TIMEOUT |
                        SDHCI_INT_INDEX     | SDHCI_INT_END_BIT      |
                        SDHCI_INT_CRC       | SDHCI_INT_TIMEOUT      |
-                       SDHCI_INT_DATA_END  | SDHCI_INT_RESPONSE);       /*  初始化时钟主控器中断        */
+                       SDHCI_INT_DATA_END  | SDHCI_INT_RESPONSE);       /*  初始化主控器中断            */
 
     return  ((PVOID)psdhcihost);
+
+__err2:
+    __sdhciTransDel(psdhcitrans);
+
+__err1:
+    API_SdAdapterDelete(pcAdapterName);
+
+__err0:
+    __SHEAP_FREE(psdhcihost);
+
+    return  (LW_NULL);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdhciHostDelete
-** 功能描述: 删除SD标准主控制器
+** 功能描述: 删除 SD 标准主控制器
 ** 输    入: pvHost    主控器指针
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 LW_API INT  API_SdhciHostDelete (PVOID  pvHost)
 {
@@ -307,19 +482,17 @@ LW_API INT  API_SdhciHostDelete (PVOID  pvHost)
         return  (PX_ERROR);
     }
 
-    psdhcihost   = (__PSDHCI_HOST)pvHost;
-
+    psdhcihost = (__PSDHCI_HOST)pvHost;
     if (API_AtomicGet(&psdhcihost->SDHCIHS_atomicDevCnt)) {
         _ErrorHandle(EBUSY);
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device always attached.\r\n");
         return  (PX_ERROR);
     }
 
+   __sdhciSdmHostDel(psdhcihost->SDHCIHS_psdhcisdmhost);
+   __sdhciTransDel(psdhcihost->SDHCIHS_psdhcitrans);
+
     API_SdAdapterDelete(__SDHCI_HOST_NAME(psdhcihost));
-
-#if LW_CFG_VMM_EN > 0
-    API_VmmDmaFree(psdhcihost->SDHCIHS_pucDmaBuf);
-#endif
-
     __SHEAP_FREE(psdhcihost);
 
     return  (ERROR_NONE);
@@ -328,20 +501,21 @@ LW_API INT  API_SdhciHostDelete (PVOID  pvHost)
 ** 函数名称: API_SdhciHostTransferModGet
 ** 功能描述: 获得主控支持的传输模式
 ** 输    入: pvHost    主控器指针
-** 输    出: NONE
-** 返    回: 成功,返回传输模式支持情况; 失败, 返回 0;
+** 输    出: 成功,返回传输模式支持情况; 失败, 返回 0
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 LW_API INT  API_SdhciHostTransferModGet (PVOID    pvHost)
 {
-    __PSDHCI_HOST   psdhcihost  = LW_NULL;
-    INT             iTmodFlg    = SDHCIHOST_TMOD_CAN_NORMAL;            /*  总是支持一般传输            */
+    __PSDHCI_HOST   psdhcihost = LW_NULL;
+    INT             iTmodFlg   = SDHCIHOST_TMOD_CAN_NORMAL;             /*  总是支持一般传输            */
 
     if (!pvHost) {
         _ErrorHandle(EINVAL);
         return  (0);
     }
 
-    psdhcihost   = (__PSDHCI_HOST)pvHost;
+    psdhcihost = (__PSDHCI_HOST)pvHost;
 
     if (psdhcihost->SDHCIHS_sdhcicap.SDHCICAP_bCanSdma) {
         iTmodFlg |= SDHCIHOST_TMOD_CAN_SDMA;
@@ -351,15 +525,16 @@ LW_API INT  API_SdhciHostTransferModGet (PVOID    pvHost)
         iTmodFlg |= SDHCIHOST_TMOD_CAN_ADMA;
     }
 
-    return (iTmodFlg);
+    return  (iTmodFlg);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdhciHostTransferModSet
 ** 功能描述: 设置主控的传输模式
 ** 输    入: pvHost    主控器指针
 **           iTmod     要设置的传输模式
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 LW_API INT  API_SdhciHostTransferModSet (PVOID    pvHost, INT   iTmod)
 {
@@ -373,10 +548,10 @@ LW_API INT  API_SdhciHostTransferModSet (PVOID    pvHost, INT   iTmod)
     psdhcihost   = (__PSDHCI_HOST)pvHost;
 
     /*
-     * 必须保证主控上没有设备,才能更改主控传输模式
+     * 必须保证主控上没有设备, 才能更改主控传输模式
      */
     if (API_AtomicGet(&psdhcihost->SDHCIHS_atomicDevCnt)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device exist.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device exist.\r\n");
         _ErrorHandle(EBUSY);
         return  (PX_ERROR);
     }
@@ -413,19 +588,20 @@ LW_API INT  API_SdhciHostTransferModSet (PVOID    pvHost, INT   iTmod)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: API_SdhciDeviceAdd
-** 功能描述: 向SD标准主控制器上添加一个SD设备
+** 函数名称: __sdhciDeviceAdd
+** 功能描述: 向SD标准主控制器上添加一个 SD 设备
 ** 输    入: pvHost      主控器指针
-**           pcDevice    要添加的SD设备名称
-** 输    出: NONE
-** 返    回: 成功,返回设备指针.失败,返回NULL.
+**           pcDevice    要添加的 SD 设备名称
+** 输    出: 成功,返回设备指针.失败,返回 NULL.
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-LW_API PVOID  API_SdhciDeviceAdd (PVOID     pvHost,
-                                  CPCHAR    pcDeviceName)
+static PVOID  __sdhciDeviceAdd (PVOID     pvHost,
+                                CPCHAR    pcDeviceName)
 {
-    __PSDHCI_HOST   psdhcihost    = LW_NULL;
-    __PSDHCI_DEVICE psdhcidevice  = LW_NULL;
-    PLW_SD_DEVICE   psddevice     = LW_NULL;
+    __PSDHCI_HOST   psdhcihost   = LW_NULL;
+    __PSDHCI_DEVICE psdhcidevice = LW_NULL;
+    PLW_SD_DEVICE   psddevice    = LW_NULL;
 
     if (!pvHost) {
         _ErrorHandle(EINVAL);
@@ -435,22 +611,19 @@ LW_API PVOID  API_SdhciDeviceAdd (PVOID     pvHost,
     psdhcihost = (__PSDHCI_HOST)pvHost;
 
     if (API_AtomicGet(&psdhcihost->SDHCIHS_atomicDevCnt) >= __SDHCI_HOST_DEVNUM_MAX) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "can not add more devices.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "can not add more devices.\r\n");
         return  ((PVOID)0);
     }
 
     psddevice = API_SdDeviceGet(__SDHCI_HOST_NAME(psdhcihost), pcDeviceName);
     if (!psddevice) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "find sd device failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "find sd device failed.\r\n");
        return  ((PVOID)0);
     }
 
-    /*
-     * 分配一个SDHCI DEVICE 结构
-     */
     psdhcidevice = (__PSDHCI_DEVICE)__SHEAP_ALLOC(sizeof(__SDHCI_DEVICE));
     if (!psdhcidevice) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  ((PVOID)0);
     }
@@ -460,23 +633,25 @@ LW_API PVOID  API_SdhciDeviceAdd (PVOID     pvHost,
     psdhcidevice->SDHCIDEV_psddevice  = psddevice;
     psdhcidevice->SDHCIDEV_psdhcihost = psdhcihost;
 
-    psddevice->SDDEV_pvUsr = psdhcidevice;                              /*  绑定用户数据                */
+    psddevice->SDDEV_pvUsr            = psdhcidevice;                   /*  绑定用户数据                */
+    psdhcihost->SDHCIHS_ucDevType     = psddevice->SDDEV_ucType;        /*  记录设备类型                */
 
     API_AtomicInc(&psdhcihost->SDHCIHS_atomicDevCnt);                   /*  设备++                      */
 
     return  ((PVOID)psdhcidevice);
 }
 /*********************************************************************************************************
-** 函数名称: API_SdhciDeviceRemove
-** 功能描述: 从SD标准主控制器上移除一个SD设备
-** 输    入: pvDevice  要移除的SD设备指针
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 函数名称: __sdhciDeviceRemove
+** 功能描述: 从 SD 标准主控制器上移除一个 SD 设备
+** 输    入: pvDevice  要移除的 SD 设备指针
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-LW_API INT  API_SdhciDeviceRemove (PVOID pvDevice)
+static INT  __sdhciDeviceRemove (PVOID pvDevice)
 {
-    __PSDHCI_HOST   psdhcihost    = LW_NULL;
-    __PSDHCI_DEVICE psdhcidevice  = LW_NULL;
+    __PSDHCI_HOST   psdhcihost   = LW_NULL;
+    __PSDHCI_DEVICE psdhcidevice = LW_NULL;
 
     if (!pvDevice) {
         _ErrorHandle(EINVAL);
@@ -493,15 +668,42 @@ LW_API INT  API_SdhciDeviceRemove (PVOID pvDevice)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: API_SdhciDeviceCheckNotify
+** 功能描述: 用于通知 SDHCI HOST 进行一次设备检查
+** 输    入: pvHost   控制器对象
+**           iDevSta  设备状态
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+LW_API VOID  API_SdhciDeviceCheckNotify (PVOID pvHost, INT iDevSta)
+{
+    __PSDHCI_HOST     psdhcihost    = LW_NULL;
+    __PSDHCI_SDM_HOST psdhcisdmhost = LW_NULL;
+
+    if (!pvHost) {
+        _ErrorHandle(EINVAL);
+        return;
+    }
+
+    psdhcihost    = (__PSDHCI_HOST)pvHost;
+    psdhcisdmhost = psdhcihost->SDHCIHS_psdhcisdmhost;
+
+    if (psdhcisdmhost->SDHCISDMH_callbackChkDev) {
+        psdhcisdmhost->SDHCISDMH_callbackChkDev(psdhcisdmhost->SDHCISDMH_pvCallBackArg, iDevSta);
+    }
+}
+/*********************************************************************************************************
 ** 函数名称: API_SdhciDeviceUsageInc
 ** 功能描述: 设备的使用计数增加一
-** 输    入: pvDevice  SD设备指针
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    入: pvDevice  SD 设备指针
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 LW_API INT  API_SdhciDeviceUsageInc (PVOID  pvDevice)
 {
-    __PSDHCI_DEVICE psdhcidevice  = LW_NULL;
+    __PSDHCI_DEVICE psdhcidevice = LW_NULL;
     INT             iError;
 
     if (!pvDevice) {
@@ -518,13 +720,14 @@ LW_API INT  API_SdhciDeviceUsageInc (PVOID  pvDevice)
 /*********************************************************************************************************
 ** 函数名称: API_SdhciDeviceUsageInc
 ** 功能描述: 设备的使用计数减一
-** 输    入: pvDevice  SD设备指针
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    入: pvDevice  SD 设备指针
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 LW_API INT  API_SdhciDeviceUsageDec (PVOID  pvDevice)
 {
-    __PSDHCI_DEVICE psdhcidevice  = LW_NULL;
+    __PSDHCI_DEVICE psdhcidevice = LW_NULL;
     INT             iError;
 
     if (!pvDevice) {
@@ -541,13 +744,14 @@ LW_API INT  API_SdhciDeviceUsageDec (PVOID  pvDevice)
 /*********************************************************************************************************
 ** 函数名称: API_SdhciDeviceUsageInc
 ** 功能描述: 获得设备的使用计数
-** 输    入: pvDevice  SD设备指针
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    入: pvDevice  SD 设备指针
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 LW_API INT  API_SdhciDeviceUsageGet (PVOID  pvDevice)
 {
-    __PSDHCI_DEVICE psdhcidevice  = LW_NULL;
+    __PSDHCI_DEVICE psdhcidevice = LW_NULL;
     INT             iError;
 
     if (!pvDevice) {
@@ -564,133 +768,125 @@ LW_API INT  API_SdhciDeviceUsageGet (PVOID  pvDevice)
 /*********************************************************************************************************
 ** 函数名称: __sdhciTransferNorm
 ** 功能描述: 一般传输
-** 输    入: psdhcihost  SD主控制器
-**           psddev      SD设备
-**           psdmsg      SD传输控制消息组
+** 输    入: psdhcihost  SD 主控制器
+**           psddev      SD 设备
+**           psdmsg      SD 传输控制消息组
 **           iNum        消息个数
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciTransferNorm (__PSDHCI_HOST       psdhcihost,
                                 PLW_SD_DEVICE       psddev,
                                 PLW_SD_MESSAGE      psdmsg,
                                 INT                 iNum)
 {
-    PLW_SD_COMMAND psdcmd  = LW_NULL;
-    PLW_SD_DATA    psddat  = LW_NULL;
-    INT            iError  = ERROR_NONE;
-    INT            i       = 0;
+    __PSDHCI_TRANS  psdhcitrans;
+    INTREG          iregInterLevel;
+    INT             iError;
+    INT             i = 0;
 
-    /*
-     * 传输消息
-     */
+    psdhcitrans = psdhcihost->SDHCIHS_psdhcitrans;
+
     while ((i < iNum) && (psdmsg != LW_NULL)) {
-        psdcmd = psdmsg->SDMSG_psdcmdCmd;
-        psddat = psdmsg->SDMSG_psdData;
-
-        __sdhciDataPrepareNorm(psdhcihost, psddat);                     /*  数据准备                    */
-        iError = __sdhciSendCmd(psdhcihost, psdcmd, psddat);            /*  发送命令                    */
+        __SDHCI_TRANS_LOCK(psdhcitrans);                                /*  锁定传输                    */
+        iError = __sdhciTransPrepare(psdhcitrans, psdmsg, __SDHIC_TRANS_NORMAL);
         if (iError != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
+        }
+        iError = __sdhciTransStart(psdhcitrans);
+        if (iError != ERROR_NONE) {
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
+        }
+        __SDHCI_TRANS_UNLOCK(psdhcitrans);                              /*  解锁传输                    */
+
+        iError = __sdhciTransFinishWait(psdhcitrans);                   /*  等待本次传输完成            */
+        if (iError != ERROR_NONE) {
             return  (PX_ERROR);
         }
 
-        /*
-         * 数据处理
-         */
-        if (psddat) {
+        __SDHCI_TRANS_LOCK(psdhcitrans);                                /*  锁定传输                    */
 
-            /*
-             * TODO: 流模式..
-             */
-            if (SD_DAT_IS_STREAM(psddat)) {
-                _DebugHandle(__ERRORMESSAGE_LEVEL, "don't support stream mode.\r\n");
-                return  (PX_ERROR);
+        __sdhciTransClean(psdhcitrans);                                 /*  清理本次传输                */
 
-            }
-
-            if (SD_DAT_IS_READ(psddat)) {
-                iError = __sdhciDataReadNorm(psdhcihost,
-                                             psddat->SDDAT_uiBlkSize,
-                                             psddat->SDDAT_uiBlkNum,
-                                             psdmsg->SDMSG_pucRdBuffer);
-                if (iError != ERROR_NONE) {
-                    _DebugHandle(__ERRORMESSAGE_LEVEL, "read error.\r\n");
-                    return  (PX_ERROR);
-
-                }
-            } else {
-                iError = __sdhciDataWriteNorm(psdhcihost,
-                                              psddat->SDDAT_uiBlkSize,
-                                              psddat->SDDAT_uiBlkNum,
-                                              psdmsg->SDMSG_pucWrtBuffer);
-                if (iError != ERROR_NONE) {
-                    _DebugHandle(__ERRORMESSAGE_LEVEL, "write error.\r\n");
-                    return  (PX_ERROR);
-                }
-            }
+        if (psdhcitrans->SDHCITS_iCmdError != ERROR_NONE) {
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
         }
+
+        if (psdhcitrans->SDHCITS_iDatError != ERROR_NONE) {
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
+        }
+        __SDHCI_TRANS_UNLOCK(psdhcitrans);                              /*  解锁传输                    */
 
         i++;
         psdmsg++;
-
-        /*
-         * 注意, 没有处理停止命令,因为只有多块操作时才使用,
-         * 而标准主控支持ACMD12(自动停止命令功能),因此忽略.
-         */
     }
 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciTransferSdma
-** 功能描述: SDMA传输
-** 输    入: psdhcihost  SD主控制器
-**           psddev      SD设备
-**           psdmsg      SD传输控制消息组
+** 功能描述: SDMA 传输
+** 输    入: psdhcihost  SD 主控制器
+**           psddev      SD 设备
+**           psdmsg      SD 传输控制消息组
 **           iNum        消息个数
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciTransferSdma (__PSDHCI_HOST       psdhcihost,
                                 PLW_SD_DEVICE       psddev,
                                 PLW_SD_MESSAGE      psdmsg,
                                 INT                 iNum)
 {
-    PLW_SD_COMMAND psdcmd  = LW_NULL;
-    PLW_SD_DATA    psddat  = LW_NULL;
-    INT            iError  = ERROR_NONE;
-    INT            i       = 0;
-    /*
-     * 传输消息
-     */
+    __PSDHCI_TRANS  psdhcitrans;
+    INTREG          iregInterLevel;
+    INT             iError;
+    INT             i = 0;
+
+    psdhcitrans = psdhcihost->SDHCIHS_psdhcitrans;
+
     while ((i < iNum) && (psdmsg != LW_NULL)) {
-        psdcmd = psdmsg->SDMSG_psdcmdCmd;
-        psddat = psdmsg->SDMSG_psdData;
-        __sdhciDataPrepareSdma(psdhcihost, psdmsg);                     /*  数据准备                    */
-        iError = __sdhciSendCmd(psdhcihost, psdcmd, psddat);            /*  发送命令                    */
+        __SDHCI_TRANS_LOCK(psdhcitrans);                                /*  锁定传输                    */
+        iError = __sdhciTransPrepare(psdhcitrans, psdmsg, __SDHIC_TRANS_SDMA);
         if (iError != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
+        }
+        iError = __sdhciTransStart(psdhcitrans);
+        if (iError != ERROR_NONE) {
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
+        }
+        __SDHCI_TRANS_UNLOCK(psdhcitrans);                              /*  解锁传输                    */
+
+        iError = __sdhciTransFinishWait(psdhcitrans);                   /*  等待本次传输完成            */
+        if (iError != ERROR_NONE) {
             return  (PX_ERROR);
         }
 
-        /*
-         * 数据处理
-         */
-        if (psddat) {
-            iError = __sdhciDataFinishSdma(psdhcihost, psdmsg);
-            if (iError != ERROR_NONE) {
-                return (PX_ERROR);
-            }
+        __SDHCI_TRANS_LOCK(psdhcitrans);                                /*  锁定传输                    */
+
+        __sdhciTransClean(psdhcitrans);                                 /*  清理本次传输                */
+
+        if (psdhcitrans->SDHCITS_iCmdError != ERROR_NONE) {
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
         }
+
+        if (psdhcitrans->SDHCITS_iDatError != ERROR_NONE) {
+            __SDHCI_TRANS_UNLOCK(psdhcitrans);
+            return  (PX_ERROR);
+        }
+        __SDHCI_TRANS_UNLOCK(psdhcitrans);                              /*  解锁传输                    */
 
         i++;
         psdmsg++;
-
-        /*
-         * 注意, 没有处理停止命令,因为只有多块操作时才使用,
-         * 而标准主控支持ACMD12(自动停止命令功能),因此忽略.
-         */
     }
 
     return  (ERROR_NONE);
@@ -698,12 +894,13 @@ static INT __sdhciTransferSdma (__PSDHCI_HOST       psdhcihost,
 /*********************************************************************************************************
 ** 函数名称: __sdhciTransferAdma
 ** 功能描述: ADMA传输
-** 输    入: psdadapter  SD主控制器
-**           psddev      SD设备
-**           psdmsg      SD传输控制消息组
+** 输    入: psdadapter  SD 主控制器
+**           psddev      SD 设备
+**           psdmsg      SD 传输控制消息组
 **           iNum        消息个数
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciTransferAdma (__PSDHCI_HOST       psdhcihost,
                                 PLW_SD_DEVICE       psddev,
@@ -713,18 +910,19 @@ static INT __sdhciTransferAdma (__PSDHCI_HOST       psdhcihost,
     /*
      *  TODO: adma mode support.
      */
-    __sdhciDataPrepareAdma(LW_NULL, LW_NULL);                           /*  不产生未使用 warning        */
+    __sdhciDataPrepareAdma(LW_NULL);
     
     return  (PX_ERROR);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciTransfer
 ** 功能描述: 总线传输函数
-** 输    入: psdadapter  SD总线适配器
+** 输    入: psdadapter  SD 总线适配器
 **           iCmd        控制命令
 **           lArg        参数
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciTransfer (PLW_SD_ADAPTER      psdadapter,
                             PLW_SD_DEVICE       psddev,
@@ -741,7 +939,7 @@ static INT __sdhciTransfer (PLW_SD_ADAPTER      psdadapter,
 
     psdhcihost = (__PSDHCI_HOST)psdadapter->SDADAPTER_psdfunc;
     if (!psdhcihost) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "no sdhci host.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "no sdhci host.\r\n");
         return  (PX_ERROR);
     }
 
@@ -750,17 +948,17 @@ static INT __sdhciTransfer (PLW_SD_ADAPTER      psdadapter,
      */
     iError = psdhcihost->SDHCIHS_pfuncMasterXfer(psdhcihost, psddev, psdmsg, iNum);
 
-    return (iError);
-
+    return  (iError);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciIoCtl
 ** 功能描述: SD 主控器IO控制函数
-** 输    入: psdadapter  SD总线适配器
+** 输    入: psdadapter  SD 总线适配器
 **           iCmd        控制命令
 **           lArg        参数
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciIoCtl (PLW_SD_ADAPTER  psdadapter,
                          INT             iCmd,
@@ -776,7 +974,7 @@ static INT __sdhciIoCtl (PLW_SD_ADAPTER  psdadapter,
 
     psdhcihost = (__PSDHCI_HOST)psdadapter->SDADAPTER_psdfunc;
     if (!psdhcihost) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "no sdhci host.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "no sdhci host.\r\n");
         return  (PX_ERROR);
     }
 
@@ -796,14 +994,23 @@ static INT __sdhciIoCtl (PLW_SD_ADAPTER  psdadapter,
         break;
 
     case SDBUS_CTRL_SETCLK:
-        if (lArg == SDARG_SETCLK_NORMAL) {
-            iError =  __sdhciClockSet(psdhcihost, __SDHCI_NOR_CLK);
-        } else if (lArg == SDARG_SETCLK_MAX) {
-            iError =  __sdhciClockSet(psdhcihost, __SDHCI_MAX_CLK);
+        if (lArg == SDARG_SETCLK_MAX) {
+            iError = __sdhciHighSpeedEn(psdhcihost, LW_TRUE);
+            if (iError != ERROR_NONE) {
+                break;
+            }
         } else {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "setting clock is not supported.\r\n ");
-            iError = PX_ERROR;
+            __sdhciHighSpeedEn(psdhcihost, LW_FALSE);
         }
+        iError = __sdhciClockSet(psdhcihost, (UINT32)lArg);
+        break;
+
+    case SDBUS_CTRL_STOPCLK:
+        iError = __sdhciClockStop(psdhcihost);
+        break;
+
+    case SDBUS_CTRL_STARTCLK:
+        iError = __sdhciClockSet(psdhcihost, psdhcihost->SDHCIHS_uiClkCurr);
         break;
 
     case SDBUS_CTRL_DELAYCLK:
@@ -815,7 +1022,7 @@ static INT __sdhciIoCtl (PLW_SD_ADAPTER  psdadapter,
         break;
 
     default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "invalidate command.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "invalidate command.\r\n");
         iError = PX_ERROR;
         break;
     }
@@ -826,11 +1033,12 @@ static INT __sdhciIoCtl (PLW_SD_ADAPTER  psdadapter,
 ** 函数名称: __sdhciHostCapDecode
 ** 功能描述: 解码主控的功能寄存器
 ** 输    入: psdhcihostattr  主控属性
-** 输    出: psdhcicap       功能结构指针
-** 返    回: ERROR CODE
+             psdhcicap       功能结构指针
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static VOID __sdhciHostCapDecode (PLW_SDHCI_HOST_ATTR psdhcihostattr, __PSDHCI_CAPAB psdhcicap)
-
 {
     UINT32  uiCapReg = 0;
     UINT32  uiTmp    = 0;
@@ -853,13 +1061,13 @@ static VOID __sdhciHostCapDecode (PLW_SDHCI_HOST_ATTR psdhcihostattr, __PSDHCI_C
     psdhcicap->SDHCICAP_uiMaxBlkSize   = 512 << psdhcicap->SDHCICAP_uiMaxBlkSize;
                                                                         /*  转换为实际最大块大小        */
     /*
-     * 如果在此寄存器里的时钟为0,则说明主控器没有自己内部时钟,而是来源于其他时钟源.
-     * 因此采用另外的时钟源作为基时钟.
+     * 如果在此寄存器里的时钟为0, 则说明主控器没有自己内部时钟,
+     * 而是来源于其他时钟源. 因此采用另外的时钟源作为基时钟.
      */
     if (psdhcicap->SDHCICAP_uiBaseClkFreq == 0) {
         uiTmp = psdhcihostattr->SDHCIHOST_uiMaxClock;
         if (uiTmp == 0) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "no clock source .\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "sdhci without clock source .\r\n");
             return;
         }
         psdhcicap->SDHCICAP_uiBaseClkFreq = uiTmp;
@@ -877,7 +1085,7 @@ static VOID __sdhciHostCapDecode (PLW_SDHCI_HOST_ATTR psdhcihostattr, __PSDHCI_C
     }
 
     if (uiTmp == 0) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "no voltage information.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "sdhci without voltage information.\r\n");
         return;
     }
     psdhcicap->SDHCICAP_uiVoltage = uiTmp;
@@ -898,23 +1106,29 @@ static VOID __sdhciHostCapDecode (PLW_SDHCI_HOST_ATTR psdhcihostattr, __PSDHCI_C
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciClockSet
-** 功能描述: 时钟频率设置
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 功能描述: 时钟频率设置并使能
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           uiSetClk        要设置的时钟频率
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciClockSet (__PSDHCI_HOST  psdhcihost, UINT32 uiSetClk)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
     UINT32              uiBaseClk      = psdhcihost->SDHCIHS_sdhcicap.SDHCICAP_uiBaseClkFreq;
 
     UINT16              usDivClk       = 0;
-    UINT                uiTimeOut      = 30;                            /*  等待为30ms                  */
+    UINT                uiTimeOut      = 30;
 
     if (uiSetClk > uiBaseClk) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "the clock to set is larger than base clock.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "the clock to set is larger than base clock.\r\n");
         return  (PX_ERROR);
+    }
+
+    if ((uiSetClk == psdhcihost->SDHCIHS_uiClkCurr) &&
+        (psdhcihost->SDHCIHS_bClkEnable)) {
+        return  (ERROR_NONE);
     }
 
     SDHCI_WRITEW(psdhcihostattr, SDHCI_CLOCK_CONTROL, 0);               /*  禁止时钟模块所有内部功能    */
@@ -947,12 +1161,11 @@ static INT __sdhciClockSet (__PSDHCI_HOST  psdhcihost, UINT32 uiSetClk)
 #ifndef printk
 #define printk
 #endif                                                                  /*  printk                      */
-        printk("current clock: %uHz\n", uiBaseClk / (usDivClk << 1));
+        printk("sdhci current clock: %uHz\n", uiBaseClk / (usDivClk << 1));
 #endif                                                                  /*  __SYLIXOS_DEBUG             */
 
     usDivClk <<= SDHCI_CLKCTL_DIVIDER_SHIFT;
     usDivClk  |= SDHCI_CLKCTL_INTER_EN;                                 /*  内部时钟使能                */
-
     SDHCI_WRITEW(psdhcihostattr, SDHCI_CLOCK_CONTROL, usDivClk);
 
     /*
@@ -966,7 +1179,7 @@ static INT __sdhciClockSet (__PSDHCI_HOST  psdhcihost, UINT32 uiSetClk)
 
         uiTimeOut--;
         if (uiTimeOut == 0) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "wait internal clock to be stable timeout.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "wait internal clock to be stable timeout.\r\n");
             return  (PX_ERROR);
         }
         SDHCI_DELAYMS(1);
@@ -975,25 +1188,51 @@ static INT __sdhciClockSet (__PSDHCI_HOST  psdhcihost, UINT32 uiSetClk)
     usDivClk |= SDHCI_CLKCTL_CLOCK_EN;                                  /*  SDCLK 设备时钟使能          */
     SDHCI_WRITEW(psdhcihostattr, SDHCI_CLOCK_CONTROL, usDivClk);
 
+    psdhcihost->SDHCIHS_uiClkCurr  = uiSetClk;
+    psdhcihost->SDHCIHS_bClkEnable = LW_TRUE;
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciClockStop
+** 功能描述: 停止时钟输出
+** 输    入: psdhcihost      SDHCI HOST 结构指针
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT __sdhciClockStop (__PSDHCI_HOST    psdhcihost)
+{
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    UINT32              uiData;
+
+    if (!psdhcihost->SDHCIHS_bClkEnable) {
+        return  (ERROR_NONE);
+    }
+
+    uiData = SDHCI_READW(psdhcihostattr, SDHCI_CLOCK_CONTROL) & (~SDHCI_CLKCTL_CLOCK_EN);
+    SDHCI_WRITEW(psdhcihostattr, SDHCI_CLOCK_CONTROL, uiData);
+
+    psdhcihost->SDHCIHS_bClkEnable = LW_FALSE;
+
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciBusWidthSet
 ** 功能描述: 主控总线位宽设置
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           uiBusWidth      要设置的总线位宽
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciBusWidthSet (__PSDHCI_HOST  psdhcihost, UINT32 uiBusWidth)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    BOOL                bSdioIntEn     = psdhcihost->SDHCIHS_bSdioIntEnable;
     UINT8               ucCtl;
-    UINT16              usIntStaEn;
 
-    usIntStaEn  = SDHCI_READW(psdhcihostattr, SDHCI_INTSTA_ENABLE);
-    usIntStaEn &= ~SDHCI_INTSTAEN_CARD_INT;
-    SDHCI_WRITEW(psdhcihostattr, SDHCI_INTSTA_ENABLE, usIntStaEn);      /*  禁止卡中断                  */
+    __sdhciSdioIntEn(psdhcihost, LW_FALSE);                             /*  禁止卡中断                  */
 
     ucCtl  = SDHCI_READB(psdhcihostattr, SDHCI_HOST_CONTROL);
 
@@ -1008,25 +1247,27 @@ static INT __sdhciBusWidthSet (__PSDHCI_HOST  psdhcihost, UINT32 uiBusWidth)
         break;
 
     default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter of bus width error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter of bus width error.\r\n");
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
-
     SDHCI_WRITEB(psdhcihostattr, SDHCI_HOST_CONTROL, ucCtl);
+
+    __sdhciSdioIntEn(psdhcihost, bSdioIntEn);                             /*  恢复之前的卡中断设置      */
 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciPowerOn
 ** 功能描述: 打开电源
-** 输    入: psdhcihost     SDHCI HOST结构指针
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    入: psdhcihost     SDHCI HOST 结构指针
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciPowerOn (__PSDHCI_HOST  psdhcihost)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
     UINT8               ucPow;
 
     ucPow  = SDHCI_READB(psdhcihostattr, SDHCI_POWER_CONTROL);
@@ -1038,13 +1279,14 @@ static INT __sdhciPowerOn (__PSDHCI_HOST  psdhcihost)
 /*********************************************************************************************************
 ** 函数名称: __sdhciPowerff
 ** 功能描述: 关闭电源
-** 输    入: psdhcihost       SDHCI HOST结构指针
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    入: psdhcihost       SDHCI HOST 结构指针
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciPowerOff (__PSDHCI_HOST  psdhcihost)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
     UINT8               ucPow;
 
     ucPow  = SDHCI_READB(psdhcihostattr, SDHCI_POWER_CONTROL);
@@ -1056,11 +1298,12 @@ static INT __sdhciPowerOff (__PSDHCI_HOST  psdhcihost)
 /*********************************************************************************************************
 ** 函数名称: __sdhciPowerSetVol
 ** 功能描述: 电源设置电压
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           ucVol           电压
 **           bIsOn           设置之后电源是否开启
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static INT __sdhciPowerSetVol (__PSDHCI_HOST  psdhcihost,
                                UINT8          ucVol,
@@ -1074,31 +1317,249 @@ static INT __sdhciPowerSetVol (__PSDHCI_HOST  psdhcihost,
 
     __sdhciPowerOff(psdhcihost);
 
-    SDHCI_WRITEB(&psdhcihost->SDHCIHS_hostattr, SDHCI_POWER_CONTROL, ucVol);
+    SDHCI_WRITEB(&psdhcihost->SDHCIHS_sdhcihostattr, SDHCI_POWER_CONTROL, ucVol);
 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __sdhciSendCmd
+** 函数名称: __sdhciHighSpeedEn
+** 功能描述: 主控高速设置
+** 输    入: psdhcihost      SDHCI HOST 结构指针
+**           bEnable         是否使能高速
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT __sdhciHighSpeedEn (__PSDHCI_HOST  psdhcihost,  BOOL bEnable)
+{
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    UINT8               ucDat;
+
+    ucDat  = SDHCI_READB(psdhcihostattr, SDHCI_HOST_CONTROL);
+    if (bEnable) {
+        if (!psdhcihost->SDHCIHS_sdhcicap.SDHCICAP_bCanHighSpeed) {
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "host don't suport highspeed mode.\r\n");
+            return  (PX_ERROR);
+        }
+        ucDat |= SDHCI_HCTRL_HISPD;
+    } else {
+        ucDat &= ~SDHCI_HCTRL_HISPD;
+    }
+
+    SDHCI_WRITEB(psdhcihostattr, SDHCI_HOST_CONTROL, ucDat);
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdmHostNew
+** 功能描述: 创建并初始化一个 SDM 规定的控制器对象
+** 输    入: psdhcihost    SDHCI 控制器内部结构对象
+** 输    出: 对象指针
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static __SDHCI_SDM_HOST *__sdhciSdmHostNew (__PSDHCI_HOST   psdhcihost)
+{
+    __SDHCI_SDM_HOST *psdhcisdmhost;
+    SD_HOST          *psdhost;
+    INT               iCapablity;
+
+    if (!psdhcihost) {
+        return  (LW_NULL);
+    }
+
+    psdhcisdmhost = (__SDHCI_SDM_HOST *)__SHEAP_ALLOC(sizeof(__SDHCI_SDM_HOST));
+    if (!psdhcisdmhost) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+        return  (LW_NULL);
+    }
+    lib_bzero(psdhcisdmhost, sizeof(__SDHCI_SDM_HOST));
+
+    iCapablity = SDHOST_CAP_DATA_4BIT | SDHOST_CAP_SDIO_IRQ;
+    if (psdhcihost->SDHCIHS_sdhcicap.SDHCICAP_bCanHighSpeed) {
+        iCapablity |= SDHOST_CAP_HIGHSPEED;
+    }
+
+    psdhost = &psdhcisdmhost->SDHCISDMH_sdhost;
+
+    psdhost->SDHOST_cpcName                = __SDHCI_HOST_NAME(psdhcihost);
+    psdhost->SDHOST_iType                  = SDHOST_TYPE_SD;
+    psdhost->SDHOST_iCapbility             = iCapablity;
+    psdhost->SDHOST_pfuncCallbackInstall   = __sdhciSdmCallBackInstall;
+    psdhost->SDHOST_pfuncCallbackUnInstall = __sdhciSdmCallBackUnInstall;
+    psdhost->SDHOST_pfuncSdioIntEn         = __sdhciSdmSdioIntEn;
+    psdhost->SDHOST_pfuncDevAttach         = __sdhciSdmDevAttach;
+    psdhost->SDHOST_pfuncDevDetach         = __sdhciSdmDevDetach;
+
+    psdhcisdmhost->SDHCISDMH_psdhcihost    = psdhcihost;
+    psdhcihost->SDHCIHS_psdhcisdmhost      = psdhcisdmhost;
+
+    if (API_SdmHostRegister(psdhost) != ERROR_NONE) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "can't register into sdm modules.\r\n");
+        __SHEAP_FREE(psdhcisdmhost);
+        return  (LW_NULL);
+    }
+
+    return  (psdhcisdmhost);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdmHostDel
+** 功能描述: 清理 SDM 规定的控制器对象
+** 输    入: psdhcisdmhost    SDM 层规定的 HOST 信息结构
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT __sdhciSdmHostDel ( __SDHCI_SDM_HOST  *psdhcisdmhost)
+{
+    CPCHAR  cpcHostName;
+
+    cpcHostName = psdhcisdmhost->SDHCISDMH_sdhost.SDHOST_cpcName;
+    if (API_SdmHostUnRegister(cpcHostName) != ERROR_NONE) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "can't unregister from sdm modules.\r\n");
+        return  (PX_ERROR);
+    }
+
+    __SHEAP_FREE(psdhcisdmhost);
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdmCallBackInstall
+** 功能描述: 安装回调函数
+** 输    入: psdhost          SDM 层规定的 HOST 信息结构
+**           iCallbackType    回调函数类型
+**           callback         回调函数指针
+**           pvCallbackArg    回调函数参数
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciSdmCallBackInstall (SD_HOST       *psdhost,
+                                       INT            iCallbackType,
+                                       SD_CALLBACK    callback,
+                                       PVOID          pvCallbackArg)
+{
+    __SDHCI_SDM_HOST *psdhcisdmhost = (__SDHCI_SDM_HOST *)psdhost;
+    if (!psdhcisdmhost) {
+        return  (PX_ERROR);
+    }
+
+    if (iCallbackType == SDHOST_CALLBACK_CHECK_DEV) {
+        psdhcisdmhost->SDHCISDMH_callbackChkDev = callback;
+        psdhcisdmhost->SDHCISDMH_pvCallBackArg  = pvCallbackArg;
+    }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdmCallBackUnInstall
+** 功能描述: 注销安装的回调函数
+** 输    入: psdhost          SDM 层规定的 HOST 信息结构
+**           iCallbackType    回调函数类型
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciSdmCallBackUnInstall (SD_HOST    *psdhost,
+                                         INT         iCallbackType)
+{
+    __SDHCI_SDM_HOST *psdhcisdmhost = (__SDHCI_SDM_HOST *)psdhost;
+    if (!psdhcisdmhost) {
+        return  (PX_ERROR);
+    }
+
+    if (iCallbackType == SDHOST_CALLBACK_CHECK_DEV) {
+        psdhcisdmhost->SDHCISDMH_callbackChkDev = LW_NULL;
+        psdhcisdmhost->SDHCISDMH_pvCallBackArg  = LW_NULL;
+    }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdmSdioIntEn
+** 功能描述: 使能 SDIO 中断
+** 输    入: psdhost          SDM 层规定的 HOST 信息结构
+**           bEnable          是否使能
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciSdmSdioIntEn (SD_HOST *psdhost,  BOOL bEnable)
+{
+    __SDHCI_SDM_HOST *psdhcisdmhost = (__SDHCI_SDM_HOST *)psdhost;
+
+    if (!psdhcisdmhost) {
+        return;
+    }
+
+    __sdhciSdioIntEn(psdhcisdmhost->SDHCISDMH_psdhcihost, bEnable);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdmDevAttach
+** 功能描述: 添加设备
+** 输    入: psdhost          SDM 层规定的 HOST 信息结构
+**           cpcDevName       设备的名称
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID  __sdhciSdmDevAttach (SD_HOST *psdhost, CPCHAR cpcDevName)
+{
+    __SDHCI_SDM_HOST *psdhcisdmhost = (__SDHCI_SDM_HOST *)psdhost;
+    PVOID             pvDevAttached;
+
+    if (!psdhcisdmhost) {
+        return;
+    }
+
+    pvDevAttached = __sdhciDeviceAdd(psdhcisdmhost->SDHCISDMH_psdhcihost, cpcDevName);
+    if (!pvDevAttached) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device attached failed.\r\n");
+        return;
+    }
+
+    psdhcisdmhost->SDHCISDMH_pvDevAttached = pvDevAttached;
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdmDevDetach
+** 功能描述: 删除设备
+** 输    入: psdhost          SDM 层规定的 HOST 信息结构
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID  __sdhciSdmDevDetach (SD_HOST *psdhost)
+{
+    __SDHCI_SDM_HOST *psdhcisdmhost = (__SDHCI_SDM_HOST *)psdhost;
+
+    if (!psdhcisdmhost) {
+        return;
+    }
+
+    __sdhciDeviceRemove(psdhcisdmhost->SDHCISDMH_pvDevAttached);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciCmdSend
 ** 功能描述: 命令发送
-** 输    入: psdhcihost            SDHCI HOST结构指针
+** 输    入: psdhcihost            SDHCI HOST 结构指针
 **           psdcmd                命令结构指针
 **           psddat                数据传输控制结构
-** 输    出: psdcmd->SDCMD_uiResp  如果有应答,这个域存放应答结果
-** 返    回: ERROR CODE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static INT  __sdhciSendCmd (__PSDHCI_HOST   psdhcihost,
+static INT  __sdhciCmdSend (__PSDHCI_HOST   psdhcihost,
                             PLW_SD_COMMAND  psdcmd,
                             PLW_SD_DATA     psddat)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
-    UINT32              uiRespFlag;
-    UINT32              uiMask;
-    UINT                uiTimeOut;
-    INT                 iCmdFlg;
+    PLW_SDHCI_HOST_ATTR   psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    __PSDHCI_TRANS        psdhcitrans    = psdhcihost->SDHCIHS_psdhcitrans;
+    UINT32                uiMask;
+    UINT                  uiTimeOut;
+    INT                   iCmdFlg;
 
-    struct timespec     tvOld;
-    struct timespec     tvNow;
+    struct timespec       tvOld;
+    struct timespec       tvNow;
 
     uiMask = SDHCI_PSTA_CMD_INHIBIT;
 
@@ -1114,13 +1575,17 @@ static INT  __sdhciSendCmd (__PSDHCI_HOST   psdhcihost,
     while (SDHCI_READL(psdhcihostattr, SDHCI_PRESENT_STATE) & uiMask) {
         uiTimeOut++;
         if (uiTimeOut > __SDHCI_CMD_RETRY) {
-            goto __cmd_free_timeout;
+            goto    __timeout;
         }
 
         lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
         if ((tvNow.tv_sec - tvOld.tv_sec) >= __SDHCI_CMD_TOUT_SEC) {
-            goto __cmd_free_timeout;
+            goto    __timeout;
         }
+    }
+
+    if (psdcmd->SDCMD_uiFlag & SD_RSP_BUSY) {
+        SDHCI_WRITEB(psdhcihostattr, SDHCI_TIMEOUT_CONTROL, 0xe);
     }
 
     /*
@@ -1131,7 +1596,13 @@ static INT  __sdhciSendCmd (__PSDHCI_HOST   psdhcihost,
     /*
      * 设置传输模式
      */
-    __sdhciTransferModSet(psdhcihost, psddat);
+    __sdhciTransferModSet(psdhcihost);
+
+    if ((psdcmd->SDCMD_uiFlag & SD_RSP_136) && (psdcmd->SDCMD_uiFlag & SD_RSP_BUSY)) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "response type unavailable.\r\n");
+        psdhcitrans->SDHCITS_iCmdError = PX_ERROR;
+        return  (PX_ERROR);
+    }
 
     /*
      * 命令发送
@@ -1148,122 +1619,44 @@ static INT  __sdhciSendCmd (__PSDHCI_HOST   psdhcihost,
     }
 
     SDHCI_WRITEW(psdhcihostattr, SDHCI_COMMAND, SDHCI_MAKE_CMD(psdcmd->SDCMD_uiOpcode, iCmdFlg));
-                                                                        /*  写入命令寄存器              */
-    /*
-     * 等待命令完成
-     */
-    uiTimeOut = 0;
-    lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
-    while (1) {
-        uiMask = SDHCI_READL(psdhcihostattr, SDHCI_INT_STATUS);         /*  读中断状态                  */
-        if (uiMask & SDHCI_INT_CMD_MASK) {
-            SDHCI_WRITEL(psdhcihostattr,
-                                SDHCI_INT_STATUS,
-                                uiMask);                                /*  写1 清除相应中断标志位      */
-            break;
-        }
 
-        uiTimeOut++;
-        if (uiTimeOut > __SDHCI_CMD_RETRY) {
-            goto __cmd_end_timeout;
-        }
-
-        lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
-        if ((tvNow.tv_sec - tvOld.tv_sec) >= __SDHCI_CMD_TOUT_SEC) {
-            goto __cmd_end_timeout;
-        }
-    }
-
-    if (uiMask & SDHCI_INT_TIMEOUT) {
-        goto __cmd_end_timeout;
-    }
-
-    if (uiMask & SDHCI_INT_CRC) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "crc error.\r\n");
-        return  (PX_ERROR);
-    }
-
-    if (uiMask & SDHCI_INT_END_BIT) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "end bit error.\r\n");
-        return  (PX_ERROR);
-    }
-
-    if (uiMask & SDHCI_INT_INDEX) {                                     /*  命令检查错误                */
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "command check error.\r\n");
-        return  (PX_ERROR);
-    }
-
-    if (!(uiMask & SDHCI_INT_RESPONSE)) {                               /*  没有得到应答                */
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "response error.\r\n");
-        return  (PX_ERROR);
-    }
-
-    /*
-     * 命令接收正确,应答处理
-     */
-    uiRespFlag = SD_RESP_TYPE(psdcmd);
-    if (uiRespFlag & SD_RSP_PRESENT) {
-        UINT32  *puiResp = psdcmd->SDCMD_uiResp;
-
-        /*
-         * 长应答,因为应答寄存器中去除了CRC这一个字节,因此作移位处理.
-         * 并且其应答字节序与上层规定的相反,作相应的转换.
-         */
-        if (uiRespFlag & SD_RSP_136) {
-            UINT32   uiRsp0;
-            UINT32   uiRsp1;
-            UINT32   uiRsp2;
-            UINT32   uiRsp3;
-
-            uiRsp3     = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE3);
-            uiRsp2     = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE2);
-            uiRsp1     = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE1);
-            uiRsp0     = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE0);
-
-            puiResp[0] = (uiRsp3 << 8) | ( uiRsp2 >> 24);
-            puiResp[1] = (uiRsp2 << 8) | ( uiRsp1 >> 24);
-            puiResp[2] = (uiRsp1 << 8) | ( uiRsp0 >> 24);
-            puiResp[3] = (uiRsp0 << 8);
-        } else {
-            puiResp[0] = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE0);
-        }
-    }
-
+    KN_IO_MB();
     return  (ERROR_NONE);
 
-__cmd_free_timeout:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "wait command\\data line timeout.\r\n");
-    return  (PX_ERROR);
+__timeout:
+    SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL,"timeout error.\r\n");
 
-__cmd_end_timeout:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "wait command complete timeout.\r\n");
-
+    psdhcitrans->SDHCITS_iCmdError = PX_ERROR;
+    psdhcitrans->SDHCITS_iDatError = PX_ERROR;
+    __sdhciTransFinish(psdhcitrans);
     return  (PX_ERROR);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciTransferModSet
 ** 功能描述: 设置传输模式
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           psddat          数据传输控制机构
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static VOID __sdhciTransferModSet (__PSDHCI_HOST  psdhcihost, PLW_SD_DATA psddat)
+static VOID __sdhciTransferModSet (__PSDHCI_HOST  psdhcihost)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    __PSDHCI_TRANS      psdhcitrans    = psdhcihost->SDHCIHS_psdhcitrans;
     UINT16              usTmod;
 
-    if (!psddat) {
+    if (!psdhcitrans->SDHCITS_pucDatBuffCurr) {
         return;
     }
 
     usTmod = SDHCI_TRNS_BLK_CNT_EN;                                     /*  使能块计数                  */
 
-    if (psddat->SDDAT_uiBlkNum > 1) {
+    if (psdhcitrans->SDHCITS_uiBlkCntRemain > 1) {
         usTmod |= SDHCI_TRNS_MULTI | SDHCI_TRNS_ACMD12;                 /*  始终使用ACMD12功能          */
     }
 
-    if (SD_DAT_IS_READ(psddat)) {
+    if (psdhcitrans->SDHCITS_bIsRead) {
         usTmod |= SDHCI_TRNS_READ;
     }
 
@@ -1276,16 +1669,18 @@ static VOID __sdhciTransferModSet (__PSDHCI_HOST  psdhcihost, PLW_SD_DATA psddat
 /*********************************************************************************************************
 ** 函数名称: __sdhciDataPrepareNorm
 ** 功能描述: 一般数据传输准备
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           psddat          数据传输控制机构
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static VOID __sdhciDataPrepareNorm (__PSDHCI_HOST  psdhcihost, PLW_SD_DATA psddat)
+static VOID __sdhciDataPrepareNorm (__PSDHCI_HOST  psdhcihost)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    __PSDHCI_TRANS      psdhcitrans    = psdhcihost->SDHCIHS_psdhcitrans;
 
-    if (!psddat) {
+    if (!psdhcitrans->SDHCITS_pucDatBuffCurr) {
         return;
     }
 
@@ -1294,333 +1689,162 @@ static VOID __sdhciDataPrepareNorm (__PSDHCI_HOST  psdhcihost, PLW_SD_DATA psdda
     SDHCI_WRITEW(psdhcihostattr,
                  SDHCI_BLOCK_SIZE,
                  SDHCI_MAKE_BLKSZ(__SDHCI_DMA_BOUND_NBITS,
-                                  psddat->SDDAT_uiBlkSize));            /*  块大小寄存器                */
+                                  psdhcitrans->SDHCITS_uiBlkSize));     /*  块大小寄存器                */
+
     SDHCI_WRITEW(psdhcihostattr,
                  SDHCI_BLOCK_COUNT,
-                 psddat->SDDAT_uiBlkNum);                               /*  块计数寄存器                */
+                 psdhcitrans->SDHCITS_uiBlkCntRemain);                  /*  块计数寄存器                */
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciDataPrepareSdma
 ** 功能描述: DMA数据传输准备
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           psdmsg          传输控制消息结构指针
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static VOID __sdhciDataPrepareSdma (__PSDHCI_HOST  psdhcihost, PLW_SD_MESSAGE psdmsg)
+static VOID __sdhciDataPrepareSdma (__PSDHCI_HOST  psdhcihost)
 {
-    PLW_SD_DATA  psddata = psdmsg->SDMSG_psdData;
-    UINT8       *pucSdma;
+    __PSDHCI_TRANS psdhcitrans = psdhcihost->SDHCIHS_psdhcitrans;
+    UINT8         *pucBuf      = psdhcitrans->SDHCITS_pucDatBuffCurr;
 
-    if (!psddata) {
+    if (!pucBuf) {
         return;
     }
 
 #if LW_CFG_VMM_EN > 0
-    pucSdma = psdhcihost->SDHCIHS_pucDmaBuf;
-    if (SD_DAT_IS_WRITE(psddata)) {                                     /*  如果是DMA写,先把用户数据拷贝*/
-        lib_memcpy(pucSdma,
-                   psdmsg->SDMSG_pucWrtBuffer,
-                   psddata->SDDAT_uiBlkNum * psddata->SDDAT_uiBlkSize);
+    pucBuf = psdhcitrans->SDHCITS_pucDmaBuffer;
+    if (!psdhcitrans->SDHCITS_bIsRead) {
+        lib_memcpy(psdhcitrans->SDHCITS_pucDmaBuffer,
+                   psdhcitrans->SDHCITS_pucDatBuffCurr,
+                   psdhcitrans->SDHCITS_uiBlkCntRemain * psdhcitrans->SDHCITS_uiBlkSize);
     }
 #else
-    if (SD_DAT_IS_READ(psddata)) {
-        pucSdma = psdmsg->SDMSG_pucRdBuffer;
-    } else {
-        pucSdma = psdmsg->SDMSG_pucWrtBuffer;
-    }
+    pucBuf = psdhcitrans->SDHCITS_pucDatBuffCurr;
 #endif
-    
-    /*
-     * TODO: STREAM MODE
-     */
-    __sdhciSdmaAddrUpdate(psdhcihost, (LONG)pucSdma);                   /*  写入DMA系统地址寄存器       */
-                                                                        /*  TODO: 地址对齐  ?           */
-    __sdhciDataPrepareNorm(psdhcihost, psddata);
+
+    __sdhciSdmaAddrUpdate(psdhcihost, (LONG)pucBuf);                    /*  写入 DMA 系统地址寄存器     */
+                                                                        /*  命令发送后才会启动 DMA 传输 */
+    __sdhciDataPrepareNorm(psdhcihost);
+    __sdhciDmaSelect(psdhcihost, SDHCI_HCTRL_SDMA);
 }
 /*********************************************************************************************************
-** 函数名称: __sdhciDataPrepareNorm
-** 功能描述: 高效DMA数据传输准备
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 函数名称: __sdhciDataPrepareAdma
+** 功能描述: 高效 DMA 数据传输准备
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           psddat          数据传输控制机构
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static VOID __sdhciDataPrepareAdma (__PSDHCI_HOST  psdhcihost, PLW_SD_DATA psddat)
+static VOID __sdhciDataPrepareAdma (__PSDHCI_HOST  psdhcihost)
 {
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciDataReadNorm
 ** 功能描述: 一般数据传输(读数据)
-** 输    入: psdhcihost      SDHCI HOST结构指针
-**           uiBlkSize       块大小
-**           uiBlkNum        块数量
-** 输    出: pucRdBuff       结果缓冲
-** 返    回: ERROR CODE
+** 输    入: psdhcitrans     传输控制块
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static INT __sdhciDataReadNorm (__PSDHCI_HOST psdhcihost,
-                                UINT32        uiBlkSize,
-                                UINT32        uiBlkNum,
-                                PUCHAR        pucRdBuff)
+static INT __sdhciDataReadNorm (__PSDHCI_TRANS    psdhcitrans)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
-    UINT32              uiRdTmp;
-    UINT32              uiBlkSizeTmp = uiBlkSize;
-    UINT32              uiIntSta;
-    INT                 iRetry = 0;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr;
+    UINT32              uiBlkSize;
+    UINT32              uiChunk;
+    UINT32              uiData;
+    UINT8              *pucBuffer;
+    INTREG              iregInterLevel;
 
-    struct timespec   tvOld;
-    struct timespec   tvNow;
-
-    while (uiBlkNum > 0) {
-        iRetry = 0;
-        lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
-        while (!(SDHCI_READL(psdhcihostattr, SDHCI_PRESENT_STATE) & SDHCI_PSTA_DATA_AVAILABLE)) {
-            iRetry++;
-            if (iRetry > __SDHCI_READ_RETRY) {
-                goto __read_ready_timeout;
-            }
-
-            lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
-            if ((tvNow.tv_sec - tvOld.tv_sec) > __SDHCI_READ_TOUT_SEC) {
-                goto __read_ready_timeout;
-            }
-        }
-
-        /*
-         * 数据读中断是以块为单位的,因此,一次读取一个块.
-         * 注意,这里的块大小应该是以4字节对称.注意在上层处理.
-         */
-        uiBlkSize = uiBlkSizeTmp;
-        while (uiBlkSize > 0) {
-            uiRdTmp      = SDHCI_READL(psdhcihostattr, SDHCI_BUFFER);
-            *pucRdBuff++ =  uiRdTmp & 0xff;
-            *pucRdBuff++ = (uiRdTmp >> 8) & 0xff;
-            *pucRdBuff++ = (uiRdTmp >> 16) & 0xff;
-            *pucRdBuff++ = (uiRdTmp >> 24) & 0xff;
-            uiBlkSize   -= 4;
-        }
-        uiBlkNum--;
-    }
+    psdhcihostattr = &psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr;
+    uiBlkSize      = psdhcitrans->SDHCITS_uiBlkSize;
+    pucBuffer      = psdhcitrans->SDHCITS_pucDatBuffCurr;
+    uiChunk        = 0;
 
     /*
-     * 对于多块或单块传输,结束后需要查看数据完成中断标志.
-     * 对于无限制的传输,当数据处理完成后,需要发送中止命令.
-     * 对于当前版本,没有使用无限制传输.
+     * 以下可以处理块大小不是 4 倍数的情况
      */
-    iRetry = 0;
-    lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
-    while (!((uiIntSta = SDHCI_READL(psdhcihostattr, SDHCI_INT_STATUS)) &
-              SDHCI_INTSTA_DATA_END)) {
-        iRetry++;
-        if (iRetry >= __SDHCI_READ_RETRY) {
-            goto __read_end_timeout;
+    __SDHCI_TRANS_LOCK(psdhcitrans);
+    while (uiBlkSize) {
+        if (uiChunk == 0) {
+            uiData = SDHCI_READL(psdhcihostattr, SDHCI_BUFFER);
+            uiChunk = 4;
         }
 
-        lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
-        if ((tvNow.tv_sec - tvOld.tv_sec) > __SDHCI_READ_TOUT_SEC) {
-            goto __read_end_timeout;
-        }
+        *pucBuffer = uiData & 0xFF;
+        pucBuffer++;
+        uiData >>= 8;
+        uiChunk--;
+        uiBlkSize--;
     }
-    SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta);           /*  清除状态                    */
+
+    psdhcitrans->SDHCITS_uiBlkCntRemain -= 1;
+    psdhcitrans->SDHCITS_pucDatBuffCurr  = pucBuffer;                   /*  记录下一次数据处理位置      */
+    __SDHCI_TRANS_UNLOCK(psdhcitrans);
 
     return  (ERROR_NONE);
-
-__read_ready_timeout:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "wait block ready timeout.\r\n");
-    return  (PX_ERROR);
-
-__read_end_timeout:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "wait complete timeout.\r\n");
-    return  (PX_ERROR);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciDataWriteNorm
 ** 功能描述: 一般数据传输(写数据)
-** 输    入: psdhcihost      SDHCI HOST结构指针
-**           uiBlkSize       块大小
-**           uiBlkNum        块数量
-**           pucWrtBuf       写缓冲
-** 输    出: NONE
-** 返    回: ERROR CODE
+** 输    入: psdhcitrans     传输控制块
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static INT __sdhciDataWriteNorm (__PSDHCI_HOST psdhcihost,
-                                 UINT32        uiBlkSize,
-                                 UINT32        uiBlkNum,
-                                 PUCHAR        pucWrtBuff)
+static INT __sdhciDataWriteNorm (__PSDHCI_TRANS    psdhcitrans)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
-    UINT32              uiBlkSizeTmp   = uiBlkSize;
-    UINT32              uiWrtTmp;
-    INT                 iRetry;
-    UINT32              uiIntSta;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr;
+    UINT32              uiBlkSize;
+    UINT32              uiChunk;
+    UINT32              uiData;
+    UINT8              *pucBuffer;
+    INTREG              iregInterLevel;
 
-    struct timespec     tvOld;
-    struct timespec     tvNow;
-
-    while (uiBlkNum > 0) {
-        /*
-         * 等待写缓冲有效
-         */
-        iRetry = 0;
-        lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
-        while (!((uiIntSta = SDHCI_READL(psdhcihostattr, SDHCI_PRESENT_STATE)) &
-                SDHCI_PSTA_SPACE_AVAILABLE)) {
-            iRetry++;
-            if (iRetry >= __SDHCI_WRITE_RETRY) {
-                goto __write_ready_timeout;
-            }
-
-            lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
-            if ((tvNow.tv_sec - tvOld.tv_sec) > __SDHCI_WRITE_TOUT_SEC) {
-                goto __write_ready_timeout;
-            }
-        }
-        SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta);       /*  清除状态                    */
-
-        /*
-         * 数据写中断是以块为单位的,因此,一次写入一个块.
-         * 注意,这里的块大小应该是以4字节对称.注意在上层处理.
-         */
-        uiBlkSize = uiBlkSizeTmp;
-        while (uiBlkSize > 0) {
-            uiWrtTmp   =  *pucWrtBuff++;
-            uiWrtTmp  |= (*pucWrtBuff++) << 8;
-            uiWrtTmp  |= (*pucWrtBuff++) << 16;
-            uiWrtTmp  |= (*pucWrtBuff++) << 24;
-            uiBlkSize -= 4;
-            SDHCI_WRITEL(psdhcihostattr, SDHCI_BUFFER, uiWrtTmp);
-        }
-        uiBlkNum--;
-    }
+    psdhcihostattr = &psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr;
+    uiBlkSize      = psdhcitrans->SDHCITS_uiBlkSize;
+    pucBuffer      = psdhcitrans->SDHCITS_pucDatBuffCurr;
+    uiChunk        = 0;
+    uiData         = 0;
 
     /*
-     * 对于多块或单块传输,结束后需要查看数据完成中断标志.
-     * 对于无限制的传输,当数据处理完成后,需要发送中止命令.
-     * 对于当前版本,没有使用无限制传输.
+     * 以下可以处理块大小不是 4 倍数的情况
      */
-    iRetry = 0;
-    lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
-    while (!((uiIntSta = SDHCI_READL(psdhcihostattr, SDHCI_INT_STATUS)) &
-              SDHCI_INTSTA_DATA_END)) {
-        iRetry++;
-        if (iRetry >= __SDHCI_WRITE_RETRY) {
-            goto __write_end_timeout;
-        }
+    __SDHCI_TRANS_LOCK(psdhcitrans);
+    while (uiBlkSize) {
+        uiData |= (UINT32)(*pucBuffer) << (uiChunk << 3);
 
-        lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
-        if ((tvNow.tv_sec - tvOld.tv_sec) > __SDHCI_WRITE_TOUT_SEC) {
-            goto __write_end_timeout;
+        pucBuffer++;
+        uiChunk++;
+        uiBlkSize--;
+        if ((uiChunk == 4) || (uiBlkSize == 0)) {
+            SDHCI_WRITEL(psdhcihostattr, SDHCI_BUFFER, uiData);
+            uiChunk = 0;
+            uiData  = 0;
         }
     }
 
-    SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta);           /*  清除状态                    */
+    psdhcitrans->SDHCITS_uiBlkCntRemain -= 1;
+    psdhcitrans->SDHCITS_pucDatBuffCurr  = pucBuffer;                   /*  记录下一次数据处理位置      */
+    __SDHCI_TRANS_UNLOCK(psdhcitrans);
 
     return  (ERROR_NONE);
-
-__write_ready_timeout:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "wait block ready timeout.\r\n");
-    return  (PX_ERROR);
-
-__write_end_timeout:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "wait complete timeout.\r\n");
-    return  (PX_ERROR);
-}
-/*********************************************************************************************************
-** 函数名称: __sdhciDataFinishSdma
-** 功能描述: SDMA数据传输完成处理
-** 输    入: psdhcihost       SDHCI HOST结构指针
-**           psdmsg
-** 输    出: NONE
-** 返    回: ERROR CODE
-*********************************************************************************************************/
-static INT __sdhciDataFinishSdma (__PSDHCI_HOST   psdhcihost,  PLW_SD_MESSAGE psdmsg)
-{
-    PLW_SDHCI_HOST_ATTR  psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
-    PLW_SD_DATA          psddat         = psdmsg->SDMSG_psdData;
-    UINT8               *pucSdma;
-
-#if LW_CFG_VMM_EN > 0
-    UINT8               *pucDst;
-#endif
-
-    INT                  iRetry;
-    UINT32               uiIntSta;
-
-    struct timespec      tvOld;
-    struct timespec      tvNow;
-
-#if LW_CFG_VMM_EN > 0
-    if (SD_DAT_IS_READ(psddat)) {
-        pucDst = psdmsg->SDMSG_pucRdBuffer;
-    }
-    pucSdma = psdhcihost->SDHCIHS_pucDmaBuf;
-#else
-    if (SD_DAT_IS_READ(psdmsg->SDMSG_psdData)) {
-        pucSdma = psdmsg->SDMSG_pucRdBuffer;
-    } else {
-        pucSdma = psdmsg->SDMSG_pucWrtBuffer;
-    }
-#endif
-
-    /*
-     * 使用SDAM时, 标准主控最大可以一次性搬移连续内存上的512k数据,
-     * 超过这个边界, 主控会产生一个DMA中断,通知需要更新DMA缓冲地址.
-     * 目前这个版本已经设置为512k边界地址.
-     * 所有数据(在块大小和块数量寄存器中标示的)传输完成,产生一个数据完成中断.
-     * 数据完成中断的优先级高于DMA中断.
-     */
-    iRetry = 0;
-    lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
-    while (1) {
-        uiIntSta = SDHCI_READL(psdhcihostattr, SDHCI_INT_STATUS);
-        if (uiIntSta & SDHCI_INTSTA_DATA_END) {                         /*  数据传输结束                */
-            SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta);   /*  清除状态                    */
-            return  (ERROR_NONE);
-        }
-
-        if (uiIntSta & SDHCI_INTSTA_DMA) {                              /*  DMA边界中断                 */
-            pucSdma += __SDHCI_DMA_BOUND_LEN;                           /*  更新DMA地址                 */
-            __sdhciSdmaAddrUpdate(psdhcihost, (LONG)pucSdma);
-        }
-
-        iRetry++;
-        if (iRetry > __SDHCI_SDMARW_RETRY) {
-            goto __sdma_timeout;
-        }
-
-        lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
-        if ((tvNow.tv_sec - tvOld.tv_sec) > __SDHCI_WRITE_TOUT_SEC) {
-            goto __sdma_timeout;
-        }
-    }
-
-    /*
-     * 如果开启了VMM,则需要把DMA物理区数据拷贝到用户区带cache的数据区
-     */
-#if LW_CFG_VMM_EN > 0
-     if (SD_DAT_IS_READ(psddat)) {
-         lib_memcpy(pucDst, pucSdma, psddat->SDDAT_uiBlkNum * psddat->SDDAT_uiBlkSize);
-     }
-#endif
-
-__sdma_timeout:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "timeout.\r\n");
-    return  (PX_ERROR);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciTransferIntSet
 ** 功能描述: 数据传输中断设置
-** 输    入: psdhcihost       SDHCI HOST结构指针
+** 输    入: psdhcihost       SDHCI HOST 结构指针
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static VOID __sdhciTransferIntSet (__PSDHCI_HOST  psdhcihost)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
-
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
     UINT32              uiIntIoMsk;                                     /*  使用一般传输时的中断掩码    */
-    UINT32              uiIntDmaMsk;                                    /*  使用DMA传输时的中断掩码     */
+    UINT32              uiIntDmaMsk;                                    /*  使用 DMA 传输时的中断掩码   */
     UINT32              uiEnMask;                                       /*  最终使能掩码                */
 
     uiIntIoMsk  = SDHCI_INT_SPACE_AVAIL | SDHCI_INT_DATA_AVAIL;
@@ -1646,21 +1870,22 @@ static VOID __sdhciTransferIntSet (__PSDHCI_HOST  psdhcihost)
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciIntDisAndEn
-** 功能描述: 中断设置(使能\禁能).就是设置中断状态(错误\一般状态)和中断信号(错误\一般信号)寄存器.
-** 输    入: psdhcihost      SDHCI HOST结构指针
+** 功能描述: 中断设置(使能\禁能).设置中断状态(错误\一般状态)和中断信号(错误\一般信号)寄存器.
+** 输    入: psdhcihost      SDHCI HOST 结构指针
 **           uiDisMask       禁能掩码
 **           uiEnMask        使能掩码
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 static VOID __sdhciIntDisAndEn (__PSDHCI_HOST  psdhcihost,
                                 UINT32         uiDisMask,
                                 UINT32         uiEnMask)
 {
-    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_hostattr;
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
     UINT32              uiMask;
 
-    uiMask  =  SDHCI_READW(psdhcihostattr, SDHCI_INTSTA_ENABLE);
+    uiMask  =  SDHCI_READL(psdhcihostattr, SDHCI_INTSTA_ENABLE);
     uiMask &= ~uiDisMask;
     uiMask |=  uiEnMask;
 
@@ -1668,19 +1893,885 @@ static VOID __sdhciIntDisAndEn (__PSDHCI_HOST  psdhcihost,
      * 因为这两个寄存器的位标位置都完全相同,
      * 所以可以同时用一个掩码.
      */
-    SDHCI_WRITEW(psdhcihostattr, SDHCI_INTSTA_ENABLE, (UINT16)uiMask);
-    SDHCI_WRITEW(psdhcihostattr, SDHCI_SIGNAL_ENABLE, (UINT16)uiMask);
+    SDHCI_WRITEL(psdhcihostattr, SDHCI_INTSTA_ENABLE, uiMask);
+    SDHCI_WRITEL(psdhcihostattr, SDHCI_SIGNAL_ENABLE, uiMask);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdioIntEn
+** 功能描述: 使能 SDIO 中断
+** 输    入: psdhcihost      SDHCI HOST 结构指针
+**           bEnable         是否使能
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciSdioIntEn (__PSDHCI_HOST psdhcihost, BOOL bEnable)
+{
+    PLW_SDHCI_HOST_ATTR psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    __SDHCI_TRANS       *psdhcitrans   = psdhcihost->SDHCIHS_psdhcitrans;
+
+    UINT32              uiMask;
+    INTREG              iregInterLevel;
+
+    __SDHCI_TRANS_LOCK(psdhcitrans);
+    if (psdhcihost->SDHCIHS_bSdioIntEnable == bEnable) {
+        __SDHCI_TRANS_UNLOCK(psdhcitrans);
+        return;
+    }
+
+    uiMask = SDHCI_READL(psdhcihostattr, SDHCI_INTSTA_ENABLE);
+    if (bEnable) {
+        uiMask |= SDHCI_INT_CARD_INT;
+    } else {
+        uiMask &= ~SDHCI_INT_CARD_INT;
+    }
+
+    SDHCI_WRITEL(psdhcihostattr, SDHCI_INTSTA_ENABLE, uiMask);
+    SDHCI_WRITEL(psdhcihostattr, SDHCI_SIGNAL_ENABLE, uiMask);
+    psdhcihost->SDHCIHS_bSdioIntEnable = bEnable;
+    __SDHCI_TRANS_UNLOCK(psdhcitrans);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransNew
+** 功能描述: 新分配并初始化一个传输事务对象
+** 输    入: psdhcihost   主控制器对象
+** 输    出: 传输事务对象
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static __SDHCI_TRANS *__sdhciTransNew (__PSDHCI_HOST   psdhcihost)
+{
+    __SDHCI_TRANS    *psdhcitrans;
+    LW_OBJECT_HANDLE  hSync;
+    INT               iError;
+
+#if LW_CFG_VMM_EN > 0
+    VOID             *pvDmaBuf;
+#endif
+
+    if (!psdhcihost) {
+        return  (LW_NULL);
+    }
+
+    psdhcitrans = (__SDHCI_TRANS *)__SHEAP_ALLOC(sizeof(__SDHCI_TRANS));
+    if (!psdhcitrans) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+        return  (LW_NULL);
+    }
+    lib_bzero(psdhcitrans, sizeof(__SDHCI_TRANS));
+
+#if LW_CFG_VMM_EN > 0
+    pvDmaBuf = API_VmmDmaAllocAlign(__SDHCI_DMA_BOUND_LEN, 4);
+    if (!pvDmaBuf) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+        goto    __err0;
+    }
+    psdhcitrans->SDHCITS_pucDmaBuffer = (UINT8 *)pvDmaBuf;
+#endif
+
+    hSync = API_SemaphoreBCreate("sdhcits_sync", LW_FALSE, LW_OPTION_OBJECT_GLOBAL, LW_NULL);
+    if (hSync == LW_OBJECT_HANDLE_INVALID) {
+        goto    __err1;
+    }
+
+    iError = __sdhciTransTaskInit(psdhcitrans);
+    if (iError != ERROR_NONE) {
+        goto    __err2;
+    }
+
+    LW_SPIN_INIT(&psdhcitrans->SDHCITS_slLock);
+
+#if LW_CFG_VMM_EN > 0
+    psdhcitrans->SDHCITS_pucDmaBuffer = pvDmaBuf;
+#endif
+    psdhcitrans->SDHCITS_hFinishSync  = hSync;
+    psdhcitrans->SDHCITS_psdhcihost   = psdhcihost;
+    psdhcihost->SDHCIHS_psdhcitrans   = psdhcitrans;
+
+    API_InterVectorConnect(psdhcihost->SDHCIHS_sdhcihostattr.SDHCIHOST_ulIntVector,
+                           __sdhciTransIrq,
+                           (VOID *)psdhcitrans,
+                           "sdhci_isr");
+    API_InterVectorEnable(psdhcihost->SDHCIHS_sdhcihostattr.SDHCIHOST_ulIntVector);
+
+    return  (psdhcitrans);
+
+__err2:
+    API_SemaphoreBDelete(&hSync);
+
+__err1:
+#if LW_CFG_VMM_EN > 0
+   API_VmmDmaFree(pvDmaBuf);
+#endif
+
+__err0:
+    __SHEAP_FREE(psdhcitrans);
+
+    return  (LW_NULL);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransTaskInit
+** 功能描述: 初始化传输事务线程相关
+** 输    入: psdhcitrans  传输事务控制块
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransTaskInit (__SDHCI_TRANS *psdhcitrans)
+{
+    LW_OBJECT_HANDLE     hSdioIntSem;
+    LW_OBJECT_HANDLE     hSdioIntThread;
+    LW_CLASS_THREADATTR  threadattr;
+
+    hSdioIntSem = API_SemaphoreCCreate("sdhcisdio_sem",
+                                       0,
+                                       4096,
+                                       LW_OPTION_WAIT_FIFO,
+                                       LW_NULL);
+    if (hSdioIntSem == LW_OBJECT_HANDLE_INVALID) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create semaphore failed.\r\n");
+        return  (PX_ERROR);
+    }
+    psdhcitrans->SDHCITS_hSdioIntSem = hSdioIntSem;
+
+    threadattr = API_ThreadAttrGetDefault();
+    threadattr.THREADATTR_pvArg           = (PVOID)psdhcitrans;
+    threadattr.THREADATTR_ucPriority      = __SDHCI_SDIOINTSVR_PRIO;
+    threadattr.THREADATTR_stStackByteSize = __SDHCI_SDIOINTSVR_STKSZ;
+    hSdioIntThread = API_ThreadCreate("t_sdhcisdio",
+                                      __sdhciSdioIntSvr,
+                                      &threadattr,
+                                      LW_NULL);
+    if (hSdioIntThread == LW_OBJECT_HANDLE_INVALID) {
+        goto    __err;
+    }
+    psdhcitrans->SDHCITS_hSdioIntThread = hSdioIntThread;
+
+    return  (ERROR_NONE);
+
+__err:
+    API_SemaphoreDelete(&hSdioIntSem);
+    return  (PX_ERROR);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransTaskDeInit
+** 功能描述: 清理传输事务线程相关
+** 输    入: psdhcitrans  传输事务控制块
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransTaskDeInit (__SDHCI_TRANS *psdhcitrans)
+{
+    API_ThreadDelete(&psdhcitrans->SDHCITS_hSdioIntThread, LW_NULL);
+    API_SemaphoreDelete(&psdhcitrans->SDHCITS_hSdioIntSem);
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransDel
+** 功能描述: 清理并释放传输事务对象空间
+** 输    入: psdhcitrans
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciTransDel (__SDHCI_TRANS *psdhcitrans)
+{
+    ULONG ulVector;
+
+    if (!psdhcitrans) {
+        return;
+    }
+
+    ulVector = psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr.SDHCIHOST_ulIntVector;
+
+    API_InterVectorDisable(ulVector);
+    API_InterVectorDisconnect(ulVector, __sdhciTransIrq, (VOID *)psdhcitrans);
+
+    __sdhciTransTaskDeInit(psdhcitrans);
+
+#if LW_CFG_VMM_EN > 0
+    API_VmmDmaFree(psdhcitrans->SDHCITS_pucDmaBuffer);
+#endif
+
+    API_SemaphoreBDelete(&psdhcitrans->SDHCITS_hFinishSync);
+    __SHEAP_FREE(psdhcitrans);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransPrepare
+** 功能描述: 准备传输事务
+** 输    入: psdhcitrans      传输事务对象
+**           psdmsg           用户请求的传输消息
+**           iTransType       传输类型
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransPrepare (__SDHCI_TRANS *psdhcitrans,
+                                 LW_SD_MESSAGE *psdmsg,
+                                 INT            iTransType)
+{
+    LW_SD_DATA  *psddata;
+
+    if (!psdhcitrans || !psdmsg || !psdmsg->SDMSG_psdcmdCmd) {
+        return  (PX_ERROR);
+    }
+
+    psddata = psdmsg->SDMSG_psddata;
+    if (psddata) {
+        if ((psddata->SDDAT_uiBlkSize < 1) || (psddata->SDDAT_uiBlkSize > 2048)) {
+            SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL,
+                              "blk size(%u) is out of range(1~2048)",
+                              psddata->SDDAT_uiBlkSize);
+            return  (PX_ERROR);
+        }
+        if ((psddata->SDDAT_uiBlkNum < 1) || (psddata->SDDAT_uiBlkNum > 65535)) {
+            SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL,
+                              "blk num(%u) is out of range(1~65535)",
+                              psddata->SDDAT_uiBlkNum);
+            return  (PX_ERROR);
+        }
+        if ((psddata->SDDAT_uiBlkSize * psddata->SDDAT_uiBlkNum) > (512 * 1024)) {
+            SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL,
+                              "transfer data length(%u) is out of range(512KB)",
+                              psddata->SDDAT_uiBlkSize * psddata->SDDAT_uiBlkNum);
+            return  (PX_ERROR);
+        }
+
+        if (SD_DAT_IS_READ(psddata)) {
+            psdhcitrans->SDHCITS_pucDatBuffCurr = psdmsg->SDMSG_pucRdBuffer;
+            psdhcitrans->SDHCITS_bIsRead        = LW_TRUE;
+        } else {
+            psdhcitrans->SDHCITS_pucDatBuffCurr = psdmsg->SDMSG_pucWrtBuffer;
+            psdhcitrans->SDHCITS_bIsRead        = LW_FALSE;
+        }
+
+        psdhcitrans->SDHCITS_uiBlkSize      = psddata->SDDAT_uiBlkSize;
+        psdhcitrans->SDHCITS_uiBlkCntRemain = psddata->SDDAT_uiBlkNum;
+
+    } else {
+        psdhcitrans->SDHCITS_pucDatBuffCurr = LW_NULL;
+        psdhcitrans->SDHCITS_uiBlkSize      = 0;
+        psdhcitrans->SDHCITS_uiBlkCntRemain = 0;
+    }
+
+    psdhcitrans->SDHCITS_iTransType  = iTransType;
+    psdhcitrans->SDHCITS_bCmdFinish  = LW_FALSE;
+    psdhcitrans->SDHCITS_bDatFinish  = LW_FALSE;
+    psdhcitrans->SDHCITS_iCmdError   = ERROR_NONE;
+    psdhcitrans->SDHCITS_iDatError   = ERROR_NONE;
+
+    psdhcitrans->SDHCITS_psdcmd      = psdmsg->SDMSG_psdcmdCmd;
+    psdhcitrans->SDHCITS_psddat      = psdmsg->SDMSG_psddata;
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransStart
+** 功能描述: 启动一次传输事务
+** 输    入: psdhcitrans      传输事务对象
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransStart (__SDHCI_TRANS *psdhcitrans)
+{
+    INT     iRet;
+
+    if (!psdhcitrans) {
+        return  (PX_ERROR);
+    }
+
+    __sdhciHostRest(psdhcitrans->SDHCITS_psdhcihost);                   /*  一定要进行一次复位操作      */
+
+    if (psdhcitrans->SDHCITS_pucDatBuffCurr) {
+        if (psdhcitrans->SDHCITS_iTransType == __SDHIC_TRANS_NORMAL) {
+            __sdhciDataPrepareNorm(psdhcitrans->SDHCITS_psdhcihost);
+        } else if (psdhcitrans->SDHCITS_iTransType == __SDHIC_TRANS_SDMA){
+            __sdhciDataPrepareSdma(psdhcitrans->SDHCITS_psdhcihost);
+        } else {
+            __sdhciDataPrepareAdma(psdhcitrans->SDHCITS_psdhcihost);
+        }
+    }
+
+    iRet = __sdhciCmdSend(psdhcitrans->SDHCITS_psdhcihost,
+                          psdhcitrans->SDHCITS_psdcmd,
+                          psdhcitrans->SDHCITS_psddat);
+
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransFinishWait
+** 功能描述: 等待本次传输事务完成
+** 输    入: psdhcitrans      传输事务对象
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransFinishWait (__SDHCI_TRANS *psdhcitrans)
+{
+    INT iRet;
+    iRet = API_SemaphoreBPend(psdhcitrans->SDHCITS_hFinishSync, LW_OPTION_WAIT_INFINITE);
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransFinish
+** 功能描述: 完成传输事务
+** 输    入: psdhcitrans      传输事务对象
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID  __sdhciTransFinish (__SDHCI_TRANS *psdhcitrans)
+{
+    API_SemaphoreBPost(psdhcitrans->SDHCITS_hFinishSync);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransClean
+** 功能描述: 清理本次传输事务
+** 输    入: psdhcitrans      传输事务对象
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransClean (__SDHCI_TRANS *psdhcitrans)
+{
+    if (!psdhcitrans) {
+        return  (PX_ERROR);
+    }
+
+    psdhcitrans->SDHCITS_psdcmd = LW_NULL;
+    psdhcitrans->SDHCITS_psddat = LW_NULL;
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransIrq
+** 功能描述: SDHCI 中断服务程序
+** 输    入: pvArg      事务控制块
+**           ulVector   中断向量
+** 输    出: 中断处理结果
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static irqreturn_t   __sdhciTransIrq (VOID *pvArg, ULONG ulVector)
+{
+    __SDHCI_TRANS       *psdhcitrans    = (__SDHCI_TRANS *)pvArg;
+    __SDHCI_HOST        *psdhcihost     = psdhcitrans->SDHCITS_psdhcihost;
+    LW_SDHCI_HOST_ATTR  *psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
+    BOOL                 bSdioInt       = LW_FALSE;
+
+    INTREG               iregInterLevel;
+    UINT32               uiIntSta;
+    irqreturn_t          irqret;
+
+
+    __SDHCI_TRANS_LOCK(psdhcitrans);
+
+    uiIntSta = SDHCI_READL(psdhcihostattr, SDHCI_INT_STATUS);
+    if (!uiIntSta || uiIntSta == 0xffffffff) {
+        SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta);
+        irqret = LW_IRQ_NONE;
+        goto    __ret;                                                  /*  无效或未知的中断            */
+    }
+
+    psdhcitrans->SDHCITS_uiIntSta = uiIntSta;
+
+    if (uiIntSta & SDHCI_INT_CMD_MASK) {
+        __sdhciTransCmdHandle(psdhcitrans, uiIntSta & SDHCI_INT_CMD_MASK);
+        SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta & SDHCI_INT_CMD_MASK);
+    }
+
+    if (uiIntSta & SDHCI_INT_DATA_MASK) {
+        __sdhciTransDatHandle(psdhcitrans, uiIntSta & SDHCI_INT_DATA_MASK);
+        SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta & SDHCI_INT_DATA_MASK);
+    }
+
+    uiIntSta &= ~(SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK);
+    uiIntSta &= ~(SDHCI_INT_ERROR);
+
+    if (uiIntSta & SDHCI_INT_BUS_POWER) {
+        SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL,
+                          "sdhci(%s): card consumed too much power!\r\n",
+                          __SDHCI_HOST_NAME(psdhcitrans->SDHCITS_psdhcihost));
+        SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, SDHCI_INT_BUS_POWER);
+        uiIntSta &= ~SDHCI_INT_BUS_POWER;
+    }
+
+    if (uiIntSta & SDHCI_INT_CARD_INT) {
+        bSdioInt = LW_TRUE;
+        uiIntSta &= ~SDHCI_INT_CARD_INT;
+        SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, SDHCI_INT_CARD_INT);
+    }
+
+    if (uiIntSta) {
+        SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta);
+    }
+
+    irqret = LW_IRQ_HANDLED;
+
+    KN_IO_MB();
+
+__ret:
+    __SDHCI_TRANS_UNLOCK(psdhcitrans);
+
+    if (bSdioInt) {
+        __sdhciSdioIntEn(psdhcitrans->SDHCITS_psdhcihost, LW_FALSE);
+        __SDHCI_SDIO_NOTIFY(psdhcitrans);
+    }
+
+    return  (irqret);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciSdioIntSvr
+** 功能描述: SDHCI SDIO 中断服务线程
+** 输    入: pvArg      事务控制块
+** 输    出: 线程返回值
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static PVOID  __sdhciSdioIntSvr (VOID *pvArg)
+{
+    __SDHCI_TRANS *psdhcitrans = (__SDHCI_TRANS *)pvArg;
+    __SDHCI_HOST  *psdhcihost;
+    INTREG         iregInterLevel;
+
+    while (1) {
+        __SDHCI_SDIO_WAIT(psdhcitrans);                                 /*  等待 SDIO 中断事件产生      */
+
+        psdhcihost  = psdhcitrans->SDHCITS_psdhcihost;
+
+        __SDHCI_TRANS_LOCK(psdhcitrans);
+        API_SdmEventNotify(__SDHCI_HOST_NAME(psdhcihost),
+                           SDM_EVENT_SDIO_INTERRUPT);                   /*  向 SDM 模块通知事件         */
+        __sdhciSdioIntEn(psdhcihost, LW_TRUE);
+        __SDHCI_TRANS_UNLOCK(psdhcitrans);
+    }
+
+    return  (LW_NULL);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransCmdHandle
+** 功能描述: 处理命令相关的事务
+** 输    入: psdhcitrans      传输事务对象
+**           uiIntSta         命令相关的中断状态
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransCmdHandle (__SDHCI_TRANS *psdhcitrans, UINT32 uiIntSta)
+{
+    if (!psdhcitrans->SDHCITS_psdcmd) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unexpected cmd interrupt.\r\n");
+        return  (PX_ERROR);
+    }
+
+    if (uiIntSta &
+        (SDHCI_INT_TIMEOUT |
+         SDHCI_INT_CRC     |
+         SDHCI_INT_END_BIT |
+         SDHCI_INT_INDEX)) {
+
+        SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "cmd error interrupt: %08x.\r\n", uiIntSta);
+        psdhcitrans->SDHCITS_iCmdError = PX_ERROR;
+        __sdhciTransFinish(psdhcitrans);                                /*  结束本次传输                */
+        return  (PX_ERROR);
+    }
+
+    if (uiIntSta & SDHCI_INT_RESPONSE) {
+        __sdhciTransCmdFinish(psdhcitrans);                             /*  命令完成处理                */
+    }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransDatHandle
+** 功能描述: 处理数据相关的事务
+** 输    入: psdhcitrans      传输事务对象
+**           uiIntSta         数据相关的中断状态
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT __sdhciTransDatHandle (__SDHCI_TRANS *psdhcitrans, UINT32 uiIntSta)
+{
+    LW_SDHCI_HOST_ATTR  *psdhcihostattr = &psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr;
+
+    /*
+     * 当没有数据传输时, 如果命令包含了 忙等待信号, 则也会产生数据完成中断
+     * 详见 SDHCI 规范 2.2.17(page64)
+     */
+    if (!psdhcitrans->SDHCITS_pucDatBuffCurr) {
+        if (!psdhcitrans->SDHCITS_bCmdFinish &&
+            SD_CMD_TEST_RSP(psdhcitrans->SDHCITS_psdcmd, SD_RSP_BUSY)) {
+            if (uiIntSta & SDHCI_INT_DATA_END) {
+                SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL,
+                                 "__sdhciTransDatHandle(): this is a cmd  busy resp signal.\r\n");
+                __sdhciTransCmdFinish(psdhcitrans);
+                return  (ERROR_NONE);
+            }
+        }
+
+        return  (ERROR_NONE);
+    }
+
+    if (uiIntSta                &
+        (SDHCI_INT_DATA_TIMEOUT |
+         SDHCI_INT_DATA_CRC     |
+         SDHCI_INT_DATA_END_BIT |
+         SDHCI_INT_ADMA_ERROR)) {
+        SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "data error interrupt: %08x.\r\n", uiIntSta);
+        psdhcitrans->SDHCITS_iDatError = PX_ERROR;
+        __sdhciTransDatFinish(psdhcitrans);
+        return  (PX_ERROR);
+    }
+
+    /*
+     * 数据可 读/写 中断
+     */
+    if ((uiIntSta & (SDHCI_INT_DATA_AVAIL | SDHCI_INT_SPACE_AVAIL)) &&
+        (psdhcitrans->SDHCITS_uiBlkCntRemain > 0)) {
+        if (psdhcitrans->SDHCITS_bIsRead) {
+            while (SDHCI_READL(psdhcihostattr, SDHCI_PRESENT_STATE) & SDHCI_PSTA_DATA_AVAILABLE) {
+                __sdhciDataReadNorm(psdhcitrans);
+                if (psdhcitrans->SDHCITS_uiBlkCntRemain == 0) {
+                    /*
+                     * 到这里, 数据已经处理完了. 但是这里不直接返回
+                     * 因为一定会伴随一个 数据完成 中断, 由之后处理
+                     */
+                    break;
+                }
+            }
+        } else {
+            while (SDHCI_READL(psdhcihostattr, SDHCI_PRESENT_STATE) & SDHCI_PSTA_SPACE_AVAILABLE) {
+                __sdhciDataWriteNorm(psdhcitrans);
+                if (psdhcitrans->SDHCITS_uiBlkCntRemain == 0) {
+                    /*
+                     * 到这里, 数据已经处理完了. 但是这里不直接返回
+                     * 因为一定会伴随一个 数据完成 中断, 由之后处理
+                     */
+                    break;
+                }
+            }
+        }
+    }
+
+    /*
+     * 当前未考虑 DMA 边界中断的情况. 但是
+     * 如果确实产生了, 仅仅重启 DMA 传输即可
+     */
+    if (uiIntSta & SDHCI_INT_DMA_END) {
+        UINT32  uiDmaAddr;
+        uiDmaAddr = SDHCI_READL(psdhcihostattr, SDHCI_SYS_SDMA);
+        SDHCI_WRITEL(psdhcihostattr, SDHCI_SYS_SDMA, uiDmaAddr);
+    }
+
+    if (uiIntSta & SDHCI_INT_DATA_END) {
+        if (!psdhcitrans->SDHCITS_bCmdFinish) {
+            /*
+             * 数据中断和命令中断的顺序不确定
+             * 如果命令中断还未产生, 这里仅仅标记数据传输完成
+             * 等待稍后的命令中断进行后续处理
+             */
+            psdhcitrans->SDHCITS_bDatFinish = LW_TRUE;
+        } else {
+            __sdhciTransDatFinish(psdhcitrans);
+        }
+    }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransCmdFinish
+** 功能描述: 命令正确完成后的处理
+** 输    入: psdhcitrans      传输事务对象
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransCmdFinish (__SDHCI_TRANS *psdhcitrans)
+{
+    LW_SDHCI_HOST_ATTR  *psdhcihostattr = &psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr;
+    LW_SD_COMMAND       *psdcmd         = psdhcitrans->SDHCITS_psdcmd;
+    UINT32               uiRespFlag;
+
+    uiRespFlag = SD_RESP_TYPE(psdcmd);
+    if (uiRespFlag & SD_RSP_PRESENT) {
+        UINT32  *puiResp = psdcmd->SDCMD_uiResp;
+
+        /*
+         * 长应答,应答寄存器中去除了 CRC 这一个字节,因此作移位处理.
+         * 其应答字节序与上层规定的相反,作相应的转换.
+         */
+        if (uiRespFlag & SD_RSP_136) {
+            UINT32   uiRsp0;
+            UINT32   uiRsp1;
+            UINT32   uiRsp2;
+            UINT32   uiRsp3;
+
+            uiRsp3 = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE3);
+            uiRsp2 = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE2);
+            uiRsp1 = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE1);
+            uiRsp0 = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE0);
+
+            puiResp[0] = (uiRsp3 << 8) | ( uiRsp2 >> 24);
+            puiResp[1] = (uiRsp2 << 8) | ( uiRsp1 >> 24);
+            puiResp[2] = (uiRsp1 << 8) | ( uiRsp0 >> 24);
+            puiResp[3] = (uiRsp0 << 8);
+        } else {
+            puiResp[0] = SDHCI_READL(psdhcihostattr, SDHCI_RESPONSE0);
+        }
+    }
+
+    psdhcitrans->SDHCITS_iCmdError  = ERROR_NONE;
+    psdhcitrans->SDHCITS_bCmdFinish = LW_TRUE;
+
+    if (psdhcitrans->SDHCITS_pucDatBuffCurr &&
+        psdhcitrans->SDHCITS_bDatFinish) {
+        __sdhciTransDatFinish(psdhcitrans);                             /*  处理数据完成                */
+    } else if (!psdhcitrans->SDHCITS_pucDatBuffCurr) {
+        __sdhciTransFinish(psdhcitrans);                                /*  本次事务结束                */
+    } else {
+        /*
+         * 这里表示数据还没处理完成
+         * 则在后面的数据中断里处理
+         */
+    }
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciTransDatFinish
+** 功能描述: 数据正确完成后的处理
+** 输    入: psdhcitrans      传输事务对象
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciTransDatFinish (__SDHCI_TRANS *psdhcitrans)
+{
+#if LW_CFG_VMM_EN > 0
+    if (psdhcitrans->SDHCITS_iDatError == ERROR_NONE) {
+        if (psdhcitrans->SDHCITS_bIsRead &&
+            (psdhcitrans->SDHCITS_iTransType != __SDHIC_TRANS_NORMAL)) {
+
+            lib_memcpy(psdhcitrans->SDHCITS_pucDatBuffCurr,
+                       psdhcitrans->SDHCITS_pucDmaBuffer,
+                       psdhcitrans->SDHCITS_uiBlkSize * psdhcitrans->SDHCITS_uiBlkCntRemain);
+        }
+    }
+#endif
+
+    __sdhciTransFinish(psdhcitrans);
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciRegAccessDrvInit
+** 功能描述: 寄存器空间访问驱动初始化
+** 输    入: psdhcihostattr 控制器属性描述对象
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static INT  __sdhciRegAccessDrvInit (PLW_SDHCI_HOST_ATTR  psdhcihostattr)
+{
+    static BOOL bInit = LW_FALSE;
+    INT         iType;
+
+    if (!psdhcihostattr) {
+        return  (PX_ERROR);
+    }
+
+    iType = psdhcihostattr->SDHCIHOST_iRegAccessType;
+    if ((iType != SDHCI_REGACCESS_TYPE_IO) &&
+        (iType != SDHCI_REGACCESS_TYPE_MEM)) {
+        return  (PX_ERROR);
+    }
+
+    if (!bInit) {
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_IO].sdhciReadB   = __sdhciIoReadB;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_IO].sdhciReadW   = __sdhciIoReadW;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_IO].sdhciReadL   = __sdhciIoReadL;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_IO].sdhciWriteB  = __sdhciIoWriteB;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_IO].sdhciWriteW  = __sdhciIoWriteW;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_IO].sdhciWriteL  = __sdhciIoWriteL;
+
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_MEM].sdhciReadB  = __sdhciMemReadB;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_MEM].sdhciReadW  = __sdhciMemReadW;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_MEM].sdhciReadL  = __sdhciMemReadL;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_MEM].sdhciWriteB = __sdhciMemWriteB;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_MEM].sdhciWriteW = __sdhciMemWriteW;
+        _G_sdhcidrvfuncTbl[SDHCI_REGACCESS_TYPE_MEM].sdhciWriteL = __sdhciMemWriteL;
+
+        bInit = LW_TRUE;
+    }
+
+    psdhcihostattr->SDHCIHOST_pdrvfuncs = &_G_sdhcidrvfuncTbl[iType];
+
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciIoReadL
+** 功能描述: IO 空间读取32位长度的数据
+** 输    入: uiAddr   IO 空间地址
+** 输    出: 数据
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static UINT32 __sdhciIoReadL (ULONG ulAddr)
+{
+    return in32(ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciIoReadW
+** 功能描述: IO 空间读取16位长度的数据
+** 输    入: uiAddr   IO 空间地址
+** 输    出: 数据
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static UINT16 __sdhciIoReadW (ULONG ulAddr)
+{
+    return in16(ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciIoReadB
+** 功能描述: IO 空间读取8位长度的数据
+** 输    入: uiAddr   IO 空间地址
+** 输    出: 数据
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static UINT8 __sdhciIoReadB (ULONG ulAddr)
+{
+    return in8(ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciIoWriteL
+** 功能描述: IO 空间写入32位长度的数据
+** 输    入: uiAddr     IO 空间地址
+**           uiLword    写入的数据
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciIoWriteL (ULONG ulAddr, UINT32 uiLword)
+{
+    out32(uiLword, ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciIoWriteW
+** 功能描述: IO 空间写入16位长度的数据
+** 输    入: uiAddr     IO 空间地址
+**           usWord     写入的数据
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciIoWriteW (ULONG ulAddr, UINT16 usWord)
+{
+    out16(usWord, ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称:
+** 功能描述: IO 空间写入8位长度的数据
+** 输    入: uiAddr     IO 空间地址
+**           ucByte     写入的数据
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciIoWriteB (ULONG ulAddr, UINT8 ucByte)
+{
+    out8(ucByte, ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciMemReadL
+** 功能描述: 内存空间读取32位长度的数据
+** 输    入: ulAddr   内存空间地址
+** 输    出: 数据
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static UINT32 __sdhciMemReadL (ULONG ulAddr)
+{
+    return read32(ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciMemReadW
+** 功能描述: 内存空间读取16位长度的数据
+** 输    入: ulAddr   内存空间地址
+** 输    出: 数据
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static UINT16 __sdhciMemReadW (ULONG ulAddr)
+{
+    return read16(ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciMemReadB
+** 功能描述: 内存空间读取8位长度的数据
+** 输    入: ulAddr   内存空间地址
+** 输    出: 数据
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static UINT8 __sdhciMemReadB (ULONG ulAddr)
+{
+    return read8(ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciMemWriteL
+** 功能描述: 内存空间写入32位长度的数据
+** 输    入: ulAddr     内存空间地址
+**           uiLword    写入的数据
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciMemWriteL (ULONG ulAddr, UINT32 uiLword)
+{
+    write32(uiLword, ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciMemWriteW
+** 功能描述: 内存空间写入16位长度的数据
+** 输    入: ulAddr     内存空间地址
+**           usWord     写入的数据
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciMemWriteW (ULONG ulAddr, UINT16 usWord)
+{
+    write16(usWord, ulAddr);
+}
+/*********************************************************************************************************
+** 函数名称: __sdhciMemWriteB
+** 功能描述: 内存空间写入8位长度的数据
+** 输    入: ulAddr     内存空间地址
+**           ucByte     写入的数据
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID __sdhciMemWriteB (ULONG ulAddr, UINT8 ucByte)
+{
+    write8(ucByte, ulAddr);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdhciPreStaShow
 ** 功能描述: 显示当前所有状态
-** 输    入: lBasePoint
+** 输    入: psdhcihostattr
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
 #ifdef  __SYLIXOS_DEBUG
-
-static VOID __sdhciPreStaShow(PLW_SDHCI_HOST_ATTR psdhcihostattr)
+static VOID __sdhciPreStaShow (PLW_SDHCI_HOST_ATTR psdhcihostattr)
 {
 #ifndef printk
 #define printk
@@ -1702,11 +2793,12 @@ static VOID __sdhciPreStaShow(PLW_SDHCI_HOST_ATTR psdhcihostattr)
 /*********************************************************************************************************
 ** 函数名称: __sdhciIntStaShow
 ** 功能描述: 显示中断状态
-** 输    入: lBasePoint
+** 输    入: psdhcihostattr
 ** 输    出: NONE
-** 返    回: NONE
+** 全局变量:
+** 调用模块:
 *********************************************************************************************************/
-static VOID __sdhciIntStaShow(PLW_SDHCI_HOST_ATTR psdhcihostattr)
+static VOID __sdhciIntStaShow (PLW_SDHCI_HOST_ATTR psdhcihostattr)
 {
 #ifndef printk
 #define printk

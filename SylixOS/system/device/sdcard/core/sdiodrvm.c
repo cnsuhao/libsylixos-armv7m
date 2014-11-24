@@ -30,6 +30,7 @@
 #include "sddrvm.h"
 #include "sdiodrvm.h"
 #include "sdutil.h"
+#include "../include/sddebug.h"
 /*********************************************************************************************************
   SDM 新驱动注册事件通知
 *********************************************************************************************************/
@@ -61,7 +62,7 @@ LW_API INT   API_SdmSdioLibInit (VOID)
         return  (ERROR_NONE);
     }
 
-    _G_hSdmDrvLock = API_SemaphoreBCreate("sdmdrv_lock", TRUE, LW_OPTION_OBJECT_GLOBAL, NULL);
+    _G_hSdmDrvLock = API_SemaphoreBCreate("sdmdrv_lock", LW_TRUE, LW_OPTION_OBJECT_GLOBAL, LW_NULL);
     if (_G_hSdmDrvLock == LW_OBJECT_HANDLE_INVALID) {
         return  (PX_ERROR);
     }
@@ -92,7 +93,7 @@ LW_API INT   API_SdmSdioDrvRegister (SDIO_DRV *psdiodrv)
 
         psdiodrvTmp = _LIST_ENTRY(plineTmp, SDIO_DRV, SDIODRV_lineManage);
         if (psdiodrvTmp == psdiodrv) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "drv has been already registered.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "drv has been already registered.\r\n");
             __SDM_DRV_UNLOCK();
             return  (PX_ERROR);
         }
@@ -101,8 +102,8 @@ LW_API INT   API_SdmSdioDrvRegister (SDIO_DRV *psdiodrv)
          * 因为SDM内部对驱动的名字不敏感, 这里仅仅警告
          */
         if (lib_strcmp(psdiodrvTmp->SDIODRV_cpcName, psdiodrv->SDIODRV_cpcName) == 0) {
-            _DebugHandle(__LOGMESSAGE_LEVEL, " warning: exist a same name drv"
-                                             " as current registering.\r\n");
+            SDCARD_DEBUG_MSG(__LOGMESSAGE_LEVEL, " warning: exist a same name drv"
+                                                 " as current registering.\r\n");
         }
     }
     __SDM_DRV_UNLOCK();
@@ -110,7 +111,7 @@ LW_API INT   API_SdmSdioDrvRegister (SDIO_DRV *psdiodrv)
     API_AtomicSet(0, &psdiodrv->SDIODRV_atomicDevCnt);
     __sdmIoDrvInsert(psdiodrv);
 
-    API_SdmEventNotify(NULL, SDM_EVENT_NEW_DRV);
+    API_SdmEventNotify(LW_NULL, SDM_EVENT_NEW_DRV);
 
     return  (ERROR_NONE);
 }
@@ -129,7 +130,7 @@ LW_API INT   API_SdmSdioDrvUnRegister (SDIO_DRV *psdiodrv)
     }
 
     if (API_AtomicGet(&psdiodrv->SDIODRV_atomicDevCnt)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "exist device using this drv.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "exist device using this drv.\r\n");
         return  (PX_ERROR);
     }
 

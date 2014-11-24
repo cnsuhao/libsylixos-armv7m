@@ -83,7 +83,7 @@ UINT16 __sdCrc16 (UINT8 *pucData, UINT16 usLen)
 	    usCrc = (usCrc << 8) ^ _G_usSdCrcTable[(usCrc >> 8) ^ *pucData++];
 	}
 
-	return (usCrc);
+	return  (usCrc);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdCrcCmdCrc7
@@ -114,7 +114,7 @@ UINT8 __sdCrcCmdCrc7 (UINT8 ucCmd, UINT8 *pucParam)
 	    }
 	}
 
-	return ((ucReg << 1) + 0x01) ;				                        /*  改为符合sd设备的crc格式     */
+	return  ((ucReg << 1) + 0x01);				                        /*  改为符合sd设备的crc格式     */
 }
 #endif                                                                  /*  LW_CFG_SDCARD_CRC_EN > 0    */
 /*********************************************************************************************************

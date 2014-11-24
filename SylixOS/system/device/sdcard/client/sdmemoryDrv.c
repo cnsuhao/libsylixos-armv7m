@@ -31,6 +31,7 @@
 #include "../core/sddrvm.h"
 #include "sdmemory.h"
 #include "sdmemoryDrv.h"
+#include "../include/sddebug.h"
 /*********************************************************************************************************
   内部宏定义
 *********************************************************************************************************/
@@ -89,6 +90,7 @@ static INT  __sdmemDevCreate (SD_DRV *psddrv, PLW_SDCORE_DEVICE psdcoredev, VOID
 
     psdmempriv= (__SDMEM_PRIV *)__SHEAP_ALLOC(sizeof(__SDMEM_PRIV));
     if (!psdmempriv) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         return  (PX_ERROR);
     }
 
@@ -96,19 +98,19 @@ static INT  __sdmemDevCreate (SD_DRV *psddrv, PLW_SDCORE_DEVICE psdcoredev, VOID
      * 增加了SDM后, 约定: 当适配器名称和设备名称为空时, 表示coredev 由 SDM 创建
      * 此时, psdmemchan 指向对应的coredev
      */
-    pblkdev = API_SdMemDevCreate(-1, NULL, NULL, (PLW_SDMEM_CHAN)psdcoredev);
+    pblkdev = API_SdMemDevCreate(-1, LW_NULL, LW_NULL, (PLW_SDMEM_CHAN)psdcoredev);
     if (!pblkdev) {
-        goto __err1;
+        goto    __err1;
     }
 
     poemdisk = oemDiskMount("/sdcard",
                             pblkdev,
-                            NULL,
+                            LW_NULL,
                             __SDMEM_CACHE_SIZE,
                             __SDMEM_CACHE_BOOST);
     if (!poemdisk) {
         printk("\nmount sd memory card failed.\r\n");
-        goto __err2;
+        goto    __err2;
     }
 
 

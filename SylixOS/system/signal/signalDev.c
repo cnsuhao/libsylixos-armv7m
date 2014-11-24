@@ -258,7 +258,7 @@ static VOID  _sigfdReadBlock (PLW_CLASS_TCB  ptcbCur, PLW_CLASS_SIGCONTEXT  psig
 }
 /*********************************************************************************************************
 ** 函数名称: _sigfdReadUnblock
-** 功能描述: 解除读/select signalfd 设备阻塞
+** 功能描述: 解除读 select signalfd 设备阻塞
 ** 输　入  : ulId             线程 ID
 **           iSigNo           信号
 ** 输　出  : NONE

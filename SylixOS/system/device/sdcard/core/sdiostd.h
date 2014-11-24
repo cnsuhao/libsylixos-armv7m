@@ -44,6 +44,7 @@
     [25:9]  Register address
     [7:0]   Data
 *********************************************************************************************************/
+
 #define SDIO_RW_DIRECT          52                                  /*  ac   [31:0]             R5      */
 
 /*********************************************************************************************************
@@ -55,6 +56,7 @@
     [25:9]  Register address
     [8:0]   Byte/block count
 *********************************************************************************************************/
+
 #define SDIO_RW_EXTENDED        53                                  /*  adtc [31:0]             R5      */
 
 /*********************************************************************************************************
@@ -71,6 +73,7 @@
             a valid command will clear it (with a delay of one command)
     c : clear by read
 *********************************************************************************************************/
+
 #define R5_COM_CRC_ERROR        (1 << 15)                           /* er, b                            */
 #define R5_ILLEGAL_CMD          (1 << 14)                           /* er, b                            */
 #define R5_ERROR                (1 << 11)                           /* erx, c                           */
@@ -82,6 +85,7 @@
 /*********************************************************************************************************
    Card Common Control Registers (CCCR)
 *********************************************************************************************************/
+
 #define SDIO_CCCR_CCCR          0x00
 #define SDIO_CCCR_REV_1_00      0                                   /* CCCR/FBR Version 1.00            */
 #define SDIO_CCCR_REV_1_10      1                                   /* CCCR/FBR Version 1.10            */
@@ -96,11 +100,11 @@
 #define SDIO_SD_REV_1_10        1                                   /* SD Physical Spec Ver 1.10        */
 #define SDIO_SD_REV_2_00        2                                   /* SD Physical Spec Ver 2.00        */
 
-#define SDIO_CCCR_IOEx          0x02
-#define SDIO_CCCR_IORx          0x03
+#define SDIO_CCCR_IOEX          0x02
+#define SDIO_CCCR_IORX          0x03
 
-#define SDIO_CCCR_IENx          0x04                                /* Func/Master Interrupt Enable     */
-#define SDIO_CCCR_INTx          0x05                                /* Function Interrupt Pending       */
+#define SDIO_CCCR_IENX          0x04                                /* Func/Master Interrupt Enable     */
+#define SDIO_CCCR_INTX          0x05                                /* Function Interrupt Pending       */
 
 #define SDIO_CCCR_ABORT         0x06                                /* function abort/card reset        */
 
@@ -145,6 +149,7 @@
 /*********************************************************************************************************
    Function Base Register (FBR)
 *********************************************************************************************************/
+
 #define SDIO_FBR_BASE(fn)       ((fn) * 0x100)                      /* base of function f's FBRs        */
 
 #define SDIO_FBR_STD_IF         0x00

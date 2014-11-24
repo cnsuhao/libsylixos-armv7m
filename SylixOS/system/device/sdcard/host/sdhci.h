@@ -27,6 +27,7 @@
             为外部函数,由具体平台的驱动实现.
 2011.06.01  访问寄存器的与硬件平台相关的函数采用回调方式,由驱动实现.
             今天是六一儿童节,回想起咱的童年,哎,一去不复返.祝福天下的小朋友们茁壮成长,健康快乐.
+2014.11.14  为支持 SDIO 和加入 SDM 模块管理, 修改了相关数据结构. 同时删除了一些 API, 该为内部使用
 *********************************************************************************************************/
 
 #ifndef __SDHCI_H
@@ -339,7 +340,7 @@
 #define SDHCI_INT_ALL_MASK              ((unsigned int)-1)
 
 /*********************************************************************************************************
-    自动CMD12错误状态寄存器.
+  自动 CMD12 错误状态寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_ACMD12_ERR                0x3c
@@ -351,7 +352,7 @@
 #define SDHCI_EACMD12_CMDISSUE          0x0080
 
 /*********************************************************************************************************
-    主控功能寄存器.
+  主控功能寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_CAPABILITIES              0x40
@@ -372,38 +373,38 @@
 #define SDHCI_CAP_CAN_64BIT             0x10000000
 
 /*********************************************************************************************************
-    Maximum current capability register.
+  Maximum current capability register.
 *********************************************************************************************************/
 
 #define SDHCI_MAX_CURRENT               0x48                            /*  4c-4f reserved for more     */
                                                                         /*  for more max current        */
 
 /*********************************************************************************************************
-    设置(force set, 就是主动产生中断)ACMD12错误寄存器.
+  设置(force set, 就是主动产生中断)ACMD12错误寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_SET_ACMD12_ERROR          0x50
 
 /*********************************************************************************************************
-    设置(force set, 即主动产生中断)中断错误寄存器.
+  设置(force set, 即主动产生中断)中断错误寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_SET_INT_ERROR             0x52
 
 /*********************************************************************************************************
-    ADMA错误状态寄存器.
+  ADMA 错误状态寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_ADMA_ERROR                0x54
 
 /*********************************************************************************************************
-   ADMA地址寄存器.
+  ADMA 地址寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_ADMA_ADDRESS              0x58
 
 /*********************************************************************************************************
-    插槽中断状态寄存器.
+  插槽中断状态寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_SLOT_INT_STATUS           0xfc
@@ -411,7 +412,7 @@
 #define SDHCI_CHK_SLOTINT(slotsta, n)   ((slotsta & 0x00ff) | (1 << (n)))
 
 /*********************************************************************************************************
-    主控制器版本寄存器.
+  主控制器版本寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_HOST_VERSION              0xfe
@@ -423,7 +424,7 @@
 #define SDHCI_HVER_SPEC_200             0x0001
 
 /*********************************************************************************************************
-    其他宏定义.
+  其他宏定义.
 *********************************************************************************************************/
 
 #define SDHCI_DELAYMS(ms)                                   \
@@ -433,7 +434,7 @@
         } while (0)
 
 /*********************************************************************************************************
-    主控传输模式设置使用参数.
+  主控传输模式设置使用参数.
 *********************************************************************************************************/
 
 #define SDHCIHOST_TMOD_SET_NORMAL       0
@@ -441,7 +442,7 @@
 #define SDHCIHOST_TMOD_SET_ADMA         2
 
 /*********************************************************************************************************
-    主控支持的传输模式组合位标定义.
+  主控支持的传输模式组合位标定义.
 *********************************************************************************************************/
 
 #define SDHCIHOST_TMOD_CAN_NORMAL       (1 << 0)
@@ -449,96 +450,93 @@
 #define SDHCIHOST_TMOD_CAN_ADMA         (1 << 2)
 
 /*********************************************************************************************************
-  SD标准主控制器属性结构
+  SD 标准主控制器属性结构
 *********************************************************************************************************/
 
 struct _sdhci_drv_funcs;                                                /*  标准主控驱动函数声明        */
 typedef struct _sdhci_drv_funcs SDHCI_DRV_FUNCS;
 
 typedef struct lw_sdhci_host_attr {
-    SDHCI_DRV_FUNCS *SDHCIHOST_pDrvFuncs;                               /*  标准主控驱动函数结构指针    */
-    LONG             SDHCIHOST_lBasePoint;                              /*  槽基地址指针.该域的设置必须 */
-                                                                        /*  特别注意,因为内部无法检测其 */
-                                                                        /*  合法性.                     */
+    SDHCI_DRV_FUNCS *SDHCIHOST_pdrvfuncs;                               /*  标准主控驱动函数结构指针    */
+                                                                        /*  内部使用 驱动无需提供       */
+    INT              SDHCIHOST_iRegAccessType;                          /*  寄存器访问类型              */
+#define SDHCI_REGACCESS_TYPE_IO         0
+#define SDHCI_REGACCESS_TYPE_MEM        1
+
+    ULONG            SDHCIHOST_ulBasePoint;                             /*  槽基地址指针                */
+    ULONG            SDHCIHOST_ulIntVector;                             /*  控制器在 CPU 中的中断向量   */
     UINT32           SDHCIHOST_uiMaxClock;                              /*  如果控制器没有内部时钟,用户 */
                                                                         /*  需要提供时钟源              */
 } LW_SDHCI_HOST_ATTR, *PLW_SDHCI_HOST_ATTR;
 
 /*********************************************************************************************************
-  SD标准主控驱动结构体
+  SD 标准主控驱动结构体
 *********************************************************************************************************/
 
 struct _sdhci_drv_funcs {
     UINT32        (*sdhciReadL)
                   (
-                  PLW_SDHCI_HOST_ATTR  phostattr,
-                  LONG                 lReg
+                  ULONG                 ulReg
                   );
     UINT16        (*sdhciReadW)
                   (
-                  PLW_SDHCI_HOST_ATTR  phostattr,
-                  LONG                 lReg
+                  ULONG                 ulReg
                   );
     UINT8         (*sdhciReadB)
                   (
-                  PLW_SDHCI_HOST_ATTR  phostattr,
-                  LONG                 lReg
+                  ULONG                 ulReg
                   );
     VOID          (*sdhciWriteL)
                   (
-                  PLW_SDHCI_HOST_ATTR  phostattr,
-                  LONG                 lReg,
-                  UINT32               uiLword
+                  ULONG                 ulReg,
+                  UINT32                uiLword
                   );
     VOID          (*sdhciWriteW)
                   (
-                  PLW_SDHCI_HOST_ATTR  phostattr,
-                  LONG                 lReg,
+                  ULONG                ulReg,
                   UINT16               usWord
                   );
     VOID          (*sdhciWriteB)
                   (
-                  PLW_SDHCI_HOST_ATTR  phostattr,
-                  LONG                 lReg,
+                  ULONG                ulReg,
                   UINT8                ucByte
                   );
 };
 
-#define SDHCI_READL(phostattr, lReg)           \
-        ((phostattr)->SDHCIHOST_pDrvFuncs->sdhciReadL)(phostattr, lReg)
-#define SDHCI_READW(phostattr, lReg)           \
-        ((phostattr)->SDHCIHOST_pDrvFuncs->sdhciReadW)(phostattr, lReg)
-#define SDHCI_READB(phostattr, lReg)           \
-        ((phostattr)->SDHCIHOST_pDrvFuncs->sdhciReadB)(phostattr, lReg)
+#define SDHCI_READL(pattr, lReg)           \
+        ((pattr)->SDHCIHOST_pdrvfuncs->sdhciReadL)((pattr)->SDHCIHOST_ulBasePoint + lReg)
+#define SDHCI_READW(pattr, lReg)           \
+        ((pattr)->SDHCIHOST_pdrvfuncs->sdhciReadW)((pattr)->SDHCIHOST_ulBasePoint + lReg)
+#define SDHCI_READB(pattr, lReg)           \
+        ((pattr)->SDHCIHOST_pdrvfuncs->sdhciReadB)((pattr)->SDHCIHOST_ulBasePoint + lReg)
 
-#define SDHCI_WRITEL(phostattr, lReg, uiLword) \
-        ((phostattr)->SDHCIHOST_pDrvFuncs->sdhciWriteL)(phostattr, lReg, uiLword)
-#define SDHCI_WRITEW(phostattr, lReg, usWord)  \
-        ((phostattr)->SDHCIHOST_pDrvFuncs->sdhciWriteW)(phostattr, lReg, usWord)
-#define SDHCI_WRITEB(phostattr, lReg, ucByte)  \
-        ((phostattr)->SDHCIHOST_pDrvFuncs->sdhciWriteB)(phostattr, lReg, ucByte)
+#define SDHCI_WRITEL(pattr, lReg, uiLword) \
+        ((pattr)->SDHCIHOST_pdrvfuncs->sdhciWriteL)((pattr)->SDHCIHOST_ulBasePoint + lReg, uiLword)
+#define SDHCI_WRITEW(pattr, lReg, usWord)  \
+        ((pattr)->SDHCIHOST_pdrvfuncs->sdhciWriteW)((pattr)->SDHCIHOST_ulBasePoint + lReg, usWord)
+#define SDHCI_WRITEB(pattr, lReg, ucByte)  \
+        ((pattr)->SDHCIHOST_pdrvfuncs->sdhciWriteB)((pattr)->SDHCIHOST_ulBasePoint + lReg, ucByte)
+
 /*********************************************************************************************************
-  SD标准主控制器操作
+  SD 标准主控制器操作
 *********************************************************************************************************/
 
 LW_API PVOID      API_SdhciHostCreate(CPCHAR               pcAdapterName,
                                       PLW_SDHCI_HOST_ATTR  psdhcihostattr);
-LW_API INT        API_SdhciHostDelete(PVOID            pvHost);
+LW_API INT        API_SdhciHostDelete(PVOID    pvHost);
 
 LW_API INT        API_SdhciHostTransferModGet(PVOID    pvHost);
 LW_API INT        API_SdhciHostTransferModSet(PVOID    pvHost, INT   iTmod);
 
 /*********************************************************************************************************
-  SD标准主控制器设备操作
+  SD 标准主控制器设备操作
 *********************************************************************************************************/
 
-LW_API PVOID      API_SdhciDeviceAdd(PVOID            pvHost,
-                                     CPCHAR           pcDeviceName);
-LW_API INT        API_SdhciDeviceRemove(PVOID         pvDevice);
+LW_API VOID       API_SdhciDeviceCheckNotify(PVOID pvHost, INT iDevSta);
 
-LW_API INT        API_SdhciDeviceUsageInc(PVOID       pvDevice);
-LW_API INT        API_SdhciDeviceUsageDec(PVOID       pvDevice);
-LW_API INT        API_SdhciDeviceUsageGet(PVOID       pvDevice);
+LW_API INT        API_SdhciDeviceUsageInc(PVOID     pvDevice);
+LW_API INT        API_SdhciDeviceUsageDec(PVOID     pvDevice);
+LW_API INT        API_SdhciDeviceUsageGet(PVOID     pvDevice);
 
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0)      */
                                                                         /*  (LW_CFG_SDCARD_EN > 0)      */

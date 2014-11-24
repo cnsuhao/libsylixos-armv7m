@@ -105,6 +105,7 @@ typedef struct {
     LW_LIST_LINE_HEADER     GDB_plistThd;                               /* 线程链表                     */
     BOOL                    GDB_beNotifing;                             /* 是否正在处理notify           */
     BOOL                    GDB_bExited;                                /* 进程是否退出                 */
+    BOOL                    GDB_bStarted;                               /* 进程是已经启动               */
 } LW_GDB_PARAM;
 /*********************************************************************************************************
   全局变量定义
@@ -1100,7 +1101,6 @@ static INT gdbHandleQCmd (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
 {
     if (lib_strstr(pcInBuff, "NonStop:1") == pcInBuff) {
         pparam->GDB_bNonStop = 1;
-        API_DtraceContinueProcess(pparam->GDB_pvDtrace);                /* non-stop先启动进程           */
         gdbReplyOk(pcOutBuff);
 
     } else if (lib_strstr(pcInBuff, "NonStop:0") == pcInBuff) {
@@ -1459,6 +1459,10 @@ static INT gdbContHandle (LW_GDB_PARAM     *pparam,
             pdmsg->DTM_ulAddr   = 0;
             pdmsg->DTM_ulThread = pthItem->TH_ulId;
             pparam->GDB_lOptThreadId = pthItem->TH_ulId;
+            if (pparam->GDB_bNonStop && !pparam->GDB_bStarted) {
+                API_DtraceContinueProcess(pparam->GDB_pvDtrace);        /* non-stop先启动进程           */
+                pparam->GDB_bStarted = LW_TRUE;
+            }
             break;
 
         default:
@@ -1661,9 +1665,11 @@ static INT gdbRspPkgHandle (LW_GDB_PARAM    *pparam,
             pdmsg->DTM_uiType   = SIGQUIT;
             pparam->GDB_bExited = LW_TRUE;
             gdbNotfyStopReason(pdmsg, cOutBuff);
-            gdbRspPkgPut(pparam, cOutBuff, TRUE);
+            gdbRspPkgPut(pparam, cOutBuff, FALSE);
+            LW_GDB_SAFEFREE(cInBuff);
+            LW_GDB_SAFEFREE(cOutBuff);
             LW_GDB_MSG("[GDB]Target process exit.\n");
-            continue;
+            return  (PX_ERROR);
         }
 
         switch (cInBuff[0]) {

@@ -31,6 +31,7 @@
 #include "../core/sdiodrvm.h"
 #include "../core/sdcoreLib.h"
 #include "../core/sdiocoreLib.h"
+#include "../include/sddebug.h"
 #include "sdiobaseDrv.h"
 /*********************************************************************************************************
   sdiobase 私有数据
@@ -98,6 +99,7 @@ static INT   __sdiobaseDevCreate (SD_DRV *psddrv, PLW_SDCORE_DEVICE psdcoredev, 
 
     psdiobase= (__SDM_SDIO_BASE *)__SHEAP_ALLOC(sizeof(__SDM_SDIO_BASE));
     if (!psdiobase) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         return  (PX_ERROR);
     }
 
@@ -109,7 +111,7 @@ static INT   __sdiobaseDevCreate (SD_DRV *psddrv, PLW_SDCORE_DEVICE psdcoredev, 
          * 如果预初始化失败, 说明不是一个 SDIO 设备, 无需进行
          * 下面的 SDIO 设备驱动匹配工作
          */
-        goto __err;
+        goto    __err;
     }
 
     __sdmSdioDrvAccessRequest();
@@ -154,7 +156,7 @@ static INT   __sdiobaseDevCreate (SD_DRV *psddrv, PLW_SDCORE_DEVICE psdcoredev, 
 __err:
     __SHEAP_FREE(psdiobase);
 
-    *ppvDevPriv = NULL;
+    *ppvDevPriv = LW_NULL;
 
     return  (PX_ERROR);
 }
@@ -227,14 +229,14 @@ INT  __sdiobaseDevIrqHandle (SD_DRV *psddrv,  VOID *pvDevPriv)
 *********************************************************************************************************/
 static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdcoredev)
 {
-    INT         iRet;
     UINT32      uiOcr     = 0;
     UINT32      uiHostOcr = 0;
     SDIO_FUNC  *psdiofunc;
+    INT         iRet;
     INT         i;
 
     if (!pinitdata || !psdcoredev) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -245,9 +247,9 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
 
     psdiofunc = &pinitdata->INIT_psdiofuncTbl[0];
     for (i = 0; i < 8; i++) {
-        psdiofunc->FUNC_uiNum              = i;
-        psdiofunc->FUNC_cpsdiocccr         = &pinitdata->INIT_sdiocccr;
-        psdiofunc->FUNC_ptupleListHeader   = NULL;
+        psdiofunc->FUNC_uiNum            = i;
+        psdiofunc->FUNC_cpsdiocccr       = &pinitdata->INIT_sdiocccr;
+        psdiofunc->FUNC_ptupleListHeader = LW_NULL;
 
         psdiofunc++;
     }
@@ -257,7 +259,8 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
     /*
      * do common init
      */
-
+    API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_POWEROFF, 0);
+    bspDelayUs(10);
     API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_POWERON, 0);
     API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_SETCLK, SDARG_SETCLK_LOW);
 
@@ -265,7 +268,7 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
 
     iRet = __sdioCoreDevSendIoOpCond(psdcoredev, 0, &uiOcr);        /*  获取设备支持的OCR               */
     if (iRet != ERROR_NONE) {
-        return (PX_ERROR);
+        return  (PX_ERROR);
     }
 
     uiOcr &= ~0x7f;                                                 /*  这里忽略协议里保留的电压范围    */
@@ -278,13 +281,13 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
 
     uiOcr = uiOcr & uiHostOcr;
     if (uiOcr == 0) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "dev ocr not match with host ocr.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "dev ocr not match with host ocr.\r\n");
         return  (PX_ERROR);
     }
 
     iRet = __sdiobaseCommonInit(pinitdata, uiOcr);
     if (iRet != ERROR_NONE) {
-        goto __clean;
+        goto    __clean;
     }
 
     /*
@@ -298,7 +301,7 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
     for (i = 0; i < pinitdata->INIT_iFuncCnt; i++) {
         iRet = __sdiobaseFuncInit(psdcoredev, psdiofunc);
         if (iRet != ERROR_NONE) {
-            goto __clean;
+            goto    __clean;
         }
         psdiofunc++;
     }
@@ -329,9 +332,9 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
     INT               iRet;
     UINT32            uiRca;
 
-    iRet = __sdioCoreDevSendIoOpCond(psdcoredev, uiRealOcr, NULL);
+    iRet = __sdioCoreDevSendIoOpCond(psdcoredev, uiRealOcr, LW_NULL);
     if (iRet != ERROR_NONE) {
-        return (PX_ERROR);
+        return  (PX_ERROR);
     }
 
 #if LW_CFG_SDCARD_CRC_EN > 0
@@ -345,14 +348,14 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
     if (COREDEV_IS_SD(psdcoredev)) {
         iRet = __sdCoreDevSendRelativeAddr(psdcoredev, &uiRca);
         if (iRet != ERROR_NONE) {
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
 
         API_SdCoreDevRcaSet(psdcoredev, uiRca);
 
         iRet = __sdCoreDevSelect(psdcoredev);
         if (iRet != ERROR_NONE) {
-            return (PX_ERROR);
+            return  (PX_ERROR);
         }
     }
 
@@ -379,14 +382,14 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
                                 SDBUS_CTRL_SETCLK,
                                 SDARG_SETCLK_MAX);
         if (iRet != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "host clock set to max failed.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "host clock set to max failed.\r\n");
         }
     } else {
         iRet = API_SdCoreDevCtl(psdcoredev,
                                 SDBUS_CTRL_SETCLK,
                                 pinitdata->INIT_psdiofuncTbl[0].FUNC_uiMaxDtr);
         if (iRet != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "host clock set to normal failed.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "host clock set to normal failed.\r\n");
         }
     }
 

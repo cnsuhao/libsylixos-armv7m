@@ -39,6 +39,7 @@
 #include "sdstd.h"
 #include "sdcrc.h"
 #include "sdcore.h"
+#include "../include/sddebug.h"
 /*********************************************************************************************************
   SPI通信配置
 *********************************************************************************************************/
@@ -169,14 +170,14 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
     case SDADAPTER_TYPE_SD:
         psddevice = API_SdDeviceCreate(pcAdapterName, pcDeviceName);
         if (!psddevice) {
-            goto __createdev_failed;
+            goto    __createdev_failed;
         }
         psddevice->SDDEV_uiState |= SD_STATE_EXIST;                     /*  该设备已经存在(此处很关键)  */
 
         psdcoredevice = (PLW_SDCORE_DEVICE)__SHEAP_ALLOC(sizeof(LW_SDCORE_DEVICE));
         if (!psdcoredevice) {
             API_SdDeviceDelete(psddevice);
-            goto __allocdev_failed;
+            goto    __allocdev_failed;
         }
         lib_bzero(psdcoredevice, sizeof(LW_SDCORE_DEVICE));
         
@@ -196,28 +197,27 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
         } else {
             __SHEAP_FREE(psdcoredevice);
             API_SdDeviceDelete(psddevice);
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "need callback of install.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "need callback of install.\r\n");
             return  (LW_NULL);
         }
-
         return  (psdcoredevice);
 
     case SDADAPTER_TYPE_SPI:
         if (!SDCORE_CHAN_SPICSEN(psdcorechan) ||
             !SDCORE_CHAN_SPICSDIS(psdcorechan)) {                       /*  spi下必须有片选回调         */
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "need callback of spi card select in spi mode.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "need callback of spi card select in spi mode.\r\n");
             _ErrorHandle(EINVAL);
             return  (LW_NULL);
         }
 
         pspidevice = API_SpiDeviceCreate(pcAdapterName, pcDeviceName);  /*  创建spi设备                 */
         if (!pspidevice) {
-            goto __createdev_failed;
+            goto    __createdev_failed;
         }
         pcspidevice = (__PCORE_SPI_DEV)__SHEAP_ALLOC(sizeof(__CORE_SPI_DEV));
         if (!pcspidevice) {                                             /*  创建core spi 设备           */
             API_SpiDeviceDelete(pspidevice);
-            goto __allocdev_failed;
+            goto    __allocdev_failed;
         }
         lib_bzero(pcspidevice, sizeof(__CORE_SPI_DEV));
         
@@ -227,7 +227,7 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
         if (!psdcoredevice) {                                           /*  创建核心设备                */
             API_SpiDeviceDelete(pspidevice);
             __SHEAP_FREE(pcspidevice);
-            goto __allocdev_failed;
+            goto    __allocdev_failed;
         }
 
         pcspidevice->CSPIDEV_pspiDev    = pspidevice;                   /*  绑定                        */
@@ -254,24 +254,23 @@ LW_API PLW_SDCORE_DEVICE  API_SdCoreDevCreate (INT                       iAdapte
             __SHEAP_FREE(psdcoredevice);
             __SHEAP_FREE(pcspidevice);
             API_SpiDeviceDelete(pspidevice);
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "callback install error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "callback install error.\r\n");
             return  (LW_NULL);
         }
-
         return  (psdcoredevice);
 
     default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "adapter type error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "adapter type error.\r\n");
         _ErrorHandle(EINVAL);
         return  (LW_NULL);
     }
 
 __createdev_failed:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "create device(sd/spi) failed.\r\n");
+    SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create device(sd/spi) failed.\r\n");
     return  (LW_NULL);
 
 __allocdev_failed:
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+    SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
     _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
 
     return  (LW_NULL);
@@ -300,7 +299,7 @@ LW_API INT  API_SdCoreDevDelete (PLW_SDCORE_DEVICE    psdcoredevice)
     iError = __CORE_DEV_DEL(psdcoredevice);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "delete device(sd/spi) failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "delete device(sd/spi) failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -335,18 +334,18 @@ LW_API INT  API_SdCoreDevCtl (PLW_SDCORE_DEVICE    psdcoredevice,
 
     iError = API_SdCoreDevStaView(psdcoredevice);
     if (iError == SD_DEVSTA_UNEXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "dev is not exist.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "dev is not exist.\r\n");
         return  (PX_ERROR);
     }
 
     iError = __CORE_DEV_CTL(psdcoredevice, iCmd, lArg);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "ctrl of device(sd/spi) failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "ctrl of device(sd/spi) failed.\r\n");
         return  (PX_ERROR);
     }
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdCoreDevTransfer
@@ -372,17 +371,17 @@ LW_API INT  API_SdCoreDevTransfer (PLW_SDCORE_DEVICE  psdcoredevice,
 
     iError = API_SdCoreDevStaView(psdcoredevice);
     if (iError == SD_DEVSTA_UNEXIST) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "dev is not exist.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "dev is not exist.\r\n");
         return  (PX_ERROR);
     }
 
     iError = __CORE_DEV_TXF(psdcoredevice, psdmsg, iNum);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "request of device(sd/spi) failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "request of device(sd/spi) failed.\r\n");
         return  (PX_ERROR);
     }
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdCoreDevCmd
@@ -416,7 +415,7 @@ LW_API INT  API_SdCoreDevCmd (PLW_SDCORE_DEVICE psdcoredevice,
     iError = API_SdCoreDevTransfer(psdcoredevice, &sdmsg, 1);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -457,10 +456,10 @@ LW_API INT   API_SdCoreDevAppCmd (PLW_SDCORE_DEVICE psdcoredevice,
     }
 
     if (i > uiRetry) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "timeout.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "timeout.\r\n");
         iError = PX_ERROR;
     } else if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send app cmd error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send app cmd error.\r\n");
     }
 
     return  (iError);
@@ -481,7 +480,7 @@ LW_API CPCHAR  API_SdCoreDevAdapterName (PLW_SDCORE_DEVICE psdcoredevice)
     LW_BUS_ADAPTER  *pBusAdapter;
 
     if (!psdcoredevice) {
-        return  (NULL);
+        return  (LW_NULL);
     }
 
     switch (psdcoredevice->COREDEV_iAdapterType) {
@@ -497,8 +496,7 @@ LW_API CPCHAR  API_SdCoreDevAdapterName (PLW_SDCORE_DEVICE psdcoredevice)
         break;
 
     default:
-        return  (NULL);
-        break;
+        return  (LW_NULL);
     }
 
     return  ((CPCHAR)pBusAdapter->BUSADAPTER_cName);
@@ -732,7 +730,7 @@ LW_API INT  API_SdCoreDevRcaSet (PLW_SDCORE_DEVICE psdcoredevice,  UINT32  uiRCA
 
     case SDADAPTER_TYPE_SPI:
     default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "in spi mode, device has no rca .\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "in spi mode, device has no rca .\r\n");
         return  (PX_ERROR);
     }
 }
@@ -895,13 +893,13 @@ LW_API INT  API_SdCoreSpiSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
 
     pcspidev = (__PCORE_SPI_DEV)psdcoredevice->COREDEV_pvDevHandle;
     if (!pcspidev) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "no core spi device.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "no core spi device.\r\n");
         return  (PX_ERROR);
     }
 
     iError = API_SpiDeviceBusRequest(pcspidev->CSPIDEV_pspiDev);        /*  请求spi总线                 */
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
         return  (PX_ERROR);
     }
     __SD_SPI_CSEN(pcspidev);                                            /*  使能片选                    */
@@ -919,8 +917,8 @@ LW_API INT  API_SdCoreSpiSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
                                    &spimsg,
                                    1);
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
-        goto __spibus_release;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        goto    __spibus_release;
     }
 
     /*
@@ -940,16 +938,16 @@ LW_API INT  API_SdCoreSpiSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
                                        &spimsg,
                                        1);
         if (iError == PX_ERROR) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
-            goto __spibus_release;
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
+            goto    __spibus_release;
         }
         if (!(ucBuf[0] & 0x80)) {
-            goto __resp_accept;
+            goto    __resp_accept;
         }
         lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
         if ((tvNow.tv_sec - tvOld.tv_sec) >= __SD_SPI_RSP_WAITSEC) {    /*  超时退出                    */
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "get response timeout.\r\n");
-            goto __spibus_release;
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get response timeout.\r\n");
+            goto    __spibus_release;
         }
     }
 
@@ -965,24 +963,23 @@ __resp_accept:
                                    &spimsg,
                                    1);
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
-        goto __spibus_release;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
+        goto    __spibus_release;
     }
 
     if (ucBuf[3] != 0xaa) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "check pattern error.\r\n");
-        goto __spibus_release;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "check pattern error.\r\n");
+        goto    __spibus_release;
     }
 
     __SD_SPI_CSDIS(pcspidev);                                           /*  禁能片选                    */
     API_SpiDeviceBusRelease(pcspidev->CSPIDEV_pspiDev);                 /*  释放spi总线                 */
-    return (ERROR_NONE);                                                /*  成功返回                    */
+    return  (ERROR_NONE);                                               /*  成功返回                    */
 
 __spibus_release:
-
     __SD_SPI_CSDIS(pcspidev);                                           /*  禁能片选                    */
     API_SpiDeviceBusRelease(pcspidev->CSPIDEV_pspiDev);                 /*  释放spi总线                 */
-    return (PX_ERROR);
+    return  (PX_ERROR);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdCoreSpiRegisterRead
@@ -1018,14 +1015,14 @@ LW_API INT  API_SdCoreSpiRegisterRead (PLW_SDCORE_DEVICE  psdcoredevice,
 
     pcspidevice = (__PCORE_SPI_DEV)psdcoredevice->COREDEV_pvDevHandle;
     if (!pcspidevice) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "no spi device error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "no spi device error.\r\n");
         return  (PX_ERROR);
 
     }
 
     iError = API_SpiDeviceBusRequest(pcspidevice->CSPIDEV_pspiDev);     /*  请求spi总线                 */
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
         return  (PX_ERROR);
     }
     __SD_SPI_CSEN(pcspidevice);                                         /*  使能片选                    */
@@ -1039,12 +1036,12 @@ LW_API INT  API_SdCoreSpiRegisterRead (PLW_SDCORE_DEVICE  psdcoredevice,
     while (iRetry++ < __SD_SPI_RSP_TIMEOUT) {
         __sdCoreSpiByteRd(pcspidevice, 1, &ucRdToken);
         if (ucRdToken != 0xff) {
-            goto __resp_accept;
+            goto    __resp_accept;
         }
         lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
         if ((tvNow.tv_sec - tvOld.tv_sec) >= __SD_SPI_RSP_WAITSEC) {    /*  超时退出                    */
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "wait read start token timeout.\r\n");
-            goto __spibus_release;
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "wait read start token timeout.\r\n");
+            goto    __spibus_release;
         }
     }
 
@@ -1064,8 +1061,8 @@ __resp_accept:
     iError = __sdCoreSpiByteRd(pcspidevice, uiLen, pucReg);
 
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "get data error.\r\n");
-        goto __spibus_release;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get data error.\r\n");
+        goto    __spibus_release;
     }
 
     /*
@@ -1073,8 +1070,8 @@ __resp_accept:
      */
     iError = __sdCoreSpiByteRd(pcspidevice, 2, pucCrc16);
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "get data error.\r\n");
-        goto __spibus_release;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get data error.\r\n");
+        goto    __spibus_release;
     }
 
 #if LW_CFG_SDCARD_CRC_EN > 0
@@ -1084,8 +1081,8 @@ __resp_accept:
     }
 
     if (((pucCrc16[0] << 8) | pucCrc16[1]) != __sdCrc16(pucReg, (UINT16)uiLen)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "crc error.\r\n");
-        goto __spibus_release;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "crc error.\r\n");
+        goto    __spibus_release;
     }
 #endif
 
@@ -1095,7 +1092,6 @@ __resp_accept:
     return  (ERROR_NONE);
 
 __spibus_release:
-
     __sdCoreSpiByteWrt(pcspidevice, 1, &ucWrtClk);
     __SD_SPI_CSDIS(pcspidevice);                                        /*  禁能片选                    */
     API_SpiDeviceBusRelease(pcspidevice->CSPIDEV_pspiDev);              /*  释放spi总线                 */
@@ -1123,7 +1119,7 @@ static INT __sdCoreSdDevTransfer (PVOID          pvDevHandle,
     iError = API_SdDeviceTransfer(psddevice, psdmsg, iNum);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "request failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "request failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1154,7 +1150,7 @@ static INT __sdCoreSdDevCtl (PVOID      pvDevHandle,
 
     iError = API_SdDeviceCtl(psddevice, iCmd, lArg);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "ctrl failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "ctrl failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1183,7 +1179,7 @@ static INT __sdCoreSdDevDelet (PVOID  pvDevHandle)
     iError = API_SdDeviceDelete(psddevice);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "delet sd device failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "delet sd device failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1275,29 +1271,29 @@ static INT __sdCoreSpiDevTransfer (PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, IN
     INT              i = 0;
 
     if (!pvDevHandle) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
 
-    while (i < iNum && psdmsg != NULL) {
+    while ((i < iNum) && (psdmsg != LW_NULL)) {
         iError = API_SpiDeviceBusRequest(pcspidevice->CSPIDEV_pspiDev); /*  请求spi总线                 */
         if (iError == PX_ERROR) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
             return  (PX_ERROR);
         }
         __SD_SPI_CSEN(pcspidevice);                                     /*  使能片选                    */
 
         psdcmd = psdmsg->SDMSG_psdcmdCmd;
-        psddat = psdmsg->SDMSG_psdData;
+        psddat = psdmsg->SDMSG_psddata;
 
         /*
          * 首先发送请求命令
          */
         iError = __sdCoreSpiCmd(pcspidevice, psdcmd);
         if (iError != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
-            goto __spibus_release;
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+            goto    __spibus_release;
         }
 
         /*
@@ -1305,13 +1301,13 @@ static INT __sdCoreSpiDevTransfer (PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, IN
          */
         if (psddat != LW_NULL) {
             if (SD_DAT_IS_STREAM(psddat)) {
-                _DebugHandle(__ERRORMESSAGE_LEVEL, "don't support stream operation.\r\n");
-                goto __spibus_release;
+                SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "don't support stream operation.\r\n");
+                goto    __spibus_release;
             }
 
             if (SD_DAT_IS_BOTHRW(psddat)) {
-                _DebugHandle(__ERRORMESSAGE_LEVEL, "don't support both read and write data.\r\n");
-                goto __spibus_release;
+                SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "don't support both read and write data.\r\n");
+                goto    __spibus_release;
             }
 
             if (SD_DAT_IS_WRITE(psddat)) {
@@ -1320,8 +1316,8 @@ static INT __sdCoreSpiDevTransfer (PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, IN
                                             psddat->SDDAT_uiBlkSize,
                                             psdmsg->SDMSG_pucWrtBuffer);
                 if (iError != ERROR_NONE) {
-                    _DebugHandle(__ERRORMESSAGE_LEVEL, "write block error.\r\n");
-                    goto __spibus_release;
+                    SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "write block error.\r\n");
+                    goto    __spibus_release;
                 }
 
             } else if (SD_DAT_IS_READ(psddat)) {
@@ -1330,13 +1326,13 @@ static INT __sdCoreSpiDevTransfer (PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, IN
                                            psddat->SDDAT_uiBlkSize,
                                            psdmsg->SDMSG_pucRdBuffer);
                 if (iError != ERROR_NONE) {
-                    _DebugHandle(__ERRORMESSAGE_LEVEL, "read block error.\r\n");
-                    goto __spibus_release;
+                    SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "read block error.\r\n");
+                    goto    __spibus_release;
                 }
 
             } else {
-                _DebugHandle(__ERRORMESSAGE_LEVEL, "unknown data flag.\r\n");
-                goto __spibus_release;
+                SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unknown data flag.\r\n");
+                goto    __spibus_release;
             }
         }
 
@@ -1347,8 +1343,8 @@ static INT __sdCoreSpiDevTransfer (PVOID  pvDevHandle, PLW_SD_MESSAGE psdmsg, IN
         if (psdcmd) {
             iError = __sdCoreSpiCmd(pcspidevice, psdcmd);
             if (iError != ERROR_NONE) {
-                _DebugHandle(__ERRORMESSAGE_LEVEL, "send stop cmd error.\r\n");
-                goto __spibus_release;
+                SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send stop cmd error.\r\n");
+                goto    __spibus_release;
             }
         }
 
@@ -1410,7 +1406,7 @@ static INT __sdCoreSpiDevCtl (PVOID  pvDevHandle, INT  iCmd, LONG lArg)
                                       LW_SPI_CTL_BAUDRATE,
                                       __SD_SPI_CLK_MAX);
         } else {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "\"SETCLK\" is not supported.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "\"SETCLK\" is not supported.\r\n");
             iError = PX_ERROR;
         }
         break;
@@ -1420,8 +1416,8 @@ static INT __sdCoreSpiDevCtl (PVOID  pvDevHandle, INT  iCmd, LONG lArg)
             ucWrtBuf = 0xff;
             iError = __sdCoreSpiByteWrt(pcspidevice, 1, &ucWrtBuf);     /*  延时n*8个时钟               */
             if (iError != ERROR_NONE) {
-                _DebugHandle(__ERRORMESSAGE_LEVEL, "delay clock error.\r\n");
-                return (PX_ERROR);
+                SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "delay clock error.\r\n");
+                return  (PX_ERROR);
             }
         }
         break;
@@ -1433,7 +1429,7 @@ static INT __sdCoreSpiDevCtl (PVOID  pvDevHandle, INT  iCmd, LONG lArg)
         break;
 
     default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "invalidate command.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "invalidate command.\r\n");
         iError = PX_ERROR;
         break;
     }
@@ -1467,7 +1463,7 @@ static INT __sdCoreSpiDevDelet (PVOID pvDevHandle)
     iError = API_SpiDeviceDelete(pcspidevice->CSPIDEV_pspiDev);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "delet spi device failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "delet spi device failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1588,8 +1584,8 @@ static INT __sdCoreSpiCmd (__PCORE_SPI_DEV pcspidevice, LW_SD_COMMAND *psdcmd)
                                    1);
 
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        goto    __error_out;
     }
 
     /*
@@ -1607,8 +1603,8 @@ static INT __sdCoreSpiCmd (__PCORE_SPI_DEV pcspidevice, LW_SD_COMMAND *psdcmd)
                                    1);
 
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send argument error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send argument error.\r\n");
+        goto    __error_out;
     }
 
     /*
@@ -1630,8 +1626,8 @@ static INT __sdCoreSpiCmd (__PCORE_SPI_DEV pcspidevice, LW_SD_COMMAND *psdcmd)
                                    1);
 
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send last byte error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send last byte error.\r\n");
+        goto    __error_out;
     }
 
     /*
@@ -1645,24 +1641,24 @@ static INT __sdCoreSpiCmd (__PCORE_SPI_DEV pcspidevice, LW_SD_COMMAND *psdcmd)
     spimsg.SPIMSG_uiLen       = 1;
     spimsg.SPIMSG_usFlag      = __SD_SPI_TMOD_RD;
     lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
+    
     while (iRetry++ < __SD_SPI_RSP_TIMEOUT) {
         iError = API_SpiDeviceTransfer(pcspidevice->CSPIDEV_pspiDev,
                                        &spimsg,
                                        1);
-
         if (iError == PX_ERROR) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
-            goto __error_out;
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
+            goto    __error_out;
         }
 
         if (!(ucRdBuf[0] & 0x80)) {                                     /*  应答起始位以0开始           */
-            goto __resp_accept;
+            goto    __resp_accept;
         }
 
         lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
         if ((tvNow.tv_sec - tvOld.tv_sec) >= __SD_SPI_RSP_WAITSEC) {    /*  超时退出                    */
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "response time out.\r\n");
-            goto __error_out;
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "response time out.\r\n");
+            goto    __error_out;
         }
     }
 
@@ -1672,8 +1668,8 @@ static INT __sdCoreSpiCmd (__PCORE_SPI_DEV pcspidevice, LW_SD_COMMAND *psdcmd)
 __resp_accept:
     iRespLen = __sdCoreSpiRespLen(psdcmd->SDCMD_uiFlag);
     if (iRespLen <= 0) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "response length error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "response length error.\r\n");
+        goto    __error_out;
     }
 
     ucWrtBuf[0]               = 0xff;
@@ -1682,13 +1678,13 @@ __resp_accept:
     spimsg.SPIMSG_pucRdBuffer = ucRdBuf + 1;                            /*  之前已经接收了一个字节应答  */
     spimsg.SPIMSG_uiLen       = iRespLen - 1;
     spimsg.SPIMSG_usFlag      = __SD_SPI_TMOD_RD;
+    
     iError = API_SpiDeviceTransfer(pcspidevice->CSPIDEV_pspiDev,
                                    &spimsg,
                                    1);
-
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get response error.\r\n");
+        goto    __error_out;
     }
 
     __sdCoreSpiRespConvert(psdcmd->SDCMD_uiResp, ucRdBuf, iRespLen);    /*  转换为SD消息结构的应答      */
@@ -1706,13 +1702,13 @@ __resp_accept:
         spimsg.SPIMSG_uiLen       = 1;
         spimsg.SPIMSG_usFlag      = __SD_SPI_TMOD_RD;
         lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
+        
         while (iRetry++ < __SD_SPI_RSP_TIMEOUT) {
             iError = API_SpiDeviceTransfer(pcspidevice->CSPIDEV_pspiDev,
                                            &spimsg,
                                            1);
-
             if (iError == PX_ERROR) {
-                goto __error_out;
+                goto    __error_out;
             }
 
             if (ucRdBuf[0] != 0) {                                      /*  忙信号为0                   */
@@ -1721,7 +1717,7 @@ __resp_accept:
 
             lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
             if ((tvNow.tv_sec - tvOld.tv_sec) >= __SD_SPI_RSP_WAITSEC) {
-                goto __error_out;
+                goto    __error_out;
             }
         }
     }
@@ -1734,7 +1730,6 @@ __resp_accept:
     return  (ERROR_NONE);
 
 __error_out:
-
     __SD_SPI_CSDIS(pcspidevice);
     ucWrtBuf[0] = 0xff;
     __sdCoreSpiByteWrt(pcspidevice, 1, ucWrtBuf);
@@ -1765,13 +1760,13 @@ static INT __sdCoreSpiDataRd (__PCORE_SPI_DEV pcspidevice,
     while (i++ < uiBlkNum) {
         iError = __sdCoreSpiBlkRd(pcspidevice, uiBlkLen, pucRdBuff);
         if (iError != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "read a block error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "read a block error.\r\n");
             return  (PX_ERROR);
         }
         pucRdBuff += uiBlkLen;
     }
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdCoreSpiDataWrt
@@ -1797,7 +1792,7 @@ static INT __sdCoreSpiDataWrt (__PCORE_SPI_DEV pcspidevice,
     while (i++ < uiBlkNum) {
         iError = __sdCoreSpiBlkWrt(pcspidevice, uiBlkLen, pucWrtBuff, bIsMul);
         if (iError != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "write a block error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "write a block error.\r\n");
 
             /*
              * 如果是多块,则要发送cmd12终止传输.
@@ -1815,7 +1810,7 @@ static INT __sdCoreSpiDataWrt (__PCORE_SPI_DEV pcspidevice,
         pucWrtBuff += uiBlkLen;
     }
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdCoreSpiBlkRd
@@ -1846,13 +1841,13 @@ static INT __sdCoreSpiBlkRd (__PCORE_SPI_DEV pcspidevice,
     while (iRetry++ < __SD_SPI_RSP_TIMEOUT) {
         __sdCoreSpiByteRd(pcspidevice, 1, &ucRdToken);
         if (ucRdToken == SD_SPITOKEN_START_SIGBLK) {
-            goto __resp_accept;
+            goto    __resp_accept;
         }
 
         lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
         if ((tvNow.tv_sec - tvOld.tv_sec) >= __SD_SPI_RSP_WAITSEC) {    /*  超时退出                    */
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "wait read token timeout.\r\n");
-            goto __error_out;
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "wait read token timeout.\r\n");
+            goto    __error_out;
         }
     }
 
@@ -1863,8 +1858,8 @@ __resp_accept:
      */
     iError = __sdCoreSpiByteRd(pcspidevice, uiBlkLen, pucRdBuff);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "get data error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get data error.\r\n");
+        goto    __error_out;
     }
 
     /*
@@ -1872,15 +1867,16 @@ __resp_accept:
      */
     iError = __sdCoreSpiByteRd(pcspidevice, 2, pucCrc16);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "get crc16 error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get crc16 error.\r\n");
+        goto    __error_out;
     }
 
 #if LW_CFG_SDCARD_CRC_EN > 0
     if (((pucCrc16[0] << 8) | pucCrc16[1]) != __sdCrc16(pucRdBuff, (UINT16)uiBlkLen)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "crc error.\r\n");
-        goto __error_out;
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "crc error.\r\n");
+        goto    __error_out;
     }
+
 #endif
 
     __SD_SPI_CSDIS(pcspidevice);
@@ -1928,20 +1924,20 @@ static INT __sdCoreSpiBlkWrt (__PCORE_SPI_DEV pcspidevice,
     __sdCoreSpiByteWrt(pcspidevice, 1, &ucWrtClk);
 
     if (bIsMul) {
-        ucWrtToken = SD_SPITOKEN_START_MULBLK ;
+        ucWrtToken = SD_SPITOKEN_START_MULBLK;
     } else {
-        ucWrtToken = SD_SPITOKEN_START_SIGBLK ;
+        ucWrtToken = SD_SPITOKEN_START_SIGBLK;
     }
 
     iError = __sdCoreSpiByteWrt(pcspidevice, 1, &ucWrtToken);           /*  发送写块开始令牌            */
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send write token error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send write token error.\r\n");
         return  (PX_ERROR);
     }
 
     iError = __sdCoreSpiByteWrt(pcspidevice, uiBlkLen, pucWrtBuff);     /*  发送数据                    */
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "write data error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "write data error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1975,13 +1971,13 @@ static INT __sdCoreSpiBlkWrt (__PCORE_SPI_DEV pcspidevice,
 
         lib_clock_gettime(CLOCK_MONOTONIC, &tvNow);
         if ((tvNow.tv_sec - tvOld.tv_sec) >= __SD_SPI_RSP_WAITSEC) {    /*  超时退出                    */
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "wait write token timeout.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "wait write token timeout.\r\n");
             return  (PX_ERROR);
         }
     }
 
     if (iRetry >= __SD_SPI_RSP_TIMEOUT) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "wait write token timeout(retry timeout).\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "wait write token timeout(retry timeout).\r\n");
         return  (PX_ERROR);
     }
 
@@ -1991,7 +1987,7 @@ static INT __sdCoreSpiBlkWrt (__PCORE_SPI_DEV pcspidevice,
      */
     iError = __sdCoreSpiWaitBusy(pcspidevice);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "wait data program timeout.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "wait data program timeout.\r\n");
     }
 
     return  (iError);
@@ -2021,13 +2017,12 @@ static INT __sdCoreSpiByteRd (__PCORE_SPI_DEV pcspidevice, UINT32 uiLen, UINT8 *
     iError = API_SpiDeviceTransfer(pcspidevice->CSPIDEV_pspiDev,
                                    &spimsg,
                                    1);
-
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "spi transfer error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "spi transfer error.\r\n");
         return  (PX_ERROR);
     }
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdCoreSpiByteWrt
@@ -2054,13 +2049,12 @@ static INT __sdCoreSpiByteWrt (__PCORE_SPI_DEV pcspidevice, UINT32 uiLen, UINT8 
     iError = API_SpiDeviceTransfer(pcspidevice->CSPIDEV_pspiDev,
                                    &spimsg,
                                    1);
-
     if (iError == PX_ERROR) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "spi transfer error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "spi transfer error.\r\n");
         return  (PX_ERROR);
     }
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdCoreSpiWaitBusy
@@ -2100,7 +2094,7 @@ static INT __sdCoreSpiWaitBusy (__PCORE_SPI_DEV pcspidevice)
     /*
      * TIME OUT
      */
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "programing data timeout.\r\n");
+    SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "programing data timeout.\r\n");
     return  (PX_ERROR);
 }
 /*********************************************************************************************************
@@ -2153,7 +2147,7 @@ static VOID  __sdCoreSpiRespConvert (UINT32 *puiResp, const UINT8 *pucResp, INT 
         break;
 
     default:
-        return ;
+        return;
     }
 }
 /*********************************************************************************************************

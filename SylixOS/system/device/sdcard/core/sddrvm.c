@@ -10,7 +10,7 @@
 **
 **--------------文件信息--------------------------------------------------------------------------------
 **
-** 文   件   名: sdm.h
+** 文   件   名: sddrvm.h
 **
 ** 创   建   人: Zeng.Bo (曾波)
 **
@@ -31,10 +31,17 @@
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SDCARD_EN > 0)
 #include "sddrvm.h"
 #include "sdutil.h"
+#include "../include/sddebug.h"
+#if LW_CFG_SDCARD_SDIO_EN > 0
+#include "sdiostd.h"
+#include "sdiodrvm.h"
+#include "sdiocoreLib.h"
+#endif                                                                  /*  LW_CFG_SDCARD_SDIO_EN > 0   */
 /*********************************************************************************************************
   宏定义
 *********************************************************************************************************/
 #define __SDM_DEVNAME_MAX               32
+#define __SDM_DEBUG_EN                  0
 /*********************************************************************************************************
   仅 SDM_SDIO 模块可见的事件
 *********************************************************************************************************/
@@ -92,7 +99,6 @@ static VOID        __sdmHostDelete(__SDM_HOST *psdmhost);
 static VOID        __sdmDrvInsert(SD_DRV *psddrv);
 static VOID        __sdmDrvDelete(SD_DRV *psddrv);
 
-
 static VOID        __sdmDevCreate(__SDM_HOST *psdmhost);
 static VOID        __sdmDevDelete(__SDM_HOST *psdmhost);
 static VOID        __sdmSdioIntHandle(__SDM_HOST *psdmhost);
@@ -105,6 +111,26 @@ static INT         __sdmCallbackUnInstall(SD_HOST *psdhost);
 
 static VOID        __sdmSpiCsEn(__SDM_HOST_CHAN *psdmhostchan);
 static VOID        __sdmSpiCsDis(__SDM_HOST_CHAN *psdmhostchan);
+/*********************************************************************************************************
+  SDM 内部调试相关
+  使用独立的线程处理事件, 方便跟踪调试
+*********************************************************************************************************/
+#if __SDM_DEBUG_EN > 0
+#define __SDM_DEBUG_THREAD_PRIO     200
+#define __SDM_DEBUG_THREAD_STKSZ    (8 * 1024)
+
+typedef struct {
+    CPCHAR        EVTMSG_cpcHostName;
+    INT           EVTMSG_iEvtType;
+} __SDM_EVT_MSG;
+
+static LW_OBJECT_HANDLE             _G_hsdmevtHandle = LW_OBJECT_HANDLE_INVALID;
+static LW_OBJECT_HANDLE             _G_hsdmevtMsgQ   = LW_OBJECT_HANDLE_INVALID;
+
+static INT    __sdmDebugLibInit(VOID);
+static VOID   __sdmDebugEvtNotify(CPCHAR cpcHostName, INT iEvtType);
+static PVOID  __sdmDebugEvtHandle(VOID *pvArg);
+#endif                                                                  /*   __SDM_DEBUG_EN > 0         */
 /*********************************************************************************************************
   全局变量
 *********************************************************************************************************/
@@ -135,6 +161,10 @@ LW_API INT   API_SdmLibInit (VOID)
 
     LW_SPIN_INIT(&_G_slSdmHostLock);
 
+#if __SDM_DEBUG_EN > 0
+    __sdmDebugLibInit();
+#endif                                                                  /*   __SDM_DEBUG_EN > 0         */
+
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -153,17 +183,17 @@ LW_API INT   API_SdmHostRegister (SD_HOST *psdhost)
         !psdhost->SDHOST_cpcName              ||
         !psdhost->SDHOST_pfuncCallbackInstall ||
         !psdhost->SDHOST_pfuncCallbackUnInstall) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "host must provide: name, callback install"
-                                           " method and callback uninstall method.\r\n");
-        return (PX_ERROR);
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "host must provide: name, callback install"
+                                               " method and callback uninstall method.\r\n");
+        return  (PX_ERROR);
     }
 
     if (psdhost->SDHOST_iType == SDHOST_TYPE_SPI) {
         if (!psdhost->SDHOST_pfuncSpicsDis ||
             !psdhost->SDHOST_pfuncSpicsEn) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "spi type host must provide:"
-                                               " spi chip select method.\r\n");
-            return (PX_ERROR);
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "spi type host must provide:"
+                                                   " spi chip select method.\r\n");
+            return  (PX_ERROR);
         }
     }
 
@@ -172,19 +202,20 @@ LW_API INT   API_SdmHostRegister (SD_HOST *psdhost)
      */
     psdmhost = __sdmHostFind(psdhost->SDHOST_cpcName);
     if (psdmhost) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "there is already a same name host registered.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "there is already a same "
+                                               "name host registered.\r\n");
         return  (PX_ERROR);
     }
 
     psdmhost = (__SDM_HOST *)__SHEAP_ALLOC(sizeof(__SDM_HOST));
-    if(!psdmhost) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system memory low.\r\n");
+    if (!psdmhost) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system memory low.\r\n");
         return  (PX_ERROR);
     }
 
     psdmhost->SDMHOST_psdhost         = psdhost;
-    psdmhost->SDMHOST_psdmdevAttached = NULL;
-    psdmhost->SDMHOST_bDevIsOrphan    = FALSE;
+    psdmhost->SDMHOST_psdmdevAttached = LW_NULL;
+    psdmhost->SDMHOST_bDevIsOrphan    = LW_FALSE;
 
     psdmhost->SDMHOST_sdmhostchan.SDMHOSTCHAAN_pdrvfuncs = &_G_sdmhostdrvfuncs;
 
@@ -205,7 +236,7 @@ LW_API INT   API_SdmHostUnRegister (CPCHAR cpcHostName)
     __SDM_HOST *psdmhost;
 
     if (!cpcHostName) {
-        return (PX_ERROR);
+        return  (PX_ERROR);
     }
 
     psdmhost = __sdmHostFind(cpcHostName);
@@ -214,12 +245,13 @@ LW_API INT   API_SdmHostUnRegister (CPCHAR cpcHostName)
     }
 
     if (psdmhost->SDMHOST_psdmdevAttached) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "there is always a device attached.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "there is always a device attached.\r\n");
         return  (PX_ERROR);
     }
 
     if (psdmhost->SDMHOST_bDevIsOrphan) {
-        _DebugHandle(__LOGMESSAGE_LEVEL, "warning: there is always a orphan device attached.\r\n");
+        SDCARD_DEBUG_MSG(__LOGMESSAGE_LEVEL, "warning: there is always a "
+                                             "orphan device attached.\r\n");
     }
 
     __sdmHostDelete(psdmhost);
@@ -302,12 +334,11 @@ LW_API INT   API_SdmSdDrvRegister (SD_DRV *psddrv)
 
     psddrv->SDDRV_pvSpec = __sdUnitPoolCreate();
     if (!psddrv->SDDRV_pvSpec) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system memory low.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system memory low.\r\n");
         return  (PX_ERROR);
     }
 
     API_AtomicSet(0, &psddrv->SDDRV_atomicDevCnt);
-
     __sdmDrvInsert(psddrv);
 
     return  (ERROR_NONE);
@@ -327,12 +358,11 @@ LW_API INT   API_SdmSdDrvUnRegister (SD_DRV *psddrv)
     }
 
     if (API_AtomicGet(&psddrv->SDDRV_atomicDevCnt)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "exist device using this drv.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "exist device using this drv.\r\n");
         return  (PX_ERROR);
     }
 
     __sdUnitPoolDelete(psddrv->SDDRV_pvSpec);
-
     __sdmDrvDelete(psddrv);
 
     return  (ERROR_NONE);
@@ -351,6 +381,11 @@ LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
     INTREG             iregInterLevel;
     PLW_LIST_LINE      plineTemp;
     __SDM_HOST        *psdmhost = LW_NULL;
+
+#if __SDM_DEBUG_EN > 0
+    __sdmDebugEvtNotify(cpcHostName, iEvtType);
+    return;
+#endif                                                                  /*   __SDM_DEBUG_EN > 0         */
 
     /*
      * 当注册一个新的驱动后, 遍历所有 Host 上的孤儿设备
@@ -381,6 +416,7 @@ LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
     }
 
     switch (iEvtType) {
+    
     case SDM_EVENT_DEV_INSERT:
         hotplugEvent((VOIDFUNCPTR)__sdmDevCreate, (PVOID)psdmhost, 0, 0, 0, 0, 0);
         break;
@@ -407,17 +443,20 @@ LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
 *********************************************************************************************************/
 static VOID __sdmDevCreate (__SDM_HOST *psdmhost)
 {
+    SD_HOST           *psdhost = psdmhost->SDMHOST_psdhost;
     SD_DRV            *psddrv;
     __SDM_SD_DEV      *psdmdev;
     PLW_SDCORE_DEVICE  psdcoredev;
     PLW_LIST_LINE      plineTemp;
-    SD_HOST           *psdhost = psdmhost->SDMHOST_psdhost;
-
     INT                iRet;
+
+    if (psdmhost->SDMHOST_psdmdevAttached) {
+        return;
+    }
 
     psdmdev = (__SDM_SD_DEV *)__SHEAP_ALLOC(sizeof(__SDM_SD_DEV));
     if (!psdmdev) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system memory low.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         return;
     }
 
@@ -429,7 +468,7 @@ static VOID __sdmDevCreate (__SDM_HOST *psdmhost)
 
         iRet = __sdUnitGet(psddrv->SDDRV_pvSpec);
         if (iRet < 0) {
-            goto __err1;
+            goto    __err0;
         }
 
         psdmdev->SDMDEV_iUnit = iRet;
@@ -440,7 +479,7 @@ static VOID __sdmDevCreate (__SDM_HOST *psdmhost)
                                          psdmdev->SDMDEV_pcDevName,
                                          (PLW_SDCORE_CHAN)&psdmhost->SDMHOST_sdmhostchan);
         if (!psdcoredev) {
-            goto __err2;
+            goto    __err1;
         }
 
         /*
@@ -450,7 +489,7 @@ static VOID __sdmDevCreate (__SDM_HOST *psdmhost)
         psdmdev->SDMDEV_psddrv            = psddrv;
         psdmdev->SDMDEV_psdcoredev        = psdcoredev;
         psdmhost->SDMHOST_psdmdevAttached = psdmdev;
-        psdmhost->SDMHOST_bDevIsOrphan    = FALSE;
+        psdmhost->SDMHOST_bDevIsOrphan    = LW_FALSE;
 
         iRet = psddrv->SDDRV_pfuncDevCreate(psddrv, psdcoredev, &psdmdev->SDMDEV_pvDevPriv);
         if (iRet != ERROR_NONE) {
@@ -466,26 +505,24 @@ static VOID __sdmDevCreate (__SDM_HOST *psdmhost)
             if (psdhost->SDHOST_pfuncDevAttach) {
                 psdhost->SDHOST_pfuncDevAttach(psdmhost->SDMHOST_psdhost, psdmdev->SDMDEV_pcDevName);
             }
-
             API_AtomicInc(&psddrv->SDDRV_atomicDevCnt);
-
             return;
         }
     }
 
-__err2:
+__err1:
     if (psddrv) {
         __sdUnitPut(psddrv->SDDRV_pvSpec, psdmdev->SDMDEV_iUnit);
     }
 
-__err1:
+__err0:
     __SHEAP_FREE(psdmdev);
 
     /*
      * 表示设备已经插入, 但是没有具体的驱动成功创建设备对象
      */
-    psdmhost->SDMHOST_psdmdevAttached = NULL;
-    psdmhost->SDMHOST_bDevIsOrphan    = TRUE;
+    psdmhost->SDMHOST_psdmdevAttached = LW_NULL;
+    psdmhost->SDMHOST_bDevIsOrphan    = LW_TRUE;
 }
 /*********************************************************************************************************
 ** 函数名称: __sdmDevDelete
@@ -502,12 +539,20 @@ static VOID __sdmDevDelete (__SDM_HOST *psdmhost)
 
     psdmdev = psdmhost->SDMHOST_psdmdevAttached;
     if (!psdmdev) {
-        psdmhost->SDMHOST_bDevIsOrphan = FALSE;
+        psdmhost->SDMHOST_bDevIsOrphan = LW_FALSE;
         return;
     }
 
     psddrv = psdmdev->SDMDEV_psddrv;
     psddrv->SDDRV_pfuncDevDelete(psddrv, psdmdev->SDMDEV_pvDevPriv);
+
+    /*
+     * 可能删除的是 SDIO 设备, 并且该设备之前开启了 SDIO 中断.
+     * 为了不影响新插入的设备, 这里主动关闭
+     */
+    if (psdmhost->SDMHOST_psdhost->SDHOST_pfuncSdioIntEn) {
+        psdmhost->SDMHOST_psdhost->SDHOST_pfuncSdioIntEn(psdmhost->SDMHOST_psdhost, LW_FALSE);
+    }
 
     __sdmCallbackUnInstall(psdmhost->SDMHOST_psdhost);
     API_SdCoreDevDelete(psdmdev->SDMDEV_psdcoredev);
@@ -515,8 +560,8 @@ static VOID __sdmDevDelete (__SDM_HOST *psdmhost)
     __sdUnitPut(psddrv->SDDRV_pvSpec, psdmdev->SDMDEV_iUnit);
     __SHEAP_FREE(psdmdev);
 
-    psdmhost->SDMHOST_psdmdevAttached = NULL;
-    psdmhost->SDMHOST_bDevIsOrphan    = FALSE;
+    psdmhost->SDMHOST_psdmdevAttached = LW_NULL;
+    psdmhost->SDMHOST_bDevIsOrphan    = LW_FALSE;
 
     if (psdmhost->SDMHOST_psdhost->SDHOST_pfuncDevDetach) {
         psdmhost->SDMHOST_psdhost->SDHOST_pfuncDevDetach(psdmhost->SDMHOST_psdhost);
@@ -534,8 +579,10 @@ static VOID __sdmDevDelete (__SDM_HOST *psdmhost)
 *********************************************************************************************************/
 static VOID __sdmSdioIntHandle (__SDM_HOST *psdmhost)
 {
-#if (LW_CFG_SDCARD_SDIO_EN > 0)
+#if LW_CFG_SDCARD_SDIO_EN > 0
     __SDM_SD_DEV    *psdmdev;
+    UINT8            ucIntFlag;
+    INT              iRet;
 
     INT  __sdiobaseDevIrqHandle(SD_DRV *psddrv,  VOID *pvDevPriv);
 
@@ -544,8 +591,22 @@ static VOID __sdmSdioIntHandle (__SDM_HOST *psdmhost)
         return;
     }
 
-    __sdiobaseDevIrqHandle(psdmdev->SDMDEV_psddrv, psdmdev->SDMDEV_pvDevPriv);
-#endif
+    /*
+     *  Host 控制器可能传来假的 SDIO 中断
+     *  因此查看 SDIO 设备是否真的产生了 SDIO 中断
+     */
+    iRet = __sdioCoreDevReadByte(psdmdev->SDMDEV_psdcoredev,
+                                 SDIO_CCCR_CCCR,
+                                 SDIO_CCCR_INTX,
+                                 &ucIntFlag);
+    if (iRet != ERROR_NONE) {
+        return;
+    }
+
+    if (ucIntFlag) {
+        __sdiobaseDevIrqHandle(psdmdev->SDMDEV_psddrv, psdmdev->SDMDEV_pvDevPriv);
+    }
+#endif                                                                  /*  LW_CFG_SDCARD_SDIO_EN > 0   */
 }
 /*********************************************************************************************************
 ** 函数名称: __sdmHostFind
@@ -725,6 +786,144 @@ static VOID __sdmSpiCsDis (__SDM_HOST_CHAN *psdmhostchan)
         psdhost->SDHOST_pfuncSpicsDis(psdhost);
     }
 }
+/*********************************************************************************************************
+** 函数名称: __sdmDebugLibInit
+** 功能描述: SDM 内部调试模块初始化
+** 输    入: NONE
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+#if __SDM_DEBUG_EN > 0
+static INT  __sdmDebugLibInit (VOID)
+{
+    LW_CLASS_THREADATTR  threadAttr;
+
+    _G_hsdmevtMsgQ = API_MsgQueueCreate("sdm_dbgmsgq",
+                                        12,
+                                        sizeof(__SDM_EVT_MSG),
+                                        LW_OPTION_WAIT_FIFO,
+                                        LW_NULL);
+    if (_G_hsdmevtMsgQ == LW_OBJECT_HANDLE_INVALID) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create message queue failed.\r\n");
+        return  (PX_ERROR);
+    }
+
+    threadAttr = API_ThreadAttrGetDefault();
+    threadAttr.THREADATTR_pvArg            = LW_NULL;
+    threadAttr.THREADATTR_ucPriority       = __SDM_DEBUG_THREAD_PRIO;
+    threadAttr.THREADATTR_stStackByteSize  = __SDM_DEBUG_THREAD_STKSZ;
+    _G_hsdmevtHandle = API_ThreadCreate("t_sdmdbgevth",
+                                        __sdmDebugEvtHandle,
+                                        &threadAttr,
+                                        LW_NULL);
+    if (_G_hsdmevtHandle == LW_OBJECT_HANDLE_INVALID) {
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create message queue failed.\r\n");
+        return  (PX_ERROR);
+    }
+
+    return  (ERROR_NONE);
+}
+#endif                                                                  /*   __SDM_DEBUG_EN > 0         */
+/*********************************************************************************************************
+** 函数名称: __sdmDebugEvtHandle
+** 功能描述: SDM 内部事件处理线程函数
+** 输    入: pvArg     线程参数
+** 输    出: 线程返回值
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+#if __SDM_DEBUG_EN > 0
+static PVOID  __sdmDebugEvtHandle (VOID *pvArg)
+{
+    INTREG             iregInterLevel;
+    PLW_LIST_LINE      plineTemp;
+    __SDM_HOST        *psdmhost;
+
+    CPCHAR             cpcHostName;
+    INT                iEvtType;
+
+    __SDM_EVT_MSG      sdmevtmsg;
+    size_t             stLen;
+    INT                iRet;
+
+    while (1) {
+        iRet = API_MsgQueueReceive(_G_hsdmevtMsgQ,
+                                   (PVOID)&sdmevtmsg,
+                                   sizeof(__SDM_EVT_MSG),
+                                   &stLen,
+                                   LW_OPTION_WAIT_INFINITE);
+        if (iRet != ERROR_NONE) {
+            printk(KERN_EMERG"__sdmDebugEvtHandle() error.\r\n");
+            continue;
+        }
+
+        iEvtType    = sdmevtmsg.EVTMSG_iEvtType;
+        cpcHostName = sdmevtmsg.EVTMSG_cpcHostName;
+
+        if ((iEvtType == SDM_EVENT_NEW_DRV) && !cpcHostName) {
+            __SDM_HOST_LOCK();
+            for (plineTemp  = _G_plineSdmhostHeader;
+                 plineTemp != LW_NULL;
+                 plineTemp  = _list_line_get_next(plineTemp)) {
+
+                psdmhost = _LIST_ENTRY(plineTemp, __SDM_HOST, SDMHOST_lineManage);
+                if (!psdmhost->SDMHOST_psdmdevAttached &&
+                     psdmhost->SDMHOST_bDevIsOrphan) {
+                    __sdmDevCreate(psdmhost);
+                }
+            }
+            __SDM_HOST_UNLOCK();
+            continue;
+        }
+
+        psdmhost = __sdmHostFind(cpcHostName);
+        if (!psdmhost) {
+            continue;
+        }
+
+        switch (iEvtType) {
+        
+        case SDM_EVENT_DEV_INSERT:
+            __sdmDevCreate(psdmhost);
+            break;
+
+        case SDM_EVENT_DEV_REMOVE:
+            __sdmDevDelete(psdmhost);
+            break;
+
+        case SDM_EVENT_SDIO_INTERRUPT:
+            __sdmSdioIntHandle(psdmhost);
+            break;
+
+        default:
+            break;
+        }
+    }
+
+    return  (LW_NULL);
+}
+#endif                                                                  /*   __SDM_DEBUG_EN > 0         */
+/*********************************************************************************************************
+** 函数名称: __sdmDebugEvtHandle
+** 功能描述: SDM 内部事件通知
+** 输    入: pvArg     线程参数
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+#if __SDM_DEBUG_EN > 0
+static VOID  __sdmDebugEvtNotify (CPCHAR cpcHostName, INT iEvtType)
+{
+    __SDM_EVT_MSG   sdmevtmsg;
+
+    sdmevtmsg.EVTMSG_iEvtType    = iEvtType;
+    sdmevtmsg.EVTMSG_cpcHostName = cpcHostName;
+    API_MsgQueueSend(_G_hsdmevtMsgQ,
+                     &sdmevtmsg,
+                     sizeof(__SDM_EVT_MSG));
+}
+#endif                                                                  /*   __SDM_DEBUG_EN > 0         */
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0)      */
                                                                         /*  (LW_CFG_SDCARD_EN > 0)      */
 /*********************************************************************************************************

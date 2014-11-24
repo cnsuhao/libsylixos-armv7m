@@ -40,6 +40,7 @@
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SDCARD_EN > 0)
 #include "sdcore.h"
 #include "sdstd.h"
+#include "../include/sddebug.h"
 /*********************************************************************************************************
  CSD ÖÐTACCÓòÖÐµÄÖ¸ÊýÖµ(ÒÔÄÉÃëÎªµ¥Î»)ºÍÏµÊý(ÎªÁË±ÜÃâÊ¹ÓÃ¸¡µã,ÒÑ¾­³ËÒÔÁË10)²éÕÒ±í
 *********************************************************************************************************/
@@ -153,6 +154,7 @@ INT __sdCoreDecodeCID (LW_SDDEV_CID  *psdcidDec, UINT32 *pRawCID, UINT8 ucType)
     lib_bzero(psdcidDec, sizeof(LW_SDDEV_CID));
 
     switch (ucType) {
+    
     case SDDEV_TYPE_MMC:
         psdcidDec->DEVCID_ucMainFid          =  __getBits(pRawCID, 120, 8);
         psdcidDec->DEVCID_usOemId            =  __getBits(pRawCID, 104, 16);
@@ -254,17 +256,18 @@ INT __sdCoreDecodeCSD (LW_SDDEV_CSD  *psdcsdDec, UINT32 *pRawCSD, UINT8 ucType)
     lib_bzero(psdcsdDec, sizeof(LW_SDDEV_CSD));
 
     /*
-     * SD¹æ·¶ÖÐ£¬CSDÓÐÁ½¸ö°æ±¾. v1.0ÓÃÓÚÕë¶ÔÒ»°ãSD¿¨.Ö®ºó³öÏÖÁËv2.0,ÊÇÎªÁËÖ§³ÖSDHCºÍSDXC¿¨.
-     * ÔÚSDHCºÍSDXCÖÐ,ºÜ¶àÓò¶¼ÊÇ¹Ì¶¨µÄ.
+     * SD¹æ·¶ÖÐ£¬CSD ÓÐÁ½¸ö°æ±¾. v1.0ÓÃÓÚÕë¶ÔÒ»°ãSD¿¨.Ö®ºó³öÏÖÁËv2.0,ÊÇÎªÁËÖ§³Ö SDHC ºÍ SDXC ¿¨.
+     * ÔÚ SDHC ºÍ SDXC ÖÐ,ºÜ¶àÓò¶¼ÊÇ¹Ì¶¨µÄ.
      */
     ucStruct = __getBits(pRawCSD, 126, 2);
     psdcsdDec->DEVCSD_ucStructure = ucStruct;
 
     if (ucType == SDDEV_TYPE_MMC) {
-        goto __decsd_mmc_sd;
+        goto    __decsd_mmc_sd;
     }
 
     switch (ucStruct) {
+    
     case CSD_STRUCT_VER_1_0:
 __decsd_mmc_sd:                                                         /*  mmcÓësd1.0µÄcsd½á¹¹»ù±¾ÏàÍ¬ */
                                                                         /*  ÕâÀïÖ»½âÎöÁËÆäÖÐ¹Ø¼üµÄÊý¾ÝÓò*/
@@ -278,7 +281,7 @@ __decsd_mmc_sd:                                                         /*  mmcÓ
 
         uiMnt = __getBits(pRawCSD, 99, 4);
         uiExp = __getBits(pRawCSD, 96, 3);
-        psdcsdDec->DEVCSD_uiTranSpeed = _G_CsdTrspExp[uiExp] * _G_CsdTrspMnt[uiMnt] ;
+        psdcsdDec->DEVCSD_uiTranSpeed = _G_CsdTrspExp[uiExp] * _G_CsdTrspMnt[uiMnt];
         psdcsdDec->DEVCSD_usCmdclass  = __getBits(pRawCSD, 84, 12);
 
         uiExp = __getBits(pRawCSD, 47, 3);
@@ -309,7 +312,6 @@ __decsd_mmc_sd:                                                         /*  mmcÓ
             psdcsdDec->DEVCSD_ucEraseBlkLen =  (__getBits(pRawCSD, 47, 3) + 1) <<
                                                (psdcsdDec->DEVCSD_ucWriteBlkLenBits - 9);
         }
-
         break;
 
     case CSD_STRUCT_VER_2_0:
@@ -331,8 +333,7 @@ __decsd_mmc_sd:                                                         /*  mmcÓ
         break;
 
     default:
-        break;
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unknown CSD structure.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unknown CSD structure.\r\n");
         return  (PX_ERROR);
     }
 
@@ -367,7 +368,7 @@ INT __sdCoreDevReset (PLW_SDCORE_DEVICE psdcoredevice)
         SD_DELAYMS(1);
         iError = API_SdCoreDevCmd(psdcoredevice, &sdcmd, 0);
         if (iError != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "send reset cmd error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send reset cmd error.\r\n");
             return  (PX_ERROR);
         }
 
@@ -381,7 +382,7 @@ INT __sdCoreDevReset (PLW_SDCORE_DEVICE psdcoredevice)
     } while (iRetry--);
 
     if (iRetry <= 0) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "reset timeout.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "reset timeout.\r\n");
         return  (PX_ERROR);
     }
 
@@ -411,7 +412,7 @@ INT __sdCoreDevSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
                               SDBUS_CTRL_GETOCR,
                               (LONG)&uiOCR);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "get adapter ocr failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get adapter ocr failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -448,13 +449,13 @@ INT __sdCoreDevSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
         }
 
         if (ucChkPattern != 0xaa) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "the check pattern is not correct, it maybe I/0 error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "the check pattern is not correct, it maybe I/0 error.\r\n");
             return  (PX_ERROR);
         } else {
             return  (ERROR_NONE);
         }
     } else {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "the device can't supply the voltage.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "the device can't supply the voltage.\r\n");
         return  (PX_ERROR);
     }
 }
@@ -497,10 +498,10 @@ INT __sdCoreDevSendAppOpCond (PLW_SDCORE_DEVICE  psdcoredevice,
     /*
      * ´æ´¢¿¨Éè±¸µÄµçÑ¹·¶Î§Îª2.7 ~ 3.6 v,Èç¹ûÖ÷¿ØÌá¹©µÄµçÑ¹ÓÐ²»ÔÚÕâ¸ö·¶Î§ÄÚµÄ,Ôò¸Ãº¯Êý»áÊ§°Ü.
      */
-    sdcmd.SDCMD_uiArg    = (uiOCR & SD_OCR_HCS) ?
-                           (uiOCR & SD_OCR_MEM_VDD_MSK) | SD_OCR_HCS :
-                           (uiOCR & SD_OCR_MEM_VDD_MSK) ;
-    sdcmd.SDCMD_uiFlag   = SD_RSP_SPI_R1| SD_RSP_R3 | SD_CMD_BCR;
+    sdcmd.SDCMD_uiArg  = (uiOCR & SD_OCR_HCS) 
+                       ? (uiOCR & SD_OCR_MEM_VDD_MSK) | SD_OCR_HCS 
+                       : (uiOCR & SD_OCR_MEM_VDD_MSK);
+    sdcmd.SDCMD_uiFlag = SD_RSP_SPI_R1| SD_RSP_R3 | SD_CMD_BCR;
 
     for (i = 0; i < SD_OPCOND_DELAY_CONTS; i++) {
         iError = API_SdCoreDevAppCmd(psdcoredevice,
@@ -509,7 +510,7 @@ INT __sdCoreDevSendAppOpCond (PLW_SDCORE_DEVICE  psdcoredevice,
                                      SD_CMD_GEN_RETRY);
 
         if (iError != ERROR_NONE) {
-            goto __mmc_ident;
+            goto    __mmc_ident;
         }
 
         /*
@@ -534,13 +535,12 @@ INT __sdCoreDevSendAppOpCond (PLW_SDCORE_DEVICE  psdcoredevice,
     }
 
     if (i >= SD_OPCOND_DELAY_CONTS) {                                   /*  sd¿¨Ê¶±ðÊ§°Ü                */
-        goto __mmc_ident;
+        goto    __mmc_ident;
     } else {
-        goto __ident_done;
+        goto    __ident_done;
     }
 
 __mmc_ident:                                                            /*  mmc Ê¶±ð                    */
-
     /*
      * ¼ÓÈëMMCµÄÊ¶±ð
      */
@@ -550,7 +550,7 @@ __mmc_ident:                                                            /*  mmc 
     for (i = 0; i < SD_OPCOND_DELAY_CONTS; i++) {
         iError = API_SdCoreDevCmd(psdcoredevice, &sdcmd, 0);
         if (iError != ERROR_NONE) {                                     /*  ´íÎóÍË³ö                    */
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "can't send cmd1.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "can't send cmd1.\r\n");
             return  (iError);
         }
 
@@ -571,14 +571,13 @@ __mmc_ident:                                                            /*  mmc 
     }
 
     if (i >= SD_OPCOND_DELAY_CONTS) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "timeout(may device is not sd or mmc card).\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "timeout(may device is not sd or mmc card).\r\n");
         return  (PX_ERROR);
     } else {
         bMmc = LW_TRUE;
     }
 
 __ident_done:                                                           /*  Ê¶±ðÍê³É                    */
-
     if (COREDEV_IS_SD(psdcoredevice)) {
         *psddevocrOut = sdcmd.SDCMD_uiResp[0];
     } else {
@@ -593,7 +592,7 @@ __ident_done:                                                           /*  Ê¶±ð
 
         iError = API_SdCoreDevCmd(psdcoredevice, &sdcmd, 1);
         if (iError != ERROR_NONE) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "spi read ocr error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "spi read ocr error.\r\n");
             return  (iError);
         }
 
@@ -634,7 +633,7 @@ INT __sdCoreDevSendRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiRCA
     }
 
     if (!COREDEV_IS_SD(psdcoredevice)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "function just for sd bus.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "function just for sd bus.\r\n");
         return  (PX_ERROR);
     }
 
@@ -649,7 +648,7 @@ INT __sdCoreDevSendRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiRCA
                               SD_CMD_GEN_RETRY);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -674,7 +673,7 @@ INT __sdCoreDevMmcSetRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 uiRCA
     LW_SD_COMMAND    sdcmd;
 
     if (!COREDEV_IS_SD(psdcoredevice)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "function just for sd bus.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "function just for sd bus.\r\n");
         return  (PX_ERROR);
     }
 
@@ -689,7 +688,7 @@ INT __sdCoreDevMmcSetRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 uiRCA
                               SD_CMD_GEN_RETRY);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -712,7 +711,7 @@ INT __sdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid
     UINT8            ucType;
 
     if (!psdcid) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "param error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "param error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -725,7 +724,7 @@ INT __sdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid
                               &sdcmd,
                               SD_CMD_GEN_RETRY);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -745,7 +744,7 @@ INT __sdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid
     API_SdCoreSpiCxdFormat(sdcmd.SDCMD_uiResp, pucCidBuf);
     __sdCoreDecodeCID(psdcid, sdcmd.SDCMD_uiResp, ucType);
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: __sdCoreDevSendCSD
@@ -765,14 +764,14 @@ INT __sdCoreDevSendAllCSD (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CSD *psdcsd
     UINT8            ucType;
 
     if (!psdcsd) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "param error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "param error.\r\n");
         return  (PX_ERROR);
     }
 
     iError = API_SdCoreDevRcaView(psdcoredevice, &uiRca);
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device without rca.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device without rca.\r\n");
         return  (PX_ERROR);
     }
 
@@ -785,7 +784,7 @@ INT __sdCoreDevSendAllCSD (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CSD *psdcsd
                               &sdcmd,
                               SD_CMD_GEN_RETRY);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
         return  (PX_ERROR);
     }
 
@@ -805,7 +804,7 @@ INT __sdCoreDevSendAllCSD (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CSD *psdcsd
     API_SdCoreSpiCxdFormat(sdcmd.SDCMD_uiResp, pucCsdBuf);
     __sdCoreDecodeCSD(psdcsd, sdcmd.SDCMD_uiResp, ucType);
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: __sdCoreSelectDev
@@ -829,7 +828,7 @@ static INT __sdCoreSelectDev (PLW_SDCORE_DEVICE psdcoredevice, BOOL bSel)
 
     iError = API_SdCoreDevRcaView(psdcoredevice, &uiRca);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "device without rca.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device without rca.\r\n");
         return  (PX_ERROR);
     }
 
@@ -849,11 +848,11 @@ static INT __sdCoreSelectDev (PLW_SDCORE_DEVICE psdcoredevice, BOOL bSel)
                               &sdcmd,
                               SD_CMD_GEN_RETRY);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
         return  (PX_ERROR);
     }
 
-    return (ERROR_NONE);
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
  ** º¯ÊýÃû³Æ: __sdCoreDevSelect
@@ -904,19 +903,19 @@ INT __sdCoreDevSetBusWidth (PLW_SDCORE_DEVICE psdcoredevice, INT iBusWidth)
 
     iError = __sdCoreDevSelect(psdcoredevice);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
         return  (PX_ERROR);
     }
 
     if (!psdcoredevice) {
         __sdCoreDevDeSelect(psdcoredevice);
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
 
     if ((iBusWidth != SDBUS_WIDTH_1) && (iBusWidth != SDBUS_WIDTH_4)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "invalid bus width in current sd version.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "invalid bus width in current sd version.\r\n");
         __sdCoreDevDeSelect(psdcoredevice);
         return  (PX_ERROR);
     }
@@ -962,20 +961,20 @@ INT __sdCoreDevSetBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iBlkLen)
 
     iError = __sdCoreDevSelect(psdcoredevice);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
         return  (PX_ERROR);
     }
 
     iError = API_SdCoreDevCmd(psdcoredevice, &sdcmd, 0);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd16 failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd16 failed.\r\n");
         __sdCoreDevDeSelect(psdcoredevice);
         return  (PX_ERROR);
     }
 
     if (COREDEV_IS_SPI(psdcoredevice)) {
         if ((sdcmd.SDCMD_uiResp[0] & 0xff) != 0) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "spi response error.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "spi response error.\r\n");
             return  (PX_ERROR);
         }
     }
@@ -1008,7 +1007,7 @@ INT __sdCoreDevGetStatus (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiStatus)
 
     iError = API_SdCoreDevCmd(psdcoredevice, &sdcmd, 1);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd13 failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd13 failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1043,7 +1042,7 @@ INT __sdCoreDevSetPreBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iPreBlkLen)
                                  LW_FALSE,
                                  1);
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "send acmd23 failed.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send acmd23 failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1065,6 +1064,7 @@ INT __sdCoreDevIsBlockAddr (PLW_SDCORE_DEVICE psdcoredevice, BOOL *pbResult)
     API_SdCoreDevTypeView(psdcoredevice, &ucType);
 
     switch (ucType) {
+    
     case SDDEV_TYPE_MMC  :
     case SDDEV_TYPE_SDSC :
         *pbResult = LW_FALSE;
@@ -1078,7 +1078,7 @@ INT __sdCoreDevIsBlockAddr (PLW_SDCORE_DEVICE psdcoredevice, BOOL *pbResult)
     case SDDEV_TYPE_SDIO :
     case SDDEV_TYPE_COMM :
     default:
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "don't support.\r\n");
+        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "don't support.\r\n");
         return  (PX_ERROR);
     }
 
@@ -1128,14 +1128,14 @@ INT __sdCoreDevSpiCrcEn (PLW_SDCORE_DEVICE psdcoredevice, BOOL bEnable)
     iError = API_SdCoreDevCmd(psdcoredevice, &sdcmd, 0);
     if (iError == ERROR_NONE) {
         if ((sdcmd.SDCMD_uiResp[0] & 0xff) != 0x00) {
-            _DebugHandle(__ERRORMESSAGE_LEVEL, "set crc failed.\r\n");
+            SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "set crc failed.\r\n");
             return  (PX_ERROR);
         } else {
             return  (ERROR_NONE);
         }
     }
 
-    _DebugHandle(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+    SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
 
     return  (PX_ERROR);
 }
