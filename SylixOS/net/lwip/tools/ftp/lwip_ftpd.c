@@ -119,7 +119,7 @@ typedef __FTPD_SESSION         *__PFTPD_SESSION;
 static PCHAR                    _G_pcFtpdRootPath         = LW_NULL;    /*  FTPd 服务器根目录           */
 static LW_LIST_LINE_HEADER      _G_plineFtpdSessionHeader = LW_NULL;    /*  会话管理链表表头            */
 static atomic_t                 _G_atomicFtpdLinks;                     /*  链接数量                    */
-static INT                      _G_iFtpdDefaultTimeout    = 2000;       /*  默认链接超时时间            */
+static INT                      _G_iFtpdDefaultTimeout    = 20 * 1000;  /*  默认数据链接超时时间        */
 static INT                      _G_iFtpdIdleTimeout       = 60 * 1000;  /*  1 分钟不访问将会关闭控制连接*/
 static LW_OBJECT_HANDLE         _G_ulFtpdSessionLock;                   /*  会话链表锁                  */
 #define __FTPD_SESSION_LOCK()   API_SemaphoreMPend(_G_ulFtpdSessionLock, LW_OPTION_WAIT_INFINITE)
