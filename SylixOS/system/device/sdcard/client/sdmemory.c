@@ -20,7 +20,7 @@
 
 ** BUG:
 2010.12.08  优化了 __sdmemTestBusy() 函数.
-2010.12.08  SD 设备结构中加入块寻址标记,以支持 SDHC 卡.
+2010.12.08  SD 设备结构中加入块寻址标记, 以支持 SDHC 卡.
 2011.01.12  增加对 SPI 的支持.
 2011.03.25  修改 __sdMemIoctl() 函数, 增加设备状态检测.
 2011.03.25  修改 API_SdMemDevCreate(), 用于底层驱动安装上层的回调.
@@ -49,7 +49,7 @@ typedef struct __sd_blk_dev {
     BOOL                  SDBLKDEV_bIsBlockAddr;                        /*  是否是块寻址                */
 
     /*
-     * 增加 SDM 后, 为了保持 API 不变，增加以下成员
+     * 增加 SDM 后, 为了保持 API 不变, 增加以下成员
      */
     BOOL                  SDBLKDEV_bCoreDevSelf;                       /*  coredev 是自己创建(非SDM给)  */
 } __SD_BLK_DEV, *__PSD_BLK_DEV;
@@ -135,7 +135,7 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
     INT                 iError;
 
     /*
-     * 增加了SDM后, 约定：当适配器名称和设备名称为空时, 表示coredev 由 sdm创建
+     * 增加了 SDM 后, 约定：当适配器名称和设备名称为空时, 表示 coredev 由 SDM 创建
      * 此时, psdmemchan 指向对应的coredev
      */
     if (!pcAdapterName && !pcDeviceName) {
@@ -319,15 +319,15 @@ LW_API INT  API_SdMemDevShow (PLW_BLK_DEV pblkdevice)
                                          sddevcid.DEVCID_usOemId & 0xff);
     }
     printf("Product Name :  %c%c%c%c%c\n",
-                                   __SD_CID_PNAME(0),
-                                   __SD_CID_PNAME(1),
-                                   __SD_CID_PNAME(2),
-                                   __SD_CID_PNAME(3),
-                                   __SD_CID_PNAME(4));
+                            __SD_CID_PNAME(0),
+                            __SD_CID_PNAME(1),
+                            __SD_CID_PNAME(2),
+                            __SD_CID_PNAME(3),
+                            __SD_CID_PNAME(4));
     printf("Product Vsn  :  v%d.%d\n", sddevcid.DEVCID_ucProductVsn >> 4,
                                        sddevcid.DEVCID_ucProductVsn & 0xf);
     printf("Serial Num   :  %x\n", sddevcid.DEVCID_uiSerialNum);
-    printf("Time         :  %d/%02d\n", sddevcid.DEVCID_uiYear, sddevcid.DEVCID_ucMonth);
+    printf("Date         :  %d/%02d\n", sddevcid.DEVCID_uiYear, sddevcid.DEVCID_ucMonth);
     printf("Max Speed    :  %dMB/s\n", sddevcsd.DEVCSD_uiTranSpeed / __SD_MILLION);
     printf("Capacity     :  %u.%03u MB\n", (UINT32)(ullCap / LW_CFG_MB_SIZE), uiCapMod / 1000);
 

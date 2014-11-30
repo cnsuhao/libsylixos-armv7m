@@ -42,6 +42,15 @@ static LW_OBJECT_HANDLE    _G_hSdListLock = LW_OBJECT_HANDLE_INVALID;   /* ÷˜øÿ◊
 #define __SD_ADAPTER_LOCK(pAda)    API_SemaphoreBPend((pAda)->SDADAPTER_hBusLock, LW_OPTION_WAIT_INFINITE)
 #define __SD_ADAPTER_UNLOCK(pAda)  API_SemaphoreBPost((pAda)->SDADAPTER_hBusLock)
 /*********************************************************************************************************
+  ƒ⁄≤øµ˜ ‘œ‡πÿ
+*********************************************************************************************************/
+#define __SD_DEBUG_EN              0
+#if __SD_DEBUG_EN > 0
+#define __SD_DEBUG_MSG             __SD_DEBUG_MSG
+#else
+#define __SD_DEBUG_MSG(level, msg)
+#endif
+/*********************************************************************************************************
 ** ∫Ø ˝√˚≥∆: __sdAdapterFind
 ** π¶ƒ‹√Ë ˆ: ≤È’““ª∏ˆsd  ≈‰∆˜
 **  ‰    »Î: NpcName    ≈‰∆˜√˚≥∆
@@ -103,7 +112,7 @@ INT  API_SdAdapterCreate (CPCHAR pcName, PLW_SD_FUNCS psdfunc)
     }
 
     if (_Object_Name_Invalid(pcName)) {                                 /*  ºÏ≤È√˚◊÷”––ß–‘              */
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "name too long.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "name too long.\r\n");
         _ErrorHandle(ERROR_KERNEL_PNAME_TOO_LONG);
         return  (PX_ERROR);
     }
@@ -113,7 +122,7 @@ INT  API_SdAdapterCreate (CPCHAR pcName, PLW_SD_FUNCS psdfunc)
      */
     psdadapter = (PLW_SD_ADAPTER)__SHEAP_ALLOC(sizeof(LW_SD_ADAPTER));
     if (psdadapter == LW_NULL) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
@@ -132,7 +141,7 @@ INT  API_SdAdapterCreate (CPCHAR pcName, PLW_SD_FUNCS psdfunc)
                                                           LW_NULL);
     if (psdadapter->SDADAPTER_hBusLock == LW_OBJECT_HANDLE_INVALID) {
         __SHEAP_FREE(psdadapter);
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "create semaphore failed.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create semaphore failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -142,8 +151,7 @@ INT  API_SdAdapterCreate (CPCHAR pcName, PLW_SD_FUNCS psdfunc)
     if (__busAdapterCreate(&psdadapter->SDADAPTER_busadapter, pcName) != ERROR_NONE) {
         API_SemaphoreBDelete(&psdadapter->SDADAPTER_hBusLock);
         __SHEAP_FREE(psdadapter);
-
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "add adapter to system bus failed.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "add adapter to system bus failed.\r\n");
         return  (PX_ERROR);
     }
 
@@ -164,7 +172,7 @@ INT API_SdAdapterDelete (CPCHAR pcName)
     PLW_SD_ADAPTER  psdadapter = __sdAdapterFind(pcName);
 
     if (psdadapter == LW_NULL) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL,"adapter is not exist.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL,"adapter is not exist.\r\n");
         _ErrorHandle(ERROR_KERNEL_OBJECT_NULL);                         /*  Œ¥’“µΩ                      */
         return  (PX_ERROR);
     }
@@ -176,7 +184,7 @@ INT API_SdAdapterDelete (CPCHAR pcName)
 
     if (psdadapter->SDADAPTER_plineDevHeader) {                         /*  ºÏ≤È «∑Ò”–…Ë±∏¡¥Ω”µΩ÷˜øÿ    */
         API_SemaphoreBPost(psdadapter->SDADAPTER_hBusLock);
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "some devices are still on the bus.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "some devices are still on the bus.\r\n");
         _ErrorHandle(EXDEV);
         return  (PX_ERROR);
     }
@@ -207,7 +215,7 @@ PLW_SD_ADAPTER   API_SdAdapterGet (CPCHAR pcName)
     PLW_SD_ADAPTER  psdadapter = __sdAdapterFind(pcName);
 
     if (psdadapter == LW_NULL) {
-       _DebugHandle(__ERRORMESSAGE_LEVEL, "adapter is not exist.\r\n");
+       __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "adapter is not exist.\r\n");
        _ErrorHandle(ERROR_KERNEL_OBJECT_NULL);                          /*  Œ¥’“µΩ                      */
        return  (LW_NULL);
     }
@@ -230,20 +238,20 @@ PLW_SD_DEVICE  API_SdDeviceCreate (CPCHAR pcAdapterName, CPCHAR pcDeviceName)
     PLW_SD_DEVICE   psddevice;
 
     if (psdadapter == LW_NULL) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "no adapter.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "no adapter.\r\n");
         _ErrorHandle(ERROR_KERNEL_OBJECT_NULL);
         return  (LW_NULL);
     }
     
     if (_Object_Name_Invalid(pcDeviceName)) {                           /*  ºÏ≤È√˚◊÷”––ß–‘              */
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "name too long.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "name too long.\r\n");
         _ErrorHandle(ERROR_KERNEL_PNAME_TOO_LONG);
         return  (LW_NULL);
     }
 
     psddevice = (PLW_SD_DEVICE)__SHEAP_ALLOC(sizeof(LW_SD_DEVICE));
     if ( psddevice == LW_NULL) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system low memory.\r\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (LW_NULL);
     }
@@ -448,7 +456,7 @@ LW_API INT  API_SdDeviceTransfer (PLW_SD_DEVICE   psddevice,
     }
 
     if (iError != ERROR_NONE) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
+        __SD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "bus request error.\r\n");
         return  (PX_ERROR);
     }
 

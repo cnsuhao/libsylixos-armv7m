@@ -21,11 +21,12 @@
 ** BUG:
 2011.03.02  增加主控传输模式查看\设置函数.允许动态改变传输模式(主控上不存在设备的情况下).
 2011.04.07  增加 SDMA 传输功能.
-2011.04.07  考虑到 SD 控制器在不同平台上其寄存器可能在 IO 空间,也可能在内存空间,所以读写寄存器的
-            6 个函数申明为外部函数,由具体平台的驱动实现.
+2011.04.07  考虑到 SD 控制器在不同平台上其寄存器可能在 IO 空间,也可能在内存空间,所以读写寄存器
+            的6个函数申明为外部函数,由具体平台的驱动实现.
 2014.11.13  修改一般传输模式为中断方式, 同时支持 SDIO 中断处理
 2014.11.15  增加 SDHCI 注册到 SDM 的相关功能函数
 2014.11.24  修正 SDIO 中断服务线程的一个 BUG, 在等到中断信号量后再获取 SDHCI 控制器对象.
+2014.11.29  修正 SDHCI 中断服务函数, 增加防止 SDIO 中断异常丢失的处理.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #define  __SYLIXOS_IO
@@ -106,10 +107,10 @@ typedef struct __sdhci_capab {
      此时不仅要考虑 1 的情况, 还应该将用户数据拆分为 N 个 512KB 进行 DMA 传输.
      比如用户数据 BlkSize 为2048, BlkCnt 为256. 则需要拆分为 2 个 512 KB 的 DMA 传输.
 
-  3. 在实际使用中, 上述情形及其少见(为了传输的稳定和减少出错). 因此, 当前版本不支持上面情况的特殊处理
+  3. 在实际使用中, 上述情形及其少见(为了传输的稳定和减少出错). 因此, 当前版本不支持上面情况的特殊处理.
 
   标准主控器传输事务控制块
-  这里将用户提交的单次请求(包括发送命令、数据读写、读取应答等一整套流程操作)称作一次事务
+  这里将用户提交的单次请求(包括发送命令、数据读写、读取应答等一整套流程操作)称作一次事务.
 *********************************************************************************************************/
 struct __sdhci_trans {
     __PSDHCI_HOST         SDHCITS_psdhcihost;
@@ -2266,7 +2267,6 @@ static irqreturn_t   __sdhciTransIrq (VOID *pvArg, ULONG ulVector)
     UINT32               uiIntSta;
     irqreturn_t          irqret;
 
-
     __SDHCI_TRANS_LOCK(psdhcitrans);
 
     uiIntSta = SDHCI_READL(psdhcihostattr, SDHCI_INT_STATUS);
@@ -2286,6 +2286,18 @@ static irqreturn_t   __sdhciTransIrq (VOID *pvArg, ULONG ulVector)
     if (uiIntSta & SDHCI_INT_DATA_MASK) {
         __sdhciTransDatHandle(psdhcitrans, uiIntSta & SDHCI_INT_DATA_MASK);
         SDHCI_WRITEL(psdhcihostattr, SDHCI_INT_STATUS, uiIntSta & SDHCI_INT_DATA_MASK);
+    }
+
+    /*
+     * 经测试发现, 某些情况下, 在本次数据传输完成后, HOST 并不能产生 SDIO 中断.
+     * 这可能和具体的 SDIO 应用驱动的实现有关. 在这里为了确保不会因此原因造成
+     * 传输的异常中断, 进行特殊处理.
+     */
+    if ((psdhcitrans->SDHCITS_pucDatBuffCurr)  &&
+        (!psdhcitrans->SDHCITS_uiBlkCntRemain) &&
+        (uiIntSta & SDHCI_INT_DATA_END)        &&
+        psdhcihost->SDHCIHS_bSdioIntEnable) {
+        bSdioInt = LW_TRUE;
     }
 
     uiIntSta &= ~(SDHCI_INT_CMD_MASK | SDHCI_INT_DATA_MASK);
