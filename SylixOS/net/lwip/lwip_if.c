@@ -22,6 +22,7 @@
 2011.07.07  _G_ulNetifLock 改名.
 2014.03.22  优化获得网络接口.
 2014.06.24  加入 if_down 与 if_up API.
+2014.12.01  停止网卡是如果使能 dhcp 需要停止租约.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -52,8 +53,22 @@ INT  if_down (const char *ifname)
     LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
     pnetif = netif_find((char *)ifname);
     if (pnetif) {
-        netifapi_netif_set_down(pnetif);
-        iError = ERROR_NONE;
+        if (pnetif->flags & NETIF_FLAG_UP) {
+#if LWIP_DHCP > 0
+            if ((pnetif->flags & NETIF_FLAG_DHCP) && (pnetif->dhcp)) {
+                netifapi_netif_common(pnetif, NULL, dhcp_release);      /*  解除 DHCP 租约, 同时停止网卡*/
+                netifapi_dhcp_stop(pnetif);                             /*  释放资源                    */
+            } else {
+                netifapi_netif_set_down(pnetif);                        /*  禁用网卡                    */
+            }
+#else
+            netifapi_netif_set_down(pnetif);                            /*  禁用网卡                    */
+#endif                                                                  /*  LWIP_DHCP > 0               */
+            iError = ERROR_NONE;
+        } else {
+            _ErrorHandle(EALREADY);
+            iError = PX_ERROR;
+        }
     } else {
         _ErrorHandle(ENXIO);
         iError = PX_ERROR;
@@ -80,8 +95,23 @@ INT  if_up (const char *ifname)
     LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
     pnetif = netif_find((char *)ifname);
     if (pnetif) {
-        netifapi_netif_set_up(pnetif);
-        iError = ERROR_NONE;
+        if (!(pnetif->flags & NETIF_FLAG_UP)) {
+            netifapi_netif_set_up(pnetif);
+#if LWIP_DHCP > 0
+            if (pnetif->flags & NETIF_FLAG_DHCP) {
+                ip_addr_t   inaddrNone;
+                
+                lib_bzero(&inaddrNone, sizeof(ip_addr_t));
+                netifapi_netif_set_addr(pnetif, &inaddrNone, &inaddrNone, &inaddrNone);
+                
+                netifapi_dhcp_start(pnetif);
+            }
+#endif                                                                  /*  LWIP_DHCP > 0               */
+            iError = ERROR_NONE;
+        } else {
+            _ErrorHandle(EALREADY);
+            iError = PX_ERROR;
+        }
     } else {
         _ErrorHandle(ENXIO);
         iError = PX_ERROR;
@@ -165,32 +195,32 @@ INT  if_islink (const char *ifname)
 LW_API  
 INT  if_set_dhcp (const char *ifname, int en)
 {
-    INT            iRet;
+    INT     iRet = PX_ERROR;
+
+#if LWIP_DHCP > 0
     struct netif  *pnetif;
-    ip_addr_t      inaddrNone;
-    
-    lib_bzero(&inaddrNone, sizeof(ip_addr_t));
     
     LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
     pnetif = netif_find((char *)ifname);
     if (pnetif) {
         if (pnetif->flags & NETIF_FLAG_UP) {
             _ErrorHandle(EISCONN);
-            iRet = PX_ERROR;
+            
         } else {
             if (en) {
                 pnetif->flags |= NETIF_FLAG_DHCP;
             } else {
                 pnetif->flags &= ~NETIF_FLAG_DHCP;
-                netifapi_netif_set_addr(pnetif, &inaddrNone, &inaddrNone, &inaddrNone);
             }
             iRet = ERROR_NONE;
         }
     } else {
         _ErrorHandle(ENXIO);
-        iRet = PX_ERROR;
     }
     LWIP_NETIF_UNLOCK();                                                /*  退出临界区                  */
+#else
+    _ErrorHandle(ENOSYS);
+#endif                                                                  /*  LWIP_DHCP > 0               */
     
     return  (iRet);
 }

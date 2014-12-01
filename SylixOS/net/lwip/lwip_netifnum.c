@@ -124,7 +124,7 @@ VOID  netif_remove_hook (PVOID  pvNetif)
 #endif                                                                  /*  LW_CFG_NET_NPF_EN > 0       */
 
 #if LW_CFG_LWIP_DHCP > 0
-    if ((netif->flags & NETIF_FLAG_DHCP) && (netif->dhcp)) {
+    if (netif->dhcp) {
         dhcp_stop(netif);                                               /*  关闭 DHCP 回收 UDP 控制块   */
         dhcp_cleanup(netif);                                            /*  回收 DHCP 内存              */
     }

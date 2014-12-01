@@ -298,9 +298,15 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
         printf(" type : general\n");                                    /*  通用网络接口                */
     }
     
-    printf("          dhcp : %s speed : %d(bps)\n", (netif->dhcp) ? "yes" : "no",
-                                                    netif->link_speed); /*  打印链接速度                */
-
+#if LWIP_DHCP
+    printf("          dhcp : %s(%s) speed : %d(bps)\n", 
+                                (netif->flags & NETIF_FLAG_DHCP) ? "En" : "Dis",
+                                (netif->dhcp) ? "On" : "Off",
+                                netif->link_speed);
+#else
+    printf("          speed : %d(bps)\n", netif->link_speed);           /*  打印链接速度                */
+#endif                                                                  /*  LWIP_DHCP                   */
+                                                                        
     /*
      *  打印网口协议地址信息
      */
