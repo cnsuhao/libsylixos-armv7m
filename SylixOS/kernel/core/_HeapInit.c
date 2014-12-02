@@ -149,15 +149,24 @@ VOID  _HeapSystemInit (VOID)
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
 {
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE > 0
-    _K_pheapSystem = _HeapCreate(pvSystemHeapMem, stSystemHeapSize);
+    if (pvSystemHeapMem && stSystemHeapSize) {
+        _K_pheapSystem = _HeapCreate(pvSystemHeapMem, stSystemHeapSize);
+    } else
 #else
 #if LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS == 0
-    _K_pheapSystem = _HeapCreate((PVOID)_K_stkSystemHeap, LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE);
+    if (LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE) {
+        _K_pheapSystem = _HeapCreate((PVOID)_K_stkSystemHeap, LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE);
+    } else
 #else
-    _K_pheapSystem = _HeapCreate((PVOID)LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS, 
-                                 LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE);
+    if (LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE) {
+        _K_pheapSystem = _HeapCreate((PVOID)LW_CFG_MEMORY_SYSTEM_HEAP_ADDRESS, 
+                                     LW_CFG_MEMORY_SYSTEM_HEAP_SIZE_BYTE);
+    } else
 #endif
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
+    {
+        _K_pheapSystem = _K_pheapKernel;                                /*  Ö»Ê¹ÓÃ kernel heap          */
+    }
 
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_FIO_LIB_EN > 0)
 #if (LW_CFG_ERRORMESSAGE_EN > 0) || (LW_CFG_LOGMESSAGE_EN > 0)
@@ -173,7 +182,12 @@ VOID  _HeapSystemInit (VOID)
 #endif                                                                  /*  LW_CFG_ERRORMESSAGE_EN...   */
 #endif                                                                  /*  LW_CFG_DEVICE_EN...         */
 
-    lib_strcpy(_K_pheapSystem->HEAP_cHeapName, "system");
+    if (_K_pheapSystem == _K_pheapKernel) {
+        lib_strcpy(_K_pheapSystem->HEAP_cHeapName, "kersys");
+    
+    } else {
+        lib_strcpy(_K_pheapSystem->HEAP_cHeapName, "system");
+    }
 }
 /*********************************************************************************************************
   END

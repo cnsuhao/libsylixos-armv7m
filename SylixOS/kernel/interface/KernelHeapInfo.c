@@ -73,6 +73,10 @@ ULONG  API_KernelHeapInfo (ULONG    ulOption,
         return  (ERROR_NONE);
         
     case LW_OPTION_HEAP_SYSTEM:
+        if (_K_pheapKernel == _K_pheapSystem) {
+            _ErrorHandle(ERROR_KERNEL_OPTION);
+            return  (ERROR_KERNEL_OPTION);
+        }
         __KERNEL_ENTER();                                               /*  进入内核                    */
         if (pstByteSize) {
             *pstByteSize = _K_pheapSystem->HEAP_stTotalByteSize;
@@ -150,6 +154,10 @@ ULONG  API_KernelHeapInfoEx (ULONG                ulOption,
         return  (ERROR_NONE);
         
     case LW_OPTION_HEAP_SYSTEM:
+        if (_K_pheapKernel == _K_pheapSystem) {
+            _ErrorHandle(ERROR_KERNEL_OPTION);
+            return  (ERROR_KERNEL_OPTION);
+        }
         __KERNEL_ENTER();                                               /*  进入内核                    */
         if (pstByteSize) {
             *pstByteSize = _K_pheapSystem->HEAP_stTotalByteSize;

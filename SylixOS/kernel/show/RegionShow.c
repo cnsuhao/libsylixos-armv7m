@@ -68,24 +68,28 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
                            &stUsedByteSize,
                            LW_NULL,
                            &stMaxUsedByteSize);
-        printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", "kernel",
-                                                        stByteSize,
-                                                        stUsedByteSize,
-                                                        stMaxUsedByteSize,
-                                                        ulSegmentCounter,
-                                                        (stUsedByteSize / (stByteSize / 100)));
-        API_KernelHeapInfo(LW_OPTION_HEAP_SYSTEM, 
-                           &stByteSize,
-                           &ulSegmentCounter,
-                           &stUsedByteSize,
-                           LW_NULL,
-                           &stMaxUsedByteSize);
-        printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", "system",
-                                                        stByteSize,
-                                                        stUsedByteSize,
-                                                        stMaxUsedByteSize,
-                                                        ulSegmentCounter,
-                                                        (stUsedByteSize / (stByteSize / 100)));
+        
+        if (API_KernelHeapInfo(LW_OPTION_HEAP_SYSTEM, LW_NULL, LW_NULL, 
+                               LW_NULL, LW_NULL, LW_NULL)) {            /*  ¼ì²âÊÇ·ñ°üº¬ system ¶Ñ      */
+            printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", "kersys",
+                   stByteSize, stUsedByteSize, stMaxUsedByteSize,
+                   ulSegmentCounter, (stUsedByteSize / (stByteSize / 100)));
+        } else {
+            printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", "kernel",
+                   stByteSize, stUsedByteSize, stMaxUsedByteSize,
+                   ulSegmentCounter, (stUsedByteSize / (stByteSize / 100)));
+                   
+            API_KernelHeapInfo(LW_OPTION_HEAP_SYSTEM, 
+                               &stByteSize,
+                               &ulSegmentCounter,
+                               &stUsedByteSize,
+                               LW_NULL,
+                               &stMaxUsedByteSize);
+                               
+            printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", "system",
+                   stByteSize, stUsedByteSize, stMaxUsedByteSize,
+                   ulSegmentCounter, (stUsedByteSize / (stByteSize / 100)));
+        }
     } else {
         if (API_RegionGetName(ulId, cRegionName)) {
             return;
@@ -99,15 +103,13 @@ VOID   API_RegionShow (LW_OBJECT_HANDLE  ulId)
             return;
         }
         printf("%-14s %10zu %10zu %10zu %7ld %3zd%%\n", cRegionName,
-                                                        stByteSize,
-                                                        stUsedByteSize,
-                                                        stMaxUsedByteSize,
-                                                        ulSegmentCounter,
-                                                        (stUsedByteSize / (stByteSize / 100)));
+               stByteSize, stUsedByteSize, stMaxUsedByteSize,
+               ulSegmentCounter, (stUsedByteSize / (stByteSize / 100)));
     }
     
     printf("\n");
 }
+
 #endif                                                                  /*  LW_CFG_FIO_LIB_EN > 0       */
                                                                         /*  LW_CFG_REGION_EN > 0        */
                                                                         /*  LW_CFG_MAX_REGIONS > 0      */

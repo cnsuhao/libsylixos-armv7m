@@ -28,11 +28,7 @@
 
 static LW_INLINE BOOL  _Addresses_Is_Aligned (PVOID  pvAddress)
 {
-#if LW_CFG_CPU_WORD_LENGHT == 32
-    return  (!((INT)pvAddress & 0x00000003));
-#else
-    return  (!((INT)pvAddress & 0x000000000000000F));
-#endif
+    return  (ALIGNED(pvAddress, sizeof(LW_STACK)));
 }
 
 #endif                                                                  /*  __INLADDRESS_H              */

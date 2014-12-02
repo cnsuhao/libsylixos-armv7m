@@ -198,35 +198,20 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 #endif                                                                  /*  LW_CFG_MEMORY_HEAP_...      */
 {
     INT     iError;
-
-    if (LW_SYS_STATUS_IS_RUNNING()) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "kernel is already start.\r\n");
-        return;
-    }
     
-    if (LW_NCPUS > LW_CFG_MAX_PROCESSORS) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "LW_NCPUS > LW_CFG_MAX_PROCESSORS.\r\n");
-        return;
-    }
-    
+    _BugHandle(LW_SYS_STATUS_IS_RUNNING(), LW_TRUE, "kernel is already start.\r\n");
+    _BugHandle(LW_NCPUS > LW_CFG_MAX_PROCESSORS, LW_TRUE, "LW_NCPUS > LW_CFG_MAX_PROCESSORS.\r\n");
     _DebugHandle(__LOGMESSAGE_LEVEL, "longwing(TM) kernel initialize...\r\n");
     
 #if LW_CFG_MEMORY_HEAP_CONFIG_TYPE > 0
-    if (!pvKernelHeapMem || !pvSystemHeapMem) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "heap memory invalidate.\r\n");
-        _DebugHandle(__LOGMESSAGE_LEVEL,   "some error occur, kernel is not initialize.\r\n");
-        return;
-    }
-    if (!_Addresses_Is_Aligned(pvKernelHeapMem) ||
-        !_Addresses_Is_Aligned(pvSystemHeapMem)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "heap memory is not align.\r\n");
-        _DebugHandle(__LOGMESSAGE_LEVEL,   "some error occur, kernel is not initialize.\r\n");
-        return;
-    }
-    if ((stKernelHeapSize < LW_CFG_KB_SIZE) || (stSystemHeapSize < LW_CFG_KB_SIZE)) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "heap memory is too little.\r\n");
-        _DebugHandle(__LOGMESSAGE_LEVEL,   "some error occur, kernel is not initialize.\r\n");
-        return;
+    _BugHandle(!pvKernelHeapMem, LW_TRUE, "heap memory invalidate.\r\n");
+    _BugHandle(!_Addresses_Is_Aligned(pvKernelHeapMem), LW_TRUE, "heap memory is not align.\r\n");
+    _BugHandle(stKernelHeapSize < LW_CFG_KB_SIZE, LW_TRUE, "heap memory is too little.\r\n");
+    
+    if (pvSystemHeapMem && stSystemHeapSize) {
+        _BugHandle(!pvSystemHeapMem, LW_TRUE, "heap memory invalidate.\r\n");
+        _BugHandle(!_Addresses_Is_Aligned(pvSystemHeapMem), LW_TRUE, "heap memory is not align.\r\n");
+        _BugHandle(stSystemHeapSize < LW_CFG_KB_SIZE, LW_TRUE, "heap memory is too little.\r\n");
     }
     _KernelPrimaryLowLevelInit(pvKernelHeapMem, stKernelHeapSize,
                                pvSystemHeapMem, stSystemHeapSize);      /*  内核底层初始化              */
@@ -242,6 +227,7 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
     iError = _cppRtInit();                                              /*  CPP 运行时库初始化          */
     if (iError != ERROR_NONE) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "c++ run time lib initialized error!\r\n");
+    
     } else {
         _DebugHandle(__LOGMESSAGE_LEVEL, "c++ run time lib initialized.\r\n");
     }

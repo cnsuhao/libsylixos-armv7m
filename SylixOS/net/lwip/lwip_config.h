@@ -66,7 +66,7 @@ extern "C" {
 #elif MEM_SIZE >= (128 * LW_CFG_KB_SIZE)
 #define MEMP_NUM_REASSDATA              20
 #else
-#define MEMP_NUM_REASSDATA              5
+#define MEMP_NUM_REASSDATA              10
 #endif                                                                  /*  MEM_SIZE >= ...             */
 
 /*********************************************************************************************************
