@@ -204,7 +204,6 @@ VOID  _EventReadyHighLevel (PLW_CLASS_TCB    ptcb, UINT16   usWaitType)
     
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
-    ppcb = _GetPcb(ptcb);
     ptcb->TCB_peventPtr = LW_NULL;
     
     if (ptcb->TCB_ucWaitTimeOut) {
@@ -214,6 +213,7 @@ VOID  _EventReadyHighLevel (PLW_CLASS_TCB    ptcb, UINT16   usWaitType)
         ptcb->TCB_usStatus = (UINT16)(ptcb->TCB_usStatus & (~usWaitType));
         if (__LW_THREAD_IS_READY(ptcb)) {                               /*  是否就绪                    */
             ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;         /*  中断激活方式                */
+            ppcb = _GetPcb(ptcb);
             __ADD_TO_READY_RING(ptcb, ppcb);                            /*  加入到相对优先级就绪环      */
         }
     }

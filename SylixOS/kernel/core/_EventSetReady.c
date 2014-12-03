@@ -63,8 +63,8 @@ BOOL  _EventSetDeleteReady (PLW_CLASS_EVENTSETNODE    pesn)
     ptcb->TCB_usStatus    &= (~LW_THREAD_STATUS_EVENTSET);
     
     if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  是否就绪                    */
-        ppcb = _GetPcb(ptcb);
         ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;
+        ppcb = _GetPcb(ptcb);
         __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入就绪表                  */
         bIsSched = LW_TRUE;
     }
@@ -107,8 +107,8 @@ BOOL  _EventSetThreadReady (PLW_CLASS_EVENTSETNODE    pesn,
     ptcb->TCB_usStatus    &= (~LW_THREAD_STATUS_EVENTSET);
     
     if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  是否就绪                    */
-        ppcb = _GetPcb(ptcb);
         ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;
+        ppcb = _GetPcb(ptcb);
         __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入就绪表                  */
         bIsSched = LW_TRUE;
     }

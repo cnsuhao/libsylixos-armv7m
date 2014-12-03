@@ -582,6 +582,10 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-12-03: han.hui
+    去掉内核 IPC 装态, 改为 JOIN 专用状态.
+    修正 GDB 无法停止 JOIN 状态的线程.
+    
     2014-11-09: han.hui
     MMU 的启停不再放在 VMM LIB 初始化中.
     相应的 BSP 要做修改.

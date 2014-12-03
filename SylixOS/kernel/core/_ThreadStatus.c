@@ -89,8 +89,8 @@ VOID  _ThreadUnwaitStatus (PLW_CLASS_TCB  ptcb)
         if (!__LW_THREAD_IS_READY(ptcbWait)) {                          /*  如果没有就绪, 取消 WSTAT    */
             ptcbWait->TCB_usStatus &= ~LW_THREAD_STATUS_WSTAT;
             if (__LW_THREAD_IS_READY(ptcbWait)) {
-                ppcb = _GetPcb(ptcbWait);
                 ptcbWait->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT; /*  中断激活方式                */
+                ppcb = _GetPcb(ptcbWait);
                 __ADD_TO_READY_RING(ptcbWait, ppcb);
             }
         }
@@ -150,8 +150,8 @@ VOID  _ThreadStatusChangeCur (PLW_CLASS_CPU    pcpuCur)
             if (!__LW_THREAD_IS_READY(ptcb)) {                          /*  如果没有就绪, 取消 WSTAT    */
                 ptcb->TCB_usStatus &= ~LW_THREAD_STATUS_WSTAT;
                 if (__LW_THREAD_IS_READY(ptcb)) {
-                    ppcb = _GetPcb(ptcb);
                     ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT; /*  中断激活方式                */
+                    ppcb = _GetPcb(ptcb);
                     __ADD_TO_READY_RING(ptcb, ppcb);
                 }
             }

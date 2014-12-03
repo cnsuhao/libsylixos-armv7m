@@ -116,6 +116,9 @@ VOID    API_ThreadShowEx (pid_t  pid)
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_MSGQUEUE) { /*  等待消息队列                */
             pcPendType = "MSGQ";
         
+        } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_JOIN) {     /*  等待其他线程                */
+            pcPendType = "JOIN";
+        
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_SUSPEND) {  /*  挂起                        */
             pcPendType = "SUSP";
         
@@ -243,6 +246,9 @@ VOID    API_ThreadPendShowEx (pid_t  pid)
         
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_MSGQUEUE) { /*  等待消息队列                */
             pcPendType = "MSGQ";
+        
+        } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_JOIN) {     /*  等待其他线程                */
+            pcPendType = "JOIN";
         
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_SUSPEND) {  /*  挂起                        */
             pcPendType = "SUSP";

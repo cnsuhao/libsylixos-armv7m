@@ -466,10 +466,10 @@ VOID  _TCBTryRun (PLW_CLASS_TCB  ptcb)
     REGISTER PLW_CLASS_PCB  ppcb;
     
     iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核同时关闭中断        */
-    
-    ppcb = _GetPcb(ptcb);
+
     ptcb->TCB_usStatus &= ~LW_THREAD_STATUS_INIT;                       /*  去掉 init 标志              */
     if (__LW_THREAD_IS_READY(ptcb)) {                                   /*  就绪                        */
+        ppcb = _GetPcb(ptcb);
         __ADD_TO_READY_RING(ptcb, ppcb);                                /*  加入到相对优先级就绪环      */
     }
     

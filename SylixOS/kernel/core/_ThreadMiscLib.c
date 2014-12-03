@@ -149,8 +149,6 @@ ULONG  _ThreadContinue (PLW_CLASS_TCB  ptcb, BOOL  bForce)
     
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
-    ppcb = _GetPcb(ptcb);
-    
     if (!(ptcb->TCB_usStatus & LW_THREAD_STATUS_STOP)) {                /*  已经退出了 STOP 状态        */
         KN_INT_ENABLE(iregInterLevel);                                  /*  打开中断                    */
         return  (ERROR_NONE);
@@ -163,6 +161,7 @@ ULONG  _ThreadContinue (PLW_CLASS_TCB  ptcb, BOOL  bForce)
             ptcb->TCB_usStatus &= (~LW_THREAD_STATUS_STOP);
             if (__LW_THREAD_IS_READY(ptcb)) {                           /*  就绪 ?                      */
                 ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;     /*  中断激活方式                */
+                ppcb = _GetPcb(ptcb);
                 __ADD_TO_READY_RING(ptcb, ppcb);                        /*  加入到相对优先级就绪环      */
             }
         }

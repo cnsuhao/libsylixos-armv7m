@@ -335,6 +335,7 @@ static VOID    __sigTaskDeleteHook (LW_OBJECT_HANDLE  ulId)
 ** 函数名称: __sigMakeReady
 ** 功能描述: 将指定线程设置为就绪状态并且设置调度器的返回值为 LW_SIGNAL_RESTART
 ** 输　入  : ptcb                   目的线程控制块
+**           iSigNo                 信号值
 **           piSchedRet             退出信号句柄后, 调度器返回值.
 **           iSaType                信号类型 (LW_SIGNAL_EINTR or LW_SIGNAL_RESTART)
 ** 输　出  : 正在等待时的剩余时间.
@@ -343,6 +344,7 @@ static VOID    __sigTaskDeleteHook (LW_OBJECT_HANDLE  ulId)
 ** 注  意  : 当目标线程处于等待事件,或者延迟时,需要将线程的调度器返回值设置为 LW_SIGNAL_RESTART.
 *********************************************************************************************************/
 static VOID  __sigMakeReady (PLW_CLASS_TCB  ptcb, 
+                             INT            iSigNo,
                              INT           *piSchedRet,
                              INT            iSaType)
 {
@@ -370,6 +372,12 @@ static VOID  __sigMakeReady (PLW_CLASS_TCB  ptcb,
         __DEL_FROM_WAKEUP_LINE(ptcb);                                   /*  从等待链中删除              */
         ptcb->TCB_ulDelay = 0ul;
         bInWakeupQ = LW_TRUE;
+    }
+    
+    if (__SIGNO_MUST_EXIT & __sigmask(iSigNo)) {                        /*  必须退出信号                */
+        if (ptcb->TCB_ptcbJoin) {
+            _ThreadReleaseJoin(ptcb->TCB_ptcbJoin, ptcb, LW_NULL);      /*  唤醒 join                   */
+        }
     }
     
     if (ptcb->TCB_usStatus & LW_THREAD_STATUS_PEND_ANY) {               /*  检查是否在等待事件          */
@@ -948,7 +956,7 @@ BOOL  _sigPendRun (PLW_CLASS_TCB  ptcb)
             iSaType = LW_SIGNAL_EINTR;                                  /*  正常 EINTR                  */
         }
         
-        __sigMakeReady(ptcb, &iSchedRet, iSaType);                      /*  强制进入就绪状态            */
+        __sigMakeReady(ptcb, iSigNo, &iSchedRet, iSaType);              /*  强制进入就绪状态            */
         __sigCtlCreate(ptcb, psigctx, &siginfo, iSchedRet, &sigsetOld); /*  创建信号上下文环境          */
         
         return  (LW_TRUE);
@@ -1022,7 +1030,7 @@ LW_SEND_VAL  _doSignal (PLW_CLASS_TCB  ptcb, PLW_CLASS_SIGPEND   psigpend)
     if (psigctx->SIGCTX_sigwait) {                                      /*  目标线程在等待信号          */
         if (psigctx->SIGCTX_sigwait->SIGWT_sigset & __sigmask(iSigNo)) {/*  属于关心的信号              */
             psigctx->SIGCTX_sigwait->SIGWT_siginfo = psigpend->SIGPEND_siginfo;
-            __sigMakeReady(ptcb, &iSchedRet, LW_SIGNAL_EINTR);          /*  就绪任务                    */
+            __sigMakeReady(ptcb, iSigNo, &iSchedRet, LW_SIGNAL_EINTR);  /*  就绪任务                    */
             psigctx->SIGCTX_sigwait = LW_NULL;                          /*  删除等待信息                */
             return  (SEND_INFO);
         }
@@ -1083,7 +1091,7 @@ LW_SEND_VAL  _doSignal (PLW_CLASS_TCB  ptcb, PLW_CLASS_SIGPEND   psigpend)
         iSaType = LW_SIGNAL_EINTR;                                      /*  正常 EINTR                  */
     }
     
-    __sigMakeReady(ptcb, &iSchedRet, iSaType);                          /*  强制进入就绪状态            */
+    __sigMakeReady(ptcb, iSigNo, &iSchedRet, iSaType);                  /*  强制进入就绪状态            */
     __sigCtlCreate(ptcb, psigctx, psiginfo, iSchedRet, &sigsetOld);     /*  创建信号上下文环境          */
     
     return  (SEND_OK);

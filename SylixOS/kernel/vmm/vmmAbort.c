@@ -470,6 +470,46 @@ static INT  __vmmAbortShare (PLW_VMM_PAGE         pvmpageVirtual,
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
+** 函数名称: __vmmAbortTypeStr
+** 功能描述: 当 __vmmAbortShell() 无法执行时, 打印调试信息
+** 输　入  : ulAbortType       异常类型
+** 输　出  : 异常类型字串
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static PCHAR  __vmmAbortTypeStr (ULONG  ulAbortType)
+{
+    switch (ulAbortType) {
+    
+    case LW_VMM_ABORT_TYPE_TERMINAL:
+        return  ("cpu extremity error");
+        
+    case LW_VMM_ABORT_TYPE_MAP:
+        return  ("memory map");
+    
+    case LW_VMM_ABORT_TYPE_WRITE:
+        return  ("can not write");
+    
+    case LW_VMM_ABORT_TYPE_FPE:
+        return  ("float points");
+    
+    case LW_VMM_ABORT_TYPE_BUS:
+        return  ("bus");
+    
+    case LW_VMM_ABORT_TYPE_BREAK:
+        return  ("break points");
+    
+    case LW_VMM_ABORT_TYPE_SYS:
+        return  ("syscall");
+    
+    case LW_VMM_ABORT_TYPE_UNDEF:
+        return  ("undefined instruction");
+    
+    default:
+        return  ("unknown");
+    }
+}
+/*********************************************************************************************************
 ** 函数名称: __vmmAbortDump
 ** 功能描述: 当 __vmmAbortShell() 无法执行时, 打印调试信息
 ** 输　入  : pvmpagefailctx    page fail 上下文
@@ -514,44 +554,7 @@ LW_API  int  mmapfd(void  *pvAddr);
         pcTail = "address invalidate.";
     }
     
-    switch (pvmpagefailctx->PAGEFCTX_ulAbortType) {
-    
-    case LW_VMM_ABORT_TYPE_TERMINAL:
-        pcType = "cpu extremity error";
-        break;
-        
-    case LW_VMM_ABORT_TYPE_MAP:
-        pcType = "memory map";
-        break;
-    
-    case LW_VMM_ABORT_TYPE_WRITE:
-        pcType = "can not write";
-        break;
-    
-    case LW_VMM_ABORT_TYPE_FPE:
-        pcType = "float points";
-        break;
-    
-    case LW_VMM_ABORT_TYPE_BUS:
-        pcType = "bus";
-        break;
-    
-    case LW_VMM_ABORT_TYPE_BREAK:
-        pcType = "break points";
-        break;
-    
-    case LW_VMM_ABORT_TYPE_SYS:
-        pcType = "syscall";
-        break;
-    
-    case LW_VMM_ABORT_TYPE_UNDEF:
-        pcType = "undefined instruction";
-        break;
-    
-    default:
-        pcType = "unknown";
-        break;
-    }
+    pcType = __vmmAbortTypeStr(pvmpagefailctx->PAGEFCTX_ulAbortType);
                                     
     _DebugFormat(__ERRORMESSAGE_LEVEL, 
                  "abort in kernel status, owner : 0x%08lx, func : %s, addr: 0x%08lx, type : %s, %s.\r\n",
@@ -807,9 +810,10 @@ static VOID  __vmmAbortAccess (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
 #if LW_CFG_DEVICE_EN > 0
         archTaskCtxShow(ioGlobalStdGet(STD_ERR), (PLW_STACK)pvmpagefailctx->PAGEFCTX_pvStackRet);
 #endif
-        printk(KERN_EMERG "thread 0x%lx abort, address : 0x%lx.\n",
+        printk(KERN_EMERG "thread 0x%lx abort, addr: 0x%08lx, type : %s.\n",
                pvmpagefailctx->PAGEFCTX_ulSelf, 
-               pvmpagefailctx->PAGEFCTX_ulAbortAddr);                   /*  操作异常                    */
+               pvmpagefailctx->PAGEFCTX_ulAbortAddr, 
+               __vmmAbortTypeStr(pvmpagefailctx->PAGEFCTX_ulAbortType));/*  操作异常                    */
     }
     
     __vmmAbortKill(pvmpagefailctx);                                     /*  发送异常信号                */

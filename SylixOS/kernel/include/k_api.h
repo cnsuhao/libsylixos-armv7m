@@ -266,10 +266,6 @@ LW_API ULONG            API_ThreadForceResume(LW_OBJECT_HANDLE   ulId); /*  强制
 LW_API ULONG            API_ThreadIsSuspend(LW_OBJECT_HANDLE    ulId);  /*  检查线程是否被挂起          */
 #endif
 
-LW_API ULONG            API_ThreadIpcWait(ULONG  ulTimeOut);            /*  当前线程等待一个 IPC 事件   */
-
-LW_API ULONG            API_ThreadIpcWakeup(LW_OBJECT_HANDLE  ulId);    /*  激活等待指定 IPC 的线程     */
-
 LW_API BOOL             API_ThreadIsReady(LW_OBJECT_HANDLE    ulId);    /*  检查线程是否就绪            */
 
 LW_API ULONG            API_ThreadSetName(LW_OBJECT_HANDLE  ulId, 

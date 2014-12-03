@@ -25,67 +25,52 @@
 2010.08.03  将外部不使用的函数改为 static 类型, 
             这里的函数都是在内核锁定模式下调用的, 所以只需关闭中断就可避免 SMP 抢占.
 2012.03.20  减少对 _K_ptcbTCBCur 的引用, 尽量采用局部变量, 减少对当前 CPU ID 获取的次数.
+2014.12.03  不再使用 suspend 操作, 转而使用 LW_THREAD_STATUS_JOIN.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-** 函数名称: _ThreadJoinSuspend
+** 函数名称: _ThreadJoinWait
 ** 功能描述: 线程合并后阻塞自己 (在进入内核并关中断后被调用)
 ** 输　入  : ptcbCur   当前任务控制块
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  _ThreadJoinSuspend (PLW_CLASS_TCB  ptcbCur)
+static VOID  _ThreadJoinWait (PLW_CLASS_TCB  ptcbCur)
 {
     REGISTER PLW_CLASS_PCB    ppcbMe;
              
     ppcbMe = _GetPcb(ptcbCur);
-    
-    ptcbCur->TCB_ulSuspendNesting++;
     __DEL_FROM_READY_RING(ptcbCur, ppcbMe);                             /*  从就绪环中删除              */
-    ptcbCur->TCB_usStatus |= LW_THREAD_STATUS_SUSPEND;
+    ptcbCur->TCB_usStatus |= LW_THREAD_STATUS_JOIN;                     /*  设置为 join 状态            */
 }
 /*********************************************************************************************************
-** 函数名称: _ThreadJoinResume
+** 函数名称: _ThreadJoinWakeup
 ** 功能描述: 就绪其他线程 (在进入内核后被调用)
 ** 输　入  : ptcb      任务控制块
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  _ThreadJoinResume (PLW_CLASS_TCB  ptcb)
+static VOID  _ThreadJoinWakeup (PLW_CLASS_TCB  ptcb)
 {
              INTREG                iregInterLevel;
     REGISTER PLW_CLASS_PCB         ppcb;
     
     ptcb->TCB_ptcbJoin = LW_NULL;                                       /*  清除记录的等待线程 tcb      */
-    
-    ppcb = _GetPcb(ptcb);
-    
-    iregInterLevel = KN_INT_DISABLE();
-    
-    if (ptcb->TCB_ulSuspendNesting) {
-        ptcb->TCB_ulSuspendNesting--;
-    
-    } else {
-        KN_INT_ENABLE(iregInterLevel);
-        return;
-    }
-    
-    if (ptcb->TCB_ulSuspendNesting) {                                   /*  出现嵌套用户操作不当造成    */
-        KN_INT_ENABLE(iregInterLevel);
-        return;
-    }
 
-    ptcb->TCB_usStatus &= (~LW_THREAD_STATUS_SUSPEND);
+    iregInterLevel = KN_INT_DISABLE();
+
+    ptcb->TCB_usStatus &= (~LW_THREAD_STATUS_JOIN);
     
     if (__LW_THREAD_IS_READY(ptcb)) {
        ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;              /*  中断激活方式                */
+       ppcb = _GetPcb(ptcb);
        __ADD_TO_READY_RING(ptcb, ppcb);                                 /*  加入就绪环                  */
     }
     
-    KN_INT_ENABLE(iregInterLevel);   
+    KN_INT_ENABLE(iregInterLevel);
 }
 /*********************************************************************************************************
 ** 函数名称: _ThreadJoin
@@ -114,14 +99,37 @@ VOID  _ThreadJoin (PLW_CLASS_TCB  ptcbDes, PVOID  *ppvRetValSave)
     
     ptcbCur->TCB_ptcbJoin = ptcbDes;                                    /*  记录目标线程                */
     
-    _ThreadJoinSuspend(ptcbCur);                                        /*  阻塞自己等待对方激活        */
+    _ThreadJoinWait(ptcbCur);                                           /*  阻塞自己等待对方激活        */
     
     KN_INT_ENABLE(iregInterLevel);
 }
 /*********************************************************************************************************
 ** 函数名称: _ThreadReleaseAllJoin
 ** 功能描述: 指定线程解除合并的所有其他线程 (在进入内核后被调用)
-** 输　入  : ptcbDes          要合并的线程
+** 输　入  : ptcbDes          合并的目标线程
+**           ptcbWakeup       需要唤醒的线程
+**           pvArg            返回值
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  _ThreadReleaseJoin (PLW_CLASS_TCB  ptcbDes, PLW_CLASS_TCB  ptcbWakeup, PVOID  pvArg)
+{
+    if (ptcbWakeup->TCB_ppvJoinRetValSave) {                            /*  等待返回值                  */
+        *ptcbWakeup->TCB_ppvJoinRetValSave = pvArg;                     /*  保存返回值                  */
+    }
+    
+    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_DETACH, 
+                      ptcbWakeup->TCB_ulId, pvArg, LW_NULL);
+                      
+    _List_Line_Del(&ptcbWakeup->TCB_lineJoin, &ptcbDes->TCB_plineJoinHeader);
+    
+    _ThreadJoinWakeup(ptcbWakeup);                                      /*  释放合并的线程              */
+}
+/*********************************************************************************************************
+** 函数名称: _ThreadReleaseAllJoin
+** 功能描述: 指定线程解除合并的所有其他线程 (在进入内核后被调用)
+** 输　入  : ptcbDes          合并的目标线程
 **           pvArg            返回值
 ** 输　出  : NONE
 ** 全局变量: 
@@ -129,31 +137,18 @@ VOID  _ThreadJoin (PLW_CLASS_TCB  ptcbDes, PVOID  *ppvRetValSave)
 *********************************************************************************************************/
 VOID  _ThreadReleaseAllJoin (PLW_CLASS_TCB  ptcbDes, PVOID  pvArg)
 {
-    REGISTER PLW_LIST_LINE         plineList;
-    REGISTER PLW_CLASS_TCB         ptcbJoin;
+    REGISTER PLW_CLASS_TCB  ptcbJoin;
     
-    for (plineList  = ptcbDes->TCB_plineJoinHeader;
-         plineList != LW_NULL;
-         plineList  = _list_line_get_next(plineList)) {
-         
-        ptcbJoin = _LIST_ENTRY(plineList, LW_CLASS_TCB, TCB_lineJoin);  /*  找到合并到本线程的TCB       */
-         
-        if (ptcbJoin->TCB_ppvJoinRetValSave) {                          /*  等待返回值                  */
-            *ptcbJoin->TCB_ppvJoinRetValSave = pvArg;                   /*  保存返回值                  */
-        }
-         
-        MONITOR_EVT_LONG1(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_DETACH, 
-                          ptcbJoin->TCB_ulId, LW_NULL);
-                           
-        _List_Line_Del(&ptcbJoin->TCB_lineJoin, &ptcbDes->TCB_plineJoinHeader);
-
-        _ThreadJoinResume(ptcbJoin);                                    /*  释放合并的线程              */
+    while (ptcbDes->TCB_plineJoinHeader) {
+        ptcbJoin = _LIST_ENTRY(ptcbDes->TCB_plineJoinHeader, 
+                               LW_CLASS_TCB, TCB_lineJoin);
+        _ThreadReleaseJoin(ptcbDes, ptcbJoin, pvArg);
     }
 }
 /*********************************************************************************************************
 ** 函数名称: _ThreadDetach
 ** 功能描述: 指定线程解除合并的所有其他线程并不允许其他线程合并自己 (在进入内核后被调用)
-** 输　入  : ptcbDes          要合并的线程
+** 输　入  : ptcbDes          合并的目标线程
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 

@@ -57,10 +57,8 @@ VOID  _ThreadSafeSuspend (PLW_CLASS_TCB  ptcbCur)
 *********************************************************************************************************/
 VOID  _ThreadSafeResume (PLW_CLASS_TCB  ptcb)
 {
-    REGISTER PLW_CLASS_PCB         ppcb;
+    REGISTER PLW_CLASS_PCB  ppcb;
     
-    ppcb = _GetPcb(ptcb);
-
     if (ptcb->TCB_ulSuspendNesting) {
         ptcb->TCB_ulSuspendNesting--;
     } else {
@@ -75,6 +73,7 @@ VOID  _ThreadSafeResume (PLW_CLASS_TCB  ptcb)
     
     if (__LW_THREAD_IS_READY(ptcb)) {
        ptcb->TCB_ucSchedActivate = LW_SCHED_ACT_INTERRUPT;              /*  中断激活方式                */
+       ppcb = _GetPcb(ptcb);
        __ADD_TO_READY_RING(ptcb, ppcb);                                 /*  加入就绪环                  */
     }
 }

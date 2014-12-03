@@ -449,7 +449,6 @@ SylixOS/kernel/interface/ThreadGetSlice.c \
 SylixOS/kernel/interface/ThreadGetStackMini.c \
 SylixOS/kernel/interface/ThreadIdSelf.c \
 SylixOS/kernel/interface/ThreadInit.c \
-SylixOS/kernel/interface/ThreadIpc.c \
 SylixOS/kernel/interface/ThreadIsLock.c \
 SylixOS/kernel/interface/ThreadIsReady.c \
 SylixOS/kernel/interface/ThreadIsSafe.c \

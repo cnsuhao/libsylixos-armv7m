@@ -67,13 +67,12 @@
 #define  LW_THREAD_STATUS_MSGQUEUE      0x0004                          /*  等待数据队列                */
 #define  LW_THREAD_STATUS_EVENTSET      0x0008                          /*  等待事件标志组              */
 #define  LW_THREAD_STATUS_SIGNAL        0x0010                          /*  等待信号                    */
-#define  LW_THREAD_STATUS_IPC           0x0020                          /*  等待 IPC 或者其他           */
+#define  LW_THREAD_STATUS_JOIN          0x0020                          /*  等待另外的线程 (信号不唤醒) */
 
 #define  LW_THREAD_STATUS_PEND_ANY     (LW_THREAD_STATUS_SEM        |   \
                                         LW_THREAD_STATUS_MSGQUEUE   |   \
                                         LW_THREAD_STATUS_EVENTSET   |   \
-                                        LW_THREAD_STATUS_SIGNAL     |   \
-                                        LW_THREAD_STATUS_IPC)
+                                        LW_THREAD_STATUS_SIGNAL)
                                         
 /*********************************************************************************************************
   THREAD STATUS INTERNAL! (初始化的线程, 还没有得到执行)

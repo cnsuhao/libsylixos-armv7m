@@ -933,6 +933,9 @@ ULONG  API_DtraceThreadExtraInfo (PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread,
     } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_MSGQUEUE) {     /*  等待消息队列                */
         pcPendType = "MSGQ";
     
+    } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_JOIN) {         /*  等待其他线程                */
+        pcPendType = "JOIN";
+        
     } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_SUSPEND) {      /*  挂起                        */
         pcPendType = "SUSP";
     
