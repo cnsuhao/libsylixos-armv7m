@@ -221,9 +221,9 @@ __show:
     if (bPacket) {
         __tshellNetstatPacket(iNetType);
     }
-    if (bTcp) {
+    if (bTcp || bListen) {
         __tshellNetstatTcpListen(iNetType);
-        if (bListen == LW_FALSE) {
+        if (bTcp) {
             __tshellNetstatTcp(iNetType);
         }
     }

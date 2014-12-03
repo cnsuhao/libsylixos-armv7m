@@ -220,13 +220,13 @@ LW_API ssize_t      API_IosPWrite(INT      iFd,
 #define iosWrite                                 API_IosWrite
 #define iosPWrite                                API_IosPWrite
                                   
-LW_API INT          API_IosIoctl(INT      iFd,
-                                 INT      iCmd,
-                                 LONG     lArg); 
-LW_API off_t        API_IosLseek(INT      iFd,
-                                 off_t    oftOffset,
-                                 INT      iWhence);
-LW_API INT          API_IosFstat(INT   iFd, struct stat *pstat);
+LW_API INT          API_IosIoctl(INT    iFd,
+                                 INT    iCmd,
+                                 LONG   lArg); 
+LW_API off_t        API_IosLseek(INT    iFd,
+                                 off_t  oftOffset,
+                                 INT    iWhence);
+LW_API INT          API_IosFstat(INT    iFd, struct stat *pstat);
 
 LW_API INT          API_IosLstat(PLW_DEV_HDR    pdevhdrHdr,
                                  PCHAR          pcName, 

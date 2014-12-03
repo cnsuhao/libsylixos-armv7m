@@ -247,8 +247,8 @@ LW_API ssize_t          writev(INT                    iFd,
                                const struct iovec    *piovec,
                                INT                    iIovcnt);
 
-LW_API INT              chdir(CPCHAR       pcName);
-LW_API INT              cd(CPCHAR       pcName);
+LW_API INT              chdir(CPCHAR  pcName);
+LW_API INT              cd(CPCHAR  pcName);
 LW_API INT              fchdir(INT  iFd);
 LW_API INT              chroot(CPCHAR  pcPath);
 

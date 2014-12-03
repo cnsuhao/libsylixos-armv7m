@@ -219,7 +219,7 @@
 *********************************************************************************************************/
 
 #define	LW_CFG_ITIMER_EN                        1       /*   是否允许任务级应用定时器工作               */
-#define LW_CFG_ITIMER_RATE                      10      /*   每次itimer服务线程扫描服务链的周期 (TICK)  */
+#define LW_CFG_ITIMER_RATE                      5       /*   每次itimer服务线程扫描服务链的周期 (TICK)  */
                                                         /*   LW 定时器的定时单位还是 TICK , 这里只是服务*/
                                                         /*   线程的扫描周期                             */
 #define LW_CFG_ITIMER_OPTION                    LW_OPTION_THREAD_STK_CHK
