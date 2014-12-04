@@ -139,7 +139,7 @@ void  sys_arch_unprotect (INTREG  ireg)
 *********************************************************************************************************/
 void  sys_assert_print (const char *msg, const char *func, const char *file, int line)
 {
-    printf("lwip assert: %s func: %s file: %s line: %d\n", msg, func, file, line);
+    fprintf(stderr, "lwip assert: %s func: %s file: %s line: %d\n", msg, func, file, line);
 }
 /*********************************************************************************************************
 ** 函数名称: sys_error_print
@@ -154,7 +154,7 @@ void  sys_assert_print (const char *msg, const char *func, const char *file, int
 *********************************************************************************************************/
 void  sys_error_print (const char *msg, const char *func, const char *file, int line)
 {
-    printf("lwip error: %s func: %s file: %s line: %d\n", msg, func, file, line);
+    fprintf(stderr, "lwip error: %s func: %s file: %s line: %d\n", msg, func, file, line);
 }
 /*********************************************************************************************************
 ** 函数名称: sys_mutex_new

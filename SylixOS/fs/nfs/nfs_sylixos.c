@@ -552,14 +552,14 @@ INT  API_NfsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     pnfsfs->NFSFS_pclient = clnt_create(pnfsfs->NFSFS_cHost, NFS_PROGRAM, NFS_V3, cProto);
     if (pnfsfs->NFSFS_pclient == LW_NULL) {                             /*  NFS(100003) V:3             */
         _ErrorHandle(EIO);
-        printf("creat nfs client failed, NFS(100003) V:3.\n");
+        fprintf(stderr, "creat nfs client failed, NFS(100003) V:3.\n");
         goto    __error_handle;
     }
     
     pnfsfs->NFSFS_pclientMount = clnt_create(pnfsfs->NFSFS_cHost, MOUNT_PROGRAM, MOUNT_V3, cProto);
     if (pnfsfs->NFSFS_pclientMount == LW_NULL) {                        /*  MOUNT(100005) V:3           */
         _ErrorHandle(EIO);
-        printf("create mount client failed, MOUNT(100005) V:3.\n");
+        fprintf(stderr, "create mount client failed, MOUNT(100005) V:3.\n");
         goto    __error_handle;
     }
     
@@ -567,7 +567,7 @@ INT  API_NfsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
         clntstat = mountproc3_null_3(LW_NULL, pnfsfs->NFSFS_pclientMount);
         if (clntstat != RPC_SUCCESS) {                                  /*  NFS NULL Call               */
             __nfsRpcErrorHandle(clntstat);
-            printf("nfs null call failed, MNT.\n");
+            fprintf(stderr, "nfs null call failed, MNT.\n");
             goto    __error_handle;
         }
     }
@@ -583,13 +583,13 @@ INT  API_NfsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     clntstat = mountproc3_mnt_3(pnfsfs->NFSFS_cPath, &mountres, pnfsfs->NFSFS_pclientMount);
     if (clntstat != RPC_SUCCESS) {                                      /*  NFS MNT Call                */
         __nfsRpcErrorHandle(clntstat);
-        printf("nfs mount failed, MNT.\n");
+        fprintf(stderr, "nfs mount failed, MNT.\n");
         goto    __error_handle;
     
     } else if (mountres.fhs_status != MNT3_OK) {
         _ErrorHandle(mountres.fhs_status);
         xdr_free((xdrproc_t)xdr_mountres3, (char *)&mountres);          /*  释放 mountres               */
-        printf("nfs mount failed, MNT.\n");
+        fprintf(stderr, "nfs mount failed, MNT.\n");
         goto    __error_handle;
     }
     
@@ -597,7 +597,7 @@ INT  API_NfsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     xdr_free((xdrproc_t)xdr_mountres3, (char *)&mountres);              /*  释放 mountres               */
     
     if (__nfsRootStat(pnfsfs, &pnfsfs->NFSFS_stat) < ERROR_NONE) {      /*  获得根节点属性              */
-        printf("nfs can not get root status.\n");
+        fprintf(stderr, "nfs can not get root status.\n");
         goto    __error_handle;
     }
 
@@ -612,7 +612,7 @@ INT  API_NfsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     if (iosDevAddEx(&pnfsfs->NFSFS_devhdrHdr, pcName, _G_iNfsDrvNum, DT_DIR)
         != ERROR_NONE) {                                                /*  安装文件系统设备            */
         xdr_free((xdrproc_t)xdr_nfs_fh3, (char *)&pnfsfs->NFSFS_hRoot);
-        printf("device add error.\n");
+        fprintf(stderr, "device add error.\n");
         goto    __error_handle;
     }
     
@@ -1789,7 +1789,7 @@ __re_umount_vol:
                                pnfsfs->NFSFS_pclientMount) != RPC_SUCCESS)) {
 #if __NFS_FORCE_UMOUNT == 0
             __NFS_VOL_UNLOCK(pnfsfs);
-            printf("nfs umount failed.\n");
+            fprintf(stderr, "nfs umount failed.\n");
             return  (PX_ERROR);
 #endif                                                                  /*  !__NFS_FORCE_UMOUNT         */
         }

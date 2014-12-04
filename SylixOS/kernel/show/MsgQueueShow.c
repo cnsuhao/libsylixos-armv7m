@@ -63,7 +63,7 @@ VOID   API_MsgQueueShow (LW_OBJECT_HANDLE  ulId)
                                        &ulThreadBlockNum,
                                        &stMaxMsgLen);                   /*  获得当前状态                */
     if (ulErrorCode) {
-        printf("\nInvalid MsgQueue id: 0x%08lx\n", ulId);
+        fprintf(stderr, "\nInvalid MsgQueue id: 0x%08lx\n", ulId);
         return;                                                         /*  产生错误                    */
     }
     

@@ -64,14 +64,14 @@ static int  __inetBiosNameSet (int  iArgC, char  *pcArgV[])
     } else if (iArgC == 2) {
         ulError = API_INetNetBiosNameSet(pcArgV[1]);
         if (ulError) {
-            printf("fail. error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "fail. error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         } else {
             return  (ERROR_NONE);
         }
         
     } else {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
 }

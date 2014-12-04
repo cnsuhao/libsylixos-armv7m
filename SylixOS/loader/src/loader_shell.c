@@ -180,12 +180,12 @@ static INT  __tshellWhich (INT  iArgC, PCHAR  *ppcArgV)
     CHAR    cFilePath[MAX_FILENAME_LENGTH];
 
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     if (__ldGetFilePath(ppcArgV[1], cFilePath, MAX_FILENAME_LENGTH) != ERROR_NONE) {
-        printf("can not find file!\n");
+        fprintf(stderr, "can not find file!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -356,7 +356,7 @@ static INT  __tshellExec (INT  iArgC, PCHAR  *ppcArgV)
     struct stat   statBuf;
     
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -376,7 +376,7 @@ static INT  __tshellExec (INT  iArgC, PCHAR  *ppcArgV)
     if (_IosCheckPermissions(O_RDONLY, LW_TRUE, statBuf.st_mode,        /*  检查文件执行权限            */
                              statBuf.st_uid, statBuf.st_gid) < ERROR_NONE) {
         fclose(pfile);
-        printf("insufficient permissions!\n");
+        fprintf(stderr, "insufficient permissions!\n");
         return  (PX_ERROR);
     }
     
@@ -411,7 +411,7 @@ static INT  __tshellDlConfig (INT  iArgC, PCHAR  *ppcArgV)
     BOOL    bShare;
 
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -424,7 +424,7 @@ static INT  __tshellDlConfig (INT  iArgC, PCHAR  *ppcArgV)
     
     } else if (lib_strcmp(ppcArgV[1], "share") == 0) {
         if (iArgC < 3) {
-            printf("argments error!\n");
+            fprintf(stderr, "argments error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         
@@ -439,7 +439,7 @@ static INT  __tshellDlConfig (INT  iArgC, PCHAR  *ppcArgV)
         return  (moduleShareConfig(bShare));
     
     } else {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 }
@@ -457,7 +457,7 @@ static INT  __tshellModuleReg (INT  iArgC, PCHAR  *ppcArgV)
     PVOID   pvModule;
 
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -468,9 +468,9 @@ static INT  __tshellModuleReg (INT  iArgC, PCHAR  *ppcArgV)
         return  (ERROR_NONE);
     } else {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not register module, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not register module, error : %s\n", lib_strerror(errno));
         }
         return  (PX_ERROR);
     }
@@ -492,18 +492,18 @@ static INT  __tshellModuleUnreg (INT  iArgC, PCHAR  *ppcArgV)
     INT                 iError;
 
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     if (sscanf(ppcArgV[1], "%lx", &ulModule) != 1) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     pmod = (LW_LD_EXEC_MODULE *)ulModule;
     if (!pmod || (pmod->EMOD_ulMagic != __LW_LD_EXEC_MODULE_MAGIC)) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -516,9 +516,9 @@ static INT  __tshellModuleUnreg (INT  iArgC, PCHAR  *ppcArgV)
         return  (ERROR_NONE);
     } else {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not unregister module, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not unregister module, error : %s\n", lib_strerror(errno));
         }
         return  (PX_ERROR);
     }
@@ -537,17 +537,17 @@ static INT  __tshellModulestat (INT  iArgC, PCHAR  *ppcArgV)
     struct stat  statGet;
 
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     if (stat(ppcArgV[1], &statGet) < 0) {
-        printf("can not open %s : %s\n", ppcArgV[1], lib_strerror(errno));
+        fprintf(stderr, "can not open %s : %s\n", ppcArgV[1], lib_strerror(errno));
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     if (!S_ISREG(statGet.st_mode)) {
-        printf("not a REG file.\n");
+        fprintf(stderr, "not a REG file.\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 

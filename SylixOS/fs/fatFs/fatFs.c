@@ -254,11 +254,11 @@ static INT  __tshellFatUGID (INT  iArgC, PCHAR  ppcArgV[])
     
     } else {
         if (sscanf(ppcArgV[1], "%u", &uid) != 1) {
-            printf("fatugid [uid] [gid]\n");
+            fprintf(stderr, "fatugid [uid] [gid]\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         if (sscanf(ppcArgV[2], "%u", &gid) != 1) {
-            printf("fatugid [uid] [gid]\n");
+            fprintf(stderr, "fatugid [uid] [gid]\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         

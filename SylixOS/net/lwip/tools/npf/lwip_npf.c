@@ -1034,7 +1034,7 @@ INT  API_INetNpfShow (INT  iFd)
     
     iFilterFd = open("/proc/net/netfilter", O_RDONLY);
     if (iFilterFd < 0) {
-        printf("can not open /proc/net/netfilter : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not open /proc/net/netfilter : %s\n", lib_strerror(errno));
         return  (PX_ERROR);
     }
     
@@ -1085,7 +1085,7 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
     PVOID    pvRule;
 
     if (iArgC < 4) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
@@ -1096,7 +1096,7 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
 
         if (sscanf(ppcArgV[__NPF_TSHELL_RADD_ARG_MAC], "%x:%x:%x:%x:%x:%x",
                    &iMac[0], &iMac[1], &iMac[2], &iMac[3], &iMac[4], &iMac[5]) != 6) {
-            printf("mac argment error!\n");
+            fprintf(stderr, "mac argment error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         for (i = 0; i < ETHARP_HWADDR_LEN; i++) {
@@ -1106,13 +1106,13 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
                                     LWIP_NPF_RULE_MAC,
                                     ucMac, LW_NULL, LW_NULL, 0, 0);
         if (pvRule == LW_NULL) {
-            printf("can not add mac rule, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not add mac rule, error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
 
     } else if (lib_strcmp(ppcArgV[__NPF_TSHELL_RADD_ARG_RULE], "ip") == 0) {
         if (iArgC != 5) {
-            printf("argments error!\n");
+            fprintf(stderr, "argments error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         pvRule = API_INetNpfRuleAdd(ppcArgV[__NPF_TSHELL_RADD_ARG_NETIF],
@@ -1121,7 +1121,7 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
                                     ppcArgV[__NPF_TSHELL_RADD_ARG_IPS],
                                     ppcArgV[__NPF_TSHELL_RADD_ARG_IPE], 0, 0);
         if (pvRule == LW_NULL) {
-            printf("can not add ip rule, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not add ip rule, error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
 
@@ -1130,15 +1130,15 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
         INT     iPortE = -1;
 
         if (iArgC != 7) {
-            printf("argments error!\n");
+            fprintf(stderr, "argments error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         if (sscanf(ppcArgV[__NPF_TSHELL_RADD_ARG_PORTS], "%i", &iPortS) != 1) {
-            printf("port argment error!\n");
+            fprintf(stderr, "port argment error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         if (sscanf(ppcArgV[__NPF_TSHELL_RADD_ARG_PORTE], "%i", &iPortE) != 1) {
-            printf("port argment error!\n");
+            fprintf(stderr, "port argment error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         
@@ -1150,7 +1150,7 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
                                     htons((u16_t)iPortS),
                                     htons((u16_t)iPortE));
         if (pvRule == LW_NULL) {
-            printf("can not add udp rule, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not add udp rule, error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
 
@@ -1159,15 +1159,15 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
         INT     iPortE = -1;
 
         if (iArgC != 7) {
-            printf("argments error!\n");
+            fprintf(stderr, "argments error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         if (sscanf(ppcArgV[__NPF_TSHELL_RADD_ARG_PORTS], "%i", &iPortS) != 1) {
-            printf("port argment error!\n");
+            fprintf(stderr, "port argment error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         if (sscanf(ppcArgV[__NPF_TSHELL_RADD_ARG_PORTE], "%i", &iPortE) != 1) {
-            printf("port argment error!\n");
+            fprintf(stderr, "port argment error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         
@@ -1179,12 +1179,12 @@ static INT  __tshellNetNpfRuleAdd (INT  iArgC, PCHAR  *ppcArgV)
                                     htons((u16_t)iPortS),
                                     htons((u16_t)iPortE));
         if (pvRule == LW_NULL) {
-            printf("can not add tcp rule, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not add tcp rule, error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
 
     } else {
-        printf("rule type argment error!\n");
+        fprintf(stderr, "rule type argment error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
@@ -1206,21 +1206,21 @@ static INT  __tshellNetNpfRuleDel (INT  iArgC, PCHAR  *ppcArgV)
     INT     iSeqNum = -1;
 
     if (iArgC != 3) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     if (sscanf(ppcArgV[2], "%i", &iSeqNum) != 1) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     iError = API_INetNpfRuleDel(ppcArgV[1], LW_NULL, iSeqNum);
     if (iError) {
         if (errno == EINVAL) {
-            printf("argments error!\n");
+            fprintf(stderr, "argments error!\n");
         } else {
-            printf("can not delete rule, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not delete rule, error : %s\n", lib_strerror(errno));
         }
     } else {
         printf("delete.\n");
@@ -1242,18 +1242,18 @@ static INT  __tshellNetNpfAttach (INT  iArgC, PCHAR  *ppcArgV)
     INT     iError;
 
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     iError = API_INetNpfAttach(ppcArgV[1]);
     if (iError < 0) {
         if (errno == EINVAL) {
-            printf("can not find the netif!\n");
+            fprintf(stderr, "can not find the netif!\n");
         } else if (errno == ERROR_SYSTEM_LOW_MEMORY) {
-            printf("system low memory!\n");
+            fprintf(stderr, "system low memory!\n");
         } else {
-            printf("can not attach netif, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not attach netif, error : %s\n", lib_strerror(errno));
         }
     } else {
         printf("attached.\n");
@@ -1275,16 +1275,16 @@ static INT  __tshellNetNpfDetach (INT  iArgC, PCHAR  *ppcArgV)
     INT     iError;
 
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     iError = API_INetNpfDetach(ppcArgV[1]);
     if (iError < 0) {
         if (errno == EINVAL) {
-            printf("netif error!\n");
+            fprintf(stderr, "netif error!\n");
         } else {
-            printf("can not detach netif, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not detach netif, error : %s\n", lib_strerror(errno));
         }
     } else {
         printf("detached.\n");

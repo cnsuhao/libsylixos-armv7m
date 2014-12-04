@@ -100,18 +100,18 @@ static INT  __tshellFsCmdCd (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT    iError;
 
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iError = cd(ppcArgV[1]);
     if (iError) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else if (errno == ENOTDIR) {
-            printf("not a directory!\n");
+            fprintf(stderr, "not a directory!\n");
         } else {
-            printf("cd : error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "cd : error : %s\n", lib_strerror(errno));
         }
         return  (iError);
     }
@@ -132,18 +132,18 @@ static INT  __tshellFsCmdCh (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT    iError;
 
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iError = chdir(ppcArgV[1]);
     if (iError) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else if (errno == ENOTDIR) {
-            printf("not a directory!\n");
+            fprintf(stderr, "not a directory!\n");
         } else {
-            printf("ch : error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "ch : error : %s\n", lib_strerror(errno));
         }
         return  (iError);
     }
@@ -200,16 +200,16 @@ static INT  __tshellFsCmdMkdir (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT    iError;
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iError = mkdir(ppcArgV[1], DEFAULT_DIR_PERM);
     if (iError) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not make this directory, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not make this directory, error : %s\n", lib_strerror(errno));
         }
     }
     
@@ -229,16 +229,16 @@ static INT  __tshellFsCmdMkfifo (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT    iError;
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iError = mkfifo(ppcArgV[1], 0);
     if (iError) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not make this fifo, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not make this fifo, error : %s\n", lib_strerror(errno));
         }
     }
     
@@ -258,16 +258,16 @@ static INT  __tshellFsCmdRmdir (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT    iError;
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iError = rmdir(ppcArgV[1]);
     if (iError) {
         if (API_GetLastError() == ENOENT) {
-            printf("directory is not exist!\n");
+            fprintf(stderr, "directory is not exist!\n");
         } else {
-            printf("can not remove directory, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not remove directory, error : %s\n", lib_strerror(errno));
         }
     }
     
@@ -287,16 +287,16 @@ static INT  __tshellFsCmdRm (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT    iError;
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iError = unlink(ppcArgV[1]);
     if (iError) {
         if (API_GetLastError() == ENOENT) {
-            printf("file is not exist!\n");
+            fprintf(stderr, "file is not exist!\n");
         } else {
-            printf("can not remove this file, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not remove this file, error : %s\n", lib_strerror(errno));
         }
     }
     
@@ -318,13 +318,13 @@ static INT  __tshellFsCmdMv (INT  iArgC, PCHAR  ppcArgV[])
              CHAR   cTemp[16];
     
     if (iArgC != 3) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iFd = open(ppcArgV[1], O_RDONLY, 0);
     if (iFd < 0) {
-        printf("SRC file/dir error : %s\n", lib_strerror(errno));
+        fprintf(stderr, "%s error : %s\n", ppcArgV[1], lib_strerror(errno));
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -378,29 +378,29 @@ static INT  __tshellFsCmdCat (INT  iArgC, PCHAR  ppcArgV[])
              struct stat    statFile;
              
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iFd = open(ppcArgV[1], O_RDONLY, 0);
     if (iFd < 0) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("file error!\n");
+            fprintf(stderr, "file error %s!\n", lib_strerror(errno));
         }
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iError = fstat(iFd, &statFile);
     if (iError < 0) {
-        printf("file stat error!\n");
+        fprintf(stderr, "file stat error!\n");
         close(iFd);
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     if (!S_ISREG(statFile.st_mode)) {
-        printf("file is not a 'REG' file!\n");
+        fprintf(stderr, "file is not a 'REG' file!\n");
         close(iFd);
         return  (-ERROR_TSHELL_EPARAM);
     }
@@ -495,7 +495,7 @@ static INT  __tshellFsCmdTouch (INT  iArgC, PCHAR  ppcArgV[])
     }
     
     if (iFileNameIndex == -1) {
-        printf("file error!\n");
+        fprintf(stderr, "file error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -506,9 +506,9 @@ static INT  __tshellFsCmdTouch (INT  iArgC, PCHAR  ppcArgV[])
         iFd = open(ppcArgV[iFileNameIndex], O_WRONLY | O_CREAT | O_TRUNC, DEFAULT_FILE_PERM);
         if (iFd < 0) {
             if (errno == EACCES) {
-                printf("insufficient permissions.\n");
+                fprintf(stderr, "insufficient permissions.\n");
             } else {
-                printf("can not create file! error : %s\n", lib_strerror(errno));
+                fprintf(stderr, "can not create file! error : %s\n", lib_strerror(errno));
             }
             return  (-1);
         }
@@ -580,9 +580,9 @@ static INT  __tshellFsCmdLs (INT  iArgC, PCHAR  ppcArgV[])
     
     if (!pdir) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not open dir! %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not open dir! %s\n", lib_strerror(errno));
         }
         return  (-1);
     }
@@ -674,7 +674,7 @@ static INT  __tshellFsCmdCmp (INT  iArgC, PCHAR  ppcArgV[])
              off_t      oftSize;
 
     if (iArgC != 3) {
-        printf("param error!\n");
+        fprintf(stderr, "param error!\n");
         return  (-1);
     }
     if (lib_strcmp(ppcArgV[1], ppcArgV[2]) == 0) {                      /*  文件相同                    */
@@ -684,25 +684,25 @@ static INT  __tshellFsCmdCmp (INT  iArgC, PCHAR  ppcArgV[])
     
     iFdSrc = open(ppcArgV[1], O_RDONLY);
     if (iFdSrc < 0) {
-        printf("can not open source[1] file!\n");
+        fprintf(stderr, "can not open %s!\n", ppcArgV[1]);
         return  (-1);
     }
     iFdDst = open(ppcArgV[2], O_RDONLY);
     if (iFdDst < 0) {
         close(iFdSrc);
-        printf("can not open source[2] file!\n");
+        fprintf(stderr, "can not open %s!\n", ppcArgV[2]);
         return  (-1);
     }
     
     iError = fstat(iFdSrc, &statFile);                                  /*  首先比较文件大小            */
     if (iError != ERROR_NONE) {
-        printf("source[1] file stat error!\n");
+        fprintf(stderr, "%s get stat error!\n", ppcArgV[1]);
         goto    __error_handle;
     }
     oftSize = statFile.st_size;
     iError = fstat(iFdDst, &statFile);
     if (iError != ERROR_NONE) {
-        printf("source[2] file stat error!\n");
+        fprintf(stderr, "%s get stat error!\n", ppcArgV[2]);
         goto    __error_handle;
     }
     if (oftSize != statFile.st_size) {                                  /*  文件大小不同                */
@@ -730,7 +730,7 @@ static INT  __tshellFsCmdCmp (INT  iArgC, PCHAR  ppcArgV[])
         sstRdSrcNum = read(iFdSrc, pcBufferSrc, stBuffer);
         sstRdDstNum = read(iFdDst, pcBufferDst, stBuffer);
         if (sstRdSrcNum != sstRdDstNum) {
-            printf("file read error!\n");
+            fprintf(stderr, "file read error!\n");
             goto    __error_handle;
         }
         if (sstRdSrcNum <= 0) {                                         /*  文件读取完毕                */
@@ -826,17 +826,17 @@ static INT  __tshellFsCmdCp (INT  iArgC, PCHAR  ppcArgV[])
              time_t     timeDiff;
 
     if (iArgC != 3) {
-        printf("param error!\n");
+        fprintf(stderr, "param error!\n");
         return  (-1);
     }
     if (lib_strcmp(ppcArgV[1], ppcArgV[2]) == 0) {                      /*  文件重复                    */
-        printf("param error!\n");
+        fprintf(stderr, "param error!\n");
         return  (-1);
     }
     
     iFdSrc = open(ppcArgV[1], O_RDONLY, 0);                             /*  打开源文件                  */
     if (iFdSrc < 0) {
-        printf("can not open source file!\n");
+        fprintf(stderr, "can not open source file!\n");
         return  (-1);
     }
     
@@ -845,7 +845,7 @@ static INT  __tshellFsCmdCp (INT  iArgC, PCHAR  ppcArgV[])
         goto    __error_handle;
     }
     if (S_ISDIR(statFile.st_mode)) {                                    /*  不能复制目录文件            */
-        printf("can not copy dir file!\n");
+        fprintf(stderr, "can not copy dir file!\n");
         errno  = EISDIR;
         iError = PX_ERROR;
         goto    __error_handle;
@@ -879,7 +879,7 @@ __re_select:
     iFdDst = open(cDstFile, (O_WRONLY | O_CREAT | O_TRUNC), DEFFILEMODE);
     if (iFdDst < 0) {
         close(iFdSrc);
-        printf("can not open destination file!\n");
+        fprintf(stderr, "can not open destination file!\n");
         return  (-1);
     }
     
@@ -900,7 +900,7 @@ __re_select:
         if (sstRdNum > 0) {
             sstWrNum = write(iFdDst, pcBuffer, (size_t)sstRdNum);
             if (sstWrNum != sstRdNum) {                                 /*  写入文件错误                */
-                printf("can not write destination file! error : %s\n", lib_strerror(errno));
+                fprintf(stderr, "can not write destination file! error : %s\n", lib_strerror(errno));
                 iError = PX_ERROR;
                 break;
             }
@@ -1089,9 +1089,9 @@ static INT  __tshellFsCmdLl (INT  iArgC, PCHAR  ppcArgV[])
     
     if (!pdir) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not open dir!\n");
+            fprintf(stderr, "can not open dir %s!\n", lib_strerror(errno));
         }
         return  (-1);
     }
@@ -1250,12 +1250,12 @@ static INT  __tshellFsCmdDsize (INT  iArgC, PCHAR  ppcArgV[])
     CHAR        cDirName[MAX_FILENAME_LENGTH];
     
     if (iArgC < 2) {
-        printf("df argments error, (dsize directory)\n");
+        fprintf(stderr, "df argments error, (dsize directory)\n");
         return  (-1);
     }
     
     if (stat(ppcArgV[1], &statGet)) {
-        printf("can not get %s stat().\n", ppcArgV[1]);
+        fprintf(stderr, "can not get %s stat().\n", ppcArgV[1]);
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -1330,13 +1330,13 @@ static INT  __tshellFsCmdDf (INT  iArgC, PCHAR  ppcArgV[])
            PCHAR        pcRo = "n";
 
     if (iArgC != 2) {
-        printf("df argments error, (df volname)\n");
+        fprintf(stderr, "df argments error, (df volname)\n");
         return  (-1);
     }
     
     if (statfs(ppcArgV[1], &statfsGet) < 0) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
             perror("volume state error");
         }
@@ -1431,19 +1431,19 @@ static INT  __tshellFsCmdChmod (INT  iArgC, PCHAR  ppcArgV[])
              INT        iNewMode = DEFAULT_FILE_PERM;
 
     if (iArgC != 3) {
-        printf("chmod argments error, (chmod newmode filename)\n");
+        fprintf(stderr, "chmod argments error, (chmod newmode filename)\n");
         return  (-1);
     }
     
     stLen = lib_strnlen(ppcArgV[1], 5);
     if (stLen > 4) {
-        printf("newmode error, (eg. 777 ... octal)\n");
+        fprintf(stderr, "newmode error, (eg. 777 ... octal)\n");
         return  (-1);
     }
     
     for (i = 0; i < stLen; i++) {                                       /*  必须是 8进制的              */
         if ((ppcArgV[1][i] > '7') || (ppcArgV[1][i] < '0')) {
-            printf("newmode error, (eg. 777 ... octal)\n");
+            fprintf(stderr, "newmode error, (eg. 777 ... octal)\n");
             return  (-1);
         }
     }
@@ -1476,7 +1476,7 @@ static INT  __tshellFsCmdChmod (INT  iArgC, PCHAR  ppcArgV[])
         
         pdir = opendir(cName);
         if (!pdir) {
-            printf("can not open dir %s error : %s\n", cName, lib_strerror(errno));
+            fprintf(stderr, "can not open dir %s error : %s\n", cName, lib_strerror(errno));
             return  (-1);
         }
         
@@ -1488,11 +1488,11 @@ static INT  __tshellFsCmdChmod (INT  iArgC, PCHAR  ppcArgV[])
                 i = chmod(cName, iNewMode);                             /*  转换文件模式                */
                 if (i < 0) {
                     if (errno == EACCES) {
-                        printf("%s insufficient permissions.\n", 
-                               pdirent->d_name);
+                        fprintf(stderr, "%s insufficient permissions.\n", 
+                                pdirent->d_name);
                     } else {
-                        printf("%s can not change file mode, error : %s\n", 
-                               pdirent->d_name, lib_strerror(errno));
+                        fprintf(stderr, "%s can not change file mode, error : %s\n", 
+                                pdirent->d_name, lib_strerror(errno));
                     }
                 }
             }
@@ -1507,7 +1507,7 @@ static INT  __tshellFsCmdChmod (INT  iArgC, PCHAR  ppcArgV[])
         i = chmod(ppcArgV[2], iNewMode);                                /*  转换文件模式                */
         if (i < 0) {
             if (errno == EACCES) {
-                printf("insufficient permissions.\n");
+                fprintf(stderr, "insufficient permissions.\n");
             } else {
                 perror("can not change file mode error");
             }
@@ -1531,7 +1531,7 @@ static INT  __tshellFsCmdMkfs (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT    iError;
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -1539,9 +1539,9 @@ static INT  __tshellFsCmdMkfs (INT  iArgC, PCHAR  ppcArgV[])
     iError = mkfs(ppcArgV[1]);
     if (iError) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not format media : error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not format media : error : %s\n", lib_strerror(errno));
         }
         return  (-errno);
     }
@@ -1565,16 +1565,16 @@ static INT  __tshellFsCmdShfile (INT  iArgC, PCHAR  ppcArgV[])
     PCHAR  pcCmdBuffer = LW_NULL;                                       /*  命令缓冲                    */
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     fileShell = fopen(ppcArgV[1], "r");                                 /*  打开 shell 文件             */
     if (fileShell == LW_NULL) {
         if (errno == EACCES) {
-            printf("insufficient permissions.\n");
+            fprintf(stderr, "insufficient permissions.\n");
         } else {
-            printf("can not open %s : %s\n", ppcArgV[1], lib_strerror(errno));
+            fprintf(stderr, "can not open %s : %s\n", ppcArgV[1], lib_strerror(errno));
         }
         return  (-ERROR_TSHELL_EPARAM);
     }
@@ -1582,7 +1582,7 @@ static INT  __tshellFsCmdShfile (INT  iArgC, PCHAR  ppcArgV[])
     pcCmdBuffer = (PCHAR)__SHEAP_ALLOC(LW_CFG_SHELL_MAX_COMMANDLEN + 1);/*  开辟命令缓冲                */
     if (pcCmdBuffer == LW_NULL) {
         fclose(fileShell);
-        printf("system low memory.\n");
+        fprintf(stderr, "system low memory.\n");
         return  (PX_ERROR);
     }
     
@@ -1621,7 +1621,7 @@ static INT  __tshellFsCmdMount (INT  iArgC, PCHAR  ppcArgV[])
     INT         iOptInd;
     
     if (iArgC < 3) {
-        printf("option error!\n");
+        fprintf(stderr, "option error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -1640,7 +1640,7 @@ static INT  __tshellFsCmdMount (INT  iArgC, PCHAR  ppcArgV[])
     
     iOptInd = optind;
     if (iOptInd > (iArgC - 2)) {
-        printf("option error!\n");
+        fprintf(stderr, "option error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -1648,7 +1648,7 @@ static INT  __tshellFsCmdMount (INT  iArgC, PCHAR  ppcArgV[])
     pcFs  = ppcArgV[iOptInd + 1];
     
     if (API_MountEx(pcDev, pcFs, pcType, pcOption) != ERROR_NONE) {
-        printf("mount error, error : %s\n", lib_strerror(errno));
+        fprintf(stderr, "mount error, error : %s\n", lib_strerror(errno));
         return  (PX_ERROR);
     } else {
         return  (ERROR_NONE);
@@ -1666,13 +1666,13 @@ static INT  __tshellFsCmdMount (INT  iArgC, PCHAR  ppcArgV[])
 static INT  __tshellFsCmdUmount (INT  iArgC, PCHAR  ppcArgV[])
 {
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     if (API_Unmount(ppcArgV[1]) == ERROR_NONE) {
         return  (ERROR_NONE);
     } else {
-        printf("umount error, error : %s\n", lib_strerror(errno));
+        fprintf(stderr, "umount error, error : %s\n", lib_strerror(errno));
         return  (PX_ERROR);
     }
 }
@@ -1705,18 +1705,18 @@ static INT  __tshellFsCmdLn (INT  iArgC, PCHAR  ppcArgV[])
 {
     if (iArgC == 3) {
         if (symlink(ppcArgV[1], ppcArgV[2]) != ERROR_NONE) {
-            printf("symlink error, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "symlink error, error : %s\n", lib_strerror(errno));
         }
     } else if (iArgC == 4) {
         if (lib_strcmp(ppcArgV[1], "-s")) {
-            printf("must use -s to create a symbol link.\n");
+            fprintf(stderr, "must use -s to create a symbol link.\n");
         } else {
             if (symlink(ppcArgV[2], ppcArgV[3]) != ERROR_NONE) {
-                printf("symlink error, error : %s\n", lib_strerror(errno));
+                fprintf(stderr, "symlink error, error : %s\n", lib_strerror(errno));
             }
         }
     } else {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -1738,7 +1738,7 @@ static INT  __tshellFsCmdDosfslabel (INT  iArgC, PCHAR  ppcArgV[])
     CHAR cLabel[MAX_FILENAME_LENGTH];
     
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
@@ -1749,21 +1749,21 @@ static INT  __tshellFsCmdDosfslabel (INT  iArgC, PCHAR  ppcArgV[])
     }
     
     if (iFd < 0) {
-        printf("can not open device, error : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not open device, error : %s\n", lib_strerror(errno));
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     if (iArgC == 2) {
         iError = ioctl(iFd, FIOLABELGET, cLabel);
         if (iError < ERROR_NONE) {
-            printf("can not get label, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not get label, error : %s\n", lib_strerror(errno));
         } else {
             printf("%s\n", cLabel);
         }
     } else {
         iError = ioctl(iFd, FIOLABELSET, ppcArgV[2]);
         if (iError < ERROR_NONE) {
-            printf("can not set label, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not set label, error : %s\n", lib_strerror(errno));
         }
     }
     

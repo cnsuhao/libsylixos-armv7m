@@ -342,7 +342,7 @@ static INT  __tshellWrapper (FUNCPTR  pfuncCommand, INT  iArgC, PCHAR  ppcArgV[]
             }
         }
         if (__tshellRedir(ppcArgV[i], pcRedir, ulMe, &iPopCnt)) {       /*  分析并执行重定位操作        */
-            printf("can not process redirect.\n");
+            fprintf(stderr, "can not process redirect.\n");
             goto    __ret;
         
         } else if (iRealArgc > i) {
@@ -805,19 +805,19 @@ static PVOID  __tshellBackground (PVOID  pvArg)
         switch (iRetValue) {                                            /*  系统级错误提示              */
         
         case -ERROR_TSHELL_EPARAM:
-            printf("parameter(s) error.\n");
+            fprintf(stderr, "parameter(s) error.\n");
             break;
         
         case -ERROR_TSHELL_CMDNOTFUND:
-            printf("sh: command not found.\n");
+            fprintf(stderr, "sh: command not found.\n");
             break;
             
         case -ERROR_TSHELL_EVAR:
-            printf("sh: variable error.\n");
+            fprintf(stderr, "sh: variable error.\n");
             break;
             
         case -ERROR_SYSTEM_LOW_MEMORY:
-            printf("sh: no memory.\n");
+            fprintf(stderr, "sh: no memory.\n");
             break;
         }
         
@@ -872,14 +872,14 @@ INT    __tshellBgCreateEx (INT               iFd[3],
     
     tsbg = (__PTSHELL_BACKGROUND)__SHEAP_ALLOC(sizeof(__TSHELL_BACKGROUND) + stCommandLen);
     if (!tsbg) {
-        printf("system low memory, can not create background thread.\n");
+        fprintf(stderr, "system low memory, can not create background thread.\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
     tsbg->TSBG_pcDefPath = (PCHAR)__SHEAP_ALLOC(lib_strlen(_PathGetDef()) + 1);
     if (!tsbg->TSBG_pcDefPath) {
         __SHEAP_FREE(tsbg);
-        printf("system low memory, can not create background thread.\n");
+        fprintf(stderr, "system low memory, can not create background thread.\n");
         _ErrorHandle(ERROR_SYSTEM_LOW_MEMORY);
         return  (PX_ERROR);
     }
@@ -1171,19 +1171,19 @@ PVOID   __tshellThread (PVOID  pcArg)
                 switch (iRetValue) {                                    /*  系统级错误提示              */
                 
                 case -ERROR_TSHELL_EPARAM:
-                    printf("parameter(s) error.\n");
+                    fprintf(stderr, "parameter(s) error.\n");
                     break;
                 
                 case -ERROR_TSHELL_CMDNOTFUND:
-                    printf("sh: command not found.\n");
+                    fprintf(stderr, "sh: command not found.\n");
                     break;
                     
                 case -ERROR_TSHELL_EVAR:
-                    printf("sh: variable error.\n");
+                    fprintf(stderr, "sh: variable error.\n");
                     break;
                     
                 case -ERROR_SYSTEM_LOW_MEMORY:
-                    printf("sh: no memory.\n");
+                    fprintf(stderr, "sh: no memory.\n");
                     break;
                 }
                 

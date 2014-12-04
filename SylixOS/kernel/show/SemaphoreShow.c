@@ -104,13 +104,13 @@ VOID    API_SemaphoreShow (LW_OBJECT_HANDLE  ulId)
 #endif                                                                  /*  LW_CFG_SEMM_EN > 0          */
     
     default:
-        printf("\nInvalid semaphore id: 0x%08lx\n", ulId);
+        fprintf(stderr, "\nInvalid semaphore id: 0x%08lx\n", ulId);
         _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);                         /*  句柄类型错误                */
         return;
     }
     
     if (ulErrorCode != ERROR_NONE) {
-        printf("\nInvalid semaphore id: 0x%08lx\n", ulId);
+        fprintf(stderr, "\nInvalid semaphore id: 0x%08lx\n", ulId);
         _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);                         /*  句柄类型错误                */
         return;
     }
@@ -119,7 +119,7 @@ VOID    API_SemaphoreShow (LW_OBJECT_HANDLE  ulId)
     LW_SPIN_LOCK_QUICK(&pevent->EVENT_slLock, &iregInterLevel);         /*  关闭中断同时锁住 spinlock   */
     if (pevent->EVENT_ucType == LW_TYPE_EVENT_UNUSED) {
         LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);    /*  打开中断, 同时打开 spinlock */
-        printf("\nInvalid semaphore id: 0x%08lx\n", ulId);
+        fprintf(stderr, "\nInvalid semaphore id: 0x%08lx\n", ulId);
         _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);                         /*  句柄类型错误                */
         return;
     }

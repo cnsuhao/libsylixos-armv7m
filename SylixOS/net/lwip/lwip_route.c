@@ -924,7 +924,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
         stSize   = LW_RT_PRINT_SIZE * uiNumEntries;
         pcBuffer = (PCHAR)__SHEAP_ALLOC(stSize);
         if (pcBuffer == LW_NULL) {
-            printf("system low memory.\n");
+            fprintf(stderr, "system low memory.\n");
             return  (PX_ERROR);
         }
 
@@ -975,14 +975,14 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
         if (pfuncAddOrChange && iArgC == 6) {                           /*  添加或者修改路由表          */
 
             if (!ipaddr_aton(ppcArgV[3], &ipaddr)) {
-                printf("inet address format error.\n");
+                fprintf(stderr, "inet address format error.\n");
                 goto    __error_handle;
             }
 
             if (lib_strcmp(ppcArgV[4], "if") == 0) {                    /*  使用 ifindex 查询网卡       */
                 INT   iIndex = lib_atoi(ppcArgV[5]);
                 if (if_indextoname(iIndex, cNetifName) == LW_NULL) {
-                    printf("can not find net interface with ifindex %d.\n", iIndex);
+                    fprintf(stderr, "can not find net interface with ifindex %d.\n", iIndex);
                     goto    __error_handle;
                 }
 
@@ -990,7 +990,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
                 lib_strlcpy(cNetifName, ppcArgV[5], IF_NAMESIZE);
 
             } else {
-                printf("net interface argument error.\n");
+                fprintf(stderr, "net interface argument error.\n");
                 goto    __error_handle;
             }
 
@@ -998,7 +998,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
                 uiFlag |= LW_RT_FLAG_H;
 
             } else if (lib_strcmp(ppcArgV[2], "-net") != 0) {           /*  非网络路由                  */
-                printf("route add must determine -host or -net.\n");
+                fprintf(stderr, "route add must determine -host or -net.\n");
                 goto    __error_handle;
             }
 
@@ -1011,7 +1011,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
         } else if ((lib_strcmp(ppcArgV[1], "del") == 0) && iArgC == 3) {/*  删除一个路由表项            */
 
             if (!ipaddr_aton(ppcArgV[2], &ipaddr)) {
-                printf("inet address format error.\n");
+                fprintf(stderr, "inet address format error.\n");
                 goto    __error_handle;
             }
 
@@ -1024,7 +1024,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
     }
     
 __error_handle:
-    printf("argments error!\n");
+    fprintf(stderr, "argments error!\n");
     return  (-ERROR_TSHELL_EPARAM);
 }
 /*********************************************************************************************************
@@ -1056,7 +1056,7 @@ static INT  __tshellAodvs (INT  iArgC, PCHAR  *ppcArgV)
     stSize   = LW_RT_PRINT_SIZE * uiNumEntries;
     pcBuffer = (PCHAR)__SHEAP_ALLOC(stSize);
     if (pcBuffer == LW_NULL) {
-        printf("system low memory.\n");
+        fprintf(stderr, "system low memory.\n");
         return  (PX_ERROR);
     }
 

@@ -142,7 +142,7 @@ static INT  __tshellReadlineInit (VOID)
     if (psihc == LW_NULL) {
         psihc = (__PSHELL_HISTORY_CTX)__SHEAP_ALLOC(sizeof(__SHELL_HISTORY_CTX));
         if (psihc == LW_NULL) {
-            printf("no memory!\n");
+            fprintf(stderr, "read line tool no memory!\n");
             return  (PX_ERROR);
         }
         lib_bzero(psihc, sizeof(__SHELL_HISTORY_CTX));

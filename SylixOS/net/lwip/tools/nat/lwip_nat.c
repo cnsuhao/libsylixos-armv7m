@@ -196,7 +196,7 @@ static INT  __tshellNat (INT  iArgC, PCHAR  ppcArgV[])
 {
     if (iArgC == 3) {
         if (API_INetNatStart(ppcArgV[1], ppcArgV[2]) != ERROR_NONE) {
-            printf("can not start NAT network, errno : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not start NAT network, errno : %s\n", lib_strerror(errno));
         } else {
             printf("NAT network started, [LAN : %s] [WAN : %s]\n", ppcArgV[1], ppcArgV[2]);
         }
@@ -206,7 +206,7 @@ static INT  __tshellNat (INT  iArgC, PCHAR  ppcArgV[])
             printf("NAT network stoped.\n");
         }
     } else {
-        printf("option error!\n");
+        fprintf(stderr, "option error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -232,7 +232,7 @@ static INT  __tshellNatShow (INT  iArgC, PCHAR  ppcArgV[])
         ipaddr.addr = inet_addr(ppcArgV[2]);
         __natShow(&ipaddr);
     } else {
-        printf("option error!\n");
+        fprintf(stderr, "option error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     

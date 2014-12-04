@@ -230,7 +230,7 @@ static INT  __tshellUserCmdUser (INT  iArgC, PCHAR  ppcArgV[])
     
     } else {
         setuid(uidOld);
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 }

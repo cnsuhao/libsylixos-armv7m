@@ -199,7 +199,7 @@ static INT  __tshellYaffsCmd (INT  iArgC, PCHAR  ppcArgV[])
     struct yaffs_dev    *pyaffsDev;
     
     if (iArgC < 3) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -207,7 +207,7 @@ static INT  __tshellYaffsCmd (INT  iArgC, PCHAR  ppcArgV[])
     pyaffsDev = (struct yaffs_dev *)yaffs_getdev(ppcArgV[1]);
     if (pyaffsDev == LW_NULL) {                                         /*  查找 nand 设备              */
         __YAFFS_OPUNLOCK();
-        printf("can not find yaffs device!\n");                         /*  无法搜索到设备              */
+        fprintf(stderr, "can not find yaffs device!\n");                /*  无法搜索到设备              */
         return  (PX_ERROR);
     }
     
@@ -293,7 +293,7 @@ static INT  __tshellYaffsCmd (INT  iArgC, PCHAR  ppcArgV[])
         
         if (iArgC < 4) {
             __YAFFS_OPUNLOCK();
-            printf("argments error!\n");
+            fprintf(stderr, "argments error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         

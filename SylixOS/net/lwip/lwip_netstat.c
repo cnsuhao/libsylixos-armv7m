@@ -81,7 +81,7 @@ VOID  __tshellNetstatIf (VOID)
     
     iFd = open("/proc/net/dev", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/net/dev : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not open /proc/net/dev : %s\n", lib_strerror(errno));
         return;
     }
     
@@ -181,7 +181,7 @@ VOID  __tshellNetstatGroup (INT  iNetType)
     
     pcPrintBuf = (PCHAR)__SHEAP_ALLOC(stNeedBufferSize);
     if (!pcPrintBuf) {
-        printf("no memory!\n");
+        fprintf(stderr, "no memory!\n");
         _ErrorHandle(ENOMEM);
         return;
     }
@@ -222,7 +222,7 @@ VOID  __tshellNetstatStat (VOID)
     fflush(stdout);
     
     if (iFd < 0) {
-        printf("can not open /proc/net/tcpip_stat : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not open /proc/net/tcpip_stat : %s\n", lib_strerror(errno));
         return;
     }
     
@@ -353,7 +353,7 @@ VOID  __tshellNetstatRaw (INT  iNetType)
     
     pcPrintBuf = (PCHAR)__SHEAP_ALLOC(stNeedBufferSize);
     if (!pcPrintBuf) {
-        printf("no memory!\n");
+        fprintf(stderr, "no memory!\n");
         _ErrorHandle(ENOMEM);
         return;
     }
@@ -553,7 +553,7 @@ VOID  __tshellNetstatTcpListen (INT  iNetType)
     
     pcPrintBuf = (PCHAR)__SHEAP_ALLOC(stNeedBufferSize);
     if (!pcPrintBuf) {
-        printf("no memory!\n");
+        fprintf(stderr, "no memory!\n");
         _ErrorHandle(ENOMEM);
         return;
     }
@@ -647,7 +647,7 @@ VOID  __tshellNetstatTcp (INT  iNetType)
     
     pcPrintBuf = (PCHAR)__SHEAP_ALLOC(stNeedBufferSize);
     if (!pcPrintBuf) {
-        printf("no memory!\n");
+        fprintf(stderr, "no memory!\n");
         _ErrorHandle(ENOMEM);
         return;
     }
@@ -773,7 +773,7 @@ VOID  __tshellNetstatUdp (INT  iNetType)
     
     pcPrintBuf = (PCHAR)__SHEAP_ALLOC(stNeedBufferSize);
     if (!pcPrintBuf) {
-        printf("no memory!\n");
+        fprintf(stderr, "no memory!\n");
         _ErrorHandle(ENOMEM);
         return;
     }
@@ -827,7 +827,7 @@ VOID  __tshellNetstatUnix (INT  iNetType)
     
     iFd = open("/proc/net/unix", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/net/unix : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not open /proc/net/unix : %s\n", lib_strerror(errno));
         return;
     }
     
@@ -861,7 +861,7 @@ VOID  __tshellNetstatPacket (INT  iNetType)
     
     iFd = open("/proc/net/packet", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/net/packet : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not open /proc/net/packet : %s\n", lib_strerror(errno));
         return;
     }
     

@@ -203,7 +203,7 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
             pcKeyword = ppcArgV[1];
         } else if (iArgC == 3) {
             if (lib_strcmp("-s", ppcArgV[1])) {
-                printf("option error.\n");
+                fprintf(stderr, "option error.\n");
                 return  (-1);
             }
             pcKeyword = ppcArgV[2];
@@ -228,7 +228,7 @@ static INT  __tshellSysCmdHelp (INT  iArgC, PCHAR  ppcArgV[])
                 }
             } while (ulGetNum);
 #else
-            printf("sylixos do not have fnmatch().\n");
+            fprintf(stderr, "sylixos do not have fnmatch().\n");
             return  (-ERROR_TSHELL_EKEYWORD);
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
         } else if (ERROR_NONE == __tshellKeywordFind(pcKeyword, &pskwNode[0])) {
@@ -272,7 +272,7 @@ static INT  __tshellSysCmdFree (INT  iArgC, PCHAR  ppcArgV[])
 static INT  __tshellSysCmdVardel (INT  iArgC, PCHAR  ppcArgV[])
 {
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (-1);
     }
     
@@ -297,7 +297,7 @@ static INT  __tshellSysCmdSem (INT  iArgC, PCHAR  ppcArgV[])
     LW_OBJECT_HANDLE        ulId = LW_OBJECT_HANDLE_INVALID;
 
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     sscanf(ppcArgV[1], "%lx", &ulId);
@@ -324,7 +324,7 @@ static INT  __tshellSysCmdPart (INT  iArgC, PCHAR  ppcArgV[])
     LW_OBJECT_HANDLE        ulId = LW_OBJECT_HANDLE_INVALID;
 
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     sscanf(ppcArgV[1], "%lx", &ulId);
@@ -349,7 +349,7 @@ static INT  __tshellSysCmdEventSet (INT  iArgC, PCHAR  ppcArgV[])
     LW_OBJECT_HANDLE        ulId = LW_OBJECT_HANDLE_INVALID;
 
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     sscanf(ppcArgV[1], "%lx", &ulId);
@@ -374,7 +374,7 @@ static INT  __tshellSysCmdMsgq (INT  iArgC, PCHAR  ppcArgV[])
     LW_OBJECT_HANDLE        ulId = LW_OBJECT_HANDLE_INVALID;
 
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     sscanf(ppcArgV[1], "%lx", &ulId);
@@ -403,7 +403,7 @@ static INT  __tshellSysCmdTs (INT  iArgC, PCHAR  ppcArgV[])
     }
     
     if (sscanf(ppcArgV[1], "%d", &pid) != 1) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
 
@@ -430,7 +430,7 @@ static INT  __tshellSysCmdTp (INT  iArgC, PCHAR  ppcArgV[])
     }
     
     if (sscanf(ppcArgV[1], "%d", &pid) != 1) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
 
@@ -515,17 +515,16 @@ static INT  __tshellSysCmdMems (INT  iArgC, PCHAR  ppcArgV[])
         API_RegionShow(0);
     
     } else if (iArgC == 2) {
-        
         if (ppcArgV[1][0] < '0' ||
             ppcArgV[1][0] > '9') {
-            printf("option error.\n");
+            fprintf(stderr, "option error.\n");
             return  (-1);
         }
         sscanf(ppcArgV[1], "%lx", &ulId);
         
         API_RegionShow(ulId);
     } else {
-        printf("option error.\n");
+        fprintf(stderr, "option error.\n");
     }
     
     return  (ERROR_NONE);
@@ -547,7 +546,7 @@ static INT  __tshellSysCmdKill (INT  iArgC, PCHAR  ppcArgV[])
     if (iArgC == 2) {
         if (ppcArgV[1][0] < '0' ||
             ppcArgV[1][0] > '9') {
-            printf("option error.\n");
+            fprintf(stderr, "option error.\n");
             return  (-1);
         }
         
@@ -559,7 +558,7 @@ static INT  __tshellSysCmdKill (INT  iArgC, PCHAR  ppcArgV[])
     
     } else if (iArgC == 4) {
         if (lib_strcmp(ppcArgV[1], "-n")) {
-            printf("option error.\n");
+            fprintf(stderr, "option error.\n");
             return  (-1);
         }
         
@@ -571,8 +570,7 @@ static INT  __tshellSysCmdKill (INT  iArgC, PCHAR  ppcArgV[])
         return  (kill(ulId, iSigNum));
     
     } else {
-        
-        printf("option error.\n");
+        fprintf(stderr, "option error.\n");
         return  (-1);
     }
 }
@@ -596,7 +594,7 @@ static INT  __tshellSysCmdSigqueue (INT  iArgC, PCHAR  ppcArgV[])
     if (iArgC == 2) {
         if (ppcArgV[1][0] < '0' ||
             ppcArgV[1][0] > '9') {
-            printf("option error.\n");
+            fprintf(stderr, "option error.\n");
             return  (-1);
         }
         
@@ -608,7 +606,7 @@ static INT  __tshellSysCmdSigqueue (INT  iArgC, PCHAR  ppcArgV[])
     
     } else if (iArgC == 4) {
         if (lib_strcmp(ppcArgV[1], "-n")) {
-            printf("option error.\n");
+            fprintf(stderr, "option error.\n");
             return  (-1);
         }
         
@@ -620,7 +618,7 @@ static INT  __tshellSysCmdSigqueue (INT  iArgC, PCHAR  ppcArgV[])
         return  (sigqueue(ulId, iSigNum, sigvalue));
     
     } else {
-        printf("option error.\n");
+        fprintf(stderr, "option error.\n");
         return  (-1);
     }
 }
@@ -756,7 +754,7 @@ __invalid_date:
                 }
             }
         } else {
-            printf("option error.\n");
+            fprintf(stderr, "option error.\n");
             return  (PX_ERROR);
         }
         
@@ -1034,7 +1032,8 @@ static INT  __tshellSysCmdVarload (INT  iArgC, PCHAR  ppcArgV[])
         API_TShellColorRefresh();                                       /*  更新颜色方案                */
         printf("envionment variables load from %s success.\n", pcFile);
     } else {
-        printf("envionment variables load from %s fail, error : %s\n", pcFile, lib_strerror(errno));
+        fprintf(stderr, "envionment variables load from %s fail, error : %s\n", 
+                pcFile, lib_strerror(errno));
     }
     
     return  (iError);
@@ -1064,7 +1063,8 @@ static INT  __tshellSysCmdVarsave (INT  iArgC, PCHAR  ppcArgV[])
     if (iError == ERROR_NONE) {
         printf("envionment variables save to %s success.\n", pcFile);
     } else {
-        printf("envionment variables save to %s fail, error : %s\n", pcFile, lib_strerror(errno));
+        fprintf(stderr, "envionment variables save to %s fail, error : %s\n", 
+                pcFile, lib_strerror(errno));
     }
     
     return  (iError);
@@ -1113,7 +1113,7 @@ static INT  __tshellSysCmdTty (INT  iArgC, PCHAR  ppcArgV[])
     if (isatty(STD_OUT)) {
         printf("%s\n", ttyname(STD_OUT));
     } else {
-        printf("std file is not a tty device.\n");
+        fprintf(stderr, "std file is not a tty device.\n");
     }
     
     return  (ERROR_NONE);
@@ -1184,7 +1184,7 @@ static INT  __tshellSysCmdRestart (INT  iArgC, PCHAR  ppcArgV[])
     ULONG                   ulArg = 0ul;
 
     if (iArgC != 3) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     sscanf(ppcArgV[1], "%lx", &ulId);
@@ -1213,7 +1213,7 @@ static INT  __tshellSysCmdSprio (INT  iArgC, PCHAR  ppcArgV[])
     ULONG   ulId  = LW_OBJECT_HANDLE_INVALID;
 
     if (iArgC != 3) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
@@ -1222,12 +1222,12 @@ static INT  __tshellSysCmdSprio (INT  iArgC, PCHAR  ppcArgV[])
     
     if ((iPrio <  API_KernelGetPriorityMin()) || 
         (iPrio >= API_KernelGetPriorityMax())) {
-        printf("priority invalidate.\n");
+        fprintf(stderr, "priority invalidate.\n");
         return  (PX_ERROR);
     }
     
     if (API_ThreadSetPriority(ulId, (UINT8)iPrio) != ERROR_NONE) {
-        printf("can not set thread priority error : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not set thread priority error : %s\n", lib_strerror(errno));
         return  (PX_ERROR);
     }
     
@@ -1258,7 +1258,7 @@ static INT  __tshellSysCmdRenice (INT  iArgC, PCHAR  ppcArgV[])
     
     if (iArgC < 3) {
 __arg_error:
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
@@ -1305,12 +1305,12 @@ __arg_error:
     iRet  = setpriority(iWhich, lId, iPrio + iNice);
     
     if (iRet < ERROR_NONE) {
-        printf("set priority error : %s.\n", lib_strerror(errno));
+        fprintf(stderr, "set priority error : %s.\n", lib_strerror(errno));
     }
     return  (iRet);
     
 #else
-    printf("do not support posix interface.\n");
+    fprintf(stderr, "do not support posix interface.\n");
     return  (PX_ERROR);
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 }
@@ -1332,7 +1332,7 @@ static INT  __tshellSysCmdLogFileAdd (INT  iArgC, PCHAR  ppcArgV[])
     INT         iFdNew = PX_ERROR;
 
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
@@ -1340,7 +1340,7 @@ static INT  __tshellSysCmdLogFileAdd (INT  iArgC, PCHAR  ppcArgV[])
     
     sscanf(ppcArgV[1], "%d", &iFdNew);
     if (iFdNew == PX_ERROR) {
-        printf("file error.\n");
+        fprintf(stderr, "file error.\n");
         return  (PX_ERROR);
     }
     
@@ -1369,7 +1369,7 @@ static INT  __tshellSysCmdLogFileClear (INT  iArgC, PCHAR  ppcArgV[])
     INT         iFdNew = PX_ERROR;
 
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
@@ -1377,7 +1377,7 @@ static INT  __tshellSysCmdLogFileClear (INT  iArgC, PCHAR  ppcArgV[])
     
     sscanf(ppcArgV[1], "%d", &iFdNew);
     if (iFdNew == PX_ERROR) {
-        printf("file error.\n");
+        fprintf(stderr, "file error.\n");
         return  (PX_ERROR);
     }
     
@@ -1475,13 +1475,13 @@ static INT  __tshellSysCmdHwclock (INT  iArgC, PCHAR  ppcArgV[])
     CHAR        cTimeBuffer[32];
 
     if (iArgC != 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
     if (lib_strcmp("--show", ppcArgV[1]) == 0) {                        /*  显示硬件时钟                */
         if (API_RtcGet(&time) < 0) {
-            printf("can not get RTC info. error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not get RTC info. error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         } else {
             printf("%s\n", lib_ctime_r(&time, cTimeBuffer));
@@ -1489,18 +1489,18 @@ static INT  __tshellSysCmdHwclock (INT  iArgC, PCHAR  ppcArgV[])
     
     } else if (lib_strcmp("--hctosys", ppcArgV[1]) == 0) {              /*  硬件时钟与系统时间同步      */
         if (API_RtcToSys() < 0) {
-            printf("can not sync RTC to system clock. error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not sync RTC to system clock. error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
     
     } else if (lib_strcmp("--systohc", ppcArgV[1]) == 0) {              /*  系统时间与硬件时钟同步      */
         if (API_SysToRtc() < 0) {
-            printf("can not sync system clock to RTC. error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not sync system clock to RTC. error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
     
     } else {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
@@ -1548,7 +1548,7 @@ static INT  __tshellSysCmdCrypt (INT  iArgC, PCHAR  ppcArgV[])
     CHAR    cResBuf[PASS_MAX];
 
     if (iArgC != 3) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
@@ -1577,7 +1577,7 @@ static INT  __tshellSysCmdHostname (INT  iArgC, PCHAR  ppcArgV[])
         printf("hostname is %s\n", cHostName);
     } else {
         if (sethostname(ppcArgV[1], lib_strlen(ppcArgV[1]))) {
-            printf("sethostname error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "set hostname error : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
     }
@@ -1730,7 +1730,8 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
             errno     = ENOSYS;
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */
             if (!pvMonitor) {
-                printf("can not create monitor net upload path error : %s.\n", lib_strerror(errno));
+                fprintf(stderr, "can not create monitor net upload path error : %s.\n", 
+                        lib_strerror(errno));
                 return  (PX_ERROR);
             }
             bIsNet = LW_TRUE;
@@ -1746,7 +1747,8 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
             errno     = ENOSYS;
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
             if (!pvMonitor) {
-                printf("can not create monitor file upload path error : %s.\n", lib_strerror(errno));
+                fprintf(stderr, "can not create monitor file upload path error : %s.\n", 
+                        lib_strerror(errno));
                 return  (PX_ERROR);
             }
             bIsNet = LW_FALSE;
@@ -1771,7 +1773,8 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
         if (bIsNet) {
 #if LW_CFG_NET_EN > 0
             if (API_MonitorNetUploadDelete(pvMonitor)) {
-                printf("can not stop net upload monitor error : %s.\n", lib_strerror(errno));
+                fprintf(stderr, "can not stop net upload monitor error : %s.\n", 
+                        lib_strerror(errno));
                 return  (PX_ERROR);
             
             } else {
@@ -1784,7 +1787,8 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
         } else {
 #if LW_CFG_DEVICE_EN > 0
             if (API_MonitorFileUploadDelete(pvMonitor)) {
-                printf("can not stop file upload monitor error : %s.\n", lib_strerror(errno));
+                fprintf(stderr, "can not stop file upload monitor error : %s.\n", 
+                        lib_strerror(errno));
                 return  (PX_ERROR);
             
             } else {
@@ -1865,7 +1869,7 @@ static INT  __tshellSysCmdMonitor (INT  iArgC, PCHAR  ppcArgV[])
     }
     
 __inval_args:
-    printf("argument error.\n");
+    fprintf(stderr, "argument error.\n");
     return  (PX_ERROR);
 }
 
@@ -1887,7 +1891,7 @@ static INT  __tshellSysCmdLspci (INT  iArgC, PCHAR  ppcArgV[])
     
     iFd = open("/proc/pci", O_RDONLY);
     if (iFd < 0) {
-        printf("can not open /proc/pci : %s\n", lib_strerror(errno));
+        fprintf(stderr, "can not open /proc/pci : %s\n", lib_strerror(errno));
         return  (PX_ERROR);
     }
     
@@ -1931,7 +1935,7 @@ static INT  __tshellSysCmdAffinity (INT  iArgC, PCHAR  ppcArgV[])
         
         iFd = open("/proc/kernel/affinity", O_RDONLY);
         if (iFd < 0) {
-            printf("can not open /proc/kernel/affinity : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not open /proc/kernel/affinity : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
         
@@ -1949,7 +1953,7 @@ static INT  __tshellSysCmdAffinity (INT  iArgC, PCHAR  ppcArgV[])
     
     if (ppcArgV[1][0] < '0' ||
         ppcArgV[1][0] > '9') {
-        printf("option error.\n");
+        fprintf(stderr, "option error.\n");
         return  (-1);
     }
     
@@ -1972,8 +1976,8 @@ static INT  __tshellSysCmdAffinity (INT  iArgC, PCHAR  ppcArgV[])
         if (iRet == ERROR_NONE) {
             printf("affinity clear %s 0x%lx ok.\n", pcTarget, ulId);
         } else {
-            printf("affinity clear %s 0x%lx fail: %s.\n", 
-                   pcTarget, ulId, lib_strerror(errno));
+            fprintf(stderr, "affinity clear %s 0x%lx fail: %s.\n", 
+                    pcTarget, ulId, lib_strerror(errno));
         }
     
     } else {
@@ -1988,8 +1992,8 @@ static INT  __tshellSysCmdAffinity (INT  iArgC, PCHAR  ppcArgV[])
             printf("affinity set %s 0x%lx to cpu %ld ok.\n", 
                    pcTarget, ulId, ulCPUId);
         } else {
-            printf("affinity set %s 0x%lx to cpu %ld fail: %s.\n", 
-                   pcTarget, ulId, ulCPUId, lib_strerror(errno));
+            fprintf(stderr, "affinity set %s 0x%lx to cpu %ld fail: %s.\n", 
+                    pcTarget, ulId, ulCPUId, lib_strerror(errno));
         }
     }
         

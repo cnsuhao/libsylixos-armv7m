@@ -106,13 +106,13 @@ static INT  __tshellFsCmdXmodems (INT  iArgC, PCHAR  ppcArgV[])
     
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
     iFile = open(ppcArgV[1], O_RDONLY);
     if (iFile < 0) {
-        printf("can not open source file!\n");
+        fprintf(stderr, "can not open source file!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -169,7 +169,7 @@ static INT  __tshellFsCmdXmodems (INT  iArgC, PCHAR  ppcArgV[])
         sstRecvNum = read(STD_IN, &ucRead, 1);
         if (sstRecvNum <= 0) {
             API_ThreadCleanupPop(LW_TRUE);
-            printf("standard in device error!\n");
+            fprintf(stderr, "standard in device error!\n");
             return  (PX_ERROR);
         }
         
@@ -246,7 +246,7 @@ static INT  __tshellFsCmdXmodemr (INT  iArgC, PCHAR  ppcArgV[])
     
     
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -272,7 +272,7 @@ __re_select:
     
     iFile = open(ppcArgV[1], (O_WRONLY | O_CREAT | O_TRUNC), 0666);     /*  创建文件                    */
     if (iFile < 0) {
-        printf("can not open destination file!\n");
+        fprintf(stderr, "can not open destination file!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -300,7 +300,7 @@ __re_select:
         sstRecvNum = read(STD_IN, &ucTemp[stTotalNum], __LW_XMODEM_PACKET_LEN - stTotalNum);
         if (sstRecvNum <= 0) {
             API_ThreadCleanupPop(LW_TRUE);
-            printf("standard in device error!\n");
+            fprintf(stderr, "standard in device error!\n");
             return  (PX_ERROR);
         }
         if (ucTemp[0] == __LW_XMODEM_EOT) {                             /*  接收结束                    */
@@ -323,7 +323,7 @@ __re_select:
             } else {
                 __LW_XMODEM_SEND_CMD(__LW_XMODEM_CAN);                  /*  结束通信                    */
                 API_ThreadCleanupPop(LW_TRUE);
-                printf("sequence number error!\n");
+                fprintf(stderr, "sequence number error!\n");
                 return  (PX_ERROR);
             }
             continue;
@@ -351,7 +351,7 @@ __re_select:
         if (sstWriteNum != __LW_XMODEM_DATA_LEN) {
             __LW_XMODEM_SEND_CMD(__LW_XMODEM_CAN);                      /*  结束通信                    */
             API_ThreadCleanupPop(LW_TRUE);
-            printf("file error!\n");
+            fprintf(stderr, "write file error %s!\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
         

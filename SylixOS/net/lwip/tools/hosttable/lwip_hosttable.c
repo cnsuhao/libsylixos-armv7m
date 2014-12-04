@@ -343,7 +343,7 @@ static INT  __tshellHostTable (INT  iArgC, PCHAR  *ppcArgV)
         (lib_strncmp(ppcArgV[1], "-s", 3) == 0)) {                      /*  添加主机地址映射            */
         
         if (!inet_aton(ppcArgV[3], &inaddr)) {
-            printf("inaddr error.\n");
+            fprintf(stderr, "inaddr error.\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         
@@ -355,7 +355,7 @@ static INT  __tshellHostTable (INT  iArgC, PCHAR  *ppcArgV)
         return  (API_INetHostTableDelItem(ppcArgV[2]));                 /*  删除条目                    */
         
     } else {
-        printf("argments error!\n");                                    /*  参数错误                    */
+        fprintf(stderr, "argments error!\n");                           /*  参数错误                    */
         return  (-ERROR_TSHELL_EPARAM);
     }
 }

@@ -1217,11 +1217,11 @@ static INT  __tshellTftp (INT  iArgC, PCHAR  *ppcArgV)
     PCHAR   pcRemoteFile;
 
     if ((iArgC != 6) && (iArgC != 5)) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     if (lib_strcmp(ppcArgV[1], "-i")) {
-        printf("must use -i option (binary type)!\n");
+        fprintf(stderr, "must use -i option (binary type)!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
@@ -1244,15 +1244,15 @@ static INT  __tshellTftp (INT  iArgC, PCHAR  *ppcArgV)
         printf("sending file...\n");
         iError = API_INetTftpSend(ppcArgV[2], pcRemoteFile, pcLocalFile);
     } else {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     if (iError < 0) {
         if (errno == EHOSTUNREACH) {
-            printf("can not find host.\n");
+            fprintf(stderr, "can not find host.\n");
         } else {
-            printf("some error occur, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "some error occur, error : %s\n", lib_strerror(errno));
         }
     } else {
         printf("file transfer completed.\n");

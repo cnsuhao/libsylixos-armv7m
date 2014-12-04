@@ -248,7 +248,7 @@ INT  API_INetPing (struct in_addr  *pinaddr, INT  iTimes, INT  iDataSize, INT  i
     for (i = 0; ;) {
         if (__inetPingSend(iSock, *pinaddr, iDataSize, &usSeqRecv) < 0) { 
                                                                         /*  发送 icmp 数据包            */
-            printf("icmp packet send error.\n");
+            fprintf(stderr, "icmp packet send error.\n");
         }
         i++;                                                            /*  发送次数 ++                 */
         
@@ -328,7 +328,7 @@ static INT  __tshellPing (INT  iArgC, PCHAR  *ppcArgV)
            INT      iTTL      = 255;
 
     if (iArgC <= 1) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -346,26 +346,26 @@ static INT  __tshellPing (INT  iArgC, PCHAR  *ppcArgV)
                 sscanf(ppcArgV[i + 1], "%i", &iDataSize);               /*  获得数据大小                */
                 if ((iDataSize > (65000 - sizeof(struct icmp_echo_hdr))) ||
                     (iDataSize < 1)) {
-                    printf("data size error!\n");
+                    fprintf(stderr, "data size error!\n");
                     return  (-ERROR_TSHELL_EPARAM);
                 }
                 
             } else if (lib_strcmp(ppcArgV[i], "-i") == 0) {             /*  获得 TTL 的值               */
                 sscanf(ppcArgV[i + 1], "%i", &iTTL);
                 if ((iTTL < 1) || (iTTL > 255)) {
-                    printf("TTL error!\n");
+                    fprintf(stderr, "TTL error!\n");
                     return  (-ERROR_TSHELL_EPARAM);
                 }
             
             } else if (lib_strcmp(ppcArgV[i], "-w") == 0) {             /*  获得 timeout 的值           */
                 sscanf(ppcArgV[i + 1], "%i", &iTimeout);
                 if ((iTimeout < 1) || (iTimeout > 60000)) {
-                    printf("timeout error!\n");
+                    fprintf(stderr, "timeout error!\n");
                     return  (-ERROR_TSHELL_EPARAM);
                 }
                 
             } else {
-                printf("argments error!\n");                            /*  参数错误                    */
+                fprintf(stderr, "argments error!\n");                   /*  参数错误                    */
                 return  (-ERROR_TSHELL_EPARAM);
             }
         }

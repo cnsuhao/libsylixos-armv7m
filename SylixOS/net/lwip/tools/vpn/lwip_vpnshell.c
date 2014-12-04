@@ -80,40 +80,40 @@ INT  __tshellVpnOpen (INT  iArgC, PCHAR  *ppcArgV)
 
 
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     iFd = open(ppcArgV[1], O_RDONLY);
     if (iFd < 0) {
-        printf("can not read the configration file!\n");
+        fprintf(stderr, "can not read the configration file %s!\n", lib_strerror(errno));
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     if (fstat(iFd, &statFile) < 0) {
         close(iFd);
-        printf("configration file error!\n");
+        fprintf(stderr, "configration file error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     if ((statFile.st_size) < 1 ||
         (statFile.st_size) > 1024) {                                    /*  配置文件应该在 1K 以内      */
         close(iFd);
-        printf("configration file size error!\n");
+        fprintf(stderr, "configration file size error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     pcBuffer = (PCHAR)__SHEAP_ALLOC((size_t)(statFile.st_size) + 1);
     if (pcBuffer == LW_NULL) {
         close(iFd);
-        printf("system low memory!\n");
+        fprintf(stderr, "system low memory!\n");
         return  (-ERROR_SYSTEM_LOW_MEMORY);
     }
 
     if (read(iFd, pcBuffer, (size_t)statFile.st_size) != (ssize_t)statFile.st_size) {
         __SHEAP_FREE(pcBuffer);
         close(iFd);
-        printf("system low memory!\n");
+        fprintf(stderr, "system low memory!\n");
         return  (-ERROR_SYSTEM_LOW_MEMORY);
     }
 
@@ -126,7 +126,7 @@ INT  __tshellVpnOpen (INT  iArgC, PCHAR  *ppcArgV)
     while ((*pcTemp == ' ') || (*pcTemp == '\t')) {                     /*  忽略空白字符                */
         pcTemp++;
         if ((pcTemp - pcBuffer) > (INT)statFile.st_size) {              /*  超过文件大小                */
-            printf("configration file size error!\n");
+            fprintf(stderr, "configration file size error!\n");
             goto    __error_handle;
         }
     }
@@ -136,7 +136,7 @@ INT  __tshellVpnOpen (INT  iArgC, PCHAR  *ppcArgV)
         do {
             pcTemp++;                                                   /*  找到下一参数                */
             if ((pcTemp - pcBuffer) > (INT)statFile.st_size) {          /*  超过文件大小                */
-                printf("configration file size error!\n");
+                fprintf(stderr, "configration file size error!\n");
                 goto    __error_handle;
             }
         } while ((*pcTemp != '\r') && (*pcTemp != '\n'));
@@ -149,7 +149,7 @@ INT  __tshellVpnOpen (INT  iArgC, PCHAR  *ppcArgV)
                (*pcTemp == '\r')) {
             pcTemp++;                                                   /*  忽略空白字符                */
             if ((pcTemp - pcBuffer) > (INT)statFile.st_size) {          /*  超过文件大小                */
-                printf("configration file size error!\n");
+                fprintf(stderr, "configration file size error!\n");
                 goto    __error_handle;
             }
         }
@@ -208,7 +208,7 @@ INT  __tshellVpnOpen (INT  iArgC, PCHAR  *ppcArgV)
                                      iVerifyOpt,
                                      ucMac);                            /*  创建 vpn 客户机链接         */
     if (iError < ERROR_NONE) {
-        printf("can not create the vpn connection!\n");
+        fprintf(stderr, "can not create the vpn connection!\n");
         goto    __error_handle;
     }
     
@@ -235,7 +235,7 @@ __error_handle:
 INT  __tshellVpnClose (INT  iArgC, PCHAR  *ppcArgV)
 {
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 

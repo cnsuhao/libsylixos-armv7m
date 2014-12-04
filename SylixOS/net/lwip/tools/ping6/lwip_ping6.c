@@ -128,7 +128,7 @@ static INT  __inetPing6Prepare (struct icmp6_echo_hdr   *icmp6hdrEcho,
         netif = netif_find((PCHAR)pcNetif);
         if (netif == LW_NULL) {
             UNLOCK_TCPIP_CORE();
-            printf("Invalid interface.\n");
+            fprintf(stderr, "Invalid interface.\n");
             return  (PX_ERROR);
         }
     } else {
@@ -138,11 +138,11 @@ static INT  __inetPing6Prepare (struct icmp6_echo_hdr   *icmp6hdrEcho,
     UNLOCK_TCPIP_CORE();
     
     if (iError == -1) {
-        printf("You must determine net interface.\n");
+        fprintf(stderr, "You must determine net interface.\n");
         return  (PX_ERROR);
     
     } else if (iError == -2) {
-        printf("Unreachable destination.\n");
+        fprintf(stderr, "Unreachable destination.\n");
         return  (PX_ERROR);
     }
     
@@ -373,7 +373,7 @@ INT  API_INetPing6 (struct in6_addr  *pin6addr,
     for (i = 0; ;) {
         if (__inetPing6Send(iSock, pin6addr, iDataSize, pcNetif, &usSeqRecv) < 0) {
                                                                         /*  发送 icmp 数据包            */
-            printf("icmp packet send error.\n");
+            fprintf(stderr, "icmp packet send error.\n");
         }
         i++;                                                            /*  发送次数 ++                 */
         
@@ -454,7 +454,7 @@ static INT  __tshellPing6 (INT  iArgC, PCHAR  *ppcArgV)
            INT      iTimeout  = 3000;
 
     if (iArgC <= 1) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -472,14 +472,14 @@ static INT  __tshellPing6 (INT  iArgC, PCHAR  *ppcArgV)
                 sscanf(ppcArgV[i + 1], "%i", &iDataSize);               /*  获得数据大小                */
                 if ((iDataSize > (65000 - sizeof(struct icmp_echo_hdr))) ||
                     (iDataSize < 1)) {
-                    printf("data size error!\n");
+                    fprintf(stderr, "data size error!\n");
                     return  (-ERROR_TSHELL_EPARAM);
                 }
             
             } else if (lib_strcmp(ppcArgV[i], "-w") == 0) {             /*  获得 timeout 的值           */
                 sscanf(ppcArgV[i + 1], "%i", &iTimeout);
                 if ((iTimeout < 1) || (iTimeout > 60000)) {
-                    printf("timeout error!\n");
+                    fprintf(stderr, "timeout error!\n");
                     return  (-ERROR_TSHELL_EPARAM);
                 }
                 
@@ -487,7 +487,7 @@ static INT  __tshellPing6 (INT  iArgC, PCHAR  *ppcArgV)
                 pcNetif = ppcArgV[i + 1];
                 
             } else {
-                printf("argments error!\n");                            /*  参数错误                    */
+                fprintf(stderr, "argments error!\n");                   /*  参数错误                    */
                 return  (-ERROR_TSHELL_EPARAM);
             }
         }

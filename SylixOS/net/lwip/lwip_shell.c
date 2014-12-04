@@ -461,7 +461,7 @@ static VOID  __netIfSet (struct netif  *netif, CPCHAR  pcItem, ip_addr_t  ipaddr
     } else if (lib_strcmp(pcItem, "gateway") == 0) {
         netifapi_netif_set_addr(netif, &ipaddrInet, &ipaddrMask, &ipaddr);
     } else {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
     }
 }
 /*********************************************************************************************************
@@ -503,11 +503,11 @@ static INT  __tshellIfconfig (INT  iArgC, PCHAR  *ppcArgV)
             INT     iDnsIndex = 0;
             sscanf(ppcArgV[2], "%d", &iDnsIndex);
             if (iDnsIndex >= DNS_MAX_SERVERS) {
-                printf("argments error!\n");
+                fprintf(stderr, "argments error!\n");
                 return  (-ERROR_TSHELL_EPARAM);
             }
             if (inet_aton(ppcArgV[3], &inaddr) == 0) {                  /*  获得 IP 地址                */
-                printf("address error.\n");
+                fprintf(stderr, "address error.\n");
                 return  (-ERROR_TSHELL_EPARAM);
             }
             ipaddr.addr = inaddr.s_addr;
@@ -519,12 +519,12 @@ static INT  __tshellIfconfig (INT  iArgC, PCHAR  *ppcArgV)
             INT     iIndex;
             netif = netif_find(ppcArgV[1]);                             /*  查询网络接口                */
             if (netif == LW_NULL) {
-                printf("can not find net interface.\n");
+                fprintf(stderr, "can not find net interface.\n");
                 return  (-ERROR_TSHELL_EPARAM);
             }
             for (iIndex = 2; iIndex < (iArgC - 1); iIndex += 2) {       /*  连续设置参数                */
                 if (inet_aton(ppcArgV[iIndex + 1], &inaddr) == 0) {     /*  获得 IP 地址                */
-                    printf("address error.\n");
+                    fprintf(stderr, "address error.\n");
                     return  (-ERROR_TSHELL_EPARAM);
                 }
                 ipaddr.addr = inaddr.s_addr;
@@ -551,7 +551,7 @@ static INT  __tshellIfUp (INT  iArgC, PCHAR  *ppcArgV)
     BOOL          bShutDownDHCP = LW_FALSE;                             /*  是否强制关闭 DHCP           */
 
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     } else if (iArgC > 2) {
         if (lib_strcmp(ppcArgV[2], "-dhcp") == 0) {
@@ -563,7 +563,7 @@ static INT  __tshellIfUp (INT  iArgC, PCHAR  *ppcArgV)
 
     netif = netif_find(ppcArgV[1]);                                     /*  查询网络接口                */
     if (netif == LW_NULL) {
-        printf("can not find net interface.\n");
+        fprintf(stderr, "can not find net interface.\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
@@ -625,18 +625,18 @@ static INT  __tshellIfDown (INT  iArgC, PCHAR  *ppcArgV)
     struct netif *netif;
 
     if (iArgC != 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     netif = netif_find(ppcArgV[1]);                                     /*  查询网络接口                */
     if (netif == LW_NULL) {
-        printf("can not find net interface.\n");
+        fprintf(stderr, "can not find net interface.\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
     if (0 == netif_is_up(netif)) {
-        printf("net interface already set down.\n");
+        fprintf(stderr, "net interface already set down.\n");
         return  (PX_ERROR);
     }
 
@@ -684,7 +684,7 @@ static INT  __tshellIfRouter (INT  iArgC, PCHAR  *ppcArgV)
 
     netif = netif_find(ppcArgV[1]);                                     /*  查询网络接口                */
     if (netif == LW_NULL) {
-        printf("can not find net interface.\n");
+        fprintf(stderr, "can not find net interface.\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 
@@ -705,7 +705,7 @@ static INT  __tshellIfRouter (INT  iArgC, PCHAR  *ppcArgV)
 static INT  __tshellArp (INT  iArgC, PCHAR  *ppcArgV)
 {
     if (iArgC < 2) {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
     
@@ -716,7 +716,7 @@ static INT  __tshellArp (INT  iArgC, PCHAR  *ppcArgV)
         
         iFd = open("/proc/net/arp", O_RDONLY);
         if (iFd < 0) {
-            printf("can not open /proc/net/arp : %s\n", lib_strerror(errno));
+            fprintf(stderr, "can not open /proc/net/arp : %s\n", lib_strerror(errno));
             return  (PX_ERROR);
         }
         
@@ -739,20 +739,20 @@ static INT  __tshellArp (INT  iArgC, PCHAR  *ppcArgV)
         err_t           err;
         
         if (iArgC != 4) {
-            printf("argments error!\n");
+            fprintf(stderr, "argments error!\n");
             return  (-ERROR_TSHELL_EPARAM);
         }
         
         ipaddr.addr = ipaddr_addr(ppcArgV[2]);
         if (ipaddr.addr == IPADDR_NONE) {
-            printf("bad inet address : %s\n", ppcArgV[2]);
+            fprintf(stderr, "bad inet address : %s\n", ppcArgV[2]);
             return  (-ERROR_TSHELL_EPARAM);
         }
         
         if (sscanf(ppcArgV[3], "%02x:%02x:%02x:%02x:%02x:%02x",
                    &iTemp[0], &iTemp[1], &iTemp[2], 
                    &iTemp[3], &iTemp[4], &iTemp[5]) != 6) {
-            printf("bad physical address : %s\n", ppcArgV[3]);
+            fprintf(stderr, "bad physical address : %s\n", ppcArgV[3]);
             return  (-ERROR_TSHELL_EPARAM);
         }
         
@@ -786,7 +786,7 @@ static INT  __tshellArp (INT  iArgC, PCHAR  *ppcArgV)
         
         ipaddr.addr = ipaddr_addr(ppcArgV[2]);
         if (ipaddr.addr == IPADDR_NONE) {
-            printf("bad inet address : %s\n", ppcArgV[2]);
+            fprintf(stderr, "bad inet address : %s\n", ppcArgV[2]);
             return  (-ERROR_TSHELL_EPARAM);
         }
         
@@ -797,7 +797,7 @@ static INT  __tshellArp (INT  iArgC, PCHAR  *ppcArgV)
         return  (err ? PX_ERROR : ERROR_NONE);
     
     } else {
-        printf("argments error!\n");
+        fprintf(stderr, "argments error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
 }

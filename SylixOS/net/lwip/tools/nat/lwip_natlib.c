@@ -780,7 +780,7 @@ VOID  __natShow (ip_addr_t  *pipaddr)
      */
     iosFdGetType(STD_OUT, &iType);
     if (iType == LW_DRV_TYPE_SOCKET) {
-        printf("NAT networking show do not support out put by socket fd!\n");
+        fprintf(stderr, "NAT networking show do not support out put by socket fd!\n");
         return;
     }
     

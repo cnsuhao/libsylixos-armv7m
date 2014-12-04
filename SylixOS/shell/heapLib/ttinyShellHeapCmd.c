@@ -229,13 +229,13 @@ static INT  __tshellHeapCmdLeakChkStart (INT  iArgC, PCHAR  ppcArgV[])
     INT             iCount;
     
     if (iArgC < 2) {
-        printf("argument error.\n");
+        fprintf(stderr, "argument error.\n");
         return  (PX_ERROR);
     }
     
     iCount = lib_atoi(ppcArgV[1]);
     if (iCount < 1024) {
-        printf("option error. (min:1024)\n");
+        fprintf(stderr, "option error. (min:1024)\n");
         return  (PX_ERROR);
     }
     
@@ -254,7 +254,7 @@ static INT  __tshellHeapCmdLeakChkStart (INT  iArgC, PCHAR  ppcArgV[])
             (__HEAP_TRACE_NODE *)__SHEAP_ALLOC(sizeof(__HEAP_TRACE_NODE) * (size_t)iCount);
         if (_G_phtnNodeBuffer == LW_NULL) {
             API_AtomicDec(&_G_atomicHeapTraceEn);
-            printf("system low memory.\n");
+            fprintf(stderr, "system low memory.\n");
             return  (PX_ERROR);
         }
         _G_ulHeapTracePart = API_PartitionCreate("heap_trace", (PVOID)_G_phtnNodeBuffer,
@@ -264,7 +264,7 @@ static INT  __tshellHeapCmdLeakChkStart (INT  iArgC, PCHAR  ppcArgV[])
                                              LW_NULL);
         if (_G_ulHeapTracePart == LW_OBJECT_HANDLE_INVALID) {
             API_AtomicDec(&_G_atomicHeapTraceEn);
-            printf("can not create heap_trace.\n");
+            fprintf(stderr, "can not create heap_trace.\n");
             __SHEAP_FREE(_G_phtnNodeBuffer);
             return  (PX_ERROR);                                         /*  无法创建跟踪缓存            */
         }

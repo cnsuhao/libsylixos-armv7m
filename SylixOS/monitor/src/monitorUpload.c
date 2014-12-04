@@ -282,13 +282,13 @@ static INT  __monitorUploadHello (INT  iFd)
                             MONITOR_EVENT_VERSION);
                             
     if (waitread(iFd, &tvTo) < 1) {
-        printf("remote no response.\n");
+        fprintf(stderr, "remote no response.\n");
         return  (PX_ERROR);
     }
     
     sstLen = read(iFd, cStart, 16);
     if ((sstLen < 5) || lib_strncmp(cStart, "start", 5)) {
-        printf("remote response error.\n");
+        fprintf(stderr, "remote response error.\n");
         return  (PX_ERROR);
     }
     
@@ -324,16 +324,16 @@ static PVOID  __monitorUploadThread (PVOID  pvArg)
                                         ucEvent, sizeof(ucEvent), 
                                         MONITOR_EVENT_TIMEOUT);
             if (sstLen < 0) {                                           /*  节点删除                    */
-                printf("monitor event buffer crash.\n"
-                       "you must stop monitor manually.\n");
+                fprintf(stderr, "monitor event buffer crash.\n"
+                                "you must stop monitor manually.\n");
                 bMustStop = LW_TRUE;
                 
             } else if (sstLen > 0) {                                    /*  接收到事件信息              */
                 sstLen = write(pmu->UPLOAD_iFd, ucEvent, (size_t)sstLen);
                 if (sstLen <= 0) {
-                    printf("monitor can not update event to server, error : %s\n"
-                           "you must stop monitor manually.\n",
-                           lib_strerror(errno));
+                    fprintf(stderr, "monitor can not update event to server, error : %s\n"
+                                    "you must stop monitor manually.\n",
+                                    lib_strerror(errno));
                     bMustStop = LW_TRUE;
                 }
             }
