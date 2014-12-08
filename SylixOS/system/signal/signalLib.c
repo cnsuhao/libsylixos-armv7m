@@ -188,14 +188,19 @@ static VOID  __signalExitHandle (INT  iSigNo, struct siginfo *psiginfo)
     }
 #endif                                                                  /*  LW_CFG_LOG_LIB_EN > 0       */
     
-    if ((iSigNo == SIGSEGV) || (iSigNo == SIGILL)) {
+    if ((iSigNo == SIGSEGV) || 
+        (iSigNo == SIGILL)) {
         __LW_FATAL_ERROR_HOOK(pid, API_ThreadIdSelf(), psiginfo);
     }
                                                                         /*  强制信号                    */
-    if ((iSigNo == SIGSEGV) || (iSigNo == SIGABRT) || (iSigNo == SIGKILL)) {    
+    if ((iSigNo == SIGSEGV) || 
+        (iSigNo == SIGILL)  ||
+        (iSigNo == SIGABRT) || 
+        (iSigNo == SIGKILL)) {
 #if LW_CFG_MODULELOADER_EN > 0
         if (pid > 0) {
             vprocExitModeSet(pid, LW_VPROC_EXIT_FORCE);                 /*  强制进程退出                */
+            vprocSetForceTerm(pid);
         }
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
         _exit(EXIT_FAILURE);                                            /*  进程错误退出                */
@@ -577,6 +582,7 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx,
         switch (iSigNo) {                                               /*  默认处理句柄                */
         
         case SIGINT:
+        case SIGQUIT:
         case SIGFPE:
         case SIGKILL:
         case SIGBUS:

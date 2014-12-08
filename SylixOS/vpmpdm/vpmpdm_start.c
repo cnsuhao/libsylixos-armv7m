@@ -95,7 +95,7 @@ __attribute__((destructor)) static void _deinit_env (void)
  */
 int _start (int argc, char **argv, char **env)
 {
-    int  i;
+    int  i, ret;
     int  oldnum = 0;
     int  addnum = 0;
 
@@ -138,7 +138,10 @@ int _start (int argc, char **argv, char **env)
     }
 
     errno = 0;
-    return  (pfuncMain(argc, argv, environ));
+    ret = pfuncMain(argc, argv, environ);
+    exit(ret);
+    
+    return  (ret);
 }
 
 /*

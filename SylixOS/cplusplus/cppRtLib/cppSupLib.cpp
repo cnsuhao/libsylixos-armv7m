@@ -268,11 +268,12 @@ void __cxa_finalize (void  *d)
 ** 功能描述: module 使用此函数执行 module 内部被 __cxa_atexit 安装的方法, (一般为析构函数)
 ** 输　入  : pvBase        动态库代码段基址
 **           stLen         动态库代码段长度
+**           bCall         是否调用函数
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-void __cxa_module_finalize (void *pvBase, size_t stLen)
+void __cxa_module_finalize (void *pvBase, size_t stLen, BOOL bCall)
 {
      LW_LIST_LINE         *plinTemp;
     __LW_CPP_FUNC_LIST   *pcppfl = LW_NULL;
@@ -286,7 +287,7 @@ void __cxa_module_finalize (void *pvBase, size_t stLen)
             ((PCHAR)pcppfl->CPPFL_pvHandle <  (PCHAR)pvBase + stLen)) {
             _List_Line_Del(&pcppfl->CPPFL_lineManage, &_G_plineCppFuncList);
             __LW_CPP_RT_UNLOCK();
-            if (pcppfl->CPPFL_pfunc) {
+            if (pcppfl->CPPFL_pfunc && bCall) {
                 pcppfl->CPPFL_pfunc(pcppfl->CPPFL_pvArg);
             }
             lib_free(pcppfl);

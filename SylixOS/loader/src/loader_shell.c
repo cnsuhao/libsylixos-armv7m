@@ -68,7 +68,7 @@ extern LW_LIST_LINE_HEADER      _G_plineVProcHeader;
 /*********************************************************************************************************
   º¯ÊýÉùÃ÷
 *********************************************************************************************************/
-VOID          moduleRebootHook(VOID);
+VOID          moduleRebootHook(INT  iRebootType);
 
 PVOIDFUNCPTR  __symbolFindHookSet(PVOIDFUNCPTR  pfuncSymbolFindHook);
 VOIDFUNCPTR   __symbolTraverseHookSet(VOIDFUNCPTR  pfuncSymbolTraverseHook);

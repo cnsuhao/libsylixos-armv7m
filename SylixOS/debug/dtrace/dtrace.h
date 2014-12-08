@@ -79,10 +79,10 @@ LW_API ULONG    API_DtraceSetRegs(PVOID  pvDtrace,
                                   const ARCH_REG_CTX  *pregctx);
 LW_API ULONG    API_DtraceGetMems(PVOID  pvDtrace, addr_t  ulAddr, PVOID  pvBuffer, size_t  stSize);
 LW_API ULONG    API_DtraceSetMems(PVOID  pvDtrace, addr_t  ulAddr, const PVOID  pvBuffer, size_t  stSize);
-LW_API ULONG    API_DtraceBreakpointInsert(PVOID  pvDtrace, addr_t  ulAddr, ULONG  *pulIns);
-LW_API ULONG    API_DtraceBreakpointRemove(PVOID  pvDtrace, addr_t  ulAddr, ULONG  ulIns);
-LW_API ULONG    API_DtraceWatchpointInsert(PVOID  pvDtrace, addr_t  ulAddr);
-LW_API ULONG    API_DtraceWatchpointRemove(PVOID  pvDtrace, addr_t  ulAddr);
+LW_API ULONG    API_DtraceBreakpointInsert(PVOID  pvDtrace, addr_t  ulAddr, size_t stSize, ULONG  *pulIns);
+LW_API ULONG    API_DtraceBreakpointRemove(PVOID  pvDtrace, addr_t  ulAddr, size_t stSize, ULONG  ulIns);
+LW_API ULONG    API_DtraceWatchpointInsert(PVOID  pvDtrace, addr_t  ulAddr, size_t stSize);
+LW_API ULONG    API_DtraceWatchpointRemove(PVOID  pvDtrace, addr_t  ulAddr, size_t stSize);
 LW_API ULONG    API_DtraceStopThread(PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread);
 LW_API ULONG    API_DtraceContinueThread(PVOID  pvDtrace, LW_OBJECT_HANDLE  ulThread);
 LW_API ULONG    API_DtraceStopProcess(PVOID  pvDtrace);
@@ -105,7 +105,7 @@ LW_API ULONG    API_DtraceSchedHook(LW_OBJECT_HANDLE  ulThreadOld, LW_OBJECT_HAN
 *********************************************************************************************************/
 
 #ifdef __SYLIXOS_KERNEL
-LW_API INT      API_DtraceBreakTrap(addr_t  ulAddr);
+LW_API INT      API_DtraceBreakTrap(addr_t  ulAddr, UINT  uiBpType);
 LW_API INT      API_DtraceAbortTrap(addr_t  ulAddr);
 LW_API INT      API_DtraceChildSig(pid_t pid, struct sigevent *psigevent, struct siginfo *psiginfo);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */

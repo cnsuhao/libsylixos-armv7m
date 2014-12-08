@@ -74,7 +74,7 @@
 /*********************************************************************************************************
   C++ 模块 atexit() 模块析构函数
 *********************************************************************************************************/
-extern void __cxa_module_finalize(void *pvBase, size_t stLen);
+extern void __cxa_module_finalize(void *pvBase, size_t stLen, BOOL bCall);
 /*********************************************************************************************************
   装载器判断文件是否可被装载 (进判断文件权限和类型, 不判断文件格式)
 *********************************************************************************************************/
@@ -474,11 +474,12 @@ static INT initArrayCall (LW_LD_EXEC_MODULE *pmodule)
 ** 函数名称: finiArrayCall
 ** 功能描述: 调用结束函数列表. (一般为 C++ 全局对象析构函数列表)
 ** 输　入  : pmodule       模块指针
+**           bRunFini      是否运行析构函数表.
 ** 输　出  : ERROR_NONE 表示没有错误, PX_ERROR 表示错误
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-static INT finiArrayCall (LW_LD_EXEC_MODULE *pmodule)
+static INT finiArrayCall (LW_LD_EXEC_MODULE *pmodule, BOOL  bRunFini)
 {
     INT             i;
     VOIDFUNCPTR     pfuncFini    = LW_NULL;
@@ -499,16 +500,19 @@ static INT finiArrayCall (LW_LD_EXEC_MODULE *pmodule)
             if (pmodTemp->EMOD_pfuncExit) {
                 pmodTemp->EMOD_pfuncExit();
             }
-
-            for (i = (INT)pmodTemp->EMOD_ulFiniArrCnt - 1; i >= 0; i--) {/*  逆序调用结束函数           */
-                pfuncFini = pmodTemp->EMOD_ppfuncFiniArray[i];
-                if (pfuncFini != LW_NULL && pfuncFini != (VOIDFUNCPTR)(~0)) {
-                    pfuncFini();
+            
+            if (bRunFini) {                                             /*  逆序调用结束函数           */
+                for (i = (INT)pmodTemp->EMOD_ulFiniArrCnt - 1; i >= 0; i--) {
+                    pfuncFini = pmodTemp->EMOD_ppfuncFiniArray[i];
+                    if (pfuncFini != LW_NULL && pfuncFini != (VOIDFUNCPTR)(~0)) {
+                        pfuncFini();
+                    }
                 }
             }
 
             __cxa_module_finalize(pmodTemp->EMOD_pvBaseAddr,
-                                  pmodTemp->EMOD_stLen);                /*  执行当前模块的 cxx_atexit   */
+                                  pmodTemp->EMOD_stLen,
+                                  bRunFini);                            /*  释放当前模块的 cxx_atexit   */
         }
 
         pringTemp = _list_ring_get_next(pringTemp);
@@ -591,17 +595,18 @@ static INT moduleDelRef (LW_LD_EXEC_MODULE *pmodule)
 /*********************************************************************************************************
 ** 函数名称: moduleRebootHook
 ** 功能描述: 系统重新启动时, 将调用所有内核模块的 module_exit 函数
-** 输　入  : NONE
+** 输　入  : iRebootType   重启类型
 ** 输　出  : NONE
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-VOID  moduleRebootHook (VOID)
+VOID  moduleRebootHook (INT  iRebootType)
 {
     LW_LD_VPROC        *pvproc = &_G_vprocKernel;
     LW_LD_EXEC_MODULE  *pmodule;
     LW_LIST_RING       *pringTemp;
     BOOL                bStart;
+    BOOL                bRunFini = (iRebootType == LW_REBOOT_FORCE) ? LW_FALSE : LW_TRUE;
 
     LW_VP_LOCK(pvproc);
     for (pringTemp  = pvproc->VP_ringModules, bStart = LW_TRUE;
@@ -614,7 +619,7 @@ VOID  moduleRebootHook (VOID)
         
         moduleCleanup(pmodule);
         
-        finiArrayCall(pmodule);
+        finiArrayCall(pmodule, bRunFini);
         
         LW_VP_LOCK(pvproc);
     }
@@ -810,7 +815,7 @@ INT  API_ModuleUnload (PVOID  pvModule)
 
     moduleDelRef(pmodule);
 
-    finiArrayCall(pmodule);                                             /*  调用c++析构函数代码         */
+    finiArrayCall(pmodule, LW_TRUE);                                    /*  调用c++析构函数代码         */
 
     LW_VP_LOCK(pmodule->EMOD_pvproc);
     __elfListUnload(pmodule);
@@ -848,7 +853,7 @@ INT API_ModuleFinish (PVOID pvVProc)
 
     moduleCleanup(pmodule);
 
-    finiArrayCall(pmodule);                                             /*  调用c++析构函数代码         */
+    finiArrayCall(pmodule, !pvproc->VP_bForceTerm);                     /*  调用c++析构函数代码         */
 
     __moduleVpPatchFini(pmodule);
 

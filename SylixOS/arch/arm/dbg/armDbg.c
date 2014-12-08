@@ -29,26 +29,33 @@
 #include "../mm/cache/armCacheCommon.h"
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 /*********************************************************************************************************
-  ARM 断点使用未定义指令异常
+  ARM 断点使用未定义指令异常, ARM 断点指令低 16 位为 thumb 指令断点,
+  这在不知道该指令是否为 thumb 指令时很有用,
+  可以在 next 单步执行时, 可以不管 ARM 或 thumb 模式, 一律填入 ARM_BREAKPOINT_INS.
 *********************************************************************************************************/
 #define ARM_BREAKPOINT_INS          0xE7FFDEFE
-#define ARM_ABORTPOINT_INS          0xE7FFDDFE
+#define ARM_ABORTPOINT_INS          0xE7FFDEFF
+#define ARM_BREAKPOINT_INS_TMB      0xDEFE
+#define ARM_ABORTPOINT_INS_TMB      0xDEFF
 /*********************************************************************************************************
 ** 函数名称: archDbgBpInsert
 ** 功能描述: 插入一个断点.
 ** 输　入  : ulAddr         断点地址
+**           stSize         断点大小
 **           pulIns         返回的之前的指令
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  archDbgBpInsert (addr_t  ulAddr, ULONG  *pulIns)
+VOID  archDbgBpInsert (addr_t  ulAddr, size_t stSize, ULONG  *pulIns)
 {
-    *pulIns = *(ULONG *)ulAddr;
-    *(ULONG *)ulAddr = ARM_BREAKPOINT_INS;
+    ULONG ulIns = ARM_BREAKPOINT_INS;
+
+    lib_memcpy((PCHAR)pulIns, (PCHAR)ulAddr, stSize);                   /*  memcpy 避免 arm 对齐问题    */
+    lib_memcpy((PCHAR)ulAddr, (PCHAR)&ulIns, stSize);
     
 #if LW_CFG_CACHE_EN > 0
-    API_CacheTextUpdate((PVOID)ulAddr, sizeof(ULONG));
+    API_CacheTextUpdate((PVOID)ulAddr, stSize);
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }
 /*********************************************************************************************************
@@ -59,6 +66,7 @@ VOID  archDbgBpInsert (addr_t  ulAddr, ULONG  *pulIns)
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : 插入异常断点时, 不考虑 CPU 运行模式, 直接插入 32 位断点即可.
 *********************************************************************************************************/
 VOID  archDbgAbInsert (addr_t  ulAddr, ULONG  *pulIns)
 {
@@ -73,17 +81,18 @@ VOID  archDbgAbInsert (addr_t  ulAddr, ULONG  *pulIns)
 ** 函数名称: archDbgBpRemove
 ** 功能描述: 删除一个断点.
 ** 输　入  : ulAddr         断点地址
+**           stSize         断点大小
 **           pulIns         返回的之前的指令
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  archDbgBpRemove (addr_t  ulAddr, ULONG  ulIns)
+VOID  archDbgBpRemove (addr_t  ulAddr, size_t stSize, ULONG  ulIns)
 {
-    *(ULONG *)ulAddr = ulIns;
+    lib_memcpy((PCHAR)ulAddr, (PCHAR)&ulIns, stSize);
     
 #if LW_CFG_CACHE_EN > 0
-    API_CacheTextUpdate((PVOID)ulAddr, sizeof(ULONG));
+    API_CacheTextUpdate((PVOID)ulAddr, stSize);
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
 }
 /*********************************************************************************************************
@@ -97,29 +106,47 @@ VOID  archDbgBpRemove (addr_t  ulAddr, ULONG  ulIns)
 *********************************************************************************************************/
 VOID  archDbgBpPrefetch (addr_t  ulAddr)
 {
-    volatile ULONG  ulIns = *(ULONG *)ulAddr;                           /*  读取断点处指令              */
-    *(ULONG *)ulAddr = ulIns;                                           /*  执行一次写操作, 产生页面中断*/
+    volatile UINT8  ucByte = *(UINT8 *)ulAddr;                          /*  读取断点处数据              */
+    
+    *(UINT8 *)ulAddr = ucByte;                                          /*  执行一次写操作, 产生页面中断*/
 }
 /*********************************************************************************************************
 ** 函数名称: archDbgTrapType
 ** 功能描述: 获取 trap 类型.
 ** 输　入  : ulAddr         断点地址
+**           pvArch         体系结构相关参数 (ARM 处理器为 CPSR)
 ** 输　出  : LW_TRAP_INVAL / LW_TRAP_BRKPT / LW_TRAP_ABORT
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-UINT  archDbgTrapType (addr_t  ulAddr)
+UINT  archDbgTrapType (addr_t  ulAddr, PVOID   pvArch)
 {
-    switch (*(ULONG *)ulAddr) {
-    
-    case ARM_BREAKPOINT_INS:
-        return  (LW_TRAP_BRKPT);
+    REGISTER UINT32  uiCpsr = (UINT32)pvArch;
+
+    if (uiCpsr & 0x20) {                                                /*  Thumb 模式                  */
+        switch (*(UINT16 *)ulAddr) {
+
+        case ARM_BREAKPOINT_INS_TMB:
+            return  (LW_TRAP_BRKPT);
+
+        case ARM_ABORTPOINT_INS_TMB:
+            return  (LW_TRAP_ABORT);
+
+        default:
+            return  (LW_TRAP_INVAL);
+        }
+    } else {                                                            /*  ARM 模式                    */
+        switch (*(ULONG *)ulAddr) {
         
-    case ARM_ABORTPOINT_INS:
-        return  (LW_TRAP_ABORT);
-        
-    default:
-        return  (LW_TRAP_INVAL);
+        case ARM_BREAKPOINT_INS:
+            return  (LW_TRAP_BRKPT);
+            
+        case ARM_ABORTPOINT_INS:
+            return  (LW_TRAP_ABORT);
+            
+        default:
+            return  (LW_TRAP_INVAL);
+        }
     }
 }
 #endif                                                                  /*  LW_CFG_GDB_EN > 0           */

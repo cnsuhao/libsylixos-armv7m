@@ -219,8 +219,10 @@ MACRO_DEF(UND_ENTRY)
     STMFD   SP!, {R1-R3}                                                ;/*  寄存器压入 und 模式堆栈     */
     MOV     R1 , SP                                                     ;/*  保存 und 堆栈指针           */
     ADD     SP , SP, #12                                                ;/*  调整 und 堆栈指针           */
-    SUB     R2 , LR, #4                                                 ;/*  调整用于中断返回的 PC 值    */
     MRS     R3 , SPSR                                                   ;/*  将 SPSR 拷贝到 R3           */
+    TST     R3 , #0x20                                                  ;/*  是否为 Thumb 模式           */
+    SUBNE   R2 , LR, #2                                                 ;/*  计算 Thumb 模式返回位置     */
+    SUBEQ   R2 , LR, #4                                                 ;/*  计算 ARM 模式返回位置       */
     MSR     CPSR_c, #(DIS_INT | SVC32_MODE)                             ;/*  回到 SVC 模式               */
     
     STMFD   SP!, {R2}                                                   ;/*  任务返回地址压栈            */
@@ -243,6 +245,7 @@ MACRO_DEF(UND_ENTRY)
     MOV     LR , PC
     BX      R0
     LDR     R8 , [SP, #(15 * 4)]                                        ;/*  参数为产生未定义指令中断地址*/
+    LDR     R9 , [SP]                                                   ;/*  产生异常的 CPSR             */
     CMP     R0 , #1
     BNE     1f
     
@@ -258,6 +261,7 @@ MACRO_DEF(UND_ENTRY)
     
 1:
     MOV     R0 , R8
+    MOV     R1 , R9
     LDR     R5 , =archUndHandle
     MOV     LR , PC
     BX      R5

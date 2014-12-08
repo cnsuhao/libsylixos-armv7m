@@ -22,6 +22,7 @@
 2011.08.15  重大决定: 将所有 posix 定义的函数以函数方式(非宏)引出.
 2012.10.17  symlink 与 readlink 不再打印错误信息.
 2013.01.03  所有对驱动 close 操作必须通过 _IosFileClose 接口.
+2014.12.08  修正 symlink 创建重复连接文件问题.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -78,8 +79,12 @@ INT  symlink (CPCHAR  pcLinkDst, CPCHAR  pcSymPath)
     
     for (;;) {
         lValue = iosOpen(pdevhdrHdr, cFullFileName, O_RDONLY, 0);
-        if ((lValue != FOLLOW_LINK_FILE) && 
-            (lValue != FOLLOW_LINK_TAIL)) {                             /*  非链接文件直接退出          */
+        if (lValue == FOLLOW_LINK_FILE) {                               /*  已经存在连接文件            */
+            _IosFileDelete(pfdentry);
+            _ErrorHandle(EEXIST);
+            return  (PX_ERROR);
+        
+        } else if (lValue != FOLLOW_LINK_TAIL) {                        /*  非链接文件直接退出          */
             break;
         
         } else {

@@ -52,6 +52,7 @@
 2014.03.03  优化代码.
 2014.05.20  tty 设备删除更加安全.
 2014.08.03  FIOWBUFSET 时需要激活等待写的线程.
+2014.12.08  修正 _TyIRd() 忘记释放 spinlock 错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -837,12 +838,11 @@ ssize_t  _TyWrite (TY_DEV_ID  ptyDev,
     
         LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel);     /*  锁定 spinlock 并关闭中断    */
         if (rngFreeBytes(ptyDev->TYDEV_vxringidWrBuf) > 0) {
-            LW_SPIN_UNLOCK_IRQ(&ptyDev->TYDEV_slLock, iregInterLevel);  
-                                                                        /*  解锁 spinlock 打开中断      */
+            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
             API_SemaphoreBPost(ptyDev->TYDEV_hWrtSyncSemB);             /*  缓冲区还有空间              */
+        
         } else {
-            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
-                                                                        /*  解锁 spinlock 打开中断      */
+            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
         }
         
         TYDEV_UNLOCK(ptyDev);                                           /*  释放设备使用权              */
@@ -955,8 +955,7 @@ __re_read:
             iFreeBytes -= ptyDev->TYDEV_ucInNBytes + 1;
         }
         if (iFreeBytes > _G_cTyXonThreshold) {
-            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
-                                                                        /*  解锁 spinlock 打开中断      */
+            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
             _TyRdXoff(ptyDev, LW_FALSE);                                /*  启动对方发送                */
             LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel); /*  锁定 spinlock 并关闭中断    */
         }
@@ -965,6 +964,7 @@ __re_read:
     if (!rngIsEmpty(ringId)) {                                          /*  是否还有数据                */
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
         API_SemaphoreBPost(ptyDev->TYDEV_hRdSyncSemB);                  /*  通知其他等待读的线程        */
+    
     } else {
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
     }
@@ -1085,8 +1085,7 @@ __re_read:
             iFreeBytes -= ptyDev->TYDEV_ucInNBytes + 1;
         }
         if (iFreeBytes > _G_cTyXonThreshold) {
-            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
-                                                                        /*  解锁 spinlock 打开中断      */
+            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
             _TyRdXoff(ptyDev, LW_FALSE);                                /*  启动对方发送                */
             LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel);   
                                                                         /*  锁定 spinlock 并关闭中断    */
@@ -1096,6 +1095,7 @@ __re_read:
     if (!rngIsEmpty(ringId)) {                                          /*  是否还有数据                */
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
         API_SemaphoreBPost(ptyDev->TYDEV_hRdSyncSemB);                  /*  通知其他等待读的线程        */
+    
     } else {
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
     }
@@ -1246,6 +1246,7 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
         if (_G_pfuncTyAbortFunc) {
             _G_pfuncTyAbortFunc();
         }
+    
     } else if ((cInchar == __TTY_CC(ptyDev, VQUIT)) && 
                (iOpt & OPT_MON_TRAP)) {                                 /*  需要处理 CONTORL+X 命令     */
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
@@ -1260,6 +1261,7 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
         } else {
             _TyWrtXoff(ptyDev, LW_FALSE);
         }
+    
     } else {
         if ((iOpt & OPT_CRMOD) && (iOpt & OPT_LINE)) {
             if (cInchar == PX_EOS) {                                    /*  此模式下对 0x00 字符不响应  */
@@ -1277,7 +1279,9 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
             (ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_cLastRecv == '\r') &&
             (cInchar == '\n')) {                                        /*  连续的 \r\n 序列, 仅识别一个*/
             ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_cLastRecv = cInchar;
+            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
             return  (iStatus);                                          /*  忽略此 \n                   */
+        
         } else {
             ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_cLastRecv = cInchar;  /*  保存本次输入                */
         }
@@ -1332,8 +1336,7 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
                 _TyTxStartup(ptyDev);                                   /*  需要启动发送                */
             }
         } else {
-            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
-                                                                        /*  解锁 spinlock 打开中断      */
+            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
         }
         
         LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel);     /*  锁定 spinlock 并关闭中断    */

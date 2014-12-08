@@ -72,6 +72,7 @@ typedef enum {
 typedef struct {
     LW_LIST_LINE            BP_plistBpLine;                             /* 断点链表                     */
     addr_t                  BP_addr;                                    /* 传输类型                     */
+    size_t                  BP_size;
     ULONG                   BP_ulInstOrg;                               /* 断点内容原指令               */
 } LW_GDB_BP;
 /*********************************************************************************************************
@@ -581,7 +582,8 @@ static INT gdbRemoveBP (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
         plineTemp = _list_line_get_next(plineTemp);
         if (addrBp == pbpItem->BP_addr) {                               /* 断点已存在                   */
             if (API_DtraceBreakpointRemove(pparam->GDB_pvDtrace,
-                                           addrBp,
+                                           pbpItem->BP_addr,
+                                           pbpItem->BP_size,
                                            pbpItem->BP_ulInstOrg) != ERROR_NONE) {
                 gdbReplyError(pcOutBuff, 0);
                 return  (ERROR_NONE);
@@ -636,8 +638,10 @@ static INT gdbInsertBP (LW_GDB_PARAM *pparam, PCHAR pcInBuff, PCHAR pcOutBuff)
     }
 
     pbpItem->BP_addr = addrBp;
+    pbpItem->BP_size = (uiLen != 0 ? uiLen : (LW_CFG_CPU_WORD_LENGHT / 8));
     if (API_DtraceBreakpointInsert(pparam->GDB_pvDtrace,
-                                   addrBp,
+                                   pbpItem->BP_addr,
+                                   pbpItem->BP_size,
                                    &pbpItem->BP_ulInstOrg) != ERROR_NONE) {
         LW_GDB_SAFEFREE(pbpItem);
         gdbReplyError(pcOutBuff, 0);
@@ -2273,6 +2277,7 @@ static INT gdbMain (INT argc, CHAR **argv)
         if (!pparam->GDB_bExited) {
             API_DtraceBreakpointRemove(pparam->GDB_pvDtrace,
                                        pbpItem->BP_addr,
+                                       pbpItem->BP_size,
                                        pbpItem->BP_ulInstOrg);
         }
         LW_GDB_SAFEFREE(pbpItem);

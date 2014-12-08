@@ -582,6 +582,10 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-12-08: han.hui
+    修正 symlink 同名符号链接文件错误.
+    修正 tty 设备接收中断未释放 spinlock 错误.
+    
     2014-12-03: han.hui
     去掉内核 IPC 装态, 改为 JOIN 专用状态.
     修正 GDB 无法停止 JOIN 状态的线程.

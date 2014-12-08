@@ -221,13 +221,14 @@ static BOOL  __dtraceMemVerify (PVOID  pvDtrace, addr_t  ulAddr, BOOL  bWrite)
 ** 函数名称: API_DtraceBreakTrap
 ** 功能描述: 有一个线程触发断点
 ** 输　入  : ulAddr        触发地址
+**           uiBpType      触发类型 (LW_TRAP_INVAL / LW_TRAP_BRKPT / LW_TRAP_ABORT) 
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-INT  API_DtraceBreakTrap (addr_t  ulAddr)
+INT  API_DtraceBreakTrap (addr_t  ulAddr, UINT  uiBpType)
 {
 #if LW_CFG_MODULELOADER_EN > 0
     LW_OBJECT_HANDLE    ulDbger;
@@ -246,7 +247,7 @@ INT  API_DtraceBreakTrap (addr_t  ulAddr)
     }
     
     dtm.DTM_ulAddr   = ulAddr;
-    dtm.DTM_uiType   = archDbgTrapType(ulAddr);                         /*  获得 trap 类型              */
+    dtm.DTM_uiType   = uiBpType;                                        /*  获得 trap 类型              */
     dtm.DTM_ulThread = ptcbCur->TCB_ulId;
     
     __KERNEL_ENTER();                                                   /*  进入内核                    */
@@ -626,6 +627,7 @@ ULONG  API_DtraceSetMems (PVOID  pvDtrace, addr_t  ulAddr, const PVOID  pvBuffer
 ** 功能描述: 插入一个断点
 ** 输　入  : pvDtrace      dtrace 节点
 **           ulAddr        断点地址
+**           stSize        断点长度
 **           pulIns        返回断点地址之前的指令
 ** 输　出  : ERROR
 ** 全局变量: 
@@ -633,7 +635,7 @@ ULONG  API_DtraceSetMems (PVOID  pvDtrace, addr_t  ulAddr, const PVOID  pvBuffer
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-ULONG  API_DtraceBreakpointInsert (PVOID  pvDtrace, addr_t  ulAddr, ULONG  *pulIns)
+ULONG  API_DtraceBreakpointInsert (PVOID  pvDtrace, addr_t  ulAddr, size_t stSize, ULONG  *pulIns)
 {
     PLW_DTRACE    pdtrace = (PLW_DTRACE)pvDtrace;
     
@@ -646,7 +648,7 @@ ULONG  API_DtraceBreakpointInsert (PVOID  pvDtrace, addr_t  ulAddr, ULONG  *pulI
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
     }
     
-    archDbgBpInsert(ulAddr, pulIns);
+    archDbgBpInsert(ulAddr, stSize, pulIns);
     
     return  (ERROR_NONE);
 }
@@ -655,6 +657,7 @@ ULONG  API_DtraceBreakpointInsert (PVOID  pvDtrace, addr_t  ulAddr, ULONG  *pulI
 ** 功能描述: 删除一个断点
 ** 输　入  : pvDtrace      dtrace 节点
 **           ulAddr        断点地址
+**           stSize        断点长度
 **           ulIns         断电之前的指令
 ** 输　出  : ERROR
 ** 全局变量: 
@@ -662,9 +665,9 @@ ULONG  API_DtraceBreakpointInsert (PVOID  pvDtrace, addr_t  ulAddr, ULONG  *pulI
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-ULONG  API_DtraceBreakpointRemove (PVOID  pvDtrace, addr_t  ulAddr, ULONG  ulIns)
+ULONG  API_DtraceBreakpointRemove (PVOID  pvDtrace, addr_t  ulAddr, size_t stSize, ULONG  ulIns)
 {
-    archDbgBpRemove(ulAddr, ulIns);
+    archDbgBpRemove(ulAddr, stSize, ulIns);
     
     return  (ERROR_NONE);
 }
@@ -673,13 +676,14 @@ ULONG  API_DtraceBreakpointRemove (PVOID  pvDtrace, addr_t  ulAddr, ULONG  ulIns
 ** 功能描述: 创建一个数据观察点
 ** 输　入  : pvDtrace      dtrace 节点
 **           ulAddr        数据地址
+**           stSize        长度
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-ULONG  API_DtraceWatchpointInsert (PVOID  pvDtrace, addr_t  ulAddr)
+ULONG  API_DtraceWatchpointInsert (PVOID  pvDtrace, addr_t  ulAddr, size_t stSize)
 {
     _ErrorHandle(ENOSYS);
     return  (ENOSYS);
@@ -689,13 +693,14 @@ ULONG  API_DtraceWatchpointInsert (PVOID  pvDtrace, addr_t  ulAddr)
 ** 功能描述: 删除一个数据观察点
 ** 输　入  : pvDtrace      dtrace 节点
 **           ulAddr        数据地址
+**           stSize        长度
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API 
-ULONG  API_DtraceWatchpointRemove (PVOID  pvDtrace, addr_t  ulAddr)
+ULONG  API_DtraceWatchpointRemove (PVOID  pvDtrace, addr_t  ulAddr, size_t stSize)
 {
     _ErrorHandle(ENOSYS);
     return  (ENOSYS);
@@ -1099,7 +1104,7 @@ ULONG API_DtraceSchedHook (LW_OBJECT_HANDLE  ulThreadOld, LW_OBJECT_HANDLE  ulTh
 
     ptcb = __GET_TCB_FROM_INDEX(usIndex);
     if (ptcb && (ptcb->TCB_ulStepAddr != (addr_t)PX_ERROR)) {           /*  确保切出线程有效            */
-        archDbgBpRemove(ptcb->TCB_ulStepAddr, ptcb->TCB_ulStepInst);
+        archDbgBpRemove(ptcb->TCB_ulStepAddr, sizeof(ULONG), ptcb->TCB_ulStepInst);
     }
 
     usIndex = _ObjectGetIndex(ulThreadNew);
@@ -1109,7 +1114,7 @@ ULONG API_DtraceSchedHook (LW_OBJECT_HANDLE  ulThreadOld, LW_OBJECT_HANDLE  ulTh
 
     ptcb = __GET_TCB_FROM_INDEX(usIndex);
     if (ptcb->TCB_ulStepAddr != (addr_t)PX_ERROR) {
-        archDbgBpInsert(ptcb->TCB_ulStepAddr, &ptcb->TCB_ulStepInst);
+        archDbgBpInsert(ptcb->TCB_ulStepAddr, sizeof(ULONG), &ptcb->TCB_ulStepInst);
     }
 
     return  (ERROR_NONE);

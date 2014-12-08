@@ -23,6 +23,7 @@
 2013.05.01  If successful, the pthread_key_*() function shall store the newly created key value at *key 
             and shall return zero. Otherwise, an error number shall be returned to indicate the error.
 2013.05.02  修正 destructor 调用的参数和时机.
+2014.12.09  强制被杀死的进程不执行 desturtors.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../include/px_pthread.h"                                      /*  已包含操作系统头文件        */
@@ -31,6 +32,12 @@
   裁剪支持
 *********************************************************************************************************/
 #if LW_CFG_POSIX_EN > 0
+/*********************************************************************************************************
+  进程相关
+*********************************************************************************************************/
+#if LW_CFG_MODULELOADER_EN > 0
+#include "../SylixOS/loader/include/loader_vppatch.h"
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 /*********************************************************************************************************
   key 私有数据类型
 *********************************************************************************************************/
@@ -232,11 +239,23 @@ static VOID  __pthreadDataDeleteByThread (LW_OBJECT_HANDLE  ulId, PVOID  pvRetVa
     PLW_LIST_LINE        plineTempD;
     
     PVOID                pvPrevValue;
+    BOOL                 bCall = LW_TRUE;
+    
+#if LW_CFG_MODULELOADER_EN > 0
+    LW_LD_VPROC         *pvprocDel;
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN      */
     
     if (pctx == LW_NULL) {                                              /*  不是 posix 线程             */
         return;
     }
     
+#if LW_CFG_MODULELOADER_EN > 0
+    pvprocDel = __LW_VP_GET_TCB_PROC(ptcbDel);
+    if (pvprocDel && pvprocDel->VP_bForceTerm) {                        /*  进程不需要执行 destructor   */
+        bCall = LW_FALSE;
+    }
+#endif                                                                  /*  LW_CFG_MODULELOADER_EN      */
+
     /*
      *  线程删除, 需要遍历所有 key 键的私有数据表, 删除与本线程相关的私有数据
      */
@@ -259,7 +278,7 @@ __re_check:
                     pkeyd->PKEYD_pvData = LW_NULL;                      /*  下次不再调用 destructor     */
                     
                     __PX_UNLOCK();                                      /*  解锁 posix 库               */
-                    if (pkeyn->PKEYN_pfuncDestructor) {                 /*  调用删除函数                */
+                    if (pkeyn->PKEYN_pfuncDestructor && bCall) {        /*  调用删除函数                */
                         pkeyn->PKEYN_pfuncDestructor(pvPrevValue);
                     }
                     goto    __re_check;                                 /*  重新检查                    */

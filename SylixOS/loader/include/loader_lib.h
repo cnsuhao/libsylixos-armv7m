@@ -60,6 +60,8 @@ typedef struct lw_ld_vproc {
     LW_OBJECT_HANDLE        VP_ulModuleMutex;                           /*  进程模块链表锁              */
     
     BOOL                    VP_bRunAtExit;                              /*  是否允许 atexit 安装的函数  */
+    BOOL                    VP_bForceTerm;                              /*  是否是被强行退出            */
+    
     pid_t                   VP_pid;                                     /*  进程号                      */
     BOOL                    VP_bIssetugid;                              /*  是否设置的 ugid             */
     PCHAR                   VP_pcName;                                  /*  进程名称                    */
@@ -92,7 +94,7 @@ typedef struct lw_ld_vproc {
     
     INT                     VP_iExitMode;                               /*  退出模式                    */
     LW_LD_VPROC_T           VP_vptimer[3];                              /*  REAL / VIRTUAL / PROF 定时器*/
-    ULONG                   VP_ulPad[10];                               /*  预留                        */
+    ULONG                   VP_ulPad[9];                                /*  预留                        */
 } LW_LD_VPROC;
 
 /*********************************************************************************************************

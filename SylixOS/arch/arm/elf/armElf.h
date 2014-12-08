@@ -58,6 +58,8 @@
 #define R_ARM_JUMP24        29
 #define R_ARM_THM_JUMP24    30
 #define R_ARM_TARGET1       38
+#define R_ARM_THM_MOVW_ABS_NC   47
+#define R_ARM_THM_MOVT_ABS      48
 
 #define R_ARM_V4BX              40
 #define R_ARM_PREL31            42

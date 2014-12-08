@@ -17,6 +17,9 @@
 ** 文件创建日期: 2010 年 04 月 17 日
 **
 ** 描        述: 实现 ARM 体系结构的 ELF 文件重定位.
+**
+** BUG:
+2014.12.08  添加thumb2重定位支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -120,7 +123,7 @@ INT  archElfRelocateRel (Elf_Rel     *prel,
                          size_t       stBuffLen)
 {
     Elf_Addr  *paddrWhere;
-    Elf_Addr   addrTmp;
+    INT32      addrTmp;
     Elf_Sword  swordAddend;
     Elf_Sword  swordTopBits;
 
@@ -236,21 +239,56 @@ INT  archElfRelocateRel (Elf_Rel     *prel,
          *  only Thumb addresses allowed (no interworking)
          */
         if (!(addrTmp & 1) ||
-            addrTmp <= (UINT32)0xff000000 ||
-            addrTmp >= (UINT32)0x01000000) {
+            addrTmp <= (INT32)0xff000000 ||
+            addrTmp >= (INT32)0x01000000) {
             return (PX_ERROR);
         }
 
         sign = (addrTmp >> 24) & 1;
         j1 = sign ^ (~(addrTmp >> 23) & 1);
         j2 = sign ^ (~(addrTmp >> 22) & 1);
-        *(UINT16 *)paddrWhere = (UINT16)((upper & 0xf800) | (sign << 10) |
-        ((addrTmp >> 12) & 0x03ff));
-        *(UINT16 *)(paddrWhere + 2) = (UINT16)((lower & 0xd000) |
-        (j1 << 13) | (j2 << 11) |
-        ((addrTmp >> 1) & 0x07ff));
+        upper = (UINT16)((upper & 0xf800) | (sign << 10) |
+                    ((addrTmp >> 12) & 0x03ff));
+        lower = (UINT16)((lower & 0xd000) |
+                  (j1 << 13) | (j2 << 11) |
+                  ((addrTmp >> 1) & 0x07ff));
+
+        *(UINT16 *)paddrWhere = upper;
+        *(UINT16 *)(paddrWhere + 2) = lower;
+        break;
+
+    case R_ARM_THM_MOVW_ABS_NC:
+    case R_ARM_THM_MOVT_ABS:
         upper = *(UINT16 *)paddrWhere;
         lower = *(UINT16 *)(paddrWhere + 2);
+
+        /*
+         * MOVT/MOVW instructions encoding in Thumb-2:
+         *
+         * i    = upper[10]
+         * imm4 = upper[3:0]
+         * imm3 = lower[14:12]
+         * imm8 = lower[7:0]
+         *
+         * imm16 = imm4:i:imm3:imm8
+         */
+        addrTmp = ((upper & 0x000f) << 12) |
+            ((upper & 0x0400) << 1) |
+            ((lower & 0x7000) >> 4) | (lower & 0x00ff);
+        addrTmp = (addrTmp ^ 0x8000) - 0x8000;
+        addrTmp += addrSymVal;
+
+        if (ELF32_R_TYPE(prel->r_info) == R_ARM_THM_MOVT_ABS)
+            addrTmp >>= 16;
+
+        upper = (UINT16)((upper & 0xfbf0) |
+                  ((addrTmp & 0xf000) >> 12) |
+                  ((addrTmp & 0x0800) >> 1));
+        lower = (UINT16)((lower & 0x8f00) |
+                  ((addrTmp & 0x0700) << 4) |
+                  (addrTmp & 0x00ff));
+        *(UINT16 *)paddrWhere = upper;
+        *(UINT16 *)(paddrWhere + 2) = lower;
         break;
 
 

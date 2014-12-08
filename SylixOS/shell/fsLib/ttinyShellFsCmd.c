@@ -62,6 +62,7 @@
 2014.05.30  加入查看文件夹大小的命令.
 2014.10.10  cp 命令将目标文件设置为与原始文件相同的 mode.
 2014.10.29  ls 显示的单行宽度通过 TIOCGWINSZ 获取.
+2014.12.08  ln 支持 -f 选项.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -1705,14 +1706,28 @@ static INT  __tshellFsCmdLn (INT  iArgC, PCHAR  ppcArgV[])
 {
     if (iArgC == 3) {
         if (symlink(ppcArgV[1], ppcArgV[2]) != ERROR_NONE) {
-            fprintf(stderr, "symlink error, error : %s\n", lib_strerror(errno));
+            fprintf(stderr, "symlink error : %s\n", lib_strerror(errno));
         }
     } else if (iArgC == 4) {
-        if (lib_strcmp(ppcArgV[1], "-s")) {
+        if (ppcArgV[1][0] != '-') {
+            fprintf(stderr, "argments error!\n");
+            return  (-ERROR_TSHELL_EPARAM);
+        }
+        if (!lib_strchr(ppcArgV[1], 's')) {
             fprintf(stderr, "must use -s to create a symbol link.\n");
+            return  (-ERROR_TSHELL_EPARAM);
+            
         } else {
+            if (lib_strchr(ppcArgV[1], 'f')) {
+                struct stat  statGet;
+                if (lstat(ppcArgV[3], &statGet) == ERROR_NONE) {
+                    if (S_ISLNK(statGet.st_mode)) {
+                        unlink(ppcArgV[3]);
+                    }
+                }
+            }
             if (symlink(ppcArgV[2], ppcArgV[3]) != ERROR_NONE) {
-                fprintf(stderr, "symlink error, error : %s\n", lib_strerror(errno));
+                fprintf(stderr, "symlink error : %s\n", lib_strerror(errno));
             }
         }
     } else {
@@ -1884,9 +1899,9 @@ VOID  __tshellFsCmdInit (VOID)
 #endif                                                                  /*  LW_CFG_MOUNT_EN > 0         */
 
     API_TShellKeywordAdd("ln", __tshellFsCmdLn);
-    API_TShellFormatAdd("ln", " [-s] [actualpath] [sympath]");
+    API_TShellFormatAdd("ln", " [-s | -f] [actualpath] [sympath]");
     API_TShellHelpAdd("ln",   "create a symbol link file (must use -s).\n"
-                              "eg. ln -s /yaffs2/n0/etc /etc\n");
+                              "eg. ln -s /tmp/dir /dir\n");
                               
     API_TShellKeywordAdd("dosfslabel", __tshellFsCmdDosfslabel);
     API_TShellFormatAdd("dosfslabel", " [[vol newlabel] [vol]]");

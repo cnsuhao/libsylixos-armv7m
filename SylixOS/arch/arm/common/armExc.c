@@ -88,17 +88,19 @@ VOID  archAbtHandle (addr_t  ulRetAddr, UINT32  uiArmExcType)
 ** 函数名称: archUndHandle
 ** 功能描述: archUndEntry 需要调用此函数处理未定义指令
 ** 输　入  : ulAddr           对应的地址
+**           uiCpsr           产生异常时的 CPSR
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  archUndHandle (addr_t  ulAddr)
+VOID  archUndHandle (addr_t  ulAddr, UINT32  uiCpsr)
 {
     PLW_CLASS_TCB   ptcbCur;
     
 #if LW_CFG_GDB_EN > 0
-    if (archDbgTrapType(ulAddr)) {                                      /*  断点指令探测                */
-        if (API_DtraceBreakTrap(ulAddr) == ERROR_NONE) {                /*  进入调试接口断点处理        */
+    UINT    uiBpType = archDbgTrapType(ulAddr, (PVOID)uiCpsr);          /*  断点指令探测                */
+    if (uiBpType) {                       
+        if (API_DtraceBreakTrap(ulAddr, uiBpType) == ERROR_NONE) {      /*  进入调试接口断点处理        */
             return;
         }
     }
