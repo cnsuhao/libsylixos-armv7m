@@ -1203,7 +1203,7 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
                 break;
                 
             default:
-                iRet = unix_ioctl(psock->SOCK_pafunix, (long)iCmd, pvArg);
+                iRet = unix_ioctl(psock->SOCK_pafunix, iCmd, pvArg);
                 break;
             }
         }
@@ -1244,7 +1244,7 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
                 break;
                 
             default:
-                iRet = packet_ioctl(psock->SOCK_pafpacket, (long)iCmd, pvArg);
+                iRet = packet_ioctl(psock->SOCK_pafpacket, iCmd, pvArg);
                 break;
             }
         }
