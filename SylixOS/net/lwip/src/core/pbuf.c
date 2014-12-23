@@ -489,7 +489,6 @@ pbuf_realloc(struct pbuf *p, u16_t new_len)
 
 /**
  * Adjusts the payload pointer to hide or reveal headers in the payload.
- 
  * @see pbuf_header.
  *
  * @param p pbuf to change the header size.

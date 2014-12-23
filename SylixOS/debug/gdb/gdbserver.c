@@ -51,6 +51,12 @@
 #define GDB_RSP_MAX_LEN             0x1000                              /* rsp 缓冲区大小               */
 #define GDB_MAX_THREAD_NUM          LW_CFG_MAX_THREADS                  /* 最大线程数                   */
 /*********************************************************************************************************
+  链接 keepalive 参数配置
+*********************************************************************************************************/
+#define GDB_TCP_KEEPIDLE            60                                  /*  空闲时间, 单位秒            */
+#define GDB_TCP_KEEPINTVL           60                                  /*  两次探测间的时间间, 单位秒  */
+#define GDB_TCP_KEEPCNT             3                                   /*  探测 N 次失败认为是掉线     */
+/*********************************************************************************************************
   内存管理
 *********************************************************************************************************/
 #define LW_GDB_SAFEMALLOC(size)     __SHEAP_ALLOC((size_t)size)
@@ -58,7 +64,11 @@
 /*********************************************************************************************************
   打印函数
 *********************************************************************************************************/
-#define LW_GDB_MSG                   printf
+#define LW_GDB_MSG                  printf
+/*********************************************************************************************************
+  GDB Non-STOP 模式 BUG
+*********************************************************************************************************/
+#define GDB_NON_STOP_BUG
 /*********************************************************************************************************
   通信类型
 *********************************************************************************************************/
@@ -128,9 +138,12 @@ static INT gdbTcpSockInit (UINT32 ui32Ip, UINT16 usPort)
     struct sockaddr_in  addrClient;
     INT                 iSockListen;
     INT                 iSockNew;
-    INT                 iOpt        = 1;
-    socklen_t           iAddrLen    = sizeof(addrClient);
-    CHAR                cIpBuff[32] = {0};
+    INT                 iKeepIdle     = GDB_TCP_KEEPIDLE;               /*  空闲时间                    */
+    INT                 iKeepInterval = GDB_TCP_KEEPINTVL;              /*  两次探测间的时间间隔        */
+    INT                 iKeepCount    = GDB_TCP_KEEPCNT;                /*  探测 N 次失败认为是掉线     */
+    INT                 iOpt          = 1;
+    socklen_t           iAddrLen      = sizeof(addrClient);
+    CHAR                cIpBuff[32]   = {0};
 
     bzero(&addrServer, sizeof(addrServer));
     if (0 == ui32Ip) {
@@ -170,7 +183,11 @@ static INT gdbTcpSockInit (UINT32 ui32Ip, UINT16 usPort)
         return  (PX_ERROR);
     }
 
-    setsockopt(iSockNew, IPPROTO_TCP, TCP_NODELAY, &iOpt, sizeof(iOpt));
+    setsockopt(iSockNew, IPPROTO_TCP, TCP_NODELAY,   (const void *)&iOpt,          sizeof(INT));
+    setsockopt(iSockNew, SOL_SOCKET,  SO_KEEPALIVE,  (const void *)&iOpt,          sizeof(INT));
+    setsockopt(iSockNew, IPPROTO_TCP, TCP_KEEPIDLE,  (const void *)&iKeepIdle,     sizeof(INT));
+    setsockopt(iSockNew, IPPROTO_TCP, TCP_KEEPINTVL, (const void *)&iKeepInterval, sizeof(INT));
+    setsockopt(iSockNew, IPPROTO_TCP, TCP_KEEPCNT,   (const void *)&iKeepCount,    sizeof(INT));
 
     LW_GDB_MSG("[GDB]Connected. host : %s\n",
                inet_ntoa_r(addrClient.sin_addr, cIpBuff, sizeof(cIpBuff)));
@@ -546,6 +563,10 @@ static INT gdbNotfyStopReason (PLW_DTRACE_MSG pdmsg, PCHAR pcOutBuff)
         sprintf(pcOutBuff, "W00");
         return  (ERROR_NONE);
     }
+
+#ifdef GDB_NON_STOP_BUG
+    API_TimeMSleep(10);                                                 /* 为解决客户端 bug，延时 10ms  */
+#endif                                                                  /* GDB_NON_STOP_BUG             */
 
     sprintf(pcOutBuff, "Stop:T%02xthread:%lx;",
             (UCHAR)pdmsg->DTM_uiType, pdmsg->DTM_ulThread);             /* 返回停止原因，默认为中断     */

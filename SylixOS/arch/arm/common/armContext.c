@@ -48,8 +48,8 @@ PLW_STACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
     pfpctx  = (ARCH_FP_CTX  *)((PCHAR)pstkTop - sizeof(ARCH_FP_CTX));
     pregctx = (ARCH_REG_CTX *)((PCHAR)pstkTop - sizeof(ARCH_FP_CTX) - sizeof(ARCH_REG_CTX));
     
-    pfpctx->FP_uiFp = (ARCH_REG_T)-1;
-    pfpctx->FP_uiLr = (ARCH_REG_T)-1;
+    pfpctx->FP_uiFp = (ARCH_REG_T)LW_NULL;
+    pfpctx->FP_uiLr = (ARCH_REG_T)LW_NULL;
     
     pregctx->REG_uiCpsr = (ARCH_ARM_SVC32MODE | 0x40);
     

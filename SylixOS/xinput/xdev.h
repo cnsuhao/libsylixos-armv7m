@@ -45,7 +45,7 @@
 
 #define XINPUT_NAME_KBD     "/dev/input/xkbd"
 #define XINPUT_NAME_MSE     "/dev/input/xmse"
-#define XINPUT_SEL_TO       10
+#define XINPUT_SEL_TO       2
 
 #define XINPUT_THREAD_SIZE  (12 * 1024)
 

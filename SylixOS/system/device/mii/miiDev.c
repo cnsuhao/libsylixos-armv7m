@@ -132,7 +132,7 @@ static INT __miiBasicCheck (PHY_DEV *pPhyDev)
     ucRegAddr = MII_STAT_REG;
 
     do {                                                                /* spin until it is done        */
-        usleep(pPhyDev->PHY_uiLinkDelay * 1000);
+        API_TimeMSleep(pPhyDev->PHY_uiLinkDelay);
 
         i++;
         if (i >= pPhyDev->PHY_uiTryMax) {

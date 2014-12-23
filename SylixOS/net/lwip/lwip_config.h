@@ -143,6 +143,7 @@ extern "C" {
 *********************************************************************************************************/
 
 #define LWIP_DHCP                       LW_CFG_LWIP_DHCP                /*  DHCP                        */
+#define LWIP_DHCP_CHECK_LINK_UP         1
 #define LWIP_DHCP_BOOTP_FILE            0                               /*  not include bootp file now  */
 #define LWIP_AUTOIP                     LW_CFG_LWIP_AUTOIP
 

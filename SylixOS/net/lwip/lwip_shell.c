@@ -37,6 +37,7 @@
 2013.05.14  打印 ipv6 地址时需要打印地址状态.
 2013.09.12  增加 ifconfig 遍历网络接口时的安全性.
             增加 arp 命令的安全性.
+2014.12.23  调整 ifconfig 显示.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -268,75 +269,76 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
     /*
      *  打印网口基本信息
      */
-    printf("%c%c%d       ", netif->name[0], netif->name[1], netif->num);
-    printf("enable : %s  ", (netif_is_up(netif) > 0) ? "true" : "false");
-    printf("linkup : %s\n", (netif_is_link_up(netif) > 0) ? "true" : "false");
-    printf("          mtu : %d  ", netif->mtu);
-    printf("multicast : %s\n", (netif->flags & NETIF_FLAG_IGMP) ? "true" : "false");
+    printf("%c%c%d       ",   netif->name[0], netif->name[1], netif->num);
+    printf("enable: %s ",     (netif_is_up(netif) > 0) ? "true" : "false");
+    printf("linkup: %s ",     (netif_is_link_up(netif) > 0) ? "true" : "false");
+    printf("MTU: %d ",        netif->mtu);
+    printf("multicast: %s\n", (netif->flags & NETIF_FLAG_IGMP) ? "true" : "false");
 
     /*
      *  打印路由信息
      */
     if (netif == netif_default) {                                       /*  route interface             */
-        printf("          metric : 1 ");
+        printf("          metric: 1 ");
     } else {
-        printf("          metric : 0 ");
+        printf("          metric: 0 ");
     }
     /*
      *  打印网口硬件地址信息
      */
     if (netif->flags & NETIF_FLAG_ETHARP) {
-        printf(" type : ethernet\n");                                   /*  以太网络                    */
-        printf("          physical address : ");
+        printf("type: Ethernet-Cap HWaddr: ");                          /*  以太网络                    */
         for (i = 0; i < netif->hwaddr_len - 1; i++) {
             printf("%02X:", netif->hwaddr[i]);
         }
         printf("%02X\n", netif->hwaddr[netif->hwaddr_len - 1]);
     } else if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
-        printf(" type : WAN(PPP/SLIP)\n");                              /*  点对点网络接口              */
+        printf("type: WAN(PPP/SLIP)\n");                                /*  点对点网络接口              */
     } else {
-        printf(" type : general\n");                                    /*  通用网络接口                */
+        printf("type: General\n");                                      /*  通用网络接口                */
     }
     
 #if LWIP_DHCP
-    printf("          dhcp : %s(%s) speed : %d(bps)\n", 
-                                (netif->flags & NETIF_FLAG_DHCP) ? "En" : "Dis",
+    printf("          DHCP: %s(%s) speed : %d(bps)\n", 
+                                (netif->flags & NETIF_FLAG_DHCP) ? "Enable" : "Disable",
                                 (netif->dhcp) ? "On" : "Off",
                                 netif->link_speed);
 #else
-    printf("          speed : %d(bps)\n", netif->link_speed);           /*  打印链接速度                */
+    printf("          speed: %d(bps)\n", netif->link_speed);            /*  打印链接速度                */
 #endif                                                                  /*  LWIP_DHCP                   */
                                                                         
     /*
      *  打印网口协议地址信息
      */
-    printf("          inet      : %d.%d.%d.%d\n", ip4_addr1(&netif->ip_addr),
-                                                  ip4_addr2(&netif->ip_addr),
-                                                  ip4_addr3(&netif->ip_addr),
-                                                  ip4_addr4(&netif->ip_addr));
-    printf("          netmask   : %d.%d.%d.%d\n", ip4_addr1(&netif->netmask),
-                                                  ip4_addr2(&netif->netmask),
-                                                  ip4_addr3(&netif->netmask),
-                                                  ip4_addr4(&netif->netmask));
+    printf("          inet addr: %d.%d.%d.%d ", ip4_addr1(&netif->ip_addr),
+                                                ip4_addr2(&netif->ip_addr),
+                                                ip4_addr3(&netif->ip_addr),
+                                                ip4_addr4(&netif->ip_addr));
+    printf("netmask: %d.%d.%d.%d\n", ip4_addr1(&netif->netmask),
+                                     ip4_addr2(&netif->netmask),
+                                     ip4_addr3(&netif->netmask),
+                                     ip4_addr4(&netif->netmask));
 
     if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
-        printf("          P-t-P     : %d.%d.%d.%d\n", ip4_addr1(&netif->gw),
-                                                      ip4_addr2(&netif->gw),
-                                                      ip4_addr3(&netif->gw),
-                                                      ip4_addr4(&netif->gw));
+        printf("          P-to-P: %d.%d.%d.%d ", ip4_addr1(&netif->gw),
+                                                 ip4_addr2(&netif->gw),
+                                                 ip4_addr3(&netif->gw),
+                                                 ip4_addr4(&netif->gw));
     } else {
-        printf("          gateway   : %d.%d.%d.%d\n", ip4_addr1(&netif->gw),
-                                                      ip4_addr2(&netif->gw),
-                                                      ip4_addr3(&netif->gw),
-                                                      ip4_addr4(&netif->gw));
+        printf("          gateway: %d.%d.%d.%d ", ip4_addr1(&netif->gw),
+                                                  ip4_addr2(&netif->gw),
+                                                  ip4_addr3(&netif->gw),
+                                                  ip4_addr4(&netif->gw));
     }
     
     if (netif->flags & NETIF_FLAG_BROADCAST) {                          /*  打印广播地址信息            */
         ipaddrBroadcast.addr = (netif->ip_addr.addr | (~netif->netmask.addr));
-        printf("          broadcast : %d.%d.%d.%d\n", ip4_addr1(&ipaddrBroadcast),
-                                                      ip4_addr2(&ipaddrBroadcast),
-                                                      ip4_addr3(&ipaddrBroadcast),
-                                                      ip4_addr4(&ipaddrBroadcast));
+        printf("broadcast: %d.%d.%d.%d\n", ip4_addr1(&ipaddrBroadcast),
+                                           ip4_addr2(&ipaddrBroadcast),
+                                           ip4_addr3(&ipaddrBroadcast),
+                                           ip4_addr4(&ipaddrBroadcast));
+    } else {
+        printf("broadcast: Non\n");
     }
     
     /*
@@ -360,7 +362,7 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
         if (ip6_addr_isglobal(&netif->ip6_addr[i])) {
             pcAddrType = "global";
         } else if (ip6_addr_islinklocal(&netif->ip6_addr[i])) {
-            pcAddrType = "local";
+            pcAddrType = "link";
         } else if (ip6_addr_issitelocal(&netif->ip6_addr[i])) {
             pcAddrType = "site";
         } else if (ip6_addr_isuniquelocal(&netif->ip6_addr[i])) {
@@ -371,7 +373,7 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
             pcAddrType = "unknown";
         }
         
-        printf("          inet6     : %s %s <%s>\n", 
+        printf("          inet6 addr: %s Scope:%s <%s>\n", 
                ip6addr_ntoa_r(&netif->ip6_addr[i], cBuffer, sizeof(cBuffer)),
                pcAddrType, pcAddrStat);
     }
@@ -379,13 +381,13 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
     /*
      *  打印网口收发数据信息
      */
-    printf("          RX ucast packets:%d nucast packets:%d dropped:%d\n", netif->ifinucastpkts,
+    printf("          RX ucast packets:%u nucast packets:%u dropped:%u\n", netif->ifinucastpkts,
                                                                            netif->ifinnucastpkts,
                                                                            netif->ifindiscards);
-    printf("          TX ucast packets:%d nucast packets:%d dropped:%d\n", netif->ifoutucastpkts,
+    printf("          TX ucast packets:%u nucast packets:%u dropped:%u\n", netif->ifoutucastpkts,
                                                                            netif->ifoutnucastpkts,
                                                                            netif->ifoutdiscards);
-    printf("          RX bytes:%d TX bytes:%d\n", netif->ifinoctets,
+    printf("          RX bytes:%u TX bytes:%u\n", netif->ifinoctets,
                                                   netif->ifoutoctets);
     printf("\n");
 }

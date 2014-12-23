@@ -582,6 +582,10 @@ HISTORY
     
 ++ Bugfixes:.
 
+    2014-12-22: han.hui
+    修正 GDB Non-STOP 模式错误.
+    升级 LwIP SO_SNDTIMEO SO_RCVTIMEO 既支持 winsock 参数又支持 linux 参数.
+
     2014-12-08: han.hui
     修正 symlink 同名符号链接文件错误.
     修正 tty 设备接收中断未释放 spinlock 错误.

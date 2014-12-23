@@ -5,14 +5,14 @@ set srcfile=libsylixos.a
 
 nm %srcfile% > %srcfile%_nm
 
-find " T "   < %srcfile%_nm    > func.txt
-find " D "   < %srcfile%_nm    > obj.txt
-find " B "   < %srcfile%_nm   >> obj.txt
-find " R "   < %srcfile%_nm   >> obj.txt
-find " S "   < %srcfile%_nm   >> obj.txt
-find " C "   < %srcfile%_nm   >> obj.txt
-find " W "   < %srcfile%_nm   >> obj.txt
-find " V "   < %srcfile%_nm   >> obj.txt
+findstr /C:" T "   < %srcfile%_nm    > func.txt
+findstr /C:" D "   < %srcfile%_nm    > obj.txt
+findstr /C:" B "   < %srcfile%_nm   >> obj.txt
+findstr /C:" R "   < %srcfile%_nm   >> obj.txt
+findstr /C:" S "   < %srcfile%_nm   >> obj.txt
+findstr /C:" C "   < %srcfile%_nm   >> obj.txt
+findstr /C:" W "   < %srcfile%_nm   >> obj.txt
+findstr /C:" V "   < %srcfile%_nm   >> obj.txt
 
 del %srcfile%_nm
 

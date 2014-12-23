@@ -553,122 +553,135 @@ static ULONG   thumbGetNextPc (GDB_REG_SET *pRegs)
 
     uiInstr = *(UINT*)uiPc;
 
-    switch (BITS(uiInstr, 12, 15)) {
-
-    case 0x0:
-    case 0x1:
-    case 0x2:
-    case 0x3:
-    case 0x5:
-    case 0x6:
-    case 0x7:
-    case 0x8:
-    case 0x9:
-    case 0xA:
-    case 0xC:
-        /*
-         * no effect on PC - next instruction executes
-         */
-        break;
-
-    case 4:
-        if (BITS(uiInstr, 7, 11) == 0x0E) {                             /* BX                           */
-            int rn;
-
-            rn = BITS(uiInstr, 3, 6);
-            uiNPc = rn == 15 ? uiPc + 4 : pRegs->regArr[rn].GDBRA_ulValue;
+    if (BITS(uiInstr, 13, 15) == 7 && BITS(uiInstr, 11, 12) != 0) {     /* thumb2 32位指令              */
+        uiNPc += 2;
+        switch (BITS(uiInstr, 11, 12)) {
+        case 1:
+            break;
+        case 2:
+            break;
+        case 3:
             break;
         }
+    } else {
 
-        if (BITSET(uiInstr, 7) &&
-           (BITS(uiInstr, 0, 11) & 0xC07) == 0x407) {                   /* 修改pc                       */
-            INT rn;
-            UINT32 operand;
+        switch (BITS(uiInstr, 12, 15)) {
 
-            rn = BITS(uiInstr, 3, 6);
-            operand = rn == 15 ? uiPc + 4 : pRegs->regArr[rn].GDBRA_ulValue;
-            switch (BITS(uiInstr, 8, 9)) {
-            case 0:                                                     /* ADD                          */
-                uiNPc = uiPc + 4 + operand;
-            break;
-            case 1:                                                     /* CMP                          */
-            break;
-            case 2:                                                     /* MOV                          */
-                uiNPc = operand;
-            break;
-            case 3:                                                     /* BX - already handled         */
-            break;
-           }
-        }
-        break;
-
-    case 0xB:
-        if (BITS(uiInstr, 8, 11) == 0xD) {                              /* POP {rlist, pc}              */
-
-            INT32 offset = 0;
-            UINT32 regList, regBit;
-
-            for (regList = BITS(uiInstr, 0, 7);
-                 regList != 0;
-                 regList &= ~regBit) {
-                regBit = regList & (-regList);
-                offset += 4;
-            }
-            uiNPc = *(UINT32 *)(pRegs->regArr[13].GDBRA_ulValue + offset);
-        }
-        break;
-
-    case 0xD:
-        {                                                               /* SWI or conditional branch    */
-            UINT32 cond;
-
-            cond = (uiInstr >> 8) & 0xF;
-            if (cond == 0xF) {
-                break;                                                  /* SWI                          */
-            }
-
-            /* Conditional branch
-             * Use the same mechanism as armGetNpc() to determine whether
-             * the branch will be taken
+        case 0x0:
+        case 0x1:
+        case 0x2:
+        case 0x3:
+        case 0x5:
+        case 0x6:
+        case 0x7:
+        case 0x8:
+        case 0x9:
+        case 0xA:
+        case 0xC:
+            /*
+             * no effect on PC - next instruction executes
              */
-            if (((uiCCTable[cond] >>
-                 (pRegs->regArr[ARM_REG_INDEX_CPSR].GDBRA_ulValue >>
-                 28)) & 1) == 0) {
-                break;                                                  /* instruction will not execute */
+            break;
+
+        case 4:
+            if (BITS(uiInstr, 7, 11) == 0x0E) {                         /* BX                           */
+                int rn;
+
+                rn = BITS(uiInstr, 3, 6);
+                uiNPc = rn == 15 ? uiPc + 4 : pRegs->regArr[rn].GDBRA_ulValue;
+                break;
             }
 
-            uiNPc = uiPc + 4 + (((uiInstr & 0x00FF) << 1) |
-                (BITSET(uiInstr, 7)  ? 0xFFFFFE00 : 0));
-        }
-        break;
+            if (BITSET(uiInstr, 7) &&
+               (BITS(uiInstr, 0, 11) & 0xC07) == 0x407) {               /* 修改pc                       */
+                INT rn;
+                UINT32 operand;
 
-    case 0xE:
-        if (BITSET(uiInstr, 11) == 0) {                                 /* Unconditional branch         */
-            uiNPc = uiPc + 4 + (((uiInstr & 0x07FF) << 1) |
-                    (BITSET(uiInstr, 10) ? 0xFFFFF000 : 0));
-        }
-        break;
-
-    case 0xF:                                                           /* BL                           */
-        if (BITSET(uiInstr, 11)) {
-            uiNPc = pRegs->regArr[14].GDBRA_ulValue + ((uiInstr & 0x07FF) << 1);
-        } else {
-            UINT32 nextBit;
-            INT32 reloc;
-
-            nextBit = *(UINT16 *)(uiPc + 2);
-            if ((nextBit & 0xF800) != 0xF800)
+                rn = BITS(uiInstr, 3, 6);
+                operand = rn == 15 ? uiPc + 4 : pRegs->regArr[rn].GDBRA_ulValue;
+                switch (BITS(uiInstr, 8, 9)) {
+                case 0:                                                 /* ADD                          */
+                    uiNPc = uiPc + 4 + operand;
                 break;
+                case 1:                                                 /* CMP                          */
+                break;
+                case 2:                                                 /* MOV                          */
+                    uiNPc = operand;
+                break;
+                case 3:                                                 /* BX - already handled         */
+                break;
+               }
+            }
+            break;
 
-            reloc = (INT32)(((uiInstr & 0x7FF) << 12) |
-                ((nextBit & 0x7FF) << 1));
-            reloc = (reloc ^ 0x00400000) - 0x00400000;
+        case 0xB:
+            if (BITS(uiInstr, 8, 11) == 0xD) {                          /* POP {rlist, pc}              */
 
-            uiNPc = uiPc + 4 + reloc;
+                INT32 offset = 0;
+                UINT32 regList, regBit;
+
+                for (regList = BITS(uiInstr, 0, 7);
+                     regList != 0;
+                     regList &= ~regBit) {
+                    regBit = regList & (-regList);
+                    offset += 4;
+                }
+                uiNPc = *(UINT32 *)(pRegs->regArr[13].GDBRA_ulValue + offset);
+            }
+            break;
+
+        case 0xD:
+            {                                                           /* SWI or conditional branch    */
+                UINT32 cond;
+
+                cond = (uiInstr >> 8) & 0xF;
+                if (cond == 0xF) {
+                    break;                                              /* SWI                          */
+                }
+
+                /* Conditional branch
+                 * Use the same mechanism as armGetNpc() to determine whether
+                 * the branch will be taken
+                 */
+                if (((uiCCTable[cond] >>
+                     (pRegs->regArr[ARM_REG_INDEX_CPSR].GDBRA_ulValue >>
+                     28)) & 1) == 0) {
+                    break;                                              /* instruction will not execute */
+                }
+
+                uiNPc = uiPc + 4 + (((uiInstr & 0x00FF) << 1) |
+                    (BITSET(uiInstr, 7)  ? 0xFFFFFE00 : 0));
+            }
+            break;
+
+        case 0xE:
+            if (BITSET(uiInstr, 11) == 0) {                             /* Unconditional branch         */
+                uiNPc = uiPc + 4 + (((uiInstr & 0x07FF) << 1) |
+                        (BITSET(uiInstr, 10) ? 0xFFFFF000 : 0));
+            }
+            break;
+
+        case 0xF:                                                       /* BL                           */
+            if (BITSET(uiInstr, 11)) {
+                uiNPc = pRegs->regArr[14].GDBRA_ulValue + ((uiInstr & 0x07FF) << 1);
+            } else {
+                UINT32 nextBit;
+                INT32 reloc;
+
+                nextBit = *(UINT16 *)(uiPc + 2);
+                if ((nextBit & 0xF800) != 0xF800)
+                    break;
+
+                reloc = (INT32)(((uiInstr & 0x7FF) << 12) |
+                    ((nextBit & 0x7FF) << 1));
+                reloc = (reloc ^ 0x00400000) - 0x00400000;
+
+                uiNPc = uiPc + 4 + reloc;
+            }
+
+            break;
+
         }
-
-        break;
-
     }
 
     return (ULONG)((UINT32)uiNPc & ~1);
