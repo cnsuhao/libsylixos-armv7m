@@ -299,7 +299,7 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
     }
     
 #if LWIP_DHCP
-    printf("          DHCP: %s(%s) speed : %d(bps)\n", 
+    printf("          DHCP: %s(%s) speed: %d(bps)\n", 
                                 (netif->flags & NETIF_FLAG_DHCP) ? "Enable" : "Disable",
                                 (netif->dhcp) ? "On" : "Off",
                                 netif->link_speed);
@@ -414,11 +414,11 @@ static VOID  __netIfShowAll (VOID)
 #if LWIP_DNS > 0
     for (i = 0; i < DNS_MAX_SERVERS; i++) {
         ip_addr_t ipaddr = dns_getserver((u8_t)i);
-        printf("dns%d : %d.%d.%d.%d\n", (i),
-                                        ip4_addr1(&ipaddr),
-                                        ip4_addr2(&ipaddr),
-                                        ip4_addr3(&ipaddr),
-                                        ip4_addr4(&ipaddr));
+        printf("dns%d: %d.%d.%d.%d\n", (i),
+                                       ip4_addr1(&ipaddr),
+                                       ip4_addr2(&ipaddr),
+                                       ip4_addr3(&ipaddr),
+                                       ip4_addr4(&ipaddr));
     }
 #endif                                                                  /*  LWIP_DNS                    */
 
@@ -429,8 +429,8 @@ static VOID  __netIfShowAll (VOID)
         cName[3] = PX_EOS;
     }
     
-    printf("router if is : %s\n", cName);                               /*  显示路由端口                */
-    printf("netif count  : %d\n", iCounter);
+    printf("router if is: %s\n", cName);                                /*  显示路由端口                */
+    printf("total net interface: %d\n", iCounter);
 }
 /*********************************************************************************************************
 ** 函数名称: __netIfSet
@@ -680,7 +680,7 @@ static INT  __tshellIfRouter (INT  iArgC, PCHAR  *ppcArgV)
         }
         LWIP_NETIF_UNLOCK();
         
-        printf("default router netif : %s\n", cName);
+        printf("default router netif: %s\n", cName);
         return  (ERROR_NONE);
     }
 
