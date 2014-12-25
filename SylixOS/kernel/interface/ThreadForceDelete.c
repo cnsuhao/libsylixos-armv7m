@@ -168,6 +168,7 @@ ULONG  API_ThreadForceDelete (LW_OBJECT_HANDLE  *pulId, PVOID  pvRetVal)
     }
     
     ptcbDel->TCB_iDeleteProcStatus = LW_TCB_DELETE_PROC_DEL;            /*  进入删除过程                */
+    
     _ObjectCloseId(pulId);                                              /*  关闭 ID                     */
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */

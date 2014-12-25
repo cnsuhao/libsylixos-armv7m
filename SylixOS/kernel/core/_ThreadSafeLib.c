@@ -41,9 +41,8 @@ VOID  _ThreadSafeSuspend (PLW_CLASS_TCB  ptcbCur)
 {
     REGISTER PLW_CLASS_PCB   ppcbMe;
              
-    ppcbMe = _GetPcb(ptcbCur);
-    
     ptcbCur->TCB_ulSuspendNesting++;
+    ppcbMe = _GetPcb(ptcbCur);
     __DEL_FROM_READY_RING(ptcbCur, ppcbMe);                             /*  从就绪环中删除              */
     ptcbCur->TCB_usStatus |= LW_THREAD_STATUS_SUSPEND;
 }

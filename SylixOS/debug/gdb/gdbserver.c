@@ -2342,7 +2342,7 @@ static INT gdbMain (INT argc, CHAR **argv)
     }
 
     if (!pparam->GDB_bNonStop && !pparam->GDB_bExited) {
-        API_DtraceContinueProcess(pparam->GDB_pvDtrace);
+        API_DtraceContinueProcess(pparam->GDB_pvDtrace);                /* 程序继续执行                 */
     }
 
     if (!iBeAttach && !pparam->GDB_bExited) {                           /* 如果不是attch则停止进程      */

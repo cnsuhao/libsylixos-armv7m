@@ -158,7 +158,11 @@ ULONG  __threadDelete (PLW_CLASS_TCB  ptcbDel, BOOL  bIsInSafe,
     
     KN_INT_ENABLE(iregInterLevel);                                      /*  打开中断                    */
     
-    _ThreadReleaseAllJoin(ptcbDel, pvRetVal);                           /*  DETACH                      */
+    if (ptcbDel->TCB_ptcbJoin) {
+        _ThreadDisjoin(ptcbDel->TCB_ptcbJoin, ptcbDel);                 /*  退出 join 状态, 不操作就绪表*/
+    }
+    
+    _ThreadDisjoinWakeupAll(ptcbDel, pvRetVal);                         /*  DETACH                      */
     
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     

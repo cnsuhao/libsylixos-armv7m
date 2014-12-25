@@ -421,8 +421,9 @@ VOID           _CoroutineFreeAll(PLW_CLASS_TCB    ptcb);
 *********************************************************************************************************/
 
 VOID           _ThreadJoin(PLW_CLASS_TCB  ptcbDes, PVOID  *ppvRetValSave);
-VOID           _ThreadReleaseJoin(PLW_CLASS_TCB  ptcbDes, PLW_CLASS_TCB  ptcbWakeup, PVOID  pvArg);
-VOID           _ThreadReleaseAllJoin(PLW_CLASS_TCB  ptcbDes, PVOID  pvArg);
+VOID           _ThreadDisjoin(PLW_CLASS_TCB  ptcbDes, PLW_CLASS_TCB  ptcbDisjoin);
+VOID           _ThreadDisjoinWakeup(PLW_CLASS_TCB  ptcbDes, PLW_CLASS_TCB  ptcbWakeup, PVOID  pvArg);
+VOID           _ThreadDisjoinWakeupAll(PLW_CLASS_TCB  ptcbDes, PVOID  pvArg);
 VOID           _ThreadDetach(PLW_CLASS_TCB  ptcbDes);
 
 /*********************************************************************************************************

@@ -381,8 +381,8 @@ static VOID  __sigMakeReady (PLW_CLASS_TCB  ptcb,
     
     if (__SIGNO_MUST_EXIT & __sigmask(iSigNo)) {                        /*  必须退出信号                */
         if (ptcb->TCB_ptcbJoin) {
-            _ThreadReleaseJoin(ptcb->TCB_ptcbJoin, ptcb, LW_NULL);      /*  唤醒 join                   */
-        }
+            _ThreadDisjoin(ptcb->TCB_ptcbJoin, ptcb);                   /*  退出 join 状态, 不操作就绪表*/
+        }                                                               /*  否则可能产生重复的操作就绪表*/
     }
     
     if (ptcb->TCB_usStatus & LW_THREAD_STATUS_PEND_ANY) {               /*  检查是否在等待事件          */
@@ -557,9 +557,11 @@ static VOID  __sigRunHandle (PLW_CLASS_SIGCONTEXT  psigctx,
     }
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
-    if ((pfuncHandle != SIG_IGN) && 
-        (pfuncHandle != SIG_ERR) &&
-        (pfuncHandle != SIG_DFL)) {
+    if ((pfuncHandle != SIG_IGN)   && 
+        (pfuncHandle != SIG_ERR)   &&
+        (pfuncHandle != SIG_DFL)   &&
+        (pfuncHandle != SIG_CATCH) &&
+        (pfuncHandle != SIG_HOLD)) {
         pvCtx = (psigctlmsg) 
               ? psigctlmsg->SIGCTLMSG_pvStackRet
               : LW_NULL;

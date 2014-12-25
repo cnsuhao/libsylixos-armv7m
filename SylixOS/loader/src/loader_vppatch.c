@@ -828,17 +828,13 @@ __recheck:
 __recheck:
 #endif                                                                  /*  LW_CFG_THREAD_EXT_EN > 0    */
     
-    if (pvproc->VP_iExitMode == LW_VPROC_EXIT_FORCE) {
+    if (pvproc->VP_iExitMode == LW_VPROC_EXIT_FORCE) {                  /*  强制退出删除除主线程外的线程*/
         vprocThreadTraversal(pvproc, vprocKillThread, (PVOID)pvproc, 
                              0, 0, 0, 0, 0);
     }
     
     do {                                                                /*  等待所有的线程安全退出      */
         if (vprocCanExit() == LW_FALSE) {                               /*  进程是否可以退出            */
-            if (pvproc->VP_iExitMode == LW_VPROC_EXIT_FORCE) {
-                vprocThreadTraversal(pvproc, vprocKillThread, (PVOID)pvproc, 
-                                     0, 0, 0, 0, 0);
-            }
             API_SemaphoreBPend(pvproc->VP_ulWaitForExit, LW_OPTION_WAIT_INFINITE);
         } else {
             break;                                                      /*  只有这一个线程了            */
@@ -1499,7 +1495,7 @@ VOID  vprocThreadTraversal (PVOID          pvVProc,
     LW_VP_UNLOCK(pvproc);
 }
 /*********************************************************************************************************
-** 函数名称: vprocThreadTraversal
+** 函数名称: vprocThreadTraversal2
 ** 功能描述: 遍历进程内的所有线程
 ** 输　入  : pid        进程
 **           pfunc      回调函数
