@@ -71,13 +71,13 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
     
     } else if (clockid == CLOCK_PROCESS_CPUTIME_ID) {
 #if LW_CFG_MODULELOADER_EN > 0
-        LW_LD_VPROC *vproc = __LW_VP_GET_CUR_PROC();
-        if (vproc == LW_NULL) {
+        LW_LD_VPROC *pvproc = __LW_VP_GET_CUR_PROC();
+        if (pvproc == LW_NULL) {
             _ErrorHandle(ENOSYS);
             return  (PX_ERROR);
         }
         LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
-        __tickToTimespec(vproc->VP_clockUser + vproc->VP_clockSystem, tv);
+        __tickToTimespec(pvproc->VP_clockUser + pvproc->VP_clockSystem, tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 #else
         _ErrorHandle(ENOSYS);

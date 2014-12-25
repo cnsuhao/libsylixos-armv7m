@@ -671,6 +671,10 @@ void reclaimchild (void)
     pid_t           pidChld;
     LW_LD_VPROC    *pvproc = __LW_VP_GET_CUR_PROC();
     
+    if (pvproc == LW_NULL) {
+        return;
+    }
+    
     __THREAD_CANCEL_POINT();                                            /*  ≤‚ ‘»°œ˚µ„                  */
     
     do {

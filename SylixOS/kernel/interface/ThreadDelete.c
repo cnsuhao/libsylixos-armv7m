@@ -277,7 +277,7 @@ ULONG  API_ThreadDelete (LW_OBJECT_HANDLE  *pulId, PVOID  pvRetVal)
         return  (ERROR_THREAD_NULL);
     }
     
-    if (pvprocDel->VP_ulMainThread == ulId) {                           /*  删除主线程                  */
+    if (pvprocDel && (pvprocDel->VP_ulMainThread == ulId)) {            /*  删除主线程                  */
         if (ptcbCur == ptcbDel) {                                       /*  主线程自己删除自己          */
             if (pvprocDel->VP_iStatus != __LW_VP_EXIT) {
                 __KERNEL_EXIT();                                        /*  退出内核                    */
