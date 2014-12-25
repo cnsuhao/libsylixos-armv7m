@@ -50,11 +50,11 @@
 
 FUNC_DEF(archIntDisable)
     MRS     R0 , CPSR
-    ORR     R1 , R0, #0xC0
+    ORR     R1 , R0, #0x80
     MSR     CPSR_c, R1
     MRS     R2 , CPSR
-    AND     R2 , R2, #0xC0
-    CMP     R2 , #0xC0
+    AND     R2 , R2, #0x80
+    CMP     R2 , #0x80
     BNE     archIntDisable
     BX      LR
     FUNC_END()
