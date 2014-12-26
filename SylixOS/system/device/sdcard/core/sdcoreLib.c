@@ -136,7 +136,7 @@ static void  __printCID (LW_SDDEV_CID *psdcid, UINT8 ucType)
 
 #endif                                                                  /*  __SYLIXOS_DEBUG             */
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDecodeCID
+** º¯ÊýÃû³Æ: API_SdCoreDecodeCID
 ** ¹¦ÄÜÃèÊö: ½âÂëCID
 ** Êä    Èë: pRawCID         Ô­Ê¼CIDÊý¾Ý
 **           ucType          ¿¨µÄÀàÐÍ
@@ -145,7 +145,7 @@ static void  __printCID (LW_SDDEV_CID *psdcid, UINT8 ucType)
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDecodeCID (LW_SDDEV_CID  *psdcidDec, UINT32 *pRawCID, UINT8 ucType)
+INT API_SdCoreDecodeCID (LW_SDDEV_CID  *psdcidDec, UINT32 *pRawCID, UINT8 ucType)
 {
     if (!psdcidDec || !pRawCID) {
         _ErrorHandle(EINVAL);
@@ -233,7 +233,7 @@ static void  __printCSD (LW_SDDEV_CSD *psdcsd)
 
 #endif                                                                  /*  __SYLIXOS_DEBUG             */
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDecodeCSD
+** º¯ÊýÃû³Æ: API_SdCoreDecodeCSD
 ** ¹¦ÄÜÃèÊö: ½âÂëCSD
 ** Êä    Èë: pRawCSD         Ô­Ê¼CSDÊý¾Ý
 **           ucType          ¿¨µÄÀàÐÍ
@@ -242,7 +242,7 @@ static void  __printCSD (LW_SDDEV_CSD *psdcsd)
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDecodeCSD (LW_SDDEV_CSD  *psdcsdDec, UINT32 *pRawCSD, UINT8 ucType)
+INT API_SdCoreDecodeCSD (LW_SDDEV_CSD  *psdcsdDec, UINT32 *pRawCSD, UINT8 ucType)
 {
     UINT8   ucStruct;
     UINT32  uiExp;
@@ -344,7 +344,7 @@ __decsd_mmc_sd:                                                         /*  mmcÓ
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDevReset
+** º¯ÊýÃû³Æ: API_SdCoreDevReset
 ** ¹¦ÄÜÃèÊö: ¸´Î»Éè±¸
 ** Êä    Èë: psdcoredevice Éè±¸½á¹¹Ö¸Õë
 ** Êä    ³ö: NONE
@@ -352,7 +352,7 @@ __decsd_mmc_sd:                                                         /*  mmcÓ
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDevReset (PLW_SDCORE_DEVICE psdcoredevice)
+INT API_SdCoreDevReset (PLW_SDCORE_DEVICE psdcoredevice)
 {
     LW_SD_COMMAND  sdcmd;
     INT            iError;
@@ -389,7 +389,7 @@ INT __sdCoreDevReset (PLW_SDCORE_DEVICE psdcoredevice)
     return  (ERROR_NONE);                                               /*  PREVENT WARNING             */
 }
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDevSendIfCond
+** º¯ÊýÃû³Æ: API_SdCoreDevSendIfCond
 ** ¹¦ÄÜÃèÊö: ¼ì²é¿¨²Ù×÷½Ó¿ÚÌõ¼þ(CMD8).ÔÚ¸´Î»Ö®ºó,Ö÷»ú²¢²»ÖªµÀ¿¨ÄÜÖ§³ÖµÄµçÑ¹ÊÇ¶àÉÙ,»òÔÚÄÄ¸ö·¶Î§.
 **           ÓÚÊÇCMD8£¨SEND_IF_COND£©¾ÍÓÃÀ´×öÕâ¸öÊÂ.
 ** Êä    Èë: psdcoredevice Éè±¸½á¹¹Ö¸Õë
@@ -398,7 +398,7 @@ INT __sdCoreDevReset (PLW_SDCORE_DEVICE psdcoredevice)
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDevSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
+INT API_SdCoreDevSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
 {
     LW_SD_COMMAND   sdcmd;
     INT             iError;
@@ -460,7 +460,7 @@ INT __sdCoreDevSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
     }
 }
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDevSendAppOpCond
+** º¯ÊýÃû³Æ: API_SdCoreDevSendAppOpCond
 ** ¹¦ÄÜÃèÊö: ·¢ËÍACMD41.
 **           µ±¸ÃÃüÁîµÄ²ÎÊýOCRÎª0,³Æ×÷"²éÑ¯ACMD41",Ð§¹ûÍ¬CMD8.
 **           µ±¸ÃÃüÁîµÄ²ÎÊýOCR²»Îª0,³Æ×÷"µÚÒ»¸öACMD41",ÓÃÀ´Æô¶¯¿¨³õÊ¼»¯µÄÍ¬Ê±,¾ö¶¨×îÖÕµÄ²Ù×÷µçÑ¹.
@@ -473,10 +473,10 @@ INT __sdCoreDevSendIfCond (PLW_SDCORE_DEVICE psdcoredevice)
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDevSendAppOpCond (PLW_SDCORE_DEVICE  psdcoredevice,
-                              UINT32             uiOCR,
-                              LW_SDDEV_OCR      *psddevocrOut,
-                              UINT8             *pucType)
+INT API_SdCoreDevSendAppOpCond (PLW_SDCORE_DEVICE  psdcoredevice,
+                                UINT32             uiOCR,
+                                LW_SDDEV_OCR      *psddevocrOut,
+                                UINT8             *pucType)
 {
     LW_SD_COMMAND   sdcmd;
     INT             iError;
@@ -614,7 +614,7 @@ __ident_done:                                                           /*  Ê¶±ð
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDevSendRelativeAddr
+** º¯ÊýÃû³Æ: API_SdCoreDevSendRelativeAddr
 ** ¹¦ÄÜÃèÊö: ÈÃ¿¨·¢ËÍ×Ô¼ºµÄ±¾µØµØÖ·.
 **           !!×¢Òâ,¸Ãº¯ÊýÖ»ÄÜÓÃÓÚSD×ÜÏßÉÏµÄÉè±¸.
 ** Êä    Èë: psdcoredevice   Éè±¸½á¹¹Ö¸Õë
@@ -623,7 +623,7 @@ __ident_done:                                                           /*  Ê¶±ð
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDevSendRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiRCA)
+INT API_SdCoreDevSendRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiRCA)
 {
     INT              iError;
     LW_SD_COMMAND    sdcmd;
@@ -657,7 +657,7 @@ INT __sdCoreDevSendRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiRCA
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDevMmcSetRelativeAddr
+** º¯ÊýÃû³Æ: API_SdCoreDevMmcSetRelativeAddr
 ** ¹¦ÄÜÃèÊö: ÉèÖÃMMC¿¨µÄRCA.
 **           MMCµÄ±¾µØµØÖ·ÊÇÓÉÓÃ»§ÉèÖÃµÄ(SDÊÇÓÉ¿¨»ñµÃµÄ).
 ** Êä    Èë: psdcoredevice   Éè±¸½á¹¹Ö¸Õë
@@ -667,7 +667,7 @@ INT __sdCoreDevSendRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiRCA
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDevMmcSetRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 uiRCA)
+INT API_SdCoreDevMmcSetRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 uiRCA)
 {
     INT              iError;
     LW_SD_COMMAND    sdcmd;
@@ -695,7 +695,7 @@ INT __sdCoreDevMmcSetRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 uiRCA
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDevSendAllCID
+** º¯ÊýÃû³Æ: API_SdCoreDevSendAllCID
 ** ¹¦ÄÜÃèÊö: »ñµÃ¿¨µÄCID
 ** Êä    Èë: psdcoredevice   Éè±¸½á¹¹Ö¸Õë
 ** Êä    ³ö: psdcid          ¿¨Ó¦´ðµÄCID(ÒÑ¾­½âÂë)
@@ -703,7 +703,7 @@ INT __sdCoreDevMmcSetRelativeAddr (PLW_SDCORE_DEVICE psdcoredevice, UINT32 uiRCA
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid)
+INT API_SdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid)
 {
     INT              iError;
     LW_SD_COMMAND    sdcmd;
@@ -733,7 +733,7 @@ INT __sdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid
      */
     API_SdCoreDevTypeView(psdcoredevice, &ucType);
     if (COREDEV_IS_SD(psdcoredevice)) {
-        __sdCoreDecodeCID(psdcid, sdcmd.SDCMD_uiResp, ucType);
+        API_SdCoreDecodeCID(psdcid, sdcmd.SDCMD_uiResp, ucType);
         return  (ERROR_NONE);
     }
 
@@ -742,12 +742,12 @@ INT __sdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid
      */
     API_SdCoreSpiRegisterRead(psdcoredevice, pucCidBuf, 16);
     API_SdCoreSpiCxdFormat(sdcmd.SDCMD_uiResp, pucCidBuf);
-    __sdCoreDecodeCID(psdcid, sdcmd.SDCMD_uiResp, ucType);
+    API_SdCoreDecodeCID(psdcid, sdcmd.SDCMD_uiResp, ucType);
 
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** º¯ÊýÃû³Æ: __sdCoreDevSendCSD
+** º¯ÊýÃû³Æ: API_SdCoreDevSendAllCSD
 ** ¹¦ÄÜÃèÊö: »ñµÃ¿¨µÄCSD
 ** Êä    Èë: psdcoredevice   Éè±¸½á¹¹Ö¸Õë
 ** Êä    ³ö: psdcsd          ¿¨Ó¦´ðµÄCSD(ÒÑ¾­½âÂë)
@@ -755,7 +755,7 @@ INT __sdCoreDevSendAllCID (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CID *psdcid
 ** È«¾Ö±äÁ¿:
 ** µ÷ÓÃÄ£¿é:
 *********************************************************************************************************/
-INT __sdCoreDevSendAllCSD (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CSD *psdcsd)
+INT API_SdCoreDevSendAllCSD (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CSD *psdcsd)
 {
     INT              iError;
     LW_SD_COMMAND    sdcmd;
@@ -793,7 +793,7 @@ INT __sdCoreDevSendAllCSD (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CSD *psdcsd
      */
     API_SdCoreDevTypeView(psdcoredevice, &ucType);
     if (COREDEV_IS_SD(psdcoredevice)) {
-        __sdCoreDecodeCSD(psdcsd, sdcmd.SDCMD_uiResp, ucType);
+        API_SdCoreDecodeCSD(psdcsd, sdcmd.SDCMD_uiResp, ucType);
         return  (ERROR_NONE);
     }
 
@@ -802,7 +802,7 @@ INT __sdCoreDevSendAllCSD (PLW_SDCORE_DEVICE psdcoredevice, LW_SDDEV_CSD *psdcsd
      */
     API_SdCoreSpiRegisterRead(psdcoredevice, pucCsdBuf, 16);
     API_SdCoreSpiCxdFormat(sdcmd.SDCMD_uiResp, pucCsdBuf);
-    __sdCoreDecodeCSD(psdcsd, sdcmd.SDCMD_uiResp, ucType);
+    API_SdCoreDecodeCSD(psdcsd, sdcmd.SDCMD_uiResp, ucType);
 
     return  (ERROR_NONE);
 }
@@ -855,7 +855,7 @@ static INT __sdCoreSelectDev (PLW_SDCORE_DEVICE psdcoredevice, BOOL bSel)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevSelect
+ ** º¯ÊýÃû³Æ: API_SdCoreDevSelect
  ** ¹¦ÄÜÃèÊö: Éè±¸Ñ¡Ôñ
  ** Êä    Èë: psdcoredevice     Éè±¸½á¹¹Ö¸Õë
  ** Êä    ³ö: NONE
@@ -863,7 +863,7 @@ static INT __sdCoreSelectDev (PLW_SDCORE_DEVICE psdcoredevice, BOOL bSel)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevSelect (PLW_SDCORE_DEVICE psdcoredevice)
+INT API_SdCoreDevSelect (PLW_SDCORE_DEVICE psdcoredevice)
 {
     INT iError;
     iError = __sdCoreSelectDev(psdcoredevice, LW_TRUE);
@@ -871,7 +871,7 @@ INT __sdCoreDevSelect (PLW_SDCORE_DEVICE psdcoredevice)
     return  (iError);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevDeSelect
+ ** º¯ÊýÃû³Æ: API_SdCoreDevDeSelect
  ** ¹¦ÄÜÃèÊö: Éè±¸È¡Ïû
  ** Êä    Èë: psdcoredevice     Éè±¸½á¹¹Ö¸Õë
  ** Êä    ³ö: NONE
@@ -879,7 +879,7 @@ INT __sdCoreDevSelect (PLW_SDCORE_DEVICE psdcoredevice)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevDeSelect (PLW_SDCORE_DEVICE psdcoredevice)
+INT API_SdCoreDevDeSelect (PLW_SDCORE_DEVICE psdcoredevice)
 {
     INT iError;
 
@@ -888,7 +888,7 @@ INT __sdCoreDevDeSelect (PLW_SDCORE_DEVICE psdcoredevice)
     return  (iError);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevSetBusWidth
+ ** º¯ÊýÃû³Æ: API_SdCoreDevSetBusWidth
  ** ¹¦ÄÜÃèÊö: ÉèÖÃ×ÜÏßÍ¨ÐÅÎ»¿í
  ** Êä    Èë: psdcoredevice     Éè±¸½á¹¹Ö¸Õë
  ** Êä    ³ö: NONE
@@ -896,19 +896,19 @@ INT __sdCoreDevDeSelect (PLW_SDCORE_DEVICE psdcoredevice)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevSetBusWidth (PLW_SDCORE_DEVICE psdcoredevice, INT iBusWidth)
+INT API_SdCoreDevSetBusWidth (PLW_SDCORE_DEVICE psdcoredevice, INT iBusWidth)
 {
     INT             iError = ERROR_NONE;
     LW_SD_COMMAND   sdcmd;
 
-    iError = __sdCoreDevSelect(psdcoredevice);
+    iError = API_SdCoreDevSelect(psdcoredevice);
     if (iError != ERROR_NONE) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
         return  (PX_ERROR);
     }
 
     if (!psdcoredevice) {
-        __sdCoreDevDeSelect(psdcoredevice);
+        API_SdCoreDevDeSelect(psdcoredevice);
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "parameter error.\r\n");
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
@@ -916,7 +916,7 @@ INT __sdCoreDevSetBusWidth (PLW_SDCORE_DEVICE psdcoredevice, INT iBusWidth)
 
     if ((iBusWidth != SDBUS_WIDTH_1) && (iBusWidth != SDBUS_WIDTH_4)) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "invalid bus width in current sd version.\r\n");
-        __sdCoreDevDeSelect(psdcoredevice);
+        API_SdCoreDevDeSelect(psdcoredevice);
         return  (PX_ERROR);
     }
 
@@ -935,12 +935,12 @@ INT __sdCoreDevSetBusWidth (PLW_SDCORE_DEVICE psdcoredevice, INT iBusWidth)
                                      LW_FALSE,
                                      0);
     }
-    __sdCoreDevDeSelect(psdcoredevice);
+    API_SdCoreDevDeSelect(psdcoredevice);
 
     return  (iError);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevSetBlkLen
+ ** º¯ÊýÃû³Æ: API_SdCoreDevSetBlkLen
  ** ¹¦ÄÜÃèÊö: ÉèÖÃ¼ÇÒä¿¨µÄ¿é³¤¶È.¸Ãº¯ÊýÓ°ÏìÖ®ºóµÄÊý¾Ý¶Á¡¢Ð´¡¢Ëø¶¨ÖÐµÄ¿é´óÐ¡²ÎÊý.
  **           µ«ÊÇÔÚSDHCºÍSDXCÖÐ,Ö»Ó°ÏìËø¶¨ÃüÁîÖÐµÄ²ÎÊý(ÒòÎª¶ÁÐ´¹Ì¶¨Îª512byte¿é´óÐ¡).
  ** Êä    Èë: psdcoredevice   Éè±¸½á¹¹Ö¸Õë
@@ -950,7 +950,7 @@ INT __sdCoreDevSetBusWidth (PLW_SDCORE_DEVICE psdcoredevice, INT iBusWidth)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevSetBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iBlkLen)
+INT API_SdCoreDevSetBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iBlkLen)
 {
     INT             iError;
     LW_SD_COMMAND   sdcmd;
@@ -959,7 +959,7 @@ INT __sdCoreDevSetBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iBlkLen)
     sdcmd.SDCMD_uiArg    = iBlkLen;
     sdcmd.SDCMD_uiFlag   = SD_RSP_SPI_R1 | SD_RSP_R1 | SD_CMD_AC;
 
-    iError = __sdCoreDevSelect(psdcoredevice);
+    iError = API_SdCoreDevSelect(psdcoredevice);
     if (iError != ERROR_NONE) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
         return  (PX_ERROR);
@@ -968,7 +968,7 @@ INT __sdCoreDevSetBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iBlkLen)
     iError = API_SdCoreDevCmd(psdcoredevice, &sdcmd, 0);
     if (iError != ERROR_NONE) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd16 failed.\r\n");
-        __sdCoreDevDeSelect(psdcoredevice);
+        API_SdCoreDevDeSelect(psdcoredevice);
         return  (PX_ERROR);
     }
 
@@ -979,10 +979,10 @@ INT __sdCoreDevSetBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iBlkLen)
         }
     }
 
-    return  (__sdCoreDevDeSelect(psdcoredevice));
+    return  (API_SdCoreDevDeSelect(psdcoredevice));
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevGetStatus
+ ** º¯ÊýÃû³Æ: API_SdCoreDevGetStatus
  ** ¹¦ÄÜÃèÊö: µÃµ½¿¨µÄ×´Ì¬×Ö
  ** Êä    Èë: psdcoredevice   Éè±¸½á¹¹Ö¸Õë
  ** Êä    ³ö: puiStatus       ×´Ì¬
@@ -990,7 +990,7 @@ INT __sdCoreDevSetBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iBlkLen)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevGetStatus (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiStatus)
+INT API_SdCoreDevGetStatus (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiStatus)
 {
     LW_SD_COMMAND  sdcmd;
     UINT32         uiRca;
@@ -1016,7 +1016,7 @@ INT __sdCoreDevGetStatus (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiStatus)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevSetPreBlkLen
+ ** º¯ÊýÃû³Æ: API_SdCoreDevSetPreBlkLen
  ** ¹¦ÄÜÃèÊö: ÉèÖÃÔ¤ÏÈ²Á³ý¿é¼ÆÊý.ÔÚ "<¶à¿éÐ´>" ²Ù×÷ÖÐ,¸Ã¹¦ÄÜÓÃÓÚÈÃ¿¨Ô¤ÏÈ²Á³ýÖ¸¶¨µÄ¿é´óÐ¡,ÕâÑù¿ÉÒÔÌá¸ßËÙ¶È.
  ** Êä    Èë: psdcoredevice   Éè±¸½á¹¹Ö¸Õë
  **           iPreBlkLen   ¿é´óÐ¡
@@ -1025,7 +1025,7 @@ INT __sdCoreDevGetStatus (PLW_SDCORE_DEVICE psdcoredevice, UINT32 *puiStatus)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevSetPreBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iPreBlkLen)
+INT API_SdCoreDevSetPreBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iPreBlkLen)
 {
     LW_SD_COMMAND  sdcmd;
     INT            iError;
@@ -1049,7 +1049,7 @@ INT __sdCoreDevSetPreBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iPreBlkLen)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevIsBlockAddr
+ ** º¯ÊýÃû³Æ: API_SdCoreDevIsBlockAddr
  ** ¹¦ÄÜÃèÊö: ÅÐ¶ÏÉè±¸ÊÇ·ñÊÇ¿éÑ°Ö·
  ** Êä    Èë: psdcoredevice     Éè±¸½á¹¹Ö¸Õë
  ** Êä    ³ö: pbResult          ½á¹û
@@ -1057,7 +1057,7 @@ INT __sdCoreDevSetPreBlkLen (PLW_SDCORE_DEVICE psdcoredevice, INT iPreBlkLen)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevIsBlockAddr (PLW_SDCORE_DEVICE psdcoredevice, BOOL *pbResult)
+INT API_SdCoreDevIsBlockAddr (PLW_SDCORE_DEVICE psdcoredevice, BOOL *pbResult)
 {
     UINT8   ucType;
 
@@ -1085,7 +1085,7 @@ INT __sdCoreDevIsBlockAddr (PLW_SDCORE_DEVICE psdcoredevice, BOOL *pbResult)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevSpiClkDely
+ ** º¯ÊýÃû³Æ: API_SdCoreDevSpiClkDely
  ** ¹¦ÄÜÃèÊö: ÔÚSPIÄ£Ê½ÏÂµÄÊ±ÖÓÑÓÊ±
  ** Êä    Èë: psdcoredevice     Éè±¸½á¹¹Ö¸Õë
  **           iClkConts         ÑÓÊ±clock¸öÊý
@@ -1094,7 +1094,7 @@ INT __sdCoreDevIsBlockAddr (PLW_SDCORE_DEVICE psdcoredevice, BOOL *pbResult)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevSpiClkDely (PLW_SDCORE_DEVICE psdcoredevice, INT iClkConts)
+INT API_SdCoreDevSpiClkDely (PLW_SDCORE_DEVICE psdcoredevice, INT iClkConts)
 {
     INT iError;
 
@@ -1104,7 +1104,7 @@ INT __sdCoreDevSpiClkDely (PLW_SDCORE_DEVICE psdcoredevice, INT iClkConts)
     return  (iError);
 }
 /*********************************************************************************************************
- ** º¯ÊýÃû³Æ: __sdCoreDevSpiCrcEn
+ ** º¯ÊýÃû³Æ: API_SdCoreDevSpiCrcEn
  ** ¹¦ÄÜÃèÊö: ÔÚSPIÄ£Ê½ÏÂÊ¹ÄÜÉè±¸µÄCRCÐ£Ñé
  ** Êä    Èë: psdcoredevice     Éè±¸½á¹¹Ö¸Õë
  **           bEnable           ÊÇ·ñÊ¹ÄÜ.(0:½ûÖ¹crc  1:Ê¹ÄÜcrc)
@@ -1113,7 +1113,7 @@ INT __sdCoreDevSpiClkDely (PLW_SDCORE_DEVICE psdcoredevice, INT iClkConts)
  ** È«¾Ö±äÁ¿:
  ** µ÷ÓÃÄ£¿é:
  ********************************************************************************************************/
-INT __sdCoreDevSpiCrcEn (PLW_SDCORE_DEVICE psdcoredevice, BOOL bEnable)
+INT API_SdCoreDevSpiCrcEn (PLW_SDCORE_DEVICE psdcoredevice, BOOL bEnable)
 {
     LW_SD_COMMAND  sdcmd;
     INT            iError;

@@ -185,7 +185,7 @@ static INT  __sdiobaseDevDelete (SD_DRV *psddrv,  VOID *pvDevPriv)
 
     psdiofunc = &psdiobase->SDMIOBASE_initdata.INIT_psdiofuncTbl[0];
     for (i = 0; i < (psdiobase->SDMIOBASE_initdata.INIT_iFuncCnt + 1); i++) {
-        __sdioCoreDevFuncClean(psdiofunc);
+        API_SdioCoreDevFuncClean(psdiofunc);
         psdiofunc++;
     }
 
@@ -264,9 +264,9 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
     API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_POWERON, 0);
     API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_SETCLK, SDARG_SETCLK_LOW);
 
-    __sdioCoreDevReset(psdcoredev);
+    API_SdioCoreDevReset(psdcoredev);
 
-    iRet = __sdioCoreDevSendIoOpCond(psdcoredev, 0, &uiOcr);        /*  获取设备支持的OCR               */
+    iRet = API_SdioCoreDevSendIoOpCond(psdcoredev, 0, &uiOcr);      /*  获取设备支持的OCR               */
     if (iRet != ERROR_NONE) {
         return  (PX_ERROR);
     }
@@ -311,7 +311,7 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
 __clean:
     psdiofunc = &pinitdata->INIT_psdiofuncTbl[0];
     for (i = 0; i < (pinitdata->INIT_iFuncCnt + 1); i++) {
-        __sdioCoreDevFuncClean(psdiofunc);
+        API_SdioCoreDevFuncClean(psdiofunc);
         psdiofunc++;
     }
 
@@ -332,34 +332,34 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
     INT               iRet;
     UINT32            uiRca;
 
-    iRet = __sdioCoreDevSendIoOpCond(psdcoredev, uiRealOcr, LW_NULL);
+    iRet = API_SdioCoreDevSendIoOpCond(psdcoredev, uiRealOcr, LW_NULL);
     if (iRet != ERROR_NONE) {
         return  (PX_ERROR);
     }
 
 #if LW_CFG_SDCARD_CRC_EN > 0
     if (COREDEV_IS_SPI(psdcoredev)) {
-        __sdCoreDevSpiCrcEn(psdcoredev, LW_TRUE);
+        API_SdCoreDevSpiCrcEn(psdcoredev, LW_TRUE);
     }
 #endif
 
     API_SdCoreDevTypeSet(psdcoredev, SDDEV_TYPE_SDIO);
 
     if (COREDEV_IS_SD(psdcoredev)) {
-        iRet = __sdCoreDevSendRelativeAddr(psdcoredev, &uiRca);
+        iRet = API_SdCoreDevSendRelativeAddr(psdcoredev, &uiRca);
         if (iRet != ERROR_NONE) {
             return  (PX_ERROR);
         }
 
         API_SdCoreDevRcaSet(psdcoredev, uiRca);
 
-        iRet = __sdCoreDevSelect(psdcoredev);
+        iRet = API_SdCoreDevSelect(psdcoredev);
         if (iRet != ERROR_NONE) {
             return  (PX_ERROR);
         }
     }
 
-    iRet = __sdioCoreDevReadCCCR(psdcoredev, &pinitdata->INIT_sdiocccr);
+    iRet = API_SdioCoreDevReadCCCR(psdcoredev, &pinitdata->INIT_sdiocccr);
     if (iRet != ERROR_NONE) {
         return  (PX_ERROR);
     }
@@ -367,7 +367,7 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
     /*
      * func0 : the common CIS
      */
-    iRet = __sdioCoreDevReadCis(psdcoredev, &pinitdata->INIT_psdiofuncTbl[0]);
+    iRet = API_SdioCoreDevReadCis(psdcoredev, &pinitdata->INIT_psdiofuncTbl[0]);
     if (iRet != ERROR_NONE) {
         return  (PX_ERROR);
     }
@@ -375,7 +375,7 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
     /*
      * try to switch to high speed
      */
-    __sdioCoreDevHighSpeedEn(psdcoredev, &pinitdata->INIT_sdiocccr);
+    API_SdioCoreDevHighSpeedEn(psdcoredev, &pinitdata->INIT_sdiocccr);
 
     if (COREDEV_IS_HIGHSPEED(psdcoredev)) {
         iRet = API_SdCoreDevCtl(psdcoredev,
@@ -393,7 +393,7 @@ static INT   __sdiobaseCommonInit (SDIO_INIT_DATA *pinitdata, UINT32 uiRealOcr)
         }
     }
 
-    iRet = __sdioCoreDevWideBusEn(psdcoredev, &pinitdata->INIT_sdiocccr);
+    iRet = API_SdioCoreDevWideBusEn(psdcoredev, &pinitdata->INIT_sdiocccr);
     if (iRet != ERROR_NONE) {
         return  (PX_ERROR);
     }
@@ -413,12 +413,12 @@ static INT  __sdiobaseFuncInit (PLW_SDCORE_DEVICE psdcoredev, SDIO_FUNC *psdiofu
 {
     INT iRet;
 
-    iRet = __sdioCoreDevReadFbr(psdcoredev, psdiofunc);
+    iRet = API_SdioCoreDevReadFbr(psdcoredev, psdiofunc);
     if (iRet != ERROR_NONE) {
         return  (PX_ERROR);
     }
 
-    iRet = __sdioCoreDevReadCis(psdcoredev, psdiofunc);
+    iRet = API_SdioCoreDevReadCis(psdcoredev, psdiofunc);
     if (iRet != ERROR_NONE) {
         return  (PX_ERROR);
     }

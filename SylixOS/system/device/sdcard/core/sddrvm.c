@@ -595,10 +595,10 @@ static VOID __sdmSdioIntHandle (__SDM_HOST *psdmhost)
      *  Host 控制器可能传来假的 SDIO 中断
      *  因此查看 SDIO 设备是否真的产生了 SDIO 中断
      */
-    iRet = __sdioCoreDevReadByte(psdmdev->SDMDEV_psdcoredev,
-                                 SDIO_CCCR_CCCR,
-                                 SDIO_CCCR_INTX,
-                                 &ucIntFlag);
+    iRet = API_SdioCoreDevReadByte(psdmdev->SDMDEV_psdcoredev,
+                                   SDIO_CCCR_CCCR,
+                                   SDIO_CCCR_INTX,
+                                   &ucIntFlag);
     if (iRet != ERROR_NONE) {
         return;
     }

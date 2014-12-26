@@ -193,7 +193,7 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
         return  (LW_NULL);
     }
 
-    iError = __sdCoreDevIsBlockAddr(psdcoredevice, &bBlkAddr);
+    iError = API_SdCoreDevIsBlockAddr(psdcoredevice, &bBlkAddr);
     if (iError != ERROR_NONE) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "unkonwn address access way.\r\n");
         __SHEAP_FREE(psdblkdevice);
@@ -355,7 +355,7 @@ static INT __sdMemTestBusy (PLW_SDCORE_DEVICE psdcoredevice, INT iType)
     lib_clock_gettime(CLOCK_MONOTONIC, &tvOld);
 
     while (iRetry++ < __SD_BUSY_RETRY) {
-        iError = __sdCoreDevGetStatus(psdcoredevice, &uiSta);
+        iError = API_SdCoreDevGetStatus(psdcoredevice, &uiSta);
 
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get device status failed.\r\n");
@@ -411,7 +411,7 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
 
         SD_DELAYMS(10);
 
-        iError = __sdCoreDevReset(psdcoredevice);                       /*  cmd0 go idle                */
+        iError = API_SdCoreDevReset(psdcoredevice);                     /*  cmd0 go idle                */
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device reset failed.\r\n");
             return  (PX_ERROR);
@@ -421,16 +421,16 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
                                   SDBUS_CTRL_GETOCR,
                                   (LONG)&uiOCR);
 
-        iError = __sdCoreDevSendIfCond(psdcoredevice);                  /*  cmd8 (v2.0以上的卡必须这个) */
+        iError = API_SdCoreDevSendIfCond(psdcoredevice);                /*  cmd8 (v2.0以上的卡必须这个) */
                                                                         /*  v2.0以下的卡无应答,忽略错误 */
         if (iError == ERROR_NONE) {                                     /*  SDHC卡初始化支持            */
             uiOCR |= SD_OCR_HCS;
         }
 
-        iError = __sdCoreDevSendAppOpCond(psdcoredevice,
-                                          uiOCR,
-                                          &sddevocr,
-                                          &ucType);                     /*  acmd41                      */
+        iError = API_SdCoreDevSendAppOpCond(psdcoredevice,
+                                            uiOCR,
+                                            &sddevocr,
+                                            &ucType);                   /*  acmd41                      */
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device don't support the ocr.\r\n");
             return  (PX_ERROR);
@@ -438,17 +438,17 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
 
         API_SdCoreDevTypeSet(psdcoredevice, ucType);                    /*  设置type域                  */
 
-        iError = __sdCoreDevSendAllCID(psdcoredevice, &sddevcid);       /*  cmd2                        */
+        iError = API_SdCoreDevSendAllCID(psdcoredevice, &sddevcid);     /*  cmd2                        */
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get device cid failed.\r\n");
             return  (PX_ERROR);
         }
         if (ucType == SDDEV_TYPE_MMC) {
             uiRCA = 0x01;
-            iError = __sdCoreDevMmcSetRelativeAddr(psdcoredevice, uiRCA);
+            iError = API_SdCoreDevMmcSetRelativeAddr(psdcoredevice, uiRCA);
         } else {
-            iError = __sdCoreDevSendRelativeAddr(psdcoredevice, &uiRCA);/*  cmd3                        */
-
+            iError = API_SdCoreDevSendRelativeAddr(psdcoredevice, &uiRCA);
+                                                                        /*  cmd3                        */
         } if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get device rca failed.\r\n");
             return  (PX_ERROR);
@@ -456,7 +456,7 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
 
         API_SdCoreDevRcaSet(psdcoredevice, uiRCA);                      /*  设置RCA域                   */
 
-        iError = __sdCoreDevSendAllCSD(psdcoredevice, &sddevcsd);
+        iError = API_SdCoreDevSendAllCSD(psdcoredevice, &sddevcsd);
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get device csd failed.\r\n");
             return  (PX_ERROR);
@@ -484,14 +484,14 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
         /*
          * 以下进入传输模式
          */
-        iError = __sdCoreDevSetBlkLen(psdcoredevice, SD_MEM_DEFAULT_BLKSIZE);
+        iError = API_SdCoreDevSetBlkLen(psdcoredevice, SD_MEM_DEFAULT_BLKSIZE);
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "set blklen failed.\r\n");
             return  (PX_ERROR);
         }
 
         if (ucType != SDDEV_TYPE_MMC) {
-            iError = __sdCoreDevSetBusWidth(psdcoredevice, SDARG_SETBUSWIDTH_4);
+            iError = API_SdCoreDevSetBusWidth(psdcoredevice, SDARG_SETBUSWIDTH_4);
                                                                         /*  acmd6 set bus width         */
             if (iError != ERROR_NONE) {
                 SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "set bus width error.\r\n");
@@ -516,9 +516,9 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
             return  (PX_ERROR);
         }
 
-        __sdCoreDevSpiClkDely(psdcoredevice, 100);                      /*  延时大于74个时钟            */
+        API_SdCoreDevSpiClkDely(psdcoredevice, 100);                    /*  延时大于74个时钟            */
 
-        iError = __sdCoreDevReset(psdcoredevice);                       /*  cmd0 go idle                */
+        iError = API_SdCoreDevReset(psdcoredevice);                     /*  cmd0 go idle                */
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device reset failed.\r\n");
             return  (PX_ERROR);
@@ -533,10 +533,10 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
 
         uiOCR |= SD_OCR_HCS;                                            /*  SDHC卡初始化支持            */
 
-        iError = __sdCoreDevSendAppOpCond(psdcoredevice,
-                                          uiOCR,
-                                          &sddevocr,
-                                          &ucType);                     /*  acmd41   +  cmd58(spi)      */
+        iError = API_SdCoreDevSendAppOpCond(psdcoredevice,
+                                            uiOCR,
+                                            &sddevocr,
+                                            &ucType);                   /*  acmd41   +  cmd58(spi)      */
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "device don't support the ocr.\r\n");
             return  (PX_ERROR);
@@ -545,22 +545,22 @@ static INT __sdMemInit (PLW_SDCORE_DEVICE psdcoredevice)
         API_SdCoreDevTypeSet(psdcoredevice, ucType);                    /*  设置type域                  */
 
 #if LW_CFG_SDCARD_CRC_EN > 0
-        __sdCoreDevSpiCrcEn(psdcoredevice, LW_TRUE);                    /*  使能crc                     */
+        API_SdCoreDevSpiCrcEn(psdcoredevice, LW_TRUE);                  /*  使能crc                     */
 #endif
 
-        iError = __sdCoreDevSetBlkLen(psdcoredevice, SD_MEM_DEFAULT_BLKSIZE);
+        iError = API_SdCoreDevSetBlkLen(psdcoredevice, SD_MEM_DEFAULT_BLKSIZE);
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "set blklen failed.\r\n");
             return  (PX_ERROR);
         }
 
-        iError = __sdCoreDevSendAllCID(psdcoredevice, &sddevcid);       /*  cmd2                        */
+        iError = API_SdCoreDevSendAllCID(psdcoredevice, &sddevcid);     /*  cmd2                        */
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get device cid failed.\r\n");
             return  (PX_ERROR);
         }
 
-        iError = __sdCoreDevSendAllCSD(psdcoredevice, &sddevcsd);
+        iError = API_SdCoreDevSendAllCSD(psdcoredevice, &sddevcsd);
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "get device csd failed.\r\n");
             return  (PX_ERROR);
@@ -881,7 +881,7 @@ static INT __sdMemBlkWrt(__PSD_BLK_DEV   psdblkdevice,
     }
 
 
-    iError = __sdCoreDevSelect(psdcoredevice);                          /*  选择设备                    */
+    iError = API_SdCoreDevSelect(psdcoredevice);                        /*  选择设备                    */
     if (iError != ERROR_NONE) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
         return  (PX_ERROR);
@@ -911,7 +911,7 @@ static INT __sdMemBlkWrt(__PSD_BLK_DEV   psdblkdevice,
 
 __error_handle:
     if (COREDEV_IS_SD(psdcoredevice)) {
-        __sdCoreDevDeSelect(psdcoredevice);                                 /*  取消设备                    */
+        API_SdCoreDevDeSelect(psdcoredevice);                           /*  取消设备                    */
     }
 
     return  (iError);
@@ -958,7 +958,7 @@ static INT __sdMemBlkRd (__PSD_BLK_DEV   psdblkdevice,
 
 
     if (COREDEV_IS_SD(psdcoredevice)) {
-        iError = __sdCoreDevSelect(psdcoredevice);                      /*  选择设备                    */
+        iError = API_SdCoreDevSelect(psdcoredevice);                    /*  选择设备                    */
         if (iError != ERROR_NONE) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "select device failed.\r\n");
             return  (PX_ERROR);
@@ -990,7 +990,7 @@ static INT __sdMemBlkRd (__PSD_BLK_DEV   psdblkdevice,
 
 __error_handle:
     if (COREDEV_IS_SD(psdcoredevice)) {
-        __sdCoreDevDeSelect(psdcoredevice);                             /*  取消设备                    */
+        API_SdCoreDevDeSelect(psdcoredevice);                           /*  取消设备                    */
     }
 
     return  (iError);

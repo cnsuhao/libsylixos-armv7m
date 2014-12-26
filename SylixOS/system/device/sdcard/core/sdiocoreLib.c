@@ -85,14 +85,14 @@ static const __CIS_TPL_PARSER _G_cistplparserTbl[] = {
 };
 #define __NELE(array)       (sizeof(array) / sizeof(array[0]))
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevReset
+** 函数名称: API_SdioCoreDevReset
 ** 功能描述: SDIO 设备复位
 ** 输    入: psdcoredev       核心设备传输对象
 ** 输    出: ERROR CODE
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevReset (PLW_SDCORE_DEVICE   psdcoredev)
+INT API_SdioCoreDevReset (PLW_SDCORE_DEVICE   psdcoredev)
 {
     INT   iRet;
     UINT8 ucAbort;
@@ -100,19 +100,19 @@ INT __sdioCoreDevReset (PLW_SDCORE_DEVICE   psdcoredev)
     /*
      * SDIO Simplified Specification V2.0, 4.4 Reset for SDIO
      */
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_ABORT, 0, &ucAbort);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_ABORT, 0, &ucAbort);
     if (iRet) {
         ucAbort = 0x08;
     } else {
         ucAbort |= 0x08;
     }
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_ABORT, ucAbort, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_ABORT, ucAbort, LW_NULL);
 
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevSendIoOpCond
+** 函数名称: API_SdioCoreDevSendIoOpCond
 ** 功能描述: SDIO 设备 操作条件 设置/查看 命令
 ** 输    入: psdcoredev       核心设备传输对象
 **           uiOcr            设置的OCR
@@ -121,7 +121,7 @@ INT __sdioCoreDevReset (PLW_SDCORE_DEVICE   psdcoredev)
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevSendIoOpCond (PLW_SDCORE_DEVICE   psdcoredev, UINT32 uiOcr, UINT32 *puiOcrOut)
+INT API_SdioCoreDevSendIoOpCond (PLW_SDCORE_DEVICE   psdcoredev, UINT32 uiOcr, UINT32 *puiOcrOut)
 {
     LW_SD_COMMAND  sdcmd;
     INT            iError = ERROR_NONE;
@@ -177,7 +177,7 @@ INT __sdioCoreDevSendIoOpCond (PLW_SDCORE_DEVICE   psdcoredev, UINT32 uiOcr, UIN
     return  (iError);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevReadByte
+** 函数名称: API_SdioCoreDevReadByte
 ** 功能描述: 读取指定 IO 功能上指定地址的一字节数据
 ** 输    入: psdcoredev       核心设备传输对象
 **           uiFn             功能号
@@ -187,19 +187,19 @@ INT __sdioCoreDevSendIoOpCond (PLW_SDCORE_DEVICE   psdcoredev, UINT32 uiOcr, UIN
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevReadByte (PLW_SDCORE_DEVICE   psdcoredev,
-                           UINT32              uiFn,
-                           UINT32              uiAddr,
-                           UINT8              *pucByte)
+INT API_SdioCoreDevReadByte (PLW_SDCORE_DEVICE   psdcoredev,
+                             UINT32              uiFn,
+                             UINT32              uiAddr,
+                             UINT8              *pucByte)
 {
     INT iRet;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, uiFn, uiAddr, 0, pucByte);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, uiFn, uiAddr, 0, pucByte);
 
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevWriteByte
+** 函数名称: API_SdioCoreDevWriteByte
 ** 功能描述: 向指定 IO 功能上指定地址写一个字节的数据
 ** 输    入: psdcoredev       核心设备传输对象
 **           uiFn             功能号
@@ -209,19 +209,19 @@ INT __sdioCoreDevReadByte (PLW_SDCORE_DEVICE   psdcoredev,
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevWriteByte (PLW_SDCORE_DEVICE   psdcoredev,
-                            UINT32              uiFn,
-                            UINT32              uiAddr,
-                            UINT8               ucByte)
+INT API_SdioCoreDevWriteByte (PLW_SDCORE_DEVICE   psdcoredev,
+                              UINT32              uiFn,
+                              UINT32              uiAddr,
+                              UINT8               ucByte)
 {
     INT iRet;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, uiFn, uiAddr, ucByte, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, uiFn, uiAddr, ucByte, LW_NULL);
 
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevWriteThenReadByte
+** 函数名称: API_SdioCoreDevWriteThenReadByte
 ** 功能描述: 写入一个字节, 随后读回一个字节
 ** 输    入: psdcoredev       核心设备传输对象
 **           uiFn             功能号
@@ -232,20 +232,20 @@ INT __sdioCoreDevWriteByte (PLW_SDCORE_DEVICE   psdcoredev,
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevWriteThenReadByte (PLW_SDCORE_DEVICE   psdcoredev,
-                                    UINT32              uiFn,
-                                    UINT32              uiAddr,
-                                    UINT8               ucWrByte,
-                                    UINT8              *pucRdByte)
+INT API_SdioCoreDevWriteThenReadByte (PLW_SDCORE_DEVICE   psdcoredev,
+                                      UINT32              uiFn,
+                                      UINT32              uiAddr,
+                                      UINT8               ucWrByte,
+                                      UINT8              *pucRdByte)
 {
     INT iRet;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, uiFn, uiAddr, ucWrByte, pucRdByte);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, uiFn, uiAddr, ucWrByte, pucRdByte);
 
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevFuncEn
+** 函数名称: API_SdioCoreDevFuncEn
 ** 功能描述: 使能一个功能
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiofunc        功能描述对象
@@ -253,20 +253,20 @@ INT __sdioCoreDevWriteThenReadByte (PLW_SDCORE_DEVICE   psdcoredev,
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevFuncEn (PLW_SDCORE_DEVICE   psdcoredev,
-                         SDIO_FUNC          *psdiofunc)
+INT API_SdioCoreDevFuncEn (PLW_SDCORE_DEVICE   psdcoredev,
+                           SDIO_FUNC          *psdiofunc)
 {
     INT     iRet;
     UINT8   ucReg;
     ULONG   ulTimeOut;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEX, 0, &ucReg);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEX, 0, &ucReg);
     if (iRet) {
         goto    __err;
     }
 
     ucReg |= 1 << psdiofunc->FUNC_uiNum;
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEX, ucReg, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEX, ucReg, LW_NULL);
     if (iRet) {
         goto    __err;
     }
@@ -275,7 +275,7 @@ INT __sdioCoreDevFuncEn (PLW_SDCORE_DEVICE   psdcoredev,
     ulTimeOut = LW_MSECOND_TO_TICK_1(ulTimeOut) + lib_clock();
 
     while (1) {
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IORX, 0, &ucReg);
+        iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IORX, 0, &ucReg);
         if (iRet) {
             goto    __err;
         }
@@ -299,7 +299,7 @@ __err:
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevFuncDis
+** 函数名称: API_SdioCoreDevFuncDis
 ** 功能描述: 禁止一个功能
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiofunc        功能描述对象
@@ -307,19 +307,19 @@ __err:
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevFuncDis (PLW_SDCORE_DEVICE   psdcoredev,
-                          SDIO_FUNC          *psdiofunc)
+INT API_SdioCoreDevFuncDis (PLW_SDCORE_DEVICE   psdcoredev,
+                            SDIO_FUNC          *psdiofunc)
 {
     INT     iRet;
     UINT8   ucReg;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEX, 0, &ucReg);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IOEX, 0, &ucReg);
     if (iRet) {
         goto    __err;
     }
 
     ucReg &= ~(1 << psdiofunc->FUNC_uiNum);
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEX, ucReg, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IOEX, ucReg, LW_NULL);
     if (iRet) {
         goto    __err;
     }
@@ -331,7 +331,7 @@ __err:
     return  (PX_ERROR);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevFuncBlkSzSet
+** 函数名称: API_SdioCoreDevFuncBlkSzSet
 ** 功能描述: 设置一个功能的传输块大小
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiofunc        功能描述对象
@@ -339,9 +339,9 @@ __err:
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevFuncBlkSzSet (PLW_SDCORE_DEVICE   psdcoredev,
-                               SDIO_FUNC          *psdiofunc,
-                               UINT32              uiBlkSz)
+INT API_SdioCoreDevFuncBlkSzSet (PLW_SDCORE_DEVICE   psdcoredev,
+                                 SDIO_FUNC          *psdiofunc,
+                                 UINT32              uiBlkSz)
 {
     INT     iRet;
     UINT32  uiMaxBlkSz;
@@ -360,16 +360,16 @@ INT __sdioCoreDevFuncBlkSzSet (PLW_SDCORE_DEVICE   psdcoredev,
         uiBlkSz = min(uiMaxBlkSz, 512u);
     }
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0,
-                                 SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_BLKSIZE,
-                                 uiBlkSz & 0xff, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0,
+                                   SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_BLKSIZE,
+                                   uiBlkSz & 0xff, LW_NULL);
     if (iRet != ERROR_NONE) {
         return  (iRet);
     }
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0,
-                                 SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_BLKSIZE + 1,
-                                 (uiBlkSz >> 8) & 0xff, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0,
+                                   SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_BLKSIZE + 1,
+                                   (uiBlkSz >> 8) & 0xff, LW_NULL);
     if (iRet != ERROR_NONE) {
         return  (iRet);
     }
@@ -379,7 +379,7 @@ INT __sdioCoreDevFuncBlkSzSet (PLW_SDCORE_DEVICE   psdcoredev,
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevRwDirect
+** 函数名称: API_SdioCoreDevRwDirect
 ** 功能描述: SDIO CMD52 直接读写命令函数
 ** 输    入: psdcoredev       核心设备传输对象
 **           bWrite           是否是写操作
@@ -391,12 +391,12 @@ INT __sdioCoreDevFuncBlkSzSet (PLW_SDCORE_DEVICE   psdcoredev,
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevRwDirect (PLW_SDCORE_DEVICE   psdcoredev,
-                           BOOL                bWrite,
-                           UINT32              uiFn,
-                           UINT32              uiAddr,
-                           UINT8               ucWrData,
-                           UINT8              *pucRdBack)
+INT API_SdioCoreDevRwDirect (PLW_SDCORE_DEVICE   psdcoredev,
+                             BOOL                bWrite,
+                             UINT32              uiFn,
+                             UINT32              uiAddr,
+                             UINT8               ucWrData,
+                             UINT8              *pucRdBack)
 {
     LW_SD_COMMAND  sdcmd;
     INT            iError;
@@ -454,7 +454,7 @@ INT __sdioCoreDevRwDirect (PLW_SDCORE_DEVICE   psdcoredev,
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevRwExtend
+** 函数名称: API_SdioCoreDevRwExtend
 ** 功能描述: SDIO CMD53 扩展的数据读写命令(该函数根据块大小和长度自动设置传输模式)
 ** 输    入: psdcoredev       核心设备传输对象
 **           bWrite           是否是写操作
@@ -468,14 +468,14 @@ INT __sdioCoreDevRwDirect (PLW_SDCORE_DEVICE   psdcoredev,
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevRwExtend (PLW_SDCORE_DEVICE   psdcoredev,
-                           BOOL                bWrite,
-                           UINT32              uiFn,
-                           UINT32              uiAddr,
-                           BOOL                bAddrInc,
-                           UINT8              *pucBuf,
-                           UINT32              uiBlkCnt,
-                           UINT32              uiBlkSz)
+INT API_SdioCoreDevRwExtend (PLW_SDCORE_DEVICE   psdcoredev,
+                             BOOL                bWrite,
+                             UINT32              uiFn,
+                             UINT32              uiAddr,
+                             BOOL                bAddrInc,
+                             UINT8              *pucBuf,
+                             UINT32              uiBlkCnt,
+                             UINT32              uiBlkSz)
 {
     LW_SD_MESSAGE   sdmsg;
     LW_SD_COMMAND   sdcmd;
@@ -557,7 +557,7 @@ INT __sdioCoreDevRwExtend (PLW_SDCORE_DEVICE   psdcoredev,
 }
 
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevRwExtendX
+** 函数名称: API_SdioCoreDevRwExtendX
 ** 功能描述: SDIO CMD53 扩展的数据读写命令(由用户指定传输模式)
 ** 输    入: psdcoredev       核心设备传输对象
 **           bWrite           是否是写操作
@@ -572,15 +572,15 @@ INT __sdioCoreDevRwExtend (PLW_SDCORE_DEVICE   psdcoredev,
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevRwExtendX (PLW_SDCORE_DEVICE   psdcoredev,
-                            BOOL                bWrite,
-                            UINT32              uiFn,
-                            BOOL                bIsBlkMode,
-                            UINT32              uiAddr,
-                            BOOL                bAddrInc,
-                            UINT8              *pucBuf,
-                            UINT32              uiBlkCnt,
-                            UINT32              uiBlkSz)
+INT API_SdioCoreDevRwExtendX (PLW_SDCORE_DEVICE   psdcoredev,
+                              BOOL                bWrite,
+                              UINT32              uiFn,
+                              BOOL                bIsBlkMode,
+                              UINT32              uiAddr,
+                              BOOL                bAddrInc,
+                              UINT8              *pucBuf,
+                              UINT32              uiBlkCnt,
+                              UINT32              uiBlkSz)
 {
     LW_SD_MESSAGE   sdmsg;
     LW_SD_COMMAND   sdcmd;
@@ -661,7 +661,7 @@ INT __sdioCoreDevRwExtendX (PLW_SDCORE_DEVICE   psdcoredev,
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevReadCis
+** 函数名称: API_SdioCoreDevReadCis
 ** 功能描述: 读取并尝试解析功能的 CIS 信息
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiofunc        SDIO 功能描述对象
@@ -669,7 +669,7 @@ INT __sdioCoreDevRwExtendX (PLW_SDCORE_DEVICE   psdcoredev,
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
+INT API_SdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
 {
     INT                iRet;
     SDIO_FUNC_TUPLE   *psdiofunctplThis;
@@ -690,9 +690,9 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
     for (i = 0; i < 3; i++) {
         UINT8 ucByte;
 
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0,
-                                     SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_CIS + i,
-                                     0, &ucByte);
+        iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0,
+                                       SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_CIS + i,
+                                       0, &ucByte);
         if (iRet) {
             return  (iRet);
         }
@@ -709,7 +709,7 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
         UINT8  ucTplCode;
         UINT8  ucTplLink;
 
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, uiCisPtr++, 0, &ucTplCode);
+        iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, uiCisPtr++, 0, &ucTplCode);
         if (iRet) {
             break;
         }
@@ -722,7 +722,7 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
             continue;
         }
 
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, uiCisPtr++, 0, &ucTplLink);
+        iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, uiCisPtr++, 0, &ucTplLink);
         if (iRet) {
             break;
         }
@@ -738,9 +738,9 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
         }
 
         for (i = 0; i < ucTplLink; i++) {
-            iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0,
-                                         uiCisPtr + i, 0,
-                                         &psdiofunctplThis->TUPLE_pucData[i]);
+            iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0,
+                                           uiCisPtr + i, 0,
+                                           &psdiofunctplThis->TUPLE_pucData[i]);
             if (iRet) {
                 break;
             }
@@ -800,7 +800,7 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevReadFbr
+** 函数名称: API_SdioCoreDevReadFbr
 ** 功能描述: 读取并解析 FBR
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiofunc        SDIO 功能描述对象
@@ -808,23 +808,23 @@ INT __sdioCoreDevReadCis (PLW_SDCORE_DEVICE   psdcoredev, SDIO_FUNC *psdiofunc)
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevReadFbr (PLW_SDCORE_DEVICE  psdcoredev, SDIO_FUNC *psdiofunc)
+INT API_SdioCoreDevReadFbr (PLW_SDCORE_DEVICE  psdcoredev, SDIO_FUNC *psdiofunc)
 {
     INT    iRet;
     UINT8  ucData;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0,
-                                 SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_STD_IF,
-                                 0, &ucData);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0,
+                                   SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_STD_IF,
+                                   0, &ucData);
     if (iRet != ERROR_NONE) {
         goto    __err;
     }
 
     ucData &= 0x0f;
     if (ucData == 0x0f) {
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0,
-                                     SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_STD_IF_EXT,
-                                     0, &ucData);
+        iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0,
+                                       SDIO_FBR_BASE(psdiofunc->FUNC_uiNum) + SDIO_FBR_STD_IF_EXT,
+                                       0, &ucData);
         if (iRet != ERROR_NONE) {
             goto    __err;
         }
@@ -836,7 +836,7 @@ __err:
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevReadCCCR
+** 函数名称: API_SdioCoreDevReadCCCR
 ** 功能描述: 读取并解析 CCCR
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiocccr        保存解析的 cccr 信息
@@ -844,7 +844,7 @@ __err:
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
+INT API_SdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
 {
     INT     iRet;
     INT     iCccrVsn;
@@ -852,7 +852,7 @@ INT __sdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
 
     lib_bzero(psdiocccr, sizeof(SDIO_CCCR));
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_CCCR, 0, &ucData);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_CCCR, 0, &ucData);
     if (iRet != ERROR_NONE) {
         goto    __err;
     }
@@ -865,14 +865,14 @@ INT __sdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
     }
     psdiocccr->CCCR_uiSdioVsn = (ucData & 0xf0) >> 4;
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SD, 0, &ucData);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SD, 0, &ucData);
     if (iRet != ERROR_NONE) {
         goto    __err;
     }
     psdiocccr->CCCR_uiSdVsn = ucData & 0x0f;
 
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_CAPS, 0, &ucData);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_CAPS, 0, &ucData);
     if (iRet != ERROR_NONE) {
         goto    __err;
     }
@@ -888,7 +888,7 @@ INT __sdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
     }
 
     if (iCccrVsn >= SDIO_CCCR_REV_1_10) {
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_POWER, 0, &ucData);
+        iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_POWER, 0, &ucData);
         if (iRet) {
             goto    __err;
         }
@@ -899,7 +899,7 @@ INT __sdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
     }
 
     if (iCccrVsn >= SDIO_CCCR_REV_1_20) {
-        iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SPEED, 0, &ucData);
+        iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SPEED, 0, &ucData);
         if (iRet) {
             goto    __err;
         }
@@ -912,14 +912,14 @@ __err:
     return  (iRet);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevFuncClean
+** 函数名称: API_SdioCoreDevFuncClean
 ** 功能描述: 在 __sdioCoreDevReadCis() 过程中会有内存分配. 使用该函数进行内存清理
 ** 输    入: psdiofunc        功能描述对象
 ** 输    出: NONE
 ** 全局变量: ERROR CODE
 ** 调用模块:
 *********************************************************************************************************/
-INT  __sdioCoreDevFuncClean (SDIO_FUNC *psdiofunc)
+INT  API_SdioCoreDevFuncClean (SDIO_FUNC *psdiofunc)
 {
     SDIO_FUNC_TUPLE *psdiofunctpl;
     SDIO_FUNC_TUPLE *psdiofunctplNext;
@@ -939,7 +939,7 @@ INT  __sdioCoreDevFuncClean (SDIO_FUNC *psdiofunc)
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevHighSpeedEn
+** 函数名称: API_SdioCoreDevHighSpeedEn
 ** 功能描述: 使能 SDIO 高速模式
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiocccr        已经解析的 CCCR 信息.(函数会参考该信息进行实际的高速使能工作)
@@ -947,7 +947,7 @@ INT  __sdioCoreDevFuncClean (SDIO_FUNC *psdiofunc)
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevHighSpeedEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
+INT API_SdioCoreDevHighSpeedEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
 {
     INT     iHostCap;
     INT     iRet;
@@ -966,13 +966,13 @@ INT __sdioCoreDevHighSpeedEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocc
         return  (PX_ERROR);
     }
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SPEED, 0, &ucSpeed);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_SPEED, 0, &ucSpeed);
     if (iRet != ERROR_NONE) {
         return  (iRet);
     }
 
     ucSpeed |= SDIO_SPEED_EHS;
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_SPEED, ucSpeed, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_SPEED, ucSpeed, LW_NULL);
     if (iRet) {
         return  (iRet);
     }
@@ -986,7 +986,7 @@ INT __sdioCoreDevHighSpeedEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocc
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevWideBusEn
+** 函数名称: API_SdioCoreDevWideBusEn
 ** 功能描述: 使能 SDIO 宽总线模式
 ** 输    入: psdcoredev       核心设备传输对象
 **           psdiocccr        已经解析的 CCCR 信息.(函数会参考该信息进行实际的宽总线设置工作)
@@ -994,7 +994,7 @@ INT __sdioCoreDevHighSpeedEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocc
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-INT __sdioCoreDevWideBusEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
+INT API_SdioCoreDevWideBusEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr)
 {
     INT     iHostCap;
     INT     iRet;
@@ -1013,13 +1013,13 @@ INT __sdioCoreDevWideBusEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr
         return  (PX_ERROR);
     }
 
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IF, 0, &ucWidth);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IF, 0, &ucWidth);
     if (iRet != ERROR_NONE) {
         return  (iRet);
     }
 
     ucWidth |= SDIO_BUS_WIDTH_4BIT;
-    iRet = __sdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IF, ucWidth, LW_NULL);
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IF, ucWidth, LW_NULL);
     if (iRet) {
         return  (iRet);
     }
@@ -1034,7 +1034,7 @@ INT __sdioCoreDevWideBusEn (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdiocccr
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
-** 函数名称: __sdioCoreDevRwDirect
+** 函数名称: __cistplParse
 ** 功能描述: 解析一个功能的 CIS Tuple
 ** 输    入: psdiofunc        SDIO 功能描述对象
 **           cpParser         具体的解析器描述对象表
