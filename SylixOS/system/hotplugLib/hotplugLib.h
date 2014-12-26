@@ -47,6 +47,22 @@
 #define LW_HOTPLUG_MSG_USB_USER         (LW_HOTPLUG_MSG_USB + 100)      /*  USB 用户自定义设备          */
 
 /*********************************************************************************************************
+  SD 热插拔消息类型
+*********************************************************************************************************/
+
+#define LW_HOTPLUG_MSG_SD               0x0100
+#define LW_HOTPLUG_MSG_SD_SERIAL        (LW_HOTPLUG_MSG_SD + 1)         /*  SDIO 串口                   */
+#define LW_HOTPLUG_MSG_SD_BLUETOOTH_A   (LW_HOTPLUG_MSG_SD + 2)         /*  SDIO 蓝牙 TYPE-A            */
+#define LW_HOTPLUG_MSG_SD_BLUETOOTH_B   (LW_HOTPLUG_MSG_SD + 3)         /*  SDIO 蓝牙 TYPE-B            */
+#define LW_HOTPLUG_MSG_SD_GPS           (LW_HOTPLUG_MSG_SD + 4)         /*  SDIO GPS                    */
+#define LW_HOTPLUG_MSG_SD_CAMERA        (LW_HOTPLUG_MSG_SD + 5)         /*  SDIO 摄像头                 */
+#define LW_HOTPLUG_MSG_SD_PHS           (LW_HOTPLUG_MSG_SD + 6)         /*  SDIO 标准 PHS 设备          */
+#define LW_HOTPLUG_MSG_SD_WLAN          (LW_HOTPLUG_MSG_SD + 7)         /*  SDIO 无线网卡               */
+#define LW_HOTPLUG_MSG_SD_ATA           (LW_HOTPLUG_MSG_SD + 8)         /*  SDIO 转 ATA 接口            */
+#define LW_HOTPLUG_MSG_SD_STORAGE       (LW_HOTPLUG_MSG_SD + 90)        /*  SD 存储卡                   */
+#define LW_HOTPLUG_MSG_SD_USER          (LW_HOTPLUG_MSG_SD + 100)       /*  SD/SDIO 用户自定义设备      */
+
+/*********************************************************************************************************
   PCI/PCI-E 热插拔消息类型
 *********************************************************************************************************/
 

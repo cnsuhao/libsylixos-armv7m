@@ -35,6 +35,7 @@
 /*********************************************************************************************************
   内部宏定义
 *********************************************************************************************************/
+#define __SDMEM_MEDIA          "/media/sdcard"
 #define __SDMEM_CACHE_BOOST    256
 #define __SDMEM_CACHE_SIZE     (128 * LW_CFG_KB_SIZE)
 /*********************************************************************************************************
@@ -103,7 +104,7 @@ static INT  __sdmemDevCreate (SD_DRV *psddrv, PLW_SDCORE_DEVICE psdcoredev, VOID
         goto    __err1;
     }
 
-    poemdisk = oemDiskMount("/sdcard",
+    poemdisk = oemDiskMount(__SDMEM_MEDIA,
                             pblkdev,
                             LW_NULL,
                             __SDMEM_CACHE_SIZE,
@@ -113,6 +114,12 @@ static INT  __sdmemDevCreate (SD_DRV *psddrv, PLW_SDCORE_DEVICE psdcoredev, VOID
         goto    __err2;
     }
 
+#if LW_CFG_HOTPLUG_EN > 0
+    oemDiskHotplugEventMessage(poemdisk,
+                               LW_HOTPLUG_MSG_SD_STORAGE,
+                               LW_TRUE,
+                               0, 0, 0, 0);
+#endif
 
     printk("\nmount sd memory card successfully.\r\n");
 
@@ -149,7 +156,15 @@ static INT  __sdmemDevDelete (SD_DRV *psddrv,  VOID *pvDevPriv)
         return  (PX_ERROR);
     }
 
+#if LW_CFG_HOTPLUG_EN > 0
+    oemDiskHotplugEventMessage(psdmempriv->SDMEMPRIV_poemdisk,
+                               LW_HOTPLUG_MSG_SD_STORAGE,
+                               LW_FALSE,
+                               0, 0, 0, 0);
+#endif
+
     oemDiskUnmount(psdmempriv->SDMEMPRIV_poemdisk);
+    
     API_SdMemDevDelete(psdmempriv->SDMEMPRIV_pblkdev);
 
     __SHEAP_FREE(psdmempriv);

@@ -690,7 +690,7 @@ static INT  __tshellIfRouter (INT  iArgC, PCHAR  *ppcArgV)
         return  (-ERROR_TSHELL_EPARAM);
     }
 
-    netifapi_netif_common(netif, netif_set_default, NULL);              /*  设置默认路由器接口          */
+    netifapi_netif_set_default(netif);                                  /*  设置默认路由器接口          */
 
     printf("set net interface \"%s\" default router interface.\n", ppcArgV[1]);
     return  (ERROR_NONE);

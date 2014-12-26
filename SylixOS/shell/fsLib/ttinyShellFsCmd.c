@@ -375,7 +375,7 @@ static INT  __tshellFsCmdCat (INT  iArgC, PCHAR  ppcArgV[])
     REGISTER INT            iError;
     REGISTER ssize_t        sstNum;
     REGISTER INT            iFd;
-             CHAR           cBuffer[256];
+             CHAR           cBuffer[MAX_FILENAME_LENGTH];
              struct stat    statFile;
              
     if (iArgC != 2) {
@@ -400,28 +400,17 @@ static INT  __tshellFsCmdCat (INT  iArgC, PCHAR  ppcArgV[])
         return  (-ERROR_TSHELL_EPARAM);
     }
     
-    if (!S_ISREG(statFile.st_mode)) {
-        fprintf(stderr, "file is not a 'REG' file!\n");
-        close(iFd);
-        return  (-ERROR_TSHELL_EPARAM);
-    }
-    
-    /*
-     *  API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);
-     */
+    API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);
     
     do {
-        sstNum = read(iFd, cBuffer, 256);
+        sstNum = read(iFd, cBuffer, MAX_FILENAME_LENGTH);
         if (sstNum > 0) {
             write(1, cBuffer, (size_t)sstNum);
         }
     } while (sstNum > 0);
     
-    /*
-     *  API_ThreadCleanupPop(LW_FALSE);
-     */
+    API_ThreadCleanupPop(LW_TRUE);
     
-    close(iFd);
     printf("\n");
     
     return  (ERROR_NONE);

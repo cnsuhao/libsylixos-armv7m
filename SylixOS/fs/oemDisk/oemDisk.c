@@ -71,18 +71,36 @@ static VOID  __oemDiskPartFree (PLW_OEMDISK_CB  poemd)
     }
 }
 /*********************************************************************************************************
-** 函数名称: __oemDiskEnableForceDelete
-** 功能描述: OEM 磁盘允许强制删除
+** 函数名称: __oemDiskForceDeleteEn
+** 功能描述: OEM 磁盘强制删除
 ** 输　入  : poemd             磁盘控制块
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID __oemDiskEnableForceDelete (CPCHAR  pcVolName)
+static VOID __oemDiskForceDeleteEn (CPCHAR  pcVolName)
 {
     INT  iFd = open(pcVolName, O_RDONLY);
+    
     if (iFd >= 0) {
         ioctl(iFd, FIOSETFORCEDEL, LW_TRUE);
+        close(iFd);
+    }
+}
+/*********************************************************************************************************
+** 函数名称: __oemDiskForceDeleteDis
+** 功能描述: OEM 磁盘非强制删除
+** 输　入  : poemd             磁盘控制块
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID __oemDiskForceDeleteDis (CPCHAR  pcVolName)
+{
+    INT  iFd = open(pcVolName, O_RDONLY);
+    
+    if (iFd >= 0) {
+        ioctl(iFd, FIOSETFORCEDEL, LW_FALSE);
         close(iFd);
     }
 }
@@ -266,6 +284,10 @@ __refined_seq:
             break;
         }
         
+        if (poemd->OEMDISK_iVolSeq[i] >= 0) {
+            __oemDiskForceDeleteEn(cFullVolName);                       /*  默认为强制删除              */
+        }
+        
         iVolSeq++;                                                      /*  已处理完当前卷              */
     }
 
@@ -447,6 +469,10 @@ __refined_seq:
             break;
         }
         
+        if (poemd->OEMDISK_iVolSeq[i] >= 0) {
+            __oemDiskForceDeleteEn(cFullVolName);                       /*  默认为强制删除              */
+        }
+        
         iVolSeq++;                                                      /*  已处理完当前卷              */
     }
 
@@ -512,8 +538,8 @@ INT  API_OemDiskUnmountEx (PLW_OEMDISK_CB  poemd, BOOL  bForce)
                 continue;                                               /*  不是此 oemDisk 的设备       */
             }
             
-            if (bForce) {
-                __oemDiskEnableForceDelete(cFullVolName);               /*  允许强制 umount 操作        */
+            if (bForce == LW_FALSE) {
+                __oemDiskForceDeleteDis(cFullVolName);                  /*  不允许强制 umount 操作      */
             }
             
             if (unlink(cFullVolName) == ERROR_NONE) {                   /*  卸载所有相关卷              */
@@ -640,12 +666,8 @@ INT  API_OemDiskHotplugEventMessage (PLW_OEMDISK_CB  poemd,
                     poemd->OEMDISK_cVolName, 
                     poemd->OEMDISK_iVolSeq[i]);                         /*  获得完整卷名                */
             
-            if (poemd->OEMDISK_pdevhdr[i] != API_IosDevMatchFull(cFullVolName)) {
-                continue;                                               /*  不是此 oemDisk 的设备       */
-            }
-            
             API_HotplugEventMessage(iMsg, bInsert, cFullVolName, 
-                                    uiArg0, uiArg1, uiArg2, uiArg3);
+                                    uiArg0, uiArg1, uiArg2, uiArg3);    /*  发送热插拔信息              */
         }
     }
     

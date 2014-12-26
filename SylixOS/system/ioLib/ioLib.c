@@ -519,6 +519,8 @@ INT  _IosInit (VOID)
                        DEFAULT_DIR_PERM, LW_NULL);                      /*  输入设备                    */
     API_RootFsMakeNode("/mnt", LW_ROOTFS_NODE_TYPE_DIR, LW_ROOTFS_NODE_OPT_ROOTFS_TIME, 
                        DEFAULT_DIR_PERM, LW_NULL);                      /*  文件系统挂载目录            */
+    API_RootFsMakeNode("/media", LW_ROOTFS_NODE_TYPE_DIR, LW_ROOTFS_NODE_OPT_ROOTFS_TIME, 
+                       DEFAULT_DIR_PERM, LW_NULL);                      /*  热插拔存储器挂载目录        */
                                                                         /*  unix 兼容 null 设备路径     */
 #endif                                                                  /*  LW_CFG_PATH_VXWORKS == 0    */
     
