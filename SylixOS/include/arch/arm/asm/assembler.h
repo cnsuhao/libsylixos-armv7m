@@ -123,6 +123,9 @@ func:
 #  define SECTION(sec)  \
         .section sec
 		
+#  define WEAK(sym)     \
+        .weak sym
+
 #else                                                                   /*  __GNUC__                    */
 #  define EXPORT_LABEL(label)       EXPORT label
 #  define IMPORT_LABEL(label)       IMPORT label
@@ -151,6 +154,8 @@ func
 
 #  define SECTION(sec)  \
         AREA sec
+        
+#  define WEAK(sym)
 #endif                                                                  /*  !__GNUC__                   */
 
 /*********************************************************************************************************

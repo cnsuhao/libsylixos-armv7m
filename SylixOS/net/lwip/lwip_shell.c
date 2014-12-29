@@ -569,11 +569,8 @@ static INT  __tshellIfUp (INT  iArgC, PCHAR  *ppcArgV)
         return  (-ERROR_TSHELL_EPARAM);
     }
 
-    if (1 == netif_is_up(netif)) {                                      /*  网卡是否已经启动            */
-        /*
-         *  首先关闭网卡
-         */
-#if LWIP_DHCP > 0
+    if (netif_is_up(netif)) {                                           /*  网卡是否已经启动            */
+#if LWIP_DHCP > 0                                                       /*  首先关闭网卡                */
         if ((netif->flags & NETIF_FLAG_DHCP) && (netif->dhcp)) {
             netifapi_netif_common(netif, NULL, dhcp_release);           /*  解除 DHCP 租约, 同时停止网卡*/
             netifapi_dhcp_stop(netif);                                  /*  释放资源                    */
@@ -637,7 +634,7 @@ static INT  __tshellIfDown (INT  iArgC, PCHAR  *ppcArgV)
         return  (-ERROR_TSHELL_EPARAM);
     }
 
-    if (0 == netif_is_up(netif)) {
+    if (!netif_is_up(netif)) {
         fprintf(stderr, "net interface already set down.\n");
         return  (PX_ERROR);
     }

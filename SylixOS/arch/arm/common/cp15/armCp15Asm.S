@@ -17,6 +17,9 @@
 ;** 文件创建日期: 2013 年 12 月 09 日
 ;**
 ;** 描        述: ARM 体系架构 CP15 基本操作.
+;**
+;** BUG:
+;2014.12.29  由于一些函数需要操作安全模式寄存器, 有些处理器需要做特殊处理, 所以这里改为弱符号.
 ;*********************************************************************************************************/
 
 #ifndef ASSEMBLY
@@ -51,6 +54,11 @@
     EXPORT_LABEL(armAuxControlFeatureDisable)
     EXPORT_LABEL(armPrivatePeriphBaseGet)
     
+    WEAK(armControlFeatureDisable)
+    WEAK(armControlFeatureEnable)
+    WEAK(armAuxControlFeatureEnable)
+    WEAK(armAuxControlFeatureDisable)
+
 ;/*********************************************************************************************************
 ;  获得 CP15 基本信息
 ;*********************************************************************************************************/

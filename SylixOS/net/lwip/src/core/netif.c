@@ -551,6 +551,12 @@ void netif_set_up(struct netif *netif)
   if (!(netif->flags & NETIF_FLAG_UP)) {
     netif->flags |= NETIF_FLAG_UP;
     
+#ifdef SYLIXOS
+    if (netif->up) {
+      netif->up(netif);
+    }
+#endif
+    
 #if LWIP_SNMP
     snmp_get_sysuptime(&netif->ts);
 #endif /* LWIP_SNMP */
@@ -584,9 +590,6 @@ void netif_set_up(struct netif *netif)
     }
     
 #ifdef SYLIXOS
-    if (netif->up) {
-      netif->up(netif);
-    }
     netEventIfUp(netif);
 #endif
   }

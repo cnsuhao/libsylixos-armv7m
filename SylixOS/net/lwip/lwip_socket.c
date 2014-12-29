@@ -581,12 +581,10 @@ static INT  __ifSubIoctl4 (INT  iCmd, PVOID  pvArg)
             ip_addr_t ipaddr;
             ipaddr.addr = psockaddrin->sin_addr.s_addr;
             netif_set_ipaddr(pnetif, &ipaddr);
-        } else if (psockaddrin->sin_family == AF_INET6) {
-            /*
-             *  TODO: ipv6
-             */
+            iRet = ERROR_NONE;
+        } else {
+            _ErrorHandle(EAFNOSUPPORT);
         }
-        iRet = ERROR_NONE;
         break;
         
     case SIOCSIFNETMASK:                                                /*  设置网卡掩码                */
@@ -594,12 +592,10 @@ static INT  __ifSubIoctl4 (INT  iCmd, PVOID  pvArg)
             ip_addr_t ipaddr;
             ipaddr.addr = psockaddrin->sin_addr.s_addr;
             netif_set_netmask(pnetif, &ipaddr);
-        } else if (psockaddrin->sin_family == AF_INET6) {
-            /*
-             *  TODO: ipv6
-             */
+            iRet = ERROR_NONE;
+        } else {
+            _ErrorHandle(EAFNOSUPPORT);
         }
-        iRet = ERROR_NONE;
         break;
         
     case SIOCSIFDSTADDR:                                                /*  设置网卡目标地址            */

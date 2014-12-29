@@ -70,13 +70,20 @@
 *********************************************************************************************************/
 static LW_OBJECT_HANDLE     _G_hPGDPartition;                           /*  系统目前仅使用一个 PGD      */
 static LW_OBJECT_HANDLE     _G_hPTEPartition;                           /*  PTE 缓冲区                  */
-static UINT                 _G_uiVMSAShareBit;                          /*  共享位值                    */
+/*********************************************************************************************************
+  内存映射属性配置
+*********************************************************************************************************/
+static BOOL                 _G_bVMSAForceShare = LW_FALSE;              /*  强制为共享模式              */
+static UINT                 _G_uiVMSANonSec    = 0;                     /*  默认为安全模式              */
+static UINT                 _G_uiVMSAShare;                             /*  共享位值                    */
+static UINT                 _G_uiVMSADevType   = ARM_MMU_V7_DEV_SHAREABLE;
 /*********************************************************************************************************
   全局定义
 *********************************************************************************************************/
-#define VMSA_NS             0ul                                         /*  非安全位值                  */
+#define VMSA_FORCE_S        _G_bVMSAForceShare                          /*  强制为共享模式              */
+#define VMSA_S              _G_uiVMSAShare                              /*  共享位值                    */
+#define VMSA_NS             _G_uiVMSANonSec                             /*  非安全位值                  */
 #define VMSA_nG             0ul                                         /*  非全局位值                  */
-#define VMSA_S              _G_uiVMSAShareBit                           /*  共享位值                    */
 /*********************************************************************************************************
   汇编函数
 *********************************************************************************************************/
@@ -138,12 +145,22 @@ static INT  armMmuFlags2Attr (ULONG   ulFlag,
         *pucCB  = 0x2;                                                  /*  Inner: 写穿透, 不具备写分配 */
 
     } else {
-        if (VMSA_S) {
-            *pucTEX = 0x0;                                              /*  可共享设备内存              */
+        switch (_G_uiVMSADevType) {
+        
+        case ARM_MMU_V7_DEV_SHAREABLE:
+            *pucTEX = 0x0;
             *pucCB  = 0x1;
-        } else {
-            *pucTEX = 0x2;                                              /*  非可共享设备内存            */
-            *pucCB  = 0x0;                                              /*  XXX 是否使用强排序 ?        */
+            break;
+        
+        case ARM_MMU_V7_DEV_NON_SHAREABLE:
+            *pucTEX = 0x2;
+            *pucCB  = 0x0;
+            break;
+            
+        default:                                                        /*  强排序共享设备内存          */
+            *pucTEX = 0x0;
+            *pucCB  = 0x0;
+            break;
         }
     }
 
@@ -891,12 +908,43 @@ VOID  armMmuV7Init (LW_MMU_OP *pmmuop, CPCHAR  pcMachineName)
     pmmuop->MMUOP_pfuncSetEnable     = armMmuEnable;
     pmmuop->MMUOP_pfuncSetDisable    = armMmuDisable;
     
-    if (LW_NCPUS > 1) {
-        _G_uiVMSAShareBit = 1;                                          /*  多核设置为可共享            */
-    
-    } else {
-        _G_uiVMSAShareBit = 0;                                          /*  单核设置为非可共享, 否则慢  */
-    }
+    VMSA_S = ((LW_NCPUS > 1) || VMSA_FORCE_S) ? 1 : 0;                  /*  共享位设置                  */
+}
+/*********************************************************************************************************
+** 函数名称: armMmuV7ForceShare
+** 功能描述: MMU 系统强制为 share 模式
+** 输　入  : bEnOrDis      是否使能强制 share 模式, 此函数仅可在 bspKernelInitHook() 中被调用.
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  armMmuV7ForceShare (BOOL  bEnOrDis)
+{
+    VMSA_FORCE_S = bEnOrDis;
+}
+/*********************************************************************************************************
+** 函数名称: armMmuV7ForceNonSecure
+** 功能描述: MMU 系统强制为 Non-Secure 模式
+** 输　入  : bEnOrDis      是否使能强制 Non-Secure 模式, 此函数仅可在 bspKernelInitHook() 中被调用.
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  armMmuV7ForceNonSecure (BOOL  bEnOrDis)
+{
+    VMSA_NS = (bEnOrDis) ? 1 : 0;
+}
+/*********************************************************************************************************
+** 函数名称: armMmuV7ForceDevType
+** 功能描述: MMU 系统强制设置 Dev 内存类型
+** 输　入  : uiType        设备内存访问类型
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  armMmuV7ForceDevType (UINT  uiType)
+{
+    _G_uiVMSADevType = uiType;
 }
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */

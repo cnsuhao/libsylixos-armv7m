@@ -158,6 +158,15 @@ VOID    archCacheInit(CACHE_MODE  uiInstruction, CACHE_MODE  uiData, CPCHAR  pcM
 VOID    archMmuInit(CPCHAR  pcMachineName);
 
 #define __ARCH_MMU_INIT     archMmuInit
+
+VOID    armMmuV7ForceShare(BOOL  bEnOrDis);                             /*  强制置位共享位              */
+VOID    armMmuV7ForceNonSecure(BOOL  bEnOrDis);                         /*  强制使用 Non-Secure 模式    */
+
+#define ARM_MMU_V7_DEV_STRONGLY_ORDERED     0                           /*  设备内存强排序              */
+#define ARM_MMU_V7_DEV_SHAREABLE            1                           /*  共享设备内存 (默认)         */
+#define ARM_MMU_V7_DEV_NON_SHAREABLE        2                           /*  非共享设备内存              */
+
+VOID    armMmuV7ForceDevType(UINT  uiType);                             /*  选择设备内存类型            */
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 
 /*********************************************************************************************************
