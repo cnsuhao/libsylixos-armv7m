@@ -444,7 +444,7 @@ LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
 static VOID __sdmDevCreate (__SDM_HOST *psdmhost)
 {
     SD_HOST           *psdhost = psdmhost->SDMHOST_psdhost;
-    SD_DRV            *psddrv;
+    SD_DRV            *psddrv  = LW_NULL;
     __SDM_SD_DEV      *psdmdev;
     PLW_SDCORE_DEVICE  psdcoredev;
     PLW_LIST_LINE      plineTemp;

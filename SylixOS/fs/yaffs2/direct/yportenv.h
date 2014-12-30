@@ -35,6 +35,7 @@
 typedef unsigned char u8;
 typedef unsigned short u16;
 typedef unsigned int u32;
+typedef signed int s32;
 #endif
 
 struct mutex {
@@ -265,13 +266,26 @@ struct iattr {
 
 #ifndef S_ISSOCK
 #define S_ISSOCK(m)	(((m) & S_IFMT) == S_IFSOCK)
+#endif
+#ifndef S_ISLNK
 #define S_ISLNK(m)	(((m) & S_IFMT) == S_IFLNK)
+#endif
+#ifndef S_ISDIR
 #define S_ISDIR(m)	(((m) & S_IFMT) == S_IFDIR)
+#endif
+#ifndef S_ISREG
 #define S_ISREG(m)	(((m) & S_IFMT) == S_IFREG)
+#endif
+#ifndef S_ISBLK
 #define S_ISBLK(m)	(((m) & S_IFMT) == S_IFBLK)
+#endif
+#ifndef S_ISCHR
 #define S_ISCHR(m)	(((m) & S_IFMT) == S_IFCHR)
+#endif
+#ifndef S_ISFIFO
 #define S_ISFIFO(m)	(((m) & S_IFMT) == S_IFIFO)
 #endif
+
 
 
 #ifndef S_IREAD

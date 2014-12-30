@@ -80,11 +80,14 @@
 struct netif *
 ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
 {
+  /* sylixos fixed add linkup detected */
+#define NETIF_CAN_SEND(netif) (netif_is_up(netif) && netif_is_link_up(netif))
+
   struct netif *netif;
   s8_t i;
 
   /* If single netif configuration, fast return. */
-  if ((netif_list != NULL) && (netif_list->next == NULL)) {
+  if ((netif_list != NULL) && (netif_list->next == NULL) && NETIF_CAN_SEND(netif_list)) {
     return netif_list;
   }
 
@@ -97,10 +100,12 @@ ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
 
     /* Try to find the netif for the source address. */
     for(netif = netif_list; netif != NULL; netif = netif->next) {
-      for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
-        if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
-            ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
-          return netif;
+      if (NETIF_CAN_SEND(netif)) {
+        for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+          if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
+              ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
+            return netif;
+          }
         }
       }
     }
@@ -111,10 +116,12 @@ ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
 
   /* See if the destination subnet matches a configured address. */
   for(netif = netif_list; netif != NULL; netif = netif->next) {
-    for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
-      if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
-          ip6_addr_netcmp(dest, netif_ip6_addr(netif, i))) {
-        return netif;
+    if (NETIF_CAN_SEND(netif)) {
+      for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+        if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
+            ip6_addr_netcmp(dest, netif_ip6_addr(netif, i))) {
+          return netif;
+        }
       }
     }
   }
@@ -132,15 +139,21 @@ ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
   /* try with the netif that matches the source address. */
   if (!ip6_addr_isany(src)) {
     for(netif = netif_list; netif != NULL; netif = netif->next) {
-      for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
-        if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
-            ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
-          return netif;
+      if (NETIF_CAN_SEND(netif)) {
+        for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+          if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
+              ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
+            return netif;
+          }
         }
       }
     }
   }
 
+  /* sylixos fixed netif_default detect */
+  if ((netif_default == NULL) || (!NETIF_CAN_SEND(netif_default))) {
+    return NULL;
+  }
   /* no matching netif found, use default netif */
   return netif_default;
 }

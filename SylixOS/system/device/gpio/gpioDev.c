@@ -533,7 +533,7 @@ static INT  _gpiofdSetFlagsOrg (PLW_GPIOFD_FILE pgpiofdfil, INT  iFlags)
 *********************************************************************************************************/
 static INT  _gpiofdSetFlags (PLW_GPIOFD_FILE pgpiofdfil, INT  iFlags)
 {
-    INT  iError;
+    INT  iError = ERROR_NONE;
 
     if (GPIO_IS_ROOT(pgpiofdfil->GF_uiGpio)) {
         _ErrorHandle(EISDIR);

@@ -111,6 +111,9 @@ static u16_t ip_id;
 struct netif *
 ip_route(ip_addr_t *dest)
 {
+  /* sylixos fixed add linkup detected */
+#define NETIF_CAN_SEND(netif) (netif_is_up(netif) && netif_is_link_up(netif))
+
   struct netif *netif;
 
 #ifdef LWIP_HOOK_IP4_ROUTE
@@ -123,7 +126,7 @@ ip_route(ip_addr_t *dest)
   /* iterate through netifs */
   for (netif = netif_list; netif != NULL; netif = netif->next) {
     /* network mask matches? */
-    if ((netif_is_up(netif))
+    if ((NETIF_CAN_SEND(netif))
 #if LWIP_IPV6
         /* prevent using IPv6-only interfaces */
         && (!ip_addr_isany(&(netif->ip_addr)))
@@ -142,7 +145,7 @@ ip_route(ip_addr_t *dest)
       }
     }
   }
-  if ((netif_default == NULL) || (!netif_is_up(netif_default))) {
+  if ((netif_default == NULL) || (!NETIF_CAN_SEND(netif_default))) {
     LWIP_DEBUGF(IP_DEBUG | LWIP_DBG_LEVEL_SERIOUS, ("ip_route: No route to %"U16_F".%"U16_F".%"U16_F".%"U16_F"\n",
       ip4_addr1_16(dest), ip4_addr2_16(dest), ip4_addr3_16(dest), ip4_addr4_16(dest)));
     IP_STATS_INC(ip.rterr);

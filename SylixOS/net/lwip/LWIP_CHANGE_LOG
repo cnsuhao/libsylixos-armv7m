@@ -35,3 +35,5 @@
 13: netif add ioctl();
 
 14: netconn_getaddr() do NOT update last_err.
+
+15: ip_route() and ip6_route() must detect netif linkup status.
