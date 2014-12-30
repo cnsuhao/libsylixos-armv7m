@@ -402,19 +402,24 @@ static INT __rtChangeCallback (ip_addr_t *pipaddrDest, UINT  uiFlag, CPCHAR  pcN
 ** 函数名称: __rtSetGwCallback
 ** 功能描述: 设置网络接口的网关(在 TCPIP 上下文中执行)
 ** 输　入  : pipaddrGw     网关地址
-**           iDefault      是否为默认网关
+**           uiGwFlags     网关设置属性
 **           pcNetifName   网络接口名
 ** 输　出  : ERROR_NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT __rtSetGwCallback (ip_addr_t *pipaddrGw, INT  iDefault, CPCHAR  pcNetifName)
+static INT __rtSetGwCallback (ip_addr_t *pipaddrGw, UINT  uiGwFlags, CPCHAR  pcNetifName)
 {
+#define LW_RT_GW_FLAG_SET       0x1
+#define LW_RT_GW_FLAG_DEFAULT   0x2
+
     struct netif  *pnetif = netif_find((PCHAR)pcNetifName);
     
     if (pnetif) {
-        netif_set_gw(pnetif, pipaddrGw);
-        if (iDefault) {
+        if (uiGwFlags & LW_RT_GW_FLAG_SET) {
+            netif_set_gw(pnetif, pipaddrGw);
+        }
+        if (uiGwFlags & LW_RT_GW_FLAG_DEFAULT) {
             netif_set_default(pnetif);
         }
         return  (ERROR_NONE);
@@ -549,13 +554,13 @@ static INT __rtChange (ip_addr_t *pipaddrDest, UINT  uiFlag, CPCHAR  pcNetifName
 ** 函数名称: __rtSetGw
 ** 功能描述: 设置一个网络接口的网关
 ** 输　入  : ipaddrDest    网关地址
-**           iDefault      是否为默认网关
+**           uiGwFlags     网关设置属性
 **           pcNetifName   设备接口名
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static INT __rtSetGw (ip_addr_t *pipaddrDest, INT  iDefault, CPCHAR  pcNetifName)
+static INT __rtSetGw (ip_addr_t *pipaddrDest, UINT  uiGwFlags, CPCHAR  pcNetifName)
 {
     INT     iError;
     
@@ -564,7 +569,7 @@ static INT __rtSetGw (ip_addr_t *pipaddrDest, INT  iDefault, CPCHAR  pcNetifName
         return  (PX_ERROR);
     }
     
-    iError = __rtSafeRun(__rtSetGwCallback, pipaddrDest, (PVOID)iDefault, (PVOID)pcNetifName, 0, 0, 0);
+    iError = __rtSafeRun(__rtSetGwCallback, pipaddrDest, (PVOID)uiGwFlags, (PVOID)pcNetifName, 0, 0, 0);
     
     return  (iError);
 }
@@ -958,8 +963,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
 
         return  (ERROR_NONE);
         
-    } else {
-
+    } else {                                                            /*  操作路由表                  */
         if (lib_strcmp(ppcArgV[1], "add") == 0) {
             pfuncAddOrChange = __rtAdd;
             pcOpAddorChange  = "add";
@@ -972,8 +976,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
             pfuncAddOrChange = LW_NULL;
         }
 
-        if (pfuncAddOrChange && iArgC == 6) {                           /*  添加或者修改路由表          */
-
+        if (pfuncAddOrChange && (iArgC == 6)) {                         /*  添加或者修改路由表          */
             if (!ipaddr_aton(ppcArgV[3], &ipaddr)) {
                 fprintf(stderr, "inet address format error.\n");
                 goto    __error_handle;
@@ -997,6 +1000,10 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
             if (lib_strcmp(ppcArgV[2], "-host") == 0) {                 /*  主机路由                    */
                 uiFlag |= LW_RT_FLAG_H;
 
+            } else if (lib_strcmp(ppcArgV[2], "-gw") == 0) {            /*  设置网卡网关                */
+                uiFlag |= LW_RT_GW_FLAG_SET;
+                pfuncAddOrChange = __rtSetGw;
+
             } else if (lib_strcmp(ppcArgV[2], "-net") != 0) {           /*  非网络路由                  */
                 fprintf(stderr, "route add must determine -host or -net.\n");
                 goto    __error_handle;
@@ -1004,12 +1011,40 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
 
             iError = pfuncAddOrChange(&ipaddr, uiFlag, cNetifName);     /*  操作路由表                  */
             if (iError >= 0) {
-                printf("kernel route entry %s %s successful.\n", ppcArgV[3], pcOpAddorChange);
+                printf("route %s %s successful.\n", ppcArgV[3], pcOpAddorChange);
+                return  (ERROR_NONE);
+            }
+        
+        } else if (pfuncAddOrChange && (iArgC == 5)) {                  /*  设置默认网关                */
+            if (lib_strcmp(ppcArgV[2], "default") != 0) {
+                goto    __error_handle;
+            }
+            
+            if (lib_strcmp(ppcArgV[3], "if") == 0) {                    /*  使用 ifindex 查询网卡       */
+                INT   iIndex = lib_atoi(ppcArgV[4]);
+                if (if_indextoname(iIndex, cNetifName) == LW_NULL) {
+                    fprintf(stderr, "can not find net interface with ifindex %d.\n", iIndex);
+                    goto    __error_handle;
+                }
+
+            } else if (lib_strcmp(ppcArgV[3], "dev") == 0) {
+                lib_strlcpy(cNetifName, ppcArgV[4], IF_NAMESIZE);
+
+            } else {
+                fprintf(stderr, "net interface argument error.\n");
+                goto    __error_handle;
+            }
+            
+            uiFlag |= LW_RT_GW_FLAG_DEFAULT;
+            pfuncAddOrChange = __rtSetGw;
+            
+            iError = pfuncAddOrChange(&ipaddr, uiFlag, cNetifName);     /*  设置默认路由出口            */
+            if (iError >= 0) {
+                printf("default device set successful.\n");
                 return  (ERROR_NONE);
             }
 
         } else if ((lib_strcmp(ppcArgV[1], "del") == 0) && iArgC == 3) {/*  删除一个路由表项            */
-
             if (!ipaddr_aton(ppcArgV[2], &ipaddr)) {
                 fprintf(stderr, "inet address format error.\n");
                 goto    __error_handle;
@@ -1017,7 +1052,7 @@ INT  __tshellRoute (INT  iArgC, PCHAR  *ppcArgV)
 
             iError = __rtDel(&ipaddr);
             if (iError >= 0) {
-                printf("kernel route entry %s delete successful.\n", ppcArgV[2]);
+                printf("route %s delete successful.\n", ppcArgV[2]);
                 return  (ERROR_NONE);
             }
         }
@@ -1088,12 +1123,14 @@ static INT  __tshellAodvs (INT  iArgC, PCHAR  *ppcArgV)
 VOID __tshellRouteInit (VOID)
 {
     API_TShellKeywordAdd("route", __tshellRoute);
-    API_TShellFormatAdd("route", " [add | del | change] {-host | -net} [addr] [[dev] | if]");
+    API_TShellFormatAdd("route", " [add | del | change] {-host | -net | -gw} [addr] [[dev] | if]");
     API_TShellHelpAdd("route",   "show, add, del, change route table\n"
                                  "eg. route\n"
                                  "    route add -host 255.255.255.255 dev en1\n"
                                  "    route add -net 192.168.3.0 dev en1\n"
                                  "    route change -net 192.168.3.4 dev en2\n"
+                                 "    route change -gw 192.168.0.1 dev en2\n"
+                                 "    route change default dev en2\n"
                                  "    route del 145.26.122.35\n");
                                  
     API_TShellKeywordAdd("aodvs", __tshellAodvs);
@@ -1138,11 +1175,11 @@ int  route_add (struct in_addr *pinaddr, int  type, const char *ifname)
         break;
         
     case ROUTE_TYPE_GATEWAY:                                            /*  添加一个网关                */
-        iError = __rtSetGw(&ipaddr, 0, ifname);
+        iError = __rtSetGw(&ipaddr, LW_RT_GW_FLAG_SET, ifname);
         break;
         
     case ROUTE_TYPE_DEFAULT:                                            /*  设置默认网关                */
-        iError = __rtSetGw(&ipaddr, 1, ifname);
+        iError = __rtSetGw(&ipaddr, LW_RT_GW_FLAG_SET | LW_RT_GW_FLAG_DEFAULT, ifname);
         break;
         
     default:
@@ -1210,11 +1247,11 @@ int  route_change (struct in_addr *pinaddr, int  type, const char *ifname)
         break;
         
     case ROUTE_TYPE_GATEWAY:                                            /*  修改一个网关                */
-        iError = __rtSetGw(&ipaddr, 0, ifname);
+        iError = __rtSetGw(&ipaddr, LW_RT_GW_FLAG_SET, ifname);
         break;
         
     case ROUTE_TYPE_DEFAULT:                                            /*  设置默认网关                */
-        iError = __rtSetGw(&ipaddr, 1, ifname);
+        iError = __rtSetGw(&ipaddr, LW_RT_GW_FLAG_SET | LW_RT_GW_FLAG_DEFAULT, ifname);
         break;
         
     default:

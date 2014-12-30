@@ -429,7 +429,7 @@ static VOID  __netIfShowAll (VOID)
         cName[3] = PX_EOS;
     }
     
-    printf("router if is: %s\n", cName);                                /*  显示路由端口                */
+    printf("default device is: %s\n", cName);                           /*  显示路由端口                */
     printf("total net interface: %d\n", iCounter);
 }
 /*********************************************************************************************************
@@ -664,32 +664,8 @@ static INT  __tshellIfDown (INT  iArgC, PCHAR  *ppcArgV)
 *********************************************************************************************************/
 static INT  __tshellIfRouter (INT  iArgC, PCHAR  *ppcArgV)
 {
-    struct netif *netif;
-    CHAR          cName[5] = "null";                                    /*  当前默认路由网络接口名      */
+    printf("this command has been removed! please use 'route' command instead.\n");
 
-    if (iArgC != 2) {
-        LWIP_NETIF_LOCK();
-        if (netif_default) {
-            cName[0] = netif_default->name[0];
-            cName[1] = netif_default->name[1];
-            cName[2] = (CHAR)(netif_default->num + '0');
-            cName[3] = PX_EOS;
-        }
-        LWIP_NETIF_UNLOCK();
-        
-        printf("default router netif: %s\n", cName);
-        return  (ERROR_NONE);
-    }
-
-    netif = netif_find(ppcArgV[1]);                                     /*  查询网络接口                */
-    if (netif == LW_NULL) {
-        fprintf(stderr, "can not find net interface.\n");
-        return  (-ERROR_TSHELL_EPARAM);
-    }
-
-    netifapi_netif_set_default(netif);                                  /*  设置默认路由器接口          */
-
-    printf("set net interface \"%s\" default router interface.\n", ppcArgV[1]);
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
