@@ -12,7 +12,7 @@ port FatFs need change some code as following:
 
 3: change ff.c file:
 
-   1. f_mount() add : fs->drive = LD2PD(vol); save drive.
+   1. f_mount() add : FRESULT f_mount_ex (FATFS* fs, BYTE vol);
 
    2. chang some function (use path to operat) : such as :
 
@@ -30,7 +30,9 @@ port FatFs need change some code as following:
       FRESULT f_chmod_ex (FATFS*, const char*, BYTE, BYTE);
       FRESULT f_utime_ex (FATFS*, const char*, const FILINFO*);
       FRESULT f_rename_ex (FATFS*, const char*, const char*);
-      FRESULT f_syncfs (FATFS  *fs);
+      FRESULT f_getlabel_ex (FATFS *fs, const TCHAR* path, TCHAR* label, DWORD* vsn);
+      FRESULT f_setlabel_ex (FATFS *fs, const TCHAR* label);
+      FRESULT f_syncfs (FATFS *fs);
       
       f_open_ex and opendir_ex and get ino! 
 
@@ -40,4 +42,14 @@ port FatFs need change some code as following:
 
    6: mem_cpy() mem_set() can use memcpy() memset() (FASTER)
 
-   7: change chk_mounted()
+   7: change find_volume()
+   
+   8: remove the following code:
+      #if _VOLUMES < 1 || _VOLUMES > 9
+      #error Wrong _VOLUMES setting
+      #endif
+	  
+   9: FILINFO add fcdate fctime file create time
+      change get_fileinfo() to get file create time
+	  
+  10: change f_mkfs() to FRESULT f_mkfs (BYTE vol, BYTE sfd, UINT au);

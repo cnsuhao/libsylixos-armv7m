@@ -56,12 +56,14 @@ mode_t  __fsAttrToMode (BYTE  ucAttr)
     
     if (ucAttr & AM_RDO) {
         mode |= (S_IRUSR | S_IRGRP | S_IROTH);
+    
     } else {
         mode |= (S_IRUSR | S_IRGRP | S_IROTH) | (S_IWUSR | S_IWGRP | S_IWOTH);
     }
     
     if (ucAttr & AM_DIR) {
         mode |= S_IFDIR;
+    
     } else {
         mode |= S_IFREG;
         mode |= S_IXUSR | S_IXGRP;                                      /*  owner gourp 拥有可执行权限  */
@@ -117,7 +119,8 @@ VOID  __filInfoToStat (FILINFO     *filinfo,
                        struct stat *pstat, 
                        ino_t        ino)
 {
-    UINT32       dwTime = (DWORD)((filinfo->fdate << 16) | (filinfo->ftime));
+    UINT32  dwCrtTime = (DWORD)((filinfo->fcdate << 16) | (filinfo->fctime));
+    UINT32  dwWrtTime = (DWORD)((filinfo->fdate  << 16) | (filinfo->ftime));
 
     pstat->st_dev   = (dev_t)fatfs;
     pstat->st_ino   = ino;
@@ -142,9 +145,9 @@ VOID  __filInfoToStat (FILINFO     *filinfo,
     /*
      *  st_atime, st_mtime, st_ctime 为 UTC 时间
      */
-    pstat->st_atime = __fattimeToTime(dwTime);                          /*  仅使用修改时间              */
+    pstat->st_atime = __fattimeToTime(dwWrtTime);                       /*  仅使用修改时间              */
     pstat->st_mtime = pstat->st_atime;
-    pstat->st_ctime = pstat->st_atime;
+    pstat->st_ctime = __fattimeToTime(dwCrtTime);
 
     pstat->st_mode  = __fsAttrToMode(filinfo->fattrib);
 }

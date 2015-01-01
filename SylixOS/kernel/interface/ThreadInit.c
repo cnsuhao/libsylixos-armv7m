@@ -180,9 +180,9 @@ LW_OBJECT_HANDLE  API_ThreadInit (CPCHAR                   pcName,
                                       pstkTop, 
                                       pthreadattr->THREADATTR_ulOption);
     
-    lib_bzero(&ptcb->TCB_fpuctxContext, 
+    lib_bzero(&ptcb->TCB_pstkStackTop, 
               sizeof(LW_CLASS_TCB) - 
-              _LIST_OFFSETOF(LW_CLASS_TCB, TCB_fpuctxContext));         /*  TCB ÇåÁã                    */
+              _LIST_OFFSETOF(LW_CLASS_TCB, TCB_pstkStackTop));          /*  TCB ÇåÁã                    */
     
     if (pcName) {                                                       /*  ¿½±´Ãû×Ö                    */
         lib_strcpy(ptcb->TCB_cThreadName, pcName);

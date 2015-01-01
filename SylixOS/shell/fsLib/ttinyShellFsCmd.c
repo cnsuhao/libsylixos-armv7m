@@ -400,6 +400,12 @@ static INT  __tshellFsCmdCat (INT  iArgC, PCHAR  ppcArgV[])
         return  (-ERROR_TSHELL_EPARAM);
     }
     
+    if (S_ISDIR(statFile.st_mode)) {
+        fprintf(stderr, "file read error: Is a directory!\n");
+        close(iFd);
+        return  (-ERROR_TSHELL_EPARAM);
+    }
+    
     API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);
     
     do {

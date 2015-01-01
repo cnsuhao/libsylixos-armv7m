@@ -3235,8 +3235,6 @@ static INT  __nfsIoctl (PLW_FD_ENTRY  pfdentry,
     switch (iRequest) {                                                 /*  Ö»¶ÁÎÄ¼þÅÐ¶Ï                */
 
     case FIOCONTIG:
-    case FIOMKDIR:
-    case FIORMDIR:
     case FIOTRUNC:
     case FIOLABELSET:
     case FIOATTRIBSET:

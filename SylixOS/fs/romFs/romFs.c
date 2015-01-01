@@ -1072,8 +1072,6 @@ static INT  __romFsIoctl (PLW_FD_ENTRY  pfdentry,
     switch (iRequest) {
 
     case FIOCONTIG:
-    case FIOMKDIR:
-    case FIORMDIR:
     case FIOTRUNC:
     case FIOLABELSET:
     case FIOATTRIBSET:

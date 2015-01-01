@@ -200,8 +200,11 @@ SylixOS/fs/fatFs/option/syscall.c \
 SylixOS/fs/fsCommon/fsCommon.c \
 SylixOS/fs/mount/mount.c \
 SylixOS/fs/mtd/mtdcore.c \
+SylixOS/fs/mtd/linux/bch.c \
+SylixOS/fs/mtd/linux/strim.c \
 SylixOS/fs/mtd/nand/nand_base.c \
 SylixOS/fs/mtd/nand/nand_bbt.c \
+SylixOS/fs/mtd/nand/nand_bch.c \
 SylixOS/fs/mtd/nand/nand_ecc.c \
 SylixOS/fs/mtd/nand/nand_ids.c \
 SylixOS/fs/mtd/onenand/onenand_base.c \

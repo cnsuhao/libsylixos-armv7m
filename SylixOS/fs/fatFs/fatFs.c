@@ -81,6 +81,7 @@
 2013.04.11  正常卸载卷时, uniq 发生器没有卸载.
 2013.06.24  升级 fat 文件系统, 同时支持卷标.
 2014.06.24  FAT 设备 64 为序列号为 -1.
+2014.12.31  支持 ff10.c 文件系统.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -407,7 +408,7 @@ INT  API_FatFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
     pfatvol->FATVOL_plineFdNodeHeader = LW_NULL;                        /*  没有文件被打开              */
     pfatvol->FATVOL_uiTime = get_fattime();                             /*  获得当前时间                */
     
-    fresError = f_mount((BYTE)iBlkdIndex, &pfatvol->FATVOL_fatfsVol);   /*  挂载文件系统                */
+    fresError = f_mount_ex(&pfatvol->FATVOL_fatfsVol, (BYTE)iBlkdIndex);/*  挂载文件系统                */
     if (fresError != FR_OK) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "fat driver table full.\r\n");
         ulError = ERROR_IOS_DRIVER_GLUT;
@@ -438,7 +439,7 @@ INT  API_FatFsDevCreate (PCHAR   pcName, PLW_BLK_DEV  pblkd)
      */
 __error_handle:
     if (iErrLevel > 3) {
-        f_mount((BYTE)iBlkdIndex, LW_NULL);                             /*  卸载挂载的文件系统          */
+        f_mount_ex(LW_NULL, (BYTE)iBlkdIndex);                          /*  卸载挂载的文件系统          */
     }
     if (iErrLevel > 2) {
         API_SemaphoreMDelete(&pfatvol->FATVOL_hVolLock);
@@ -703,6 +704,9 @@ static VOID  __fatFsCloseFile (PFAT_FILE  pfatfile)
 {
     if (pfatfile->FATFIL_iFileType == __FAT_FILE_TYPE_NODE) {           /*  标准 FAT 文件               */
         f_close(&pfatfile->FATFIL_fftm.FFTM_file);                      /*  FAT 关闭文件                */
+    
+    } else if (pfatfile->FATFIL_iFileType == __FAT_FILE_TYPE_DIR) {     /*  目录                        */
+        f_closedir(&pfatfile->FATFIL_fftm.FFTM_fatdir);
     }
 }
 /*********************************************************************************************************
@@ -990,7 +994,7 @@ __re_umount_vol:
             
             iosDevDelete((LW_DEV_HDR *)pfatvol);                        /*  IO 系统移除设备             */
             
-            f_mount((BYTE)pfatvol->FATVOL_iDrv, LW_NULL);               /*  卸载挂载的文件系统          */
+            f_mount_ex(LW_NULL, (BYTE)pfatvol->FATVOL_iDrv);            /*  卸载挂载的文件系统          */
             __blockIoDevIoctl(pfatvol->FATVOL_iDrv,
                               FIOUNMOUNT, 0);                           /*  执行底层脱离任务            */
             __blockIoDevDelete(pfatvol->FATVOL_iDrv);                   /*  在驱动表中移除              */
@@ -1779,8 +1783,10 @@ static INT  __fatFsStatGet (PLW_FD_ENTRY  pfdentry, struct stat *pstat)
              *  fdate 为 FATVOL_uiTime 高 16 位, ftime 为低 16 位.
              *  (FATVOL_uiTime & 0xFFFF) 更容易理解.
              */
-            fileinfo.fdate    = (WORD)(pfatfile->FATFIL_pfatvol->FATVOL_uiTime >> 16);
-            fileinfo.ftime    = (WORD)(pfatfile->FATFIL_pfatvol->FATVOL_uiTime & 0xFFFF);
+            fileinfo.fcdate   = (WORD)(pfatfile->FATFIL_pfatvol->FATVOL_uiTime >> 16);
+            fileinfo.fctime   = (WORD)(pfatfile->FATFIL_pfatvol->FATVOL_uiTime & 0xFFFF);
+            fileinfo.fdate    = fileinfo.fcdate;
+            fileinfo.ftime    = fileinfo.fctime;
             fileinfo.fattrib  = AM_DIR;
             fileinfo.fname[0] = PX_ROOT;
             fileinfo.fname[1] = PX_EOS;
@@ -2171,8 +2177,6 @@ static INT  __fatFsIoctl (PLW_FD_ENTRY  pfdentry,
     switch (iRequest) {                                                 /*  只读文件判断                */
     
     case FIOCONTIG:
-    case FIOMKDIR:
-    case FIORMDIR:
     case FIOTRUNC:
     case FIOLABELSET:
     case FIOATTRIBSET:

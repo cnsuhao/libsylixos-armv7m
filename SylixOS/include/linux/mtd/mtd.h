@@ -12,6 +12,17 @@
 #include "mtd-abi.h"
 #include "errno.h"
 
+#ifdef SYLIXOS
+/*
+ * SylixOS config
+ */
+#define CONFIG_SYS_NAND_ONFI_DETECTION 1
+#define CONFIG_NAND_ECC_BCH 1
+
+char *skip_spaces(const char *str);
+char *strim(char *s);
+#endif /* SYLIXOS */
+
 #define MTD_CHAR_MAJOR 90
 #define MTD_BLOCK_MAJOR 31
 #define MAX_MTD_DEVICES 32

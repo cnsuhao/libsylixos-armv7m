@@ -16,7 +16,10 @@
 **
 ** 文件创建日期: 2008 年 09 月 26 日
 **
-** 描        述: FAT 文件系统与 BLOCK 设备接口
+** 描        述: FAT 文件系统与 BLOCK 设备接口.
+**
+** BUG:
+2014.12.31  支持 ff10c 接口.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -54,6 +57,7 @@ DSTATUS  disk_initialize (BYTE  ucDriver)
     
     if (iError < 0) {
         return  ((BYTE)(STA_NOINIT | STA_NODISK));
+    
     } else {
         return  ((BYTE)ERROR_NONE);
     }
@@ -76,21 +80,22 @@ DSTATUS  disk_status (BYTE  ucDriver)
 ** 输　入  : ucDriver          卷序号
 **           ucBuffer          缓冲区
 **           dwSectorNumber    起始扇区号
-**           ucSectorCount     扇区数量
+**           uiSectorCount     扇区数量
 ** 输　出  : DRESULT
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-DRESULT disk_read (BYTE  ucDriver, BYTE  *ucBuffer, DWORD   dwSectorNumber, BYTE  ucSectorCount)
+DRESULT disk_read (BYTE  ucDriver, BYTE  *ucBuffer, DWORD   dwSectorNumber, UINT  uiSectorCount)
 {
     REGISTER INT    iError;
     
     iError = __blockIoDevRead((INT)ucDriver, 
                               (PVOID)ucBuffer, 
                               (ULONG)dwSectorNumber,
-                              (ULONG)ucSectorCount);
+                              (ULONG)uiSectorCount);
     if (iError >= ERROR_NONE) {
         return  (RES_OK);
+    
     } else {
         return  (RES_ERROR);
     }
@@ -101,21 +106,22 @@ DRESULT disk_read (BYTE  ucDriver, BYTE  *ucBuffer, DWORD   dwSectorNumber, BYTE
 ** 输　入  : ucDriver          卷序号
 **           ucBuffer          缓冲区
 **           dwSectorNumber    起始扇区号
-**           ucSectorCount     扇区数量
+**           uiSectorCount     扇区数量
 ** 输　出  : DRESULT
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-DRESULT disk_write (BYTE  ucDriver, const BYTE  *ucBuffer, DWORD   dwSectorNumber, BYTE  ucSectorCount)
+DRESULT disk_write (BYTE  ucDriver, const BYTE  *ucBuffer, DWORD   dwSectorNumber, UINT  uiSectorCount)
 {
     REGISTER INT    iError;
     
     iError = __blockIoDevWrite((INT)ucDriver, 
                                (PVOID)ucBuffer, 
                                (ULONG)dwSectorNumber,
-                               (ULONG)ucSectorCount);
+                               (ULONG)uiSectorCount);
     if (iError >= ERROR_NONE) {
         return  (RES_OK);
+    
     } else {
         return  (RES_ERROR);
     }
@@ -133,60 +139,55 @@ DRESULT disk_write (BYTE  ucDriver, const BYTE  *ucBuffer, DWORD   dwSectorNumbe
 DRESULT  disk_ioctl (BYTE  ucDriver, BYTE ucCmd, void  *pvArg)
 {
     REGISTER INT    iError;
+             ULONG  ulTrimSector[2];
     
     switch (ucCmd) {                                                    /*  转换命令                    */
     
     case CTRL_SYNC:
         return  (RES_OK);                                               /*  注意, 目前此条命令忽略      */
     
-    case GET_SECTOR_COUNT:
+    case GET_SECTOR_COUNT:                                              /*  获得扇区总数量              */
         ucCmd = LW_BLKD_GET_SECNUM;
         break;
         
-    case GET_SECTOR_SIZE:
+    case GET_SECTOR_SIZE:                                               /*  获得扇区大小                */
         ucCmd = LW_BLKD_GET_SECSIZE;
         break;
         
-    case GET_BLOCK_SIZE:
+    case GET_BLOCK_SIZE:                                                /*  获得块大小                  */
         ucCmd = LW_BLKD_GET_BLKSIZE;
         break;
         
-    case CTRL_POWER:
+    case CTRL_TRIM:                                                     /*  ATA 释放扇区                */
+        ucCmd = FIOTRIM;
+        ulTrimSector[0] = (ULONG)(((DWORD *)pvArg)[0]);
+        ulTrimSector[1] = (ULONG)(((DWORD *)pvArg)[1]);
+        pvArg           = (PVOID)ulTrimSector;
+        break;
+        
+    case CTRL_POWER:                                                    /*  电源控制                    */
         ucCmd = LW_BLKD_CTRL_POWER;
         break;
         
-    case CTRL_LOCK:
+    case CTRL_LOCK:                                                     /*  锁定设备                    */
         ucCmd = LW_BLKD_CTRL_LOCK;
         break;
         
-    case CTRL_EJECT:
+    case CTRL_EJECT:                                                    /*  弹出设备                    */
         ucCmd = LW_BLKD_CTRL_EJECT;
         break;
     }
     
     iError = __blockIoDevIoctl((INT)ucDriver, (INT)ucCmd, (LONG)pvArg);
-    
     if (iError >= ERROR_NONE) {
         return  (RES_OK);
+    
     } else {
         return  (RES_ERROR);
     }
 }
-/*********************************************************************************************************
-** 函数名称: disk_timerproc
-** 功能描述: I don't know!!!
-** 输　入  : ucDriver          卷序号
-**           ucCmd             命令
-**           pvArg             参数
-** 输　出  : DRESULT
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-void  disk_timerproc (void)
-{
-}
+
 #endif                                                                  /*  LW_CFG_MAX_VOLUMES          */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/
-

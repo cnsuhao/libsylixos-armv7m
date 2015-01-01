@@ -80,8 +80,7 @@
 #define  FIOSELECT                          28                  /* wake up process in select on I/O     */
 #define  FIOUNSELECT                        29                  /* wake up process in select on I/O     */
 #define  FIONFREE                           30                  /* get free byte count on device        */
-#define  FIOMKDIR                           31                  /* create a directory                   */
-#define  FIORMDIR                           32                  /* remove a directory                   */
+#define  FIOTRIM                            31                  /* ATA TRIM command                     */
 #define  FIOLABELGET                        33                  /* get volume label                     */
 #define  FIOLABELSET                        34                  /* set volume label                     */
 #define  FIOATTRIBSET                       35                  /* set file attribute                   */

@@ -40,6 +40,7 @@
 2013.11.17  支持 SOCK_SEQPACKET 类型连接.
 2013.11.21  升级新的发送信号接口.
 2014.10.16  __unixFind() 加入对 listen 状态 unix 套接字的搜索.
+2015.01.01  修正 __unixFind() 对 DGRAM 类型判断错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -769,9 +770,11 @@ static AF_UNIX_T  *__unixFind (CPCHAR  pcPath, INT  iType, BOOL  bListen)
     
         pafunixTemp = (AF_UNIX_T *)plineTemp;
         if ((__AF_UNIX_TYPE(pafunixTemp) == iType) &&
-            (lib_strcmp(pafunixTemp->UNIX_cFile, pcPath) == 0) &&
-            (bListen && (pafunixTemp->UNIX_iStatus == __AF_UNIX_STATUS_LISTEN))) {
-            return  (pafunixTemp);
+            (lib_strcmp(pafunixTemp->UNIX_cFile, pcPath) == 0)) {
+            if ((iType == SOCK_DGRAM) || !bListen ||
+                (pafunixTemp->UNIX_iStatus == __AF_UNIX_STATUS_LISTEN)) {
+                return  (pafunixTemp);
+            }
         }
     }
     

@@ -211,7 +211,8 @@ INT  __blockIoDevRead (INT     iIndex,
         if (pblkd->BLKD_bRemovable) {
             pblkd->BLKD_pfuncBlkIoctl(pblkd, FIOCANCEL, 0);
         }
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "can not read block.\r\n");
+        _DebugFormat(__ERRORMESSAGE_LEVEL, "can not read block: blk %d sector %lu [%ld].\r\n",
+                     iIndex, ulStartSector, ulSectorCount);
         return  (PX_ERROR);
     } else {
         return  (ERROR_NONE);
@@ -270,7 +271,8 @@ INT  __blockIoDevWrite (INT     iIndex,
         if (pblkd->BLKD_bRemovable) {
             pblkd->BLKD_pfuncBlkIoctl(pblkd, FIOCANCEL, 0);
         }
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "can not write block.\r\n");
+        _DebugFormat(__ERRORMESSAGE_LEVEL, "can not write block: blk %d sector %lu [%ld].\r\n",
+                     iIndex, ulStartSector, ulSectorCount);
         return  (PX_ERROR);
     } else {
         return  (ERROR_NONE);
