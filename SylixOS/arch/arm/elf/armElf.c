@@ -20,6 +20,7 @@
 **
 ** BUG:
 2014.12.08  添加thumb2重定位支持.
+2015.01.06  将目标为thumb的BL转换为BLX.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -127,7 +128,7 @@ INT  archElfRelocateRel (Elf_Rel     *prel,
     Elf_Sword  swordAddend;
     Elf_Sword  swordTopBits;
 
-    Elf_Addr  upper, lower, sign, j1, j2;
+    Elf_Addr  upper, lower, sign, j1, j2, H;
 
     paddrWhere = (Elf_Addr *)((size_t)pcTargetSec + prel->r_offset);    /*  计算重定位目标地址          */
 
@@ -172,8 +173,15 @@ INT  archElfRelocateRel (Elf_Rel     *prel,
             addrTmp = addrSymVal - (Elf_Addr)paddrWhere + (swordAddend << 2);
         }
 
-        addrTmp >>= 2;
-        *paddrWhere = (*paddrWhere & 0xff000000) | (addrTmp & 0x00ffffff);
+        if ((*paddrWhere & 0x0F000000) == 0x0B000000 &&
+            (addrTmp & 0x3) != 0) {                                     /*  将目标为thumb的BL转换为BLX  */
+            H = ((addrTmp >> 1) & 1) << 24;
+            addrTmp >>= 2;
+            *paddrWhere = (0xFA << 24) | H | (addrTmp & 0x00ffffff);
+        } else {
+            addrTmp >>= 2;
+            *paddrWhere = (*paddrWhere & 0xff000000) | (addrTmp & 0x00ffffff);
+        }
         break;
 
     case R_ARM_REL32:
