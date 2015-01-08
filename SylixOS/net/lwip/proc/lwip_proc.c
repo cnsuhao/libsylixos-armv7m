@@ -1561,7 +1561,7 @@ static ssize_t  __procFsNetRouteRead (PLW_PROCFS_NODE  p_pfsn,
 *********************************************************************************************************/
 static VOID  __procFsNetUnixGetCnt (AF_UNIX_T  *pafunix, size_t  *pstNeedBufferSize)
 {
-    *pstNeedBufferSize += lib_strlen(pafunix->UNIX_cFile) + 64;
+    *pstNeedBufferSize += lib_strlen(pafunix->UNIX_cFile) + 70;
 }
 /*********************************************************************************************************
 ** 函数名称: __procFsNetUnixPrint
@@ -1582,7 +1582,6 @@ static VOID  __procFsNetUnixPrint (AF_UNIX_T  *pafunix, PCHAR  pcBuffer,
     PCHAR   pcShut;
     
     if (stTotalSize > *pstOft) {
-        
         if (pafunix->UNIX_iType == SOCK_STREAM) {
             pcType = "stream";
         } else if (pafunix->UNIX_iType == SOCK_SEQPACKET) {
@@ -1610,8 +1609,10 @@ static VOID  __procFsNetUnixPrint (AF_UNIX_T  *pafunix, PCHAR  pcBuffer,
             pcShut = "no";
         }
         
-        *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft, "%-9s %4x %-7s %-5s %10zu %s\n",
-                           pcType, pafunix->UNIX_iFlag, pcStat, pcShut, pafunix->UNIX_stMaxBufSize,
+        *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft, "%-9s %4x %-7s %-5s %10zu %10zu %s\n",
+                           pcType, pafunix->UNIX_iFlag, pcStat, pcShut, 
+                           pafunix->UNIX_unixq.UNIQ_stTotal,
+                           pafunix->UNIX_stMaxBufSize,
                            pafunix->UNIX_cFile);
     }
 }
@@ -1632,7 +1633,7 @@ static ssize_t  __procFsNetUnixRead (PLW_PROCFS_NODE  p_pfsn,
                                      off_t            oft)
 {
     const CHAR      cUnixInfoHdr[] = 
-    "TYPE      FLAG STATUS  SHUTD MAX_BUFFER PATH\n";
+    "TYPE      FLAG STATUS  SHUTD      NREAD MAX_BUFFER PATH\n";
           PCHAR     pcFileBuffer;
           size_t    stRealSize;                                         /*  实际的文件内容大小          */
           size_t    stCopeBytes;

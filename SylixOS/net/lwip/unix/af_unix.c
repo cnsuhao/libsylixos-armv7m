@@ -41,6 +41,7 @@
 2013.11.21  升级新的发送信号接口.
 2014.10.16  __unixFind() 加入对 listen 状态 unix 套接字的搜索.
 2015.01.01  修正 __unixFind() 对 DGRAM 类型判断错误.
+2015.01.08  SOCK_DGRAM 没有一次接收完整包, 剩下的数据需要丢弃.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -498,36 +499,34 @@ static ssize_t  __unixRecvfromMsg (AF_UNIX_T  *pafunixRecver,
      *  接收数据信息
      */
     stMsgLen = pafunixmsg->UNIM_stLen - pafunixmsg->UNIM_stOffset;      /*  计算消息节点内消息的长度    */
+    if (stLen > stMsgLen) {                                             /*  可以获取全部信息            */
+        stLen = stMsgLen;
+    }
+                                                                        /*  拷贝数据                    */
+    lib_memcpy(pvMsg, &pafunixmsg->UNIM_pcMsg[pafunixmsg->UNIM_stOffset], stLen);
     
-    if (stMsgLen <= stLen) {                                            /*  可以获取全部信息            */
-        lib_memcpy(pvMsg, &pafunixmsg->UNIM_pcMsg[pafunixmsg->UNIM_stOffset], stMsgLen);
-        
-        if ((flags & MSG_PEEK) == 0) {                                  /*  数据预读, 不删除数据        */
-            _list_mono_allocate_seq(&pafunixq->UNIQ_pmonoHeader,
-                                    &pafunixq->UNIQ_pmonoTail);         /*  将消息从队列中删除          */
-            
-            __unixDeleteMsg(pafunixmsg);                                /*  释放消息节点                */
-            
-            pafunixq->UNIQ_stTotal -= stMsgLen;                         /*  更新缓冲区中的总数据        */
-        }
-        
-        return  ((ssize_t)stMsgLen);
-    
-    } else {                                                            /*  只能接收一部分消息          */
-        lib_memcpy(pvMsg, &pafunixmsg->UNIM_pcMsg[pafunixmsg->UNIM_stOffset], stLen);
-    
-        if ((flags & MSG_PEEK) == 0) {                                  /*  数据预读, 不删除数据        */
-            pafunixmsg->UNIM_stOffset += stLen;                         /*  向前推移指针                */
-            
-            if (pafunixmsg->UNIM_punie) {
-                pafunixmsg->UNIM_punie->UNIE_bValid = LW_FALSE;         /*  扩展信息只能接收一次        */
-            }
-            
-            pafunixq->UNIQ_stTotal -= stLen;                            /*  更新缓冲区中的总数据        */
-        }
-        
+    if (flags & MSG_PEEK) {                                             /*  数据预读, 不删除数据        */
         return  ((ssize_t)stLen);
     }
+    
+    if ((stLen == stMsgLen) || 
+        (pafunixRecver->UNIX_iType == SOCK_DGRAM)) {                    /*  已经读取完毕或者 DGRAM 型   */
+        _list_mono_allocate_seq(&pafunixq->UNIQ_pmonoHeader,
+                                &pafunixq->UNIQ_pmonoTail);             /*  将消息从队列中删除          */
+        __unixDeleteMsg(pafunixmsg);                                    /*  释放消息节点                */
+        
+        pafunixq->UNIQ_stTotal -= stMsgLen;                             /*  减少整包字节数              */
+        
+    } else {
+        if (pafunixmsg->UNIM_punie) {
+            pafunixmsg->UNIM_punie->UNIE_bValid = LW_FALSE;             /*  扩展信息只能接收一次        */
+        }
+        
+        pafunixmsg->UNIM_stOffset += stLen;                             /*  向前推移指针                */
+        pafunixq->UNIQ_stTotal    -= stLen;                             /*  减少单次读取字节数          */
+    }
+    
+    return  ((ssize_t)stLen);
 }
 /*********************************************************************************************************
 ** 函数名称: __unixUpdateReader
