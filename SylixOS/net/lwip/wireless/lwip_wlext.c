@@ -367,30 +367,99 @@ void wireless_send_event (struct netif      *dev,
                           union iwreq_data  *wrqu,
                           const char        *extra)
 {
-    static const UINT8  ucMacInval[ETH_ALEN] = {0, 0, 0, 0, 0, 0};
-    
-    switch (cmd) {
-    
-    case SIOCGIWAP:                                                     /*  网络连接变化                */
-        if (lib_memcmp(wrqu->ap_addr.sa_data, 
-                       ucMacInval, ETH_ALEN) == 0) {
-            netif_set_link_down(dev);                                   /*  网卡未连接                  */
-        } else {
-            netif_set_link_up(dev);                                     /*  网卡已连接                  */
-        }
-        break;
-        
-    case SIOCGIWSCAN:                                                   /*  扫描完成                    */
-        netEventIfWlScan(dev);
-        break;
-    
-    case IWEVMICHAELMICFAILURE:                                         /*  WPA failure                 */
-        netEventIfAuthFail(dev);
-        break;
-    
-    default:                                                            /*  其他消息暂不处理            */
-        break;
+    int event_len;                                                       /* Its size                    */
+    int hdr_len;                                                         /* Size of the event header    */
+    int wrqu_off = 0;                                                    /* Offset in wrqu              */
+    int tmp_len, extra_len = 0;
+    unsigned  cmd_index;                                                 /* *MUST* be unsigned          */
+    struct iw_event  *event;                                             /* Mallocated whole event      */
+    const struct iw_ioctl_description * descr = NULL;
+    struct neattr {
+        unsigned short    nea_len;
+        unsigned short    nea_type;
+    } *nea;
+
+    /*
+     * Nothing in the kernel sends scan events with data, be safe.
+     * This is necessary because we cannot fix up scan event data
+     * for compat, due to being contained in 'extra', but normally
+     * applications are required to retrieve the scan data anyway
+     * and no data is included in the event, this codifies that
+     * practice.
+     */
+    if ((cmd == SIOCGIWSCAN) && extra) {
+        extra = NULL;
     }
+
+    /* Get the description of the Event */
+    if (cmd <= SIOCIWLAST) {
+        cmd_index = IW_IOCTL_IDX(cmd);
+        if (cmd_index < standard_ioctl_num) {
+            descr = &(standard_ioctl[cmd_index]);
+        }
+    } else {
+        cmd_index = IW_EVENT_IDX(cmd);
+        if (cmd_index < standard_event_num) {
+            descr = &(standard_event[cmd_index]);
+        }
+    }
+    /* Don't accept unknown events */
+    if (descr == NULL) {
+        /* Note : we don't return an error to the driver, because
+         * the driver would not know what to do about it. It can't
+         * return an error to the user, because the event is not
+         * initiated by a user request.
+         * The best the driver could do is to log an error message.
+         * We will do it ourselves instead...
+         */
+        return;
+    }
+
+    /* Check extra parameters and set extra_len */
+    if (descr->header_type == IW_HEADER_TYPE_POINT) {
+        /* Check if number of token fits within bounds */
+        if (wrqu->data.length > descr->max_tokens) {
+            return;
+        }
+        if (wrqu->data.length < descr->min_tokens) {
+            return;
+        }
+        /* Calculate extra_len - extra is NULL for restricted events */
+        if (extra != NULL) {
+            extra_len = wrqu->data.length * descr->token_size;
+        }
+        /* Always at an offset in wrqu */
+        wrqu_off = IW_EV_POINT_OFF;
+    }
+
+    /* Total length of the event */
+    hdr_len = event_type_size[descr->header_type];
+    event_len = hdr_len + extra_len;
+    tmp_len = (int)((sizeof(struct neattr) + 3) & ~3) + event_len;
+
+    /* malloc SylixOS netevent */
+    nea = (struct neattr *)sys_zalloc(tmp_len);
+    if (!nea) {
+        return;
+    }
+
+#define IFLA_WIRELESS  (11)                                             /* Wireless Extension event     */
+    nea->nea_type = IFLA_WIRELESS;
+    nea->nea_len = tmp_len;
+
+    event = (struct iw_event *)((char *)nea +
+            (int)((sizeof(struct neattr) + 3) & ~3));
+
+    event->len = event_len;
+    event->cmd = cmd;
+
+    lib_memcpy(&event->u, ((char *) wrqu) + wrqu_off, hdr_len - IW_EV_LCP_LEN);
+    if (extra_len)
+        lib_memcpy(((char *) event) + hdr_len, extra, extra_len);
+
+    netEventIfWlExt2(dev, (void *)nea, (unsigned int)nea->nea_len);
+
+    sys_free(nea);
 }
 /*********************************************************************************************************
 ** 函数名称: get_wireless_stats

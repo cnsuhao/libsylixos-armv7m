@@ -745,6 +745,41 @@ VOID  netEventIfWlExt (struct netif *pnetif,
     
     _netEventDevPutMsg(ucBuffer, sizeof(ucBuffer));
 }
+/*********************************************************************************************************
+** 函数名称: netEventIfWlExt2
+** 功能描述: 网卡扩展事件发送
+** 输　入  : pnetif           网卡
+**           ulEvent          无线扩展事件地址
+**           uiArg            事件参数
+** 输　出  : NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+VOID  netEventIfWlExt2 (struct netif *pnetif,
+                        PVOID         pvEvent,
+                        UINT32        uiArg)
+{
+    UINT32   uiLen = uiArg;
+    PUCHAR   pucBuffer = LW_NULL;
+
+    pucBuffer = __SHEAP_ALLOC(4 + 4 + uiLen);
+    if (!pucBuffer) {
+        return;
+    }
+
+    lib_bzero(pucBuffer, 4 + 4 + uiLen);
+
+    *(pucBuffer + 4) = pnetif->name[0];
+    *(pucBuffer + 5) = pnetif->name[1];
+    *(pucBuffer + 6) = (UCHAR)(pnetif->num + '0');
+    *(pucBuffer + 7) = PX_EOS;
+
+    lib_memcpy(pucBuffer + 8, (PUCHAR)pvEvent, uiLen);
+
+    _netEventDevPutMsg(pucBuffer, 4 + 4 + uiLen);
+
+    __SHEAP_FREE(pucBuffer);
+}
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */
 /*********************************************************************************************************
   END

@@ -103,6 +103,9 @@ VOID  netEventIfWlExt(struct netif *pnetif,
                       UINT32        uiArg1,
                       UINT32        uiArg2,
                       UINT32        uiArg3);
+VOID  netEventIfWlExt2(struct netif *pnetif,
+                       PVOID         pvEvent,
+                       UINT32        uiArg);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  LW_CFG_NET_EN > 0           */
