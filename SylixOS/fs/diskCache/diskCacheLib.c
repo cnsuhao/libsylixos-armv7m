@@ -25,6 +25,7 @@
 2009.07.22  增加对 FIOSYNC 的支持.
 2009.11.03  FIOCANCEL 命令应该传往磁盘驱动, 使其放弃所有数据.
             FIODISKCHANGE 与 FIOCANCEL 操作相同.
+2015.02.05  修正 __diskCacheNodeReadData() 对扇区判断错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -571,7 +572,7 @@ static INT  __diskCacheNodeReadData (PLW_DISKCACHE_CB  pdiskcDiskCache, PLW_DISK
              
     iNSector = (INT)__MIN((ULONG)pdiskcDiskCache->DISKC_iMaxBurstSector, 
                      (ULONG)((pdiskcDiskCache->DISKC_ulNCacheNode - 
-                      pdiskcDiskCache->DISKC_ulDirtyCounter) / 2));     /*  获得读扇区的个数            */
+                      pdiskcDiskCache->DISKC_ulDirtyCounter)));         /*  获得读扇区的个数            */
                       
     iNSector = (INT)__MIN((ULONG)iNSector,                              /*  进行无符号数比较            */
                      (ULONG)(pdiskcDiskCache->DISKC_ulEndStector - 

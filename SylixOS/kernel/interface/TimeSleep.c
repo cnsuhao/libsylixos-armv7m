@@ -28,6 +28,7 @@
 2012.03.20  减少对 _K_ptcbTCBCur 的引用, 尽量采用局部变量, 减少对当前 CPU ID 获取的次数.
 2013.07.10  去掉 API_TimeUSleep API.
             API_TimeMSleep 至少保证一个 tick 延迟.
+2015.02.04  nanosleep() 如果低于一个 tick 则使用 bspDelayNs() 进行延迟.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -292,7 +293,12 @@ INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
     
     ulTick = __timespecToTick((struct timespec *)rqtp);
     if (!ulTick) {
-        ulTick = 1;                                                     /*  至少延迟一个 tick           */
+        bspDelayNs((ULONG)rqtp->tv_nsec);                               /*  使用 BSP 断延迟函数         */
+        if (rmtp) {
+            rmtp->tv_sec  = 0;                                          /*  不存在时间差别              */
+            rmtp->tv_nsec = 0;
+        }
+        return  (ERROR_NONE);
     }
     
 __wait_again:
