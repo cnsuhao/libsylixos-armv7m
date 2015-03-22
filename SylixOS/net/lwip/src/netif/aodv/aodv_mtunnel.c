@@ -136,7 +136,7 @@ static void aodv_mtunnel_forward (struct aodv_mrtnode *mrt,
  * @param port remote port
  */
 static void aodv_mtunnel_recv (void *arg, struct udp_pcb *pcb, struct pbuf *p,
-                               ip_addr_t *addr, u16_t port)
+                               const ip_addr_t *addr, u16_t port)
 {
   struct in_addr grp_addr, rev_addr, orig_addr;
   struct ip_hdr *iphdr;

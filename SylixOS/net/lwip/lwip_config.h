@@ -291,6 +291,9 @@ extern  UINT32  __inetHostTableGetItem(CPCHAR  pcHost);                 /*  本地
 #define MEMP_NUM_TCP_SEG                (8 * TCP_SND_QUEUELEN)
 
 #define LWIP_TCP_KEEPALIVE              1
+#define LWIP_NETCONN_FULLDUPLEX         1
+
+#define LWIP_SO_LINGER                  1
 #define LWIP_SO_SNDTIMEO                1
 #define LWIP_SO_RCVTIMEO                1
 #define LWIP_SO_RCVBUF                  1
@@ -427,9 +430,10 @@ extern  UINT32  __inetHostTableGetItem(CPCHAR  pcHost);                 /*  本地
   ppp option
 *********************************************************************************************************/
 
-#define PPP_INPROC_MULTITHREADED        1                               /*  pppos use pppfd recv-thread */
+#define PPP_INPROC_IRQ_SAFE             1                               /*  pppos use pppfd recv-thread */
 #define PPP_NOTIFY_PHASE                1
 #define PPP_FCS_TABLE                   1
+#define PPP_OUR_NAME                    "SylixOS"
 
 #define PAP_SUPPORT                     1
 #define CHAP_SUPPORT                    1

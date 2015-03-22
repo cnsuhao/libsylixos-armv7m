@@ -54,13 +54,14 @@
 #include "lwip/inet_chksum.h"
 #include "lwip/stats.h"
 #include "lwip/snmp.h"
-#include "arch/perf.h"
 #include "lwip/ip6.h"
 #include "lwip/ip6_addr.h"
 #include "lwip/inet_chksum.h"
 #if LWIP_ND6_TCP_REACHABILITY_HINTS
 #include "lwip/nd6.h"
 #endif /* LWIP_ND6_TCP_REACHABILITY_HINTS */
+
+#define LWIP_TCP_CALC_INITIAL_CWND(mss) LWIP_MIN((4U * (mss)), LWIP_MAX((2U * (mss)), 4380U));
 
 /* These variables are global to all functions involved in the input
    processing of TCP segments. They are set by the tcp_input()
@@ -359,17 +360,6 @@ tcp_input(struct pbuf *p, struct netif *inp)
         TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_RST);
         tcp_pcb_remove(&tcp_active_pcbs, pcb);
         memp_free(MEMP_TCP_PCB, pcb);
-      } else if (recv_flags & TF_CLOSED) {
-        /* The connection has been closed and we will deallocate the
-           PCB. */
-        if (!(pcb->flags & TF_RXCLOSED)) {
-          /* Connection closed although the application has only shut down the
-             tx side: call the PCB's err callback and indicate the closure to
-             ensure the application doesn't continue using the PCB. */
-          TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_CLSD);
-        }
-        tcp_pcb_remove(&tcp_active_pcbs, pcb);
-        memp_free(MEMP_TCP_PCB, pcb);
       } else {
         err = ERR_OK;
         /* If the application has registered a "sent" function to be
@@ -394,7 +384,19 @@ tcp_input(struct pbuf *p, struct netif *inp)
             }
           }
         }
-
+        if (recv_flags & TF_CLOSED) {
+          /* The connection has been closed and we will deallocate the
+             PCB. */
+          if (!(pcb->flags & TF_RXCLOSED)) {
+            /* Connection closed although the application has only shut down the
+               tx side: call the PCB's err callback and indicate the closure to
+               ensure the application doesn't continue using the PCB. */
+            TCP_EVENT_ERR(pcb->errf, pcb->callback_arg, ERR_CLSD);
+          }
+          tcp_pcb_remove(&tcp_active_pcbs, pcb);
+          memp_free(MEMP_TCP_PCB, pcb);
+          goto aborted;
+        }
 #if TCP_QUEUE_OOSEQ && LWIP_WND_SCALE
         while (recv_data != NULL) {
           struct pbuf *rest = NULL;
@@ -740,7 +742,10 @@ tcp_process(struct tcp_pcb *pcb)
        * but for the default value of pcb->mss) */
       pcb->ssthresh = pcb->mss * 10;
 
-      pcb->cwnd = ((pcb->cwnd == 1) ? (pcb->mss * 2) : pcb->mss);
+      pcb->cwnd = LWIP_TCP_CALC_INITIAL_CWND(pcb->mss);
+      LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_process (SENT): cwnd %"TCPWNDSIZE_F
+                                   " ssthresh %"TCPWNDSIZE_F"\n",
+                                   pcb->cwnd, pcb->ssthresh));
       LWIP_ASSERT("pcb->snd_queuelen > 0", (pcb->snd_queuelen > 0));
       --pcb->snd_queuelen;
       LWIP_DEBUGF(TCP_QLEN_DEBUG, ("tcp_process: SYN-SENT --queuelen %"TCPWNDSIZE_F"\n", (tcpwnd_size_t)pcb->snd_queuelen));
@@ -776,7 +781,6 @@ tcp_process(struct tcp_pcb *pcb)
     if (flags & TCP_ACK) {
       /* expected ACK number? */
       if (TCP_SEQ_BETWEEN(ackno, pcb->lastack+1, pcb->snd_nxt)) {
-        tcpwnd_size_t old_cwnd;
         pcb->state = ESTABLISHED;
         LWIP_DEBUGF(TCP_DEBUG, ("TCP connection established %"U16_F" -> %"U16_F".\n", inseg.tcphdr->src, inseg.tcphdr->dest));
 #if LWIP_CALLBACK_API
@@ -793,7 +797,6 @@ tcp_process(struct tcp_pcb *pcb)
           }
           return ERR_ABRT;
         }
-        old_cwnd = pcb->cwnd;
         /* If there was any data contained within this ACK,
          * we'd better pass it on to the application as well. */
         tcp_receive(pcb);
@@ -803,7 +806,10 @@ tcp_process(struct tcp_pcb *pcb)
           pcb->acked--;
         }
 
-        pcb->cwnd = ((old_cwnd == 1) ? (pcb->mss * 2) : pcb->mss);
+        pcb->cwnd = LWIP_TCP_CALC_INITIAL_CWND(pcb->mss);
+        LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_process (SYN_RCVD): cwnd %"TCPWNDSIZE_F
+                                     " ssthresh %"TCPWNDSIZE_F"\n",
+                                     pcb->cwnd, pcb->ssthresh));
 
         if (recv_flags & TF_GOT_FIN) {
           tcp_ack_now(pcb);
@@ -925,7 +931,7 @@ tcp_oos_insert_segment(struct tcp_seg *cseg, struct tcp_seg *next)
 
 /**
  * Called by tcp_process. Checks if the given segment is an ACK for outstanding
- * data, and if so frees the memory of the buffered data. Next, is places the
+ * data, and if so frees the memory of the buffered data. Next, it places the
  * segment on any of the receive queues (pcb->recved or pcb->ooseq). If the segment
  * is buffered, the pbuf is referenced by pbuf_ref so that it will not be freed until
  * it has been removed from the buffer.
@@ -1576,7 +1582,7 @@ tcp_receive(struct tcp_pcb *pcb)
                     pbuf_realloc(next->p, next->len);
                   }
                   /* check if the remote side overruns our receive window */
-                  if ((u32_t)tcplen + seqno > pcb->rcv_nxt + (u32_t)pcb->rcv_wnd) {
+                  if (TCP_SEQ_GT((u32_t)tcplen + seqno, pcb->rcv_nxt + (u32_t)pcb->rcv_wnd)) {
                     LWIP_DEBUGF(TCP_INPUT_DEBUG, 
                                 ("tcp_receive: other end overran receive window"
                                  "seqno %"U32_F" len %"U16_F" right edge %"U32_F"\n",
@@ -1759,6 +1765,12 @@ tcp_parseopt(struct tcp_pcb *pcb)
       }
     }
   }
+}
+
+void
+tcp_trigger_input_pcb_close(void)
+{
+  recv_flags |= TF_CLOSED;
 }
 
 #endif /* LWIP_TCP */

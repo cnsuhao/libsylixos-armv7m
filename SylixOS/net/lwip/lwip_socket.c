@@ -42,6 +42,8 @@
 2014.05.03  加入获取网络类型的接口.
 2014.05.07  __ifIoctlIf() 优先使用 netif ioctl.
 2014.11.07  AF_PACKET ioctl() 支持基本网口操作.
+2015.03.02  加入 socket 复位操作, 回收 socket 首先需要设置 SO_LINGER 为立即关闭模式.
+2015.03.17  netif ioctl 仅负责混杂模式的设置.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -397,13 +399,6 @@ static INT  __ifSubIoctlIf (INT  iCmd, PVOID  pvArg)
         _ErrorHandle(EADDRNOTAVAIL);                                    /*  未找到指定的网络接口        */
         return  (iRet);
     }
-    
-    if (pnetif->ioctl) {                                                /*  优先调用网卡驱动            */
-        iRet = pnetif->ioctl(pnetif, iCmd, pvArg);
-        if ((iRet == ERROR_NONE) || (errno != ENOSYS)) {
-            return  (iRet);
-        }
-    }
 
     switch (iCmd) {
     
@@ -430,12 +425,38 @@ static INT  __ifSubIoctlIf (INT  iCmd, PVOID  pvArg)
         if (pnetif->ip_addr.addr == ntohl(INADDR_LOOPBACK)) {
             pifreq->ifr_flags |= IFF_LOOPBACK;
         }
+        if ((pnetif->flags2 & NETIF_FLAG2_PROMISC)) {
+            pifreq->ifr_flags |= IFF_PROMISC;
+        }
         iRet = ERROR_NONE;
         break;
         
     case SIOCSIFFLAGS:                                                  /*  设置网卡 flag               */
+        if ((pifreq->ifr_flags & IFF_PROMISC) && 
+            !(pnetif->flags2 & NETIF_FLAG2_PROMISC)) {                  /*  混杂模式开启                */
+            if (!pnetif->ioctl) {
+                break;
+            }
+            iRet = pnetif->ioctl(pnetif, SIOCSIFFLAGS, pvArg);
+            if (iRet < ERROR_NONE) {
+                break;
+            }
+            pnetif->flags2 |= NETIF_FLAG2_PROMISC;
+        
+        } else if (!(pifreq->ifr_flags & IFF_PROMISC) && 
+                   (pnetif->flags2 & NETIF_FLAG2_PROMISC)) {            /*  混杂模式关闭                */
+            if (!pnetif->ioctl) {
+                break;
+            }
+            iRet = pnetif->ioctl(pnetif, SIOCSIFFLAGS, pvArg);
+            if (iRet < ERROR_NONE) {
+                break;
+            }
+            pnetif->flags2 &= ~NETIF_FLAG2_PROMISC;
+        }
+        
         if (pifreq->ifr_flags & IFF_UP) {
-            netif_set_up(pnetif);                                       /*  只允许 up/down              */
+            netif_set_up(pnetif);
         } else {
             netif_set_down(pnetif);
         }
@@ -1403,6 +1424,26 @@ static INT  __socketUnmap (SOCKET_T *psock, PLW_DEV_MMAP_AREA  pdmap)
     }
     
     return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: __socketReset
+** 功能描述: socket 复位操作
+** 输　入  : psock         socket 结构
+** 输　出  : NONE.
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  __socketReset (PLW_FD_ENTRY  pfdentry)
+{
+    struct linger   lingerReset = {1, 0};
+    SOCKET_T       *psock       = (SOCKET_T *)pfdentry->FDENTRY_lValue;
+    
+    if (psock && 
+        ((psock->SOCK_iFamily == AF_INET) || 
+        ((psock->SOCK_iFamily == AF_INET6)))) {
+        lwip_setsockopt(psock->SOCK_iLwipFd, SOL_SOCKET, SO_LINGER, 
+                        &lingerReset, sizeof(struct linger));
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: lwip_sendmsg

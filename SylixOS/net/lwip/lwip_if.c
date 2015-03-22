@@ -55,7 +55,7 @@ INT  if_down (const char *ifname)
     if (pnetif) {
         if (pnetif->flags & NETIF_FLAG_UP) {
 #if LWIP_DHCP > 0
-            if ((pnetif->flags & NETIF_FLAG_DHCP) && (pnetif->dhcp)) {
+            if (pnetif->dhcp && pnetif->dhcp->pcb) {
                 netifapi_netif_common(pnetif, NULL, dhcp_release);      /*  解除 DHCP 租约, 同时停止网卡*/
                 netifapi_dhcp_stop(pnetif);                             /*  释放资源                    */
             } else {
@@ -98,12 +98,10 @@ INT  if_up (const char *ifname)
         if (!(pnetif->flags & NETIF_FLAG_UP)) {
             netifapi_netif_set_up(pnetif);
 #if LWIP_DHCP > 0
-            if (pnetif->flags & NETIF_FLAG_DHCP) {
+            if (pnetif->flags2 & NETIF_FLAG2_DHCP) {
                 ip_addr_t   inaddrNone;
-                
                 lib_bzero(&inaddrNone, sizeof(ip_addr_t));
                 netifapi_netif_set_addr(pnetif, &inaddrNone, &inaddrNone, &inaddrNone);
-                
                 netifapi_dhcp_start(pnetif);
             }
 #endif                                                                  /*  LWIP_DHCP > 0               */
@@ -208,9 +206,9 @@ INT  if_set_dhcp (const char *ifname, int en)
             
         } else {
             if (en) {
-                pnetif->flags |= NETIF_FLAG_DHCP;
+                pnetif->flags2 |= NETIF_FLAG2_DHCP;
             } else {
-                pnetif->flags &= ~NETIF_FLAG_DHCP;
+                pnetif->flags2 &= ~NETIF_FLAG2_DHCP;
             }
             iRet = ERROR_NONE;
         }
@@ -242,7 +240,7 @@ INT  if_get_dhcp (const char *ifname)
     LWIP_NETIF_LOCK();                                                  /*  进入临界区                  */
     pnetif = netif_find((char *)ifname);
     if (pnetif) {
-        if (pnetif->flags & NETIF_FLAG_DHCP) {
+        if (pnetif->flags2 & NETIF_FLAG2_DHCP) {
             iRet = 1;
         } else {
             iRet = 0;

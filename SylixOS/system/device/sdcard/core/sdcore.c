@@ -415,7 +415,7 @@ LW_API INT  API_SdCoreDevCmd (PLW_SDCORE_DEVICE psdcoredevice,
     iError = API_SdCoreDevTransfer(psdcoredevice, &sdmsg, 1);
 
     if (iError != ERROR_NONE) {
-        SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "send cmd error.\r\n");
+        SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "send cmd%d error.\r\n", psdcmd->SDCMD_uiOpcode);
         return  (PX_ERROR);
     }
 
@@ -2152,7 +2152,7 @@ static VOID  __sdCoreSpiRespConvert (UINT32 *puiResp, const UINT8 *pucResp, INT 
 }
 /*********************************************************************************************************
 ** 函数名称: __sdCoreSpiRespLen
-** 功能描述: 更加命令标记判断 SPI 应答的长度
+** 功能描述: 根据命令标记判断 SPI 应答的长度
 ** 输    入: uiCmdFlg     命令标志
 ** 输    出: NONE
 ** 返    回: 成功,返回设备设备指针,否则返回LW_NULL

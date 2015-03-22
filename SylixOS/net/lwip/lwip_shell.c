@@ -300,7 +300,7 @@ static VOID  __netIfShow (CPCHAR  pcIfName, const struct netif  *netifShow)
     
 #if LWIP_DHCP
     printf("          DHCP: %s(%s) speed: %d(bps)\n", 
-                                (netif->flags & NETIF_FLAG_DHCP) ? "Enable" : "Disable",
+                                (netif->flags2 & NETIF_FLAG2_DHCP) ? "Enable" : "Disable",
                                 (netif->dhcp) ? "On" : "Off",
                                 netif->link_speed);
 #else
@@ -571,7 +571,7 @@ static INT  __tshellIfUp (INT  iArgC, PCHAR  *ppcArgV)
 
     if (netif_is_up(netif)) {                                           /*  网卡是否已经启动            */
 #if LWIP_DHCP > 0                                                       /*  首先关闭网卡                */
-        if ((netif->flags & NETIF_FLAG_DHCP) && (netif->dhcp)) {
+        if (netif->dhcp && netif->dhcp->pcb) {
             netifapi_netif_common(netif, NULL, dhcp_release);           /*  解除 DHCP 租约, 同时停止网卡*/
             netifapi_dhcp_stop(netif);                                  /*  释放资源                    */
         } else {
@@ -586,16 +586,15 @@ static INT  __tshellIfUp (INT  iArgC, PCHAR  *ppcArgV)
 
 #if LWIP_DHCP > 0
     if (bUseDHCP) {
-        netif->flags |= NETIF_FLAG_DHCP;                                /*  使用 DHCP 启动              */
+        netif->flags2 |= NETIF_FLAG2_DHCP;                              /*  使用 DHCP 启动              */
     } else if (bShutDownDHCP) {
-        netif->flags &= ~NETIF_FLAG_DHCP;                               /*  强制关闭 DHCP               */
+        netif->flags2 &= ~NETIF_FLAG2_DHCP;                             /*  强制关闭 DHCP               */
     }
 
-    if (netif->flags & NETIF_FLAG_DHCP) {
+    if (netif->flags2 & NETIF_FLAG2_DHCP) {
         ip_addr_t  inaddrNone;
 
         lib_bzero(&inaddrNone, sizeof(ip_addr_t));
-
         netifapi_netif_set_addr(netif, &inaddrNone, &inaddrNone, &inaddrNone);
                                                                         /*  所有地址设置为 0            */
         printf("DHCP client starting...\n");
@@ -640,7 +639,7 @@ static INT  __tshellIfDown (INT  iArgC, PCHAR  *ppcArgV)
     }
 
 #if LWIP_DHCP > 0
-    if ((netif->flags & NETIF_FLAG_DHCP) && (netif->dhcp)) {
+    if (netif->dhcp && netif->dhcp->pcb) {
         netifapi_netif_common(netif, NULL, dhcp_release);               /*  解除 DHCP 租约, 同时停止网卡*/
         netifapi_dhcp_stop(netif);                                      /*  释放资源                    */
     } else {

@@ -27,6 +27,7 @@
 2013.01.11  简化 IO 操作, 去掉不再需要的函数.
 2013.05.31  加入对 fd_node 类型文件的加锁操作, 不允许写, 不允许删除.
 2013.11.18  _IosFileDup() 加入一个参数, 可以控制最小文件描述符数值.
+2015.03.02  进程回收 I/O 资源时 socket 需要先复位连接.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -1269,6 +1270,10 @@ INT  API_IosFdRefDec (INT  iFd)
 LW_API  
 INT  API_IosFdEntryReclaim (PLW_FD_ENTRY  pfdentry, ULONG  ulRefDec, pid_t  pid)
 {
+#if LW_CFG_NET_EN > 0
+    extern VOID  __socketReset(PLW_FD_ENTRY  pfdentry);
+#endif                                                                  /*  LW_CFG_NET_EN > 0           */
+
     REGISTER INT        iErrCode  = ERROR_NONE;
     REGISTER BOOL       bCallFunc = LW_TRUE;
 
@@ -1287,7 +1292,13 @@ INT  API_IosFdEntryReclaim (PLW_FD_ENTRY  pfdentry, ULONG  ulRefDec, pid_t  pid)
         _FdLockfClearFdEntry(pfdentry, pid);                            /*  回收指定进程创建的记录锁    */
         
         if (bCallFunc) {                                                /*  正常文件需要调用驱动        */
+#if LW_CFG_NET_EN > 0
+            if (pfdentry->FDENTRY_iType == LW_DRV_TYPE_SOCKET) {
+                __socketReset(pfdentry);                                /*  设置 SO_LINGER              */
+            }
+#endif                                                                  /*  LW_CFG_NET_EN > 0           */
             _IosFileClose(pfdentry);
+            
             if (pfdentry->FDENTRY_bNeedUnlink) {                        /*  之前有 unlink 操作          */
                 unlink(pfdentry->FDENTRY_pcName);                       /*  删除文件                    */
             }

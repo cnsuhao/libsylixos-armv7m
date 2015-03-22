@@ -99,7 +99,7 @@ LW_API INT   API_SdmSdioDrvRegister (SDIO_DRV *psdiodrv)
         }
 
         /*
-         * 因为SDM内部对驱动的名字不敏感, 这里仅仅警告
+         * 因为 SDM 内部对驱动的名字不敏感, 这里仅仅警告
          */
         if (lib_strcmp(psdiodrvTmp->SDIODRV_cpcName, psdiodrv->SDIODRV_cpcName) == 0) {
             SDCARD_DEBUG_MSG(__LOGMESSAGE_LEVEL, " warning: exist a same name drv"

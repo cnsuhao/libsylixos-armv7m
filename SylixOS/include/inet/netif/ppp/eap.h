@@ -80,8 +80,9 @@ extern "C" {
 #define	SRP_PSEUDO_LEN	7
 
 #define MD5_SIGNATURE_SIZE	16
-#define EAP_MIN_CHALLENGE_LENGTH	16
+#define EAP_MIN_CHALLENGE_LENGTH	17
 #define EAP_MAX_CHALLENGE_LENGTH	24
+#define EAP_MIN_MAX_POWER_OF_TWO_CHALLENGE_LENGTH     3   /* 2^3-1 = 7, 17+7 = 24 */
 
 #define	EAP_STATES	\
 	"Initial", "Pending", "Closed", "Listen", "Identify", \
@@ -113,8 +114,8 @@ enum eap_state_code {
 };
 
 struct eap_auth {
-	char *ea_name;		/* Our name */
-	char *ea_peer;		/* Peer's name */
+	const char *ea_name;	/* Our name */
+	char ea_peer[MAXNAMELEN +1];	/* Peer's name */
 	void *ea_session;	/* Authentication library linkage */
 	u_char *ea_skey;	/* Shared encryption key */
 	u_short ea_namelen;	/* Length of our name */
@@ -154,8 +155,8 @@ typedef struct eap_state {
 #define	EAP_DEFALLOWREQ		20	/* max # times to accept requests */
 #endif /* moved to opt.h */
 
-void eap_authwithpeer(ppp_pcb *pcb, char *localname);
-void eap_authpeer(ppp_pcb *pcb, char *localname);
+void eap_authwithpeer(ppp_pcb *pcb, const char *localname);
+void eap_authpeer(ppp_pcb *pcb, const char *localname);
 
 extern const struct protent eap_protent;
 

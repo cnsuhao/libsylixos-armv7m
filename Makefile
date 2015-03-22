@@ -863,6 +863,7 @@ SylixOS/net/lwip/src/netif/ppp/ppp.c \
 SylixOS/net/lwip/src/netif/ppp/pppcrypt.c \
 SylixOS/net/lwip/src/netif/ppp/pppoe.c \
 SylixOS/net/lwip/src/netif/ppp/pppol2tp.c \
+SylixOS/net/lwip/src/netif/ppp/pppos.c \
 SylixOS/net/lwip/src/netif/ppp/upap.c \
 SylixOS/net/lwip/src/netif/ppp/utils.c \
 SylixOS/net/lwip/src/netif/ppp/vj.c \

@@ -73,7 +73,7 @@ extern int aodv_wait_on_reboot_get(void);
  * @param port remote port
  */
 static void aodv_udp_recv (void *arg, struct udp_pcb *pcb, struct pbuf *p,
-                           ip_addr_t *addr, u16_t port)
+                           const ip_addr_t *addr, u16_t port)
 {
 #if AODV_DEBUG
   char buffer[INET_ADDRSTRLEN];
@@ -247,7 +247,7 @@ err_t aodv_udp_sendto (struct pbuf *p, struct in_addr *dest_addr, u8_t ttl, int 
  * @param p recv pbuf list
  * @param addr remote address
  */
-static u8_t aodv_mproxy_recv (void *arg, struct raw_pcb *pcb, struct pbuf *p, ip_addr_t *addr)
+static u8_t aodv_mproxy_recv (void *arg, struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *addr)
 {
 #if LWIP_RAW
   struct in_addr dest_addr;
@@ -359,7 +359,7 @@ void aodv_mproxy_remove (void)
  * @param p recv pbuf list
  * @param addr remote address
  */
-static u8_t aodv_igmp_recv (void *arg, struct raw_pcb *pcb, struct pbuf *p, ip_addr_t *addr)
+static u8_t aodv_igmp_recv (void *arg, struct raw_pcb *pcb, struct pbuf *p, const ip_addr_t *addr)
 {
 #if LWIP_RAW
   struct in_addr grp_addr;

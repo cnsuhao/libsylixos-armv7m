@@ -1697,7 +1697,7 @@ static VOID  __procFsNetGetIfFlag (struct netif *netif, PCHAR  pcFlag)
     if (netif->flags & NETIF_FLAG_POINTTOPOINT) {
         lib_strcat(pcFlag, "P");
     }
-    if (netif->flags & NETIF_FLAG_DHCP) {
+    if (netif->flags2 & NETIF_FLAG2_DHCP) {
         lib_strcat(pcFlag, "D");
     }
     if (netif->flags & NETIF_FLAG_LINK_UP) {
@@ -2374,21 +2374,30 @@ static ssize_t  __procFsNetPacketRead (PLW_PROCFS_NODE  p_pfsn,
 *********************************************************************************************************/
 #if LW_CFG_LWIP_PPP > 0
 
+typedef struct {
+#define PPP_OS          0
+#define PPP_OE          1
+#define PPP_OL2TP       2
+    UINT                CTXP_uiType;
+} PPP_CTX_PRIV;
+
 static VOID  __procFsNetPppPrint (struct netif *netif, PCHAR  pcBuffer, 
                                   size_t  stTotalSize, size_t *pstOft)
 {
-    ppp_pcb  *pcb;
+    PPP_CTX_PRIV *pctxp;
+    ppp_pcb      *pcb;
     
     PCHAR     pcType;
     PCHAR     pcPhase;
     
-    pcb = _LIST_ENTRY(netif, ppp_pcb, netif);
-    if (pcb->pppoe_sc) {
-        pcType = "PPPoE";
-    } else if (pcb->l2tp_pcb) {
-        pcType = "PPPoL2TP";
-    } else {
+    pcb   = _LIST_ENTRY(netif, ppp_pcb, netif);
+    pctxp = (PPP_CTX_PRIV *)pcb->ctx_cb;
+    if (pctxp->CTXP_uiType == PPP_OS) {
         pcType = "PPPoS";
+    } else if (pctxp->CTXP_uiType == PPP_OE) {
+        pcType = "PPPoE";
+    } else {
+        pcType = "PPPoL2TP";
     }
     
     switch (pcb->phase) {

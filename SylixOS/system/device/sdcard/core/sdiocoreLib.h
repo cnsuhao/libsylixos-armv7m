@@ -55,6 +55,11 @@ INT API_SdioCoreDevFuncEn(PLW_SDCORE_DEVICE   psdcoredev,
 INT API_SdioCoreDevFuncDis(PLW_SDCORE_DEVICE   psdcoredev,
                            SDIO_FUNC          *psdiofunc);
 
+INT API_SdioCoreDevFuncIntEn(PLW_SDCORE_DEVICE   psdcoredev,
+                             SDIO_FUNC          *psdiofunc);
+INT API_SdioCoreDevFuncIntDis(PLW_SDCORE_DEVICE   psdcoredev,
+                              SDIO_FUNC          *psdiofunc);
+
 INT API_SdioCoreDevFuncBlkSzSet(PLW_SDCORE_DEVICE   psdcoredev,
                                 SDIO_FUNC          *psdiofunc,
                                 UINT32              uiBlkSz);

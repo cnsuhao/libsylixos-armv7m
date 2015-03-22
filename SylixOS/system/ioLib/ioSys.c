@@ -358,6 +358,7 @@ ULONG  API_IosDrvRemove (INT  iDrvNum, BOOL  bForceClose)
         if (pfdentry->FDENTRY_pdevhdrHdr->DEVHDR_usDrvNum == (UINT16)iDrvNum) {
             if (bForceClose == LW_FALSE) {
                 _IosUnlock();                                           /*  退出 IO 临界区              */
+                _IosFileListUnlock();                                   /*  结束遍历, 删除请求删除的节点*/
                 _DebugHandle(__ERRORMESSAGE_LEVEL, "device file has exist.\r\n");
                 _ErrorHandle(ERROR_IO_FILE_EXIST);
                 return  (ERROR_IO_FILE_EXIST);

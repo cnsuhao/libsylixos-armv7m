@@ -260,7 +260,7 @@ static INT  __sdiobasePreInit (SDIO_INIT_DATA *pinitdata, PLW_SDCORE_DEVICE psdc
      * do common init
      */
     API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_POWEROFF, 0);
-    bspDelayUs(10);
+    bspDelayUs(100000);
     API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_POWERON, 0);
     API_SdCoreDevCtl(psdcoredev, SDBUS_CTRL_SETCLK, SDARG_SETCLK_LOW);
 

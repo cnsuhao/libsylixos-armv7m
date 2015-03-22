@@ -36,6 +36,7 @@
             迅雷的 FTP 可能有问题, 不管是二进制模式还是ASCII模式, 他都要求命令回复结尾为 \r\n. 而其他 FTP
             客户端没有此要求.
 2013.05.10  断点上传时, 非追加模式创建的文件必须带有 O_TRUNC 选项, 打开后自动清空.
+2015.03.18  数据连接不能使用 SO_LINGER reset 模式关闭.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -405,7 +406,7 @@ static INT  __ftpdDatasocket (__PFTPD_SESSION  pftpds)
     
     pftpds->FTPDS_iSockData   = iSock;
     pftpds->FTPDS_bUseDefault = LW_TRUE;
-    if (iSock > 0) {
+    if (iSock >= 0) {
         setsockopt(iSock, SOL_SOCKET, SO_RCVTIMEO, 
                    (const void *)&_G_iFtpdDefaultTimeout, 
                    sizeof(INT));                                        /*  设置链接与接收操作          */
@@ -1357,18 +1358,13 @@ static VOID  __ftpdCloseSessionCtrl (__PFTPD_SESSION  pftpds)
 *********************************************************************************************************/
 static VOID  __ftpdCloseSessionData (__PFTPD_SESSION  pftpds)
 {
-    struct linger   lingerCloseNow = {1, 0};                            /*  立即关闭链接                */
-
     /*
      *  只可能存在一种数据连接模式.
      */
     if (pftpds->FTPDS_iSockData > 0) {
-        setsockopt(pftpds->FTPDS_iSockData, SOL_SOCKET, SO_LINGER, 
-                   (void *)&lingerCloseNow, sizeof(lingerCloseNow));
         close(pftpds->FTPDS_iSockData);                                 /*  关闭数据连接                */
+    
     } else if (pftpds->FTPDS_iSockPASV > 0) {
-        setsockopt(pftpds->FTPDS_iSockPASV, SOL_SOCKET, SO_LINGER, 
-                   (void *)&lingerCloseNow, sizeof(lingerCloseNow));
         close(pftpds->FTPDS_iSockPASV);                                 /*  关闭 PASV 数据连接          */
     }
     

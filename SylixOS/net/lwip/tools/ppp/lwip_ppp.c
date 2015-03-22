@@ -29,6 +29,7 @@
 #if (LW_CFG_NET_EN > 0) && (LW_CFG_LWIP_PPP > 0)
 #include "lwip/netif.h"
 #include "lwip/pppapi.h"
+#include "netif/ppp/pppos.h"
 #include "lwip_ppp.h"
 #include "net/if_event.h"
 /*********************************************************************************************************
@@ -56,7 +57,9 @@ typedef struct {
     UINT8               CTXP_ucPhase;                                   /*  最后一次状态                */
     PCHAR               CTXP_cUser;                                     /*  拨号用户名                  */
     PCHAR               CTXP_cPass;                                     /*  拨号密码                    */
+    INT                 CTXP_iFd;                                       /*  串口文件描述符              */
     ppp_pcb            *CTXP_pcb;                                       /*  回指向连接控制块            */
+    struct netif        CTXP_netif;                                     /*  网络接口                    */
 } PPP_CTX_PRIV;
 /*********************************************************************************************************
 ** 函数名称: __pppLinkStatCb
@@ -218,15 +221,15 @@ static VOID  __pppOsThread (ppp_pcb *pcb)
     pctxp = (PPP_CTX_PRIV *)pcb->ctx_cb;
 
     for (;;) {
-        sstRead = read((INT)pcb->fd, ucBuffer, sizeof(ucBuffer));
+        sstRead = read(pctxp->CTXP_iFd, ucBuffer, sizeof(ucBuffer));
         if (sstRead > 0) {
             pppos_input(pcb, ucBuffer, (INT)sstRead);
         }
 
         if ((pctxp->CTXP_bNeedDelete) &&
             (pcb->phase == PPP_PHASE_DEAD)) {                           /*  需要删除 PPP 连接           */
-            close((INT)pcb->fd);
-            pppapi_delete(pcb);
+            close(pctxp->CTXP_iFd);
+            pppapi_free(pcb);
             if (pctxp->CTXP_cUser) {
                 lib_free(pctxp->CTXP_cUser);
             }
@@ -265,7 +268,7 @@ static ppp_pcb  *__pppGet (CPCHAR  pcIfName)
         return  (LW_NULL);
     }
 
-    pcb = _LIST_ENTRY(netif, ppp_pcb, netif);
+    pcb = (ppp_pcb *)netif->state;
 
     return  (pcb);
 }
@@ -287,7 +290,6 @@ INT  API_PppOsCreate (CPCHAR  pcSerial, LW_PPP_TTY  *ptty, PCHAR  pcIfName, size
     INT             iErrLevel = 0;
     INT             iFd;
     PPP_CTX_PRIV   *pctxp;
-    ppp_pcb        *pcb;
     
     if (!pcSerial || !pcIfName || (stMaxSize < 4)) {
         _ErrorHandle(EINVAL);
@@ -301,25 +303,18 @@ INT  API_PppOsCreate (CPCHAR  pcSerial, LW_PPP_TTY  *ptty, PCHAR  pcIfName, size
     }
     lib_bzero(pctxp, sizeof(PPP_CTX_PRIV));
     
-    pcb = pppapi_new();                                                 /*  创建 PPP 网卡               */
-    if (pcb == LW_NULL) {
-        _ErrorHandle(ENOMEM);
-        iErrLevel = 1;
-        goto    __error_handle;
-    }
-    
     __KERNEL_SPACE_ENTER();                                             /*  文件为内核 IO 文件          */
     iFd = open(pcSerial, O_RDWR);
     if (iFd < 0) {
         __KERNEL_SPACE_EXIT();
-        iErrLevel = 2;
+        iErrLevel = 1;
         goto    __error_handle;
     }
     
     if (!isatty(iFd)) {
         __KERNEL_SPACE_EXIT();
         _ErrorHandle(ENOTTY);
-        iErrLevel = 2;
+        iErrLevel = 1;
         goto    __error_handle;
     }
     
@@ -349,29 +344,27 @@ INT  API_PppOsCreate (CPCHAR  pcSerial, LW_PPP_TTY  *ptty, PCHAR  pcIfName, size
     pctxp->CTXP_ulInput     = LW_OBJECT_HANDLE_INVALID;
     pctxp->CTXP_bNeedDelete = LW_FALSE;
     pctxp->CTXP_ucPhase     = PPP_PHASE_DEAD;
-    pctxp->CTXP_pcb         = pcb;
+    pctxp->CTXP_iFd         = iFd;
 
-    if (pppapi_over_serial_create(pcb, (sio_fd_t)iFd, __pppLinkStatCb, pctxp)) {
+    pctxp->CTXP_pcb = pppapi_pppos_create(&pctxp->CTXP_netif, (sio_fd_t)iFd, __pppLinkStatCb, pctxp);
+    if (pctxp->CTXP_pcb == LW_NULL) {
         _ErrorHandle(ENODEV);
-        iErrLevel = 3;
+        iErrLevel = 2;
         goto    __error_handle;
     }
 
-    pppapi_set_notify_phase_callback(pcb, __pppNotifyPhaseCb);
+    pppapi_set_notify_phase_callback(pctxp->CTXP_pcb, __pppNotifyPhaseCb);
     
-    pcIfName[0] = pcb->netif.name[0];
-    pcIfName[1] = pcb->netif.name[1];
-    pcIfName[2] = pcb->netif.num + '0';
+    pcIfName[0] = pctxp->CTXP_netif.name[0];
+    pcIfName[1] = pctxp->CTXP_netif.name[1];
+    pcIfName[2] = pctxp->CTXP_netif.num + '0';
     pcIfName[3] = PX_EOS;
     
     return  (ERROR_NONE);
     
 __error_handle:
-    if (iErrLevel > 2) {
-        close(iFd);
-    }
     if (iErrLevel > 1) {
-        pppapi_delete(pcb);
+        close(iFd);
     }
     if (iErrLevel > 0) {
         __SHEAP_FREE(pctxp);
@@ -395,7 +388,6 @@ INT  API_PppOeCreate (CPCHAR  pcEthIf, PCHAR  pcIfName, size_t  stMaxSize)
 {
     INT             iErrLevel = 0;
     PPP_CTX_PRIV   *pctxp;
-    ppp_pcb        *pcb;
     struct netif   *netif;
 
     if (!pcEthIf || !pcIfName || (stMaxSize < 4)) {
@@ -410,17 +402,10 @@ INT  API_PppOeCreate (CPCHAR  pcEthIf, PCHAR  pcIfName, size_t  stMaxSize)
     }
     lib_bzero(pctxp, sizeof(PPP_CTX_PRIV));
 
-    pcb = pppapi_new();                                                 /*  创建 PPP 网卡               */
-    if (pcb == LW_NULL) {
-        _ErrorHandle(ENOMEM);
-        iErrLevel = 1;
-        goto    __error_handle;
-    }
-
     netif = netif_find((char *)pcEthIf);
     if ((netif == LW_NULL) || ((netif->flags & (NETIF_FLAG_ETHARP | NETIF_FLAG_ETHERNET)) == 0)) {
         _ErrorHandle(ENODEV);
-        iErrLevel = 2;
+        iErrLevel = 1;
         goto    __error_handle;
     }
 
@@ -428,27 +413,26 @@ INT  API_PppOeCreate (CPCHAR  pcEthIf, PCHAR  pcIfName, size_t  stMaxSize)
     pctxp->CTXP_ulInput     = LW_OBJECT_HANDLE_INVALID;
     pctxp->CTXP_bNeedDelete = LW_FALSE;
     pctxp->CTXP_ucPhase     = PPP_PHASE_DEAD;
-    pctxp->CTXP_pcb         = pcb;
+    pctxp->CTXP_iFd         = PX_ERROR;
 
-    if (pppapi_over_ethernet_create(pcb, netif, LW_NULL, LW_NULL, __pppLinkStatCb, pctxp)) {
+    pctxp->CTXP_pcb = pppapi_pppoe_create(&pctxp->CTXP_netif, netif,
+                                          LW_NULL, LW_NULL, __pppLinkStatCb, pctxp);
+    if (pctxp->CTXP_pcb == LW_NULL) {
         _ErrorHandle(ENODEV);
-        iErrLevel = 2;
+        iErrLevel = 1;
         goto    __error_handle;
     }
 
-    pppapi_set_notify_phase_callback(pcb, __pppNotifyPhaseCb);
+    pppapi_set_notify_phase_callback(pctxp->CTXP_pcb, __pppNotifyPhaseCb);
 
-    pcIfName[0] = pcb->netif.name[0];
-    pcIfName[1] = pcb->netif.name[1];
-    pcIfName[2] = pcb->netif.num + '0';
+    pcIfName[0] = pctxp->CTXP_netif.name[0];
+    pcIfName[1] = pctxp->CTXP_netif.name[1];
+    pcIfName[2] = pctxp->CTXP_netif.num + '0';
     pcIfName[3] = PX_EOS;
 
     return  (ERROR_NONE);
 
 __error_handle:
-    if (iErrLevel > 1) {
-        pppapi_delete(pcb);
-    }
     if (iErrLevel > 0) {
         __SHEAP_FREE(pctxp);
     }
@@ -481,7 +465,6 @@ INT  API_PppOl2tpCreate (CPCHAR  pcEthIf,
 {
     INT             iErrLevel = 0;
     PPP_CTX_PRIV   *pctxp;
-    ppp_pcb        *pcb;
     struct netif   *netif;
     ip_addr_t       ipaddr;
 
@@ -503,17 +486,10 @@ INT  API_PppOl2tpCreate (CPCHAR  pcEthIf,
     }
     lib_bzero(pctxp, sizeof(PPP_CTX_PRIV));
 
-    pcb = pppapi_new();                                                 /*  创建 PPP 网卡               */
-    if (pcb == LW_NULL) {
-        _ErrorHandle(ENOMEM);
-        iErrLevel = 1;
-        goto    __error_handle;
-    }
-
     netif = netif_find((char *)pcEthIf);
     if (netif == LW_NULL) {
         _ErrorHandle(ENODEV);
-        iErrLevel = 2;
+        iErrLevel = 1;
         goto    __error_handle;
     }
 
@@ -521,29 +497,27 @@ INT  API_PppOl2tpCreate (CPCHAR  pcEthIf,
     pctxp->CTXP_ulInput     = LW_OBJECT_HANDLE_INVALID;
     pctxp->CTXP_bNeedDelete = LW_FALSE;
     pctxp->CTXP_ucPhase     = PPP_PHASE_DEAD;
-    pctxp->CTXP_pcb         = pcb;
+    pctxp->CTXP_iFd         = PX_ERROR;
 
-    if (pppapi_over_l2tp_create(pcb, netif, &ipaddr, ntohs(usPort),
-                                (u8_t *)pcSecret, (u8_t)stSecretLen,
-                                __pppLinkStatCb, pctxp)) {
+    pctxp->CTXP_pcb = pppapi_pppol2tp_create(&pctxp->CTXP_netif, netif, &ipaddr, ntohs(usPort),
+                                             (u8_t *)pcSecret, (u8_t)stSecretLen,
+                                             __pppLinkStatCb, pctxp);
+    if (pctxp->CTXP_pcb == LW_NULL) {
         _ErrorHandle(ENODEV);
-        iErrLevel = 2;
+        iErrLevel = 1;
         goto    __error_handle;
     }
 
-    pppapi_set_notify_phase_callback(pcb, __pppNotifyPhaseCb);
+    pppapi_set_notify_phase_callback(pctxp->CTXP_pcb, __pppNotifyPhaseCb);
 
-    pcIfName[0] = pcb->netif.name[0];
-    pcIfName[1] = pcb->netif.name[1];
-    pcIfName[2] = pcb->netif.num + '0';
+    pcIfName[0] = pctxp->CTXP_netif.name[0];
+    pcIfName[1] = pctxp->CTXP_netif.name[1];
+    pcIfName[2] = pctxp->CTXP_netif.num + '0';
     pcIfName[3] = PX_EOS;
 
     return  (ERROR_NONE);
 
 __error_handle:
-    if (iErrLevel > 1) {
-        pppapi_delete(pcb);
-    }
     if (iErrLevel > 0) {
         __SHEAP_FREE(pctxp);
     }
@@ -584,12 +558,12 @@ INT  API_PppDelete (CPCHAR  pcIfName)
     if (pctxp->CTXP_ulInput) {                                          /*  PPPoS 型连接                */
         pctxp->CTXP_bNeedDelete = LW_TRUE;
         __KERNEL_SPACE_ENTER();
-        ioctl((INT)pcb->fd, FIOCANCEL);
+        ioctl(pctxp->CTXP_iFd, FIOCANCEL);
         __KERNEL_SPACE_EXIT();
         return  (ERROR_NONE);
 
     } else {
-        pppapi_delete(pcb);                                             /*  直接删除                    */
+        pppapi_free(pcb);                                               /*  直接删除                    */
         if (pctxp->CTXP_cUser) {
             lib_free(pctxp->CTXP_cUser);
         }
@@ -680,7 +654,7 @@ __passwd_same:
                             &attr, LW_NULL);                            /*  创建 PPPoS 接收线程         */
     }
 
-    pppapi_open(pcb, 0);                                                /*  拨号连接                    */
+    pppapi_connect(pcb, 0);                                             /*  拨号连接                    */
 
     return  (ERROR_NONE);
 }
@@ -714,10 +688,10 @@ INT  API_PppDisconnect (CPCHAR  pcIfName, BOOL  bForce)
     }
 
     if (bForce) {
-        pppapi_sighup(pcb);                                             /*  强制中断 PPP 连接           */
+        pppapi_close(pcb, 1);                                           /*  强制中断 PPP 连接           */
 
     } else {
-        pppapi_close(pcb);
+        pppapi_close(pcb, 0);
     }
 
     return  (ERROR_NONE);

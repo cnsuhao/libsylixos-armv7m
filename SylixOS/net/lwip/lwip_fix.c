@@ -1101,7 +1101,7 @@ VOID ppp_link_status_hook (PVOID pvPPP, INT iError, PVOID pvArg)
         break;
     }
     
-    pcNetifName = if_indextoname(pcb->netif.num, cNetifName);
+    pcNetifName = if_indextoname(pcb->netif->num, cNetifName);
     if (!pcNetifName) {
         pcNetifName = "<unknown>";
     }

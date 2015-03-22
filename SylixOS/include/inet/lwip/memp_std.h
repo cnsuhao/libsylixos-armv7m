@@ -47,14 +47,14 @@ LWIP_MEMPOOL(TCP_SEG,        MEMP_NUM_TCP_SEG,         sizeof(struct tcp_seg),  
 #if IP_REASSEMBLY
 LWIP_MEMPOOL(REASSDATA,      MEMP_NUM_REASSDATA,       sizeof(struct ip_reassdata),   "REASSDATA")
 #endif /* IP_REASSEMBLY */
-#if (IP_FRAG && !IP_FRAG_USES_STATIC_BUF && !LWIP_NETIF_TX_SINGLE_PBUF) || LWIP_IPV6_FRAG
+#if (IP_FRAG && !IP_FRAG_USES_STATIC_BUF && !LWIP_NETIF_TX_SINGLE_PBUF) || (LWIP_IPV6 && LWIP_IPV6_FRAG)
 LWIP_MEMPOOL(FRAG_PBUF,      MEMP_NUM_FRAG_PBUF,       sizeof(struct pbuf_custom_ref),"FRAG_PBUF")
 #endif /* IP_FRAG && !IP_FRAG_USES_STATIC_BUF && !LWIP_NETIF_TX_SINGLE_PBUF */
 
-#if LWIP_NETCONN
+#if LWIP_NETCONN || LWIP_SOCKET
 LWIP_MEMPOOL(NETBUF,         MEMP_NUM_NETBUF,          sizeof(struct netbuf),         "NETBUF")
 LWIP_MEMPOOL(NETCONN,        MEMP_NUM_NETCONN,         sizeof(struct netconn),        "NETCONN")
-#endif /* LWIP_NETCONN */
+#endif /* LWIP_NETCONN || LWIP_SOCKET */
 
 #if NO_SYS==0
 LWIP_MEMPOOL(TCPIP_MSG_API,  MEMP_NUM_TCPIP_MSG_API,   sizeof(struct tcpip_msg),      "TCPIP_MSG_API")
@@ -63,7 +63,7 @@ LWIP_MEMPOOL(API_MSG,        MEMP_NUM_API_MSG,         sizeof(struct api_msg),  
 #if LWIP_DNS
 LWIP_MEMPOOL(DNS_API_MSG,    MEMP_NUM_DNS_API_MSG,     sizeof(struct dns_api_msg),    "DNS_API_MSG")
 #endif
-#if LWIP_SOCKET
+#if LWIP_SOCKET && !LWIP_TCPIP_CORE_LOCKING
 LWIP_MEMPOOL(SOCKET_SETGETSOCKOPT_DATA, MEMP_NUM_SOCKET_SETGETSOCKOPT_DATA, sizeof(struct lwip_setgetsockopt_data), "SOCKET_SETGETSOCKOPT_DATA")
 #endif
 #if LWIP_NETIF_API
@@ -102,6 +102,9 @@ LWIP_MEMPOOL(LOCALHOSTLIST,  MEMP_NUM_LOCALHOSTLIST,   LOCALHOSTLIST_ELEM_SIZE, 
 
 #if PPP_SUPPORT
 LWIP_MEMPOOL(PPP_PCB,       MEMP_NUM_PPP_PCB,              sizeof(ppp_pcb),             "PPP_PCB")
+#if PPPOS_SUPPORT
+LWIP_MEMPOOL(PPPOS_PCB,     MEMP_NUM_PPPOS_INTERFACES,     sizeof(pppos_pcb),           "PPPOS_PCB")
+#endif /* PPPOS_SUPPORT */
 #if PPPOE_SUPPORT
 LWIP_MEMPOOL(PPPOE_IF,      MEMP_NUM_PPPOE_INTERFACES,     sizeof(struct pppoe_softc),  "PPPOE_IF")
 #endif /* PPPOE_SUPPORT */

@@ -26,6 +26,7 @@
 2011.03.25  修改 API_SdMemDevCreate(), 用于底层驱动安装上层的回调.
 2011.04.03  将 API_SdMemDevShowInfo() 改为 API_SdMemDevShow() 统一 SylxiOS Show 函数.
 2011.04.03  更改 block io 层回调函数的参数.
+2015.03.11  增加卡写保护功能.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -132,6 +133,7 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
 
     LW_SDDEV_CSD        sddevcsd;
     BOOL                bBlkAddr;
+    INT                 iBlkDevFlag;
     INT                 iError;
 
     /*
@@ -205,6 +207,12 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
         return  (LW_NULL);
     }
 
+    if (API_SdmHostIsCardWp(psdcoredevice)) {
+        iBlkDevFlag = O_RDONLY;
+    } else {
+        iBlkDevFlag = O_RDWR;
+    }
+
     psdblkdevice->SDBLKDEV_bIsBlockAddr = bBlkAddr;                     /*  设置寻址方式                */
     psdblkdevice->SDBLKDEV_pcoreDev     = psdcoredevice;                /*  连接核心设备                */
     psdblkdevice->SDBLKDEV_bCoreDevSelf = bCoreDevSelf;
@@ -225,7 +233,7 @@ LW_API PLW_BLK_DEV API_SdMemDevCreate (INT                       iAdapterType,
     pblkdevice->BLKD_bRemovable        = LW_TRUE;
     pblkdevice->BLKD_bDiskChange       = LW_FALSE;                      /*  媒质没有改变                */
     pblkdevice->BLKD_iRetry            = __SD_DEV_RETRY;                /*  重试次数                    */
-    pblkdevice->BLKD_iFlag             = O_RDWR;                        /*  读写属性                    */
+    pblkdevice->BLKD_iFlag             = iBlkDevFlag;
     pblkdevice->BLKD_iLogic            = 0;
     pblkdevice->BLKD_uiLinkCounter     = 0;
     pblkdevice->BLKD_pvLink            = LW_NULL;
@@ -310,26 +318,26 @@ LW_API INT  API_SdMemDevShow (PLW_BLK_DEV pblkdevice)
     ullCap   = (UINT64)sddevcsd.DEVCSD_uiCapacity * ((UINT64)1 << sddevcsd.DEVCSD_ucReadBlkLenBits);
     uiCapMod = ullCap % LW_CFG_MB_SIZE;
 
-    printf("\nSD MEMORY INFO >>\n");
-    printf("Manufacturer :  0x%02x\n", sddevcid.DEVCID_ucMainFid);
+    printf("\nSD Memory Information >>\n");
+    printf("Manufacturer : 0x%02x\n", sddevcid.DEVCID_ucMainFid);
     if (ucType == SDDEV_TYPE_MMC) {
-        printf("OEM ID       :  %08x\n", sddevcid.DEVCID_usOemId);
+        printf("OEM ID       : %08x\n", sddevcid.DEVCID_usOemId);
     } else {
-        printf("OEM ID       :  %c%c\n", sddevcid.DEVCID_usOemId >> 8,
-                                         sddevcid.DEVCID_usOemId & 0xff);
+        printf("OEM ID       : %c%c\n", sddevcid.DEVCID_usOemId >> 8,
+                                        sddevcid.DEVCID_usOemId & 0xff);
     }
-    printf("Product Name :  %c%c%c%c%c\n",
-                            __SD_CID_PNAME(0),
-                            __SD_CID_PNAME(1),
-                            __SD_CID_PNAME(2),
-                            __SD_CID_PNAME(3),
-                            __SD_CID_PNAME(4));
-    printf("Product Vsn  :  v%d.%d\n", sddevcid.DEVCID_ucProductVsn >> 4,
-                                       sddevcid.DEVCID_ucProductVsn & 0xf);
-    printf("Serial Num   :  %x\n", sddevcid.DEVCID_uiSerialNum);
-    printf("Date         :  %d/%02d\n", sddevcid.DEVCID_uiYear, sddevcid.DEVCID_ucMonth);
-    printf("Max Speed    :  %dMB/s\n", sddevcsd.DEVCSD_uiTranSpeed / __SD_MILLION);
-    printf("Capacity     :  %u.%03u MB\n", (UINT32)(ullCap / LW_CFG_MB_SIZE), uiCapMod / 1000);
+    printf("Product Name : %c%c%c%c%c\n",
+                           __SD_CID_PNAME(0),
+                           __SD_CID_PNAME(1),
+                           __SD_CID_PNAME(2),
+                           __SD_CID_PNAME(3),
+                           __SD_CID_PNAME(4));
+    printf("Product Vsn  : v%d.%d\n", sddevcid.DEVCID_ucProductVsn >> 4,
+                                      sddevcid.DEVCID_ucProductVsn & 0xf);
+    printf("Serial Num   : %x\n", sddevcid.DEVCID_uiSerialNum);
+    printf("Date         : %d/%02d\n", sddevcid.DEVCID_uiYear, sddevcid.DEVCID_ucMonth);
+    printf("Max Speed    : %dMB/s\n", sddevcsd.DEVCSD_uiTranSpeed / __SD_MILLION);
+    printf("Capacity     : %u.%03u MB\n", (UINT32)(ullCap / LW_CFG_MB_SIZE), uiCapMod / 1000);
 
     return  (ERROR_NONE);
 }

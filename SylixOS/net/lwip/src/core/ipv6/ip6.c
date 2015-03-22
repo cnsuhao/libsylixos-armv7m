@@ -78,50 +78,58 @@
  * @return the netif on which to send to reach dest
  */
 struct netif *
-ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
+ip6_route(const struct ip6_addr *src, const struct ip6_addr *dest)
 {
-  /* sylixos fixed add linkup detected */
-#define NETIF_CAN_SEND(netif) (netif_is_up(netif) && netif_is_link_up(netif))
-
   struct netif *netif;
   s8_t i;
 
   /* If single netif configuration, fast return. */
-  if ((netif_list != NULL) && (netif_list->next == NULL) && NETIF_CAN_SEND(netif_list)) {
+  if ((netif_list != NULL) && (netif_list->next == NULL)) {
+    if (!netif_is_up(netif_list) || !netif_is_link_up(netif_list)) {
+      return NULL;
+    }
     return netif_list;
   }
 
   /* Special processing for link-local addresses. */
   if (ip6_addr_islinklocal(dest)) {
     if (ip6_addr_isany(src)) {
-      /* Use default netif. */
+      /* Use default netif, if Up. */
+      if (!netif_is_up(netif_default) || !netif_is_link_up(netif_default)) {
+        return NULL;
+      }
       return netif_default;
     }
 
-    /* Try to find the netif for the source address. */
+    /* Try to find the netif for the source address, checking that link is up. */
     for(netif = netif_list; netif != NULL; netif = netif->next) {
-      if (NETIF_CAN_SEND(netif)) {
-        for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
-          if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
-              ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
-            return netif;
-          }
+      if (!netif_is_up(netif) || !netif_is_link_up(netif)) {
+        continue;
+      }
+      for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+        if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
+            ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
+          return netif;
         }
       }
     }
 
-    /* netif not found, use default netif */
+    /* netif not found, use default netif, if up */
+    if (!netif_is_up(netif_default) || !netif_is_link_up(netif_default)) {
+      return NULL;
+    }
     return netif_default;
   }
 
   /* See if the destination subnet matches a configured address. */
   for(netif = netif_list; netif != NULL; netif = netif->next) {
-    if (NETIF_CAN_SEND(netif)) {
-      for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
-        if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
-            ip6_addr_netcmp(dest, netif_ip6_addr(netif, i))) {
-          return netif;
-        }
+    if (!netif_is_up(netif) || !netif_is_link_up(netif)) {
+      continue;
+    }
+    for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+      if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
+          ip6_addr_netcmp(dest, netif_ip6_addr(netif, i))) {
+        return netif;
       }
     }
   }
@@ -131,7 +139,9 @@ ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
   if (i >= 0) {
     if (default_router_list[i].neighbor_entry != NULL) {
       if (default_router_list[i].neighbor_entry->netif != NULL) {
-        return default_router_list[i].neighbor_entry->netif;
+        if (netif_is_up(default_router_list[i].neighbor_entry->netif) && netif_is_link_up(default_router_list[i].neighbor_entry->netif)) {
+          return default_router_list[i].neighbor_entry->netif;
+        }
       }
     }
   }
@@ -139,22 +149,22 @@ ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
   /* try with the netif that matches the source address. */
   if (!ip6_addr_isany(src)) {
     for(netif = netif_list; netif != NULL; netif = netif->next) {
-      if (NETIF_CAN_SEND(netif)) {
-        for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
-          if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
-              ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
-            return netif;
-          }
+      if (!netif_is_up(netif) || !netif_is_link_up(netif)) {
+        continue;
+      }
+      for (i = 0; i < LWIP_IPV6_NUM_ADDRESSES; i++) {
+        if (ip6_addr_isvalid(netif_ip6_addr_state(netif, i)) &&
+            ip6_addr_cmp(src, netif_ip6_addr(netif, i))) {
+          return netif;
         }
       }
     }
   }
 
-  /* sylixos fixed netif_default detect */
-  if ((netif_default == NULL) || (!NETIF_CAN_SEND(netif_default))) {
+  /* no matching netif found, use default netif, if up */
+  if (!netif_is_up(netif_default) || !netif_is_link_up(netif_default)) {
     return NULL;
   }
-  /* no matching netif found, use default netif */
   return netif_default;
 }
 
@@ -169,7 +179,7 @@ ip6_route(struct ip6_addr *src, struct ip6_addr *dest)
  *         source address is found
  */
 ip6_addr_t *
-ip6_select_source_address(struct netif *netif, ip6_addr_t * dest)
+ip6_select_source_address(struct netif *netif, const ip6_addr_t * dest)
 {
   ip6_addr_t * src = NULL;
   u8_t i;
@@ -410,6 +420,7 @@ ip6_input(struct pbuf *p, struct netif *inp)
 
   /* In netif, used in case we need to send ICMPv6 packets back. */
   ip_data.current_netif = inp;
+  ip_data.current_input_netif = inp;
 
   /* match packet against an interface, i.e. is this packet for us? */
   if (ip6_addr_ismulticast(ip6_current_dest_addr())) {
@@ -619,14 +630,12 @@ netif_found:
       }
 
       /* Offset == 0 and more_fragments == 0? */
-      if (((frag_hdr->_fragment_offset & IP6_FRAG_OFFSET_MASK) == 0) &&
-          ((frag_hdr->_fragment_offset & IP6_FRAG_MORE_FLAG) == 0)) {
-
+      if ((frag_hdr->_fragment_offset &
+           PP_HTONS(IP6_FRAG_OFFSET_MASK | IP6_FRAG_MORE_FLAG)) == 0) {
         /* This is a 1-fragment packet, usually a packet that we have
          * already reassembled. Skip this header anc continue. */
         pbuf_header(p, -hlen);
-      }
-      else {
+      } else {
 #if LWIP_IPV6_REASS
 
         /* reassemble the packet */
@@ -721,6 +730,7 @@ options_done:
 
 ip6_input_cleanup:
   ip_data.current_netif = NULL;
+  ip_data.current_input_netif = NULL;
   ip_data.current_ip6_header = NULL;
   ip_data.current_ip_header_tot_len = 0;
   ip6_addr_set_any(&ip_data.current_iphdr_src.ip6);
@@ -755,11 +765,11 @@ ip6_input_cleanup:
  *         returns errors returned by netif->output
  */
 err_t
-ip6_output_if(struct pbuf *p, ip6_addr_t *src, ip6_addr_t *dest,
+ip6_output_if(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
              u8_t hl, u8_t tc,
              u8_t nexth, struct netif *netif)
 {
-  ip6_addr_t *src_used = src;
+  const ip6_addr_t *src_used = src;
   if (dest != IP_HDRINCL) {
     if (src != NULL && ip6_addr_isany(src)) {
       src = ip6_select_source_address(netif, dest);
@@ -779,16 +789,14 @@ ip6_output_if(struct pbuf *p, ip6_addr_t *src, ip6_addr_t *dest,
  * when it is 'any'.
  */
 err_t
-ip6_output_if_src(struct pbuf *p, ip6_addr_t *src, ip6_addr_t *dest,
+ip6_output_if_src(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
              u8_t hl, u8_t tc,
              u8_t nexth, struct netif *netif)
 {
   struct ip6_hdr *ip6hdr;
   ip6_addr_t dest_addr;
 
-  /* pbufs passed to IP must have a ref-count of 1 as their payload pointer
-     gets altered as the packet is passed down the stack */
-  LWIP_ASSERT("p->ref == 1", p->ref == 1);
+  LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX(p);
 
   /* Should the IPv6 header be generated or is it already included in p? */
   if (dest != IP_HDRINCL) {
@@ -880,9 +888,7 @@ ip6_output(struct pbuf *p, ip6_addr_t *src, ip6_addr_t *dest,
   struct ip6_hdr *ip6hdr;
   ip6_addr_t src_addr, dest_addr;
 
-  /* pbufs passed to IPv6 must have a ref-count of 1 as their payload pointer
-     gets altered as the packet is passed down the stack */
-  LWIP_ASSERT("p->ref == 1", p->ref == 1);
+  LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX(p);
 
   if (dest != IP_HDRINCL) {
     netif = ip6_route(src, dest);
@@ -933,7 +939,7 @@ ip6_output(struct pbuf *p, ip6_addr_t *src, ip6_addr_t *dest,
  *         see ip_output_if() for more return values
  */
 err_t
-ip6_output_hinted(struct pbuf *p, ip6_addr_t *src, ip6_addr_t *dest,
+ip6_output_hinted(struct pbuf *p, const ip6_addr_t *src, const ip6_addr_t *dest,
           u8_t hl, u8_t tc, u8_t nexth, u8_t *addr_hint)
 {
   struct netif *netif;
@@ -941,9 +947,7 @@ ip6_output_hinted(struct pbuf *p, ip6_addr_t *src, ip6_addr_t *dest,
   ip6_addr_t src_addr, dest_addr;
   err_t err;
 
-  /* pbufs passed to IP must have a ref-count of 1 as their payload pointer
-     gets altered as the packet is passed down the stack */
-  LWIP_ASSERT("p->ref == 1", p->ref == 1);
+  LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX(p);
 
   if (dest != IP_HDRINCL) {
     netif = ip6_route(src, dest);

@@ -52,6 +52,7 @@
 2014.05.31  加入退出模式的选择.
 2014.07.03  加入获取进程虚拟空间组的函数.
 2014.09.29  API_ModuleGetBase() 加入长度参数.
+2015.03.02  修正 vprocNotifyParent() 获取父系进程主线程错误.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -646,10 +647,14 @@ INT  vprocNotifyParent (LW_LD_VPROC *pvproc, INT  iSigCode)
 {
     siginfo_t           siginfoChld;
     sigevent_t          sigeventChld;
-    LW_OBJECT_HANDLE    ulFatherMainThread = pvproc->VP_pvprocFather->VP_ulMainThread;
+    LW_OBJECT_HANDLE    ulFatherMainThread;
     
     if (!pvproc) {
         return  (PX_ERROR);
+    }
+    
+    if (pvproc->VP_pvprocFather) {
+        ulFatherMainThread = pvproc->VP_pvprocFather->VP_ulMainThread;  /*  获得父系进程主线程          */
     }
 
     LW_LD_LOCK();

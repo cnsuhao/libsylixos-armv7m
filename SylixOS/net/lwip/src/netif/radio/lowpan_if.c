@@ -234,7 +234,7 @@ lowpan_level_init (struct netif *netif)
  * - ERR_IF Error interface of this packet
  */
 static err_t
-netif_null_output_ip4(struct netif *netif, struct pbuf *p, ip_addr_t *ipaddr)
+netif_null_output_ip4(struct netif *netif, struct pbuf *p, const ip_addr_t *ipaddr)
 {
     (void)netif;
     (void)p;

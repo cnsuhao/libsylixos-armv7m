@@ -20,6 +20,7 @@
 
 ** BUG:
 2014.11.07  增加孤儿设备管理,这允许先插入设备,再注册驱动后,设备能够正确创建.
+2015.03.11  增加卡写保护功能支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -101,7 +102,7 @@ static VOID        __sdmDrvDelete(SD_DRV *psddrv);
 
 static VOID        __sdmDevCreate(__SDM_HOST *psdmhost);
 static VOID        __sdmDevDelete(__SDM_HOST *psdmhost);
-static VOID        __sdmSdioIntHandle(__SDM_HOST *psdmhost);
+static INT         __sdmSdioIntHandle(__SDM_HOST *psdmhost);
 
 static INT         __sdmCallbackInstall(__SDM_HOST_CHAN  *psdmhostchan,
                                         INT               iCallbackType,
@@ -319,6 +320,38 @@ LW_API VOID  API_SdmHostInterEn (PLW_SDCORE_DEVICE psdcoredev, BOOL bEnable)
     }
 }
 /*********************************************************************************************************
+** 函数名称: API_SdmHostIsCardWp
+** 功能描述: 获得该 HOST 上对应的 卡是否写保护
+** 输    入: psdcoredev       sd 卡对应的核心设备传输对象
+** 输    出: LW_TRUE: 卡写保护开关打开   LW_FALSE: 卡写保护开关关闭
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+LW_API BOOL  API_SdmHostIsCardWp (PLW_SDCORE_DEVICE psdcoredev)
+{
+    CPCHAR      cpcHostName;
+    __SDM_HOST *psdmhost;
+    SD_HOST    *psdhost;
+    BOOL        bIsWp = LW_FALSE;
+
+    cpcHostName = API_SdCoreDevAdapterName(psdcoredev);
+    if (!cpcHostName) {
+        return  (LW_FALSE);
+    }
+
+    psdmhost = __sdmHostFind(cpcHostName);
+    if (!psdmhost) {
+        return  (LW_FALSE);
+    }
+
+    psdhost = psdmhost->SDMHOST_psdhost;
+    if (psdhost->SDHOST_pfuncIsCardWp) {
+        bIsWp = psdhost->SDHOST_pfuncIsCardWp(psdhost);
+    }
+
+    return  (bIsWp);
+}
+/*********************************************************************************************************
 ** 函数名称: API_SdmSdDrvRegister
 ** 功能描述: 向SDM注册一个设备应用驱动
 ** 输    入: psddrv       sd 驱动. 注意 SDM 内部会直接引用该对象, 因此该对象需要持续有效
@@ -376,15 +409,16 @@ LW_API INT   API_SdmSdDrvUnRegister (SD_DRV *psddrv)
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
+LW_API INT  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
 {
     INTREG             iregInterLevel;
     PLW_LIST_LINE      plineTemp;
     __SDM_HOST        *psdmhost = LW_NULL;
+    INT                iError   = ERROR_NONE;
 
 #if __SDM_DEBUG_EN > 0
     __sdmDebugEvtNotify(cpcHostName, iEvtType);
-    return;
+    return  (ERROR_NONE);
 #endif                                                                  /*   __SDM_DEBUG_EN > 0         */
 
     /*
@@ -404,7 +438,7 @@ LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
         }
         __SDM_HOST_UNLOCK();
 
-        return;
+        return  (ERROR_NONE);
     }
 
     /*
@@ -412,7 +446,7 @@ LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
      */
     psdmhost = __sdmHostFind(cpcHostName);
     if (!psdmhost) {
-        return;
+        return  (PX_ERROR);
     }
 
     switch (iEvtType) {
@@ -426,12 +460,14 @@ LW_API VOID  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
         break;
 
     case SDM_EVENT_SDIO_INTERRUPT:
-        __sdmSdioIntHandle(psdmhost);
+        iError = __sdmSdioIntHandle(psdmhost);
         break;
 
     default:
         break;
     }
+
+    return  (iError);
 }
 /*********************************************************************************************************
 ** 函数名称: __sdmDevCreate
@@ -494,6 +530,13 @@ static VOID __sdmDevCreate (__SDM_HOST *psdmhost)
         iRet = psddrv->SDDRV_pfuncDevCreate(psddrv, psdcoredev, &psdmdev->SDMDEV_pvDevPriv);
         if (iRet != ERROR_NONE) {
             /*
+             * 可能在这之前使能了 SDIO 中断
+             */
+            if (psdmhost->SDMHOST_psdhost->SDHOST_pfuncSdioIntEn) {
+                psdmhost->SDMHOST_psdhost->SDHOST_pfuncSdioIntEn(psdmhost->SDMHOST_psdhost, LW_FALSE);
+            }
+
+            /*
              * 在删除 core dev 之前一定要先卸载安装的回调函数
              * 避免设备对象释放后, host 端还有可能去调用安装的回调函数
              */
@@ -543,9 +586,6 @@ static VOID __sdmDevDelete (__SDM_HOST *psdmhost)
         return;
     }
 
-    psddrv = psdmdev->SDMDEV_psddrv;
-    psddrv->SDDRV_pfuncDevDelete(psddrv, psdmdev->SDMDEV_pvDevPriv);
-
     /*
      * 可能删除的是 SDIO 设备, 并且该设备之前开启了 SDIO 中断.
      * 为了不影响新插入的设备, 这里主动关闭
@@ -553,6 +593,9 @@ static VOID __sdmDevDelete (__SDM_HOST *psdmhost)
     if (psdmhost->SDMHOST_psdhost->SDHOST_pfuncSdioIntEn) {
         psdmhost->SDMHOST_psdhost->SDHOST_pfuncSdioIntEn(psdmhost->SDMHOST_psdhost, LW_FALSE);
     }
+
+    psddrv = psdmdev->SDMDEV_psddrv;
+    psddrv->SDDRV_pfuncDevDelete(psddrv, psdmdev->SDMDEV_pvDevPriv);
 
     __sdmCallbackUnInstall(psdmhost->SDMHOST_psdhost);
     API_SdCoreDevDelete(psdmdev->SDMDEV_psdcoredev);
@@ -577,7 +620,7 @@ static VOID __sdmDevDelete (__SDM_HOST *psdmhost)
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-static VOID __sdmSdioIntHandle (__SDM_HOST *psdmhost)
+static INT __sdmSdioIntHandle (__SDM_HOST *psdmhost)
 {
 #if LW_CFG_SDCARD_SDIO_EN > 0
     __SDM_SD_DEV    *psdmdev;
@@ -588,24 +631,27 @@ static VOID __sdmSdioIntHandle (__SDM_HOST *psdmhost)
 
     psdmdev = psdmhost->SDMHOST_psdmdevAttached;
     if (!psdmdev) {
-        return;
+        return  (PX_ERROR);
     }
 
     /*
      *  Host 控制器可能传来假的 SDIO 中断
-     *  因此查看 SDIO 设备是否真的产生了 SDIO 中断
+     *  或者是不支持硬件 SDIO 中断的 HOST进行的一次查询请求
      */
     iRet = API_SdioCoreDevReadByte(psdmdev->SDMDEV_psdcoredev,
                                    SDIO_CCCR_CCCR,
                                    SDIO_CCCR_INTX,
                                    &ucIntFlag);
     if (iRet != ERROR_NONE) {
-        return;
+        return  (PX_ERROR);
     }
 
     if (ucIntFlag) {
         __sdiobaseDevIrqHandle(psdmdev->SDMDEV_psddrv, psdmdev->SDMDEV_pvDevPriv);
+        return  (ERROR_NONE);
     }
+
+    return  (PX_ERROR);
 #endif                                                                  /*  LW_CFG_SDCARD_SDIO_EN > 0   */
 }
 /*********************************************************************************************************

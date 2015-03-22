@@ -34,7 +34,14 @@
 
 #include "lwip/opt.h"
 
-#if LWIP_NETCONN /* don't build if not configured for use in lwipopts.h */
+#if LWIP_NETCONN || LWIP_SOCKET /* don't build if not configured for use in lwipopts.h */
+
+/* don't export the netconn functions when socket API is enabled but netconn API is disabled */
+#if LWIP_NETCONN
+#define LWIP_NETCONN_SCOPE
+#else /* LWIP_NETCONN */
+#define LWIP_NETCONN_SCOPE static
+#endif /* LWIP_NETCONN */
 
 #include <stddef.h> /* for size_t */
 
@@ -49,9 +56,11 @@ extern "C" {
 #endif
 
 #if LWIP_MPU_COMPATIBLE
-#define API_MSG_M_DEF(m)  m
+#define API_MSG_M_DEF(m)      m
+#define API_MSG_M_DEF_C(t, m) t m
 #else /* LWIP_MPU_COMPATIBLE */
-#define API_MSG_M_DEF(m)  *m
+#define API_MSG_M_DEF(m)      *m
+#define API_MSG_M_DEF_C(t, m) const t * m
 #endif /* LWIP_MPU_COMPATIBLE */
 
 /* For the netconn API, these values are use as a bitmask! */
@@ -81,7 +90,7 @@ struct api_msg_msg {
     } n;
     /** used for lwip_netconn_do_bind and lwip_netconn_do_connect */
     struct {
-      ip_addr_t API_MSG_M_DEF(ipaddr);
+      API_MSG_M_DEF_C(ip_addr_t, ipaddr);
       u16_t port;
     } bc;
     /** used for lwip_netconn_do_getaddr */
@@ -106,12 +115,17 @@ struct api_msg_msg {
     /** used for lwip_netconn_do_close (/shutdown) */
     struct {
       u8_t shut;
+#if LWIP_SO_SNDTIMEO || LWIP_SO_LINGER
+      u32_t time_started;
+#else /* LWIP_SO_SNDTIMEO || LWIP_SO_LINGER */
+      u8_t polls_left;
+#endif /* LWIP_SO_SNDTIMEO || LWIP_SO_LINGER */
     } sd;
 #if LWIP_IGMP || (LWIP_IPV6 && LWIP_IPV6_MLD)
     /** used for lwip_netconn_do_join_leave_group */
     struct {
-      ipX_addr_t API_MSG_M_DEF(multiaddr);
-      ipX_addr_t API_MSG_M_DEF(netif_addr);
+      API_MSG_M_DEF_C(ipX_addr_t, multiaddr);
+      API_MSG_M_DEF_C(ipX_addr_t, netif_addr);
       enum netconn_igmp join_or_leave;
     } jl;
 #endif /* LWIP_IGMP || (LWIP_IPV6 && LWIP_IPV6_MLD) */
@@ -155,7 +169,7 @@ struct dns_api_msg {
 #else /* LWIP_MPU_COMPATIBLE */
   const char *name;
 #endif /* LWIP_MPU_COMPATIBLE */
-  /** Rhe resolved address is stored here */
+  /** The resolved address is stored here */
   ip_addr_t API_MSG_M_DEF(addr);
   /** This semaphore is posted when the name is resolved, the application thread
       should wait on it. */
@@ -165,33 +179,33 @@ struct dns_api_msg {
 };
 #endif /* LWIP_DNS */
 
-void lwip_netconn_do_newconn         ( struct api_msg_msg *msg);
-void lwip_netconn_do_delconn         ( struct api_msg_msg *msg);
-void lwip_netconn_do_bind            ( struct api_msg_msg *msg);
-void lwip_netconn_do_connect         ( struct api_msg_msg *msg);
-void lwip_netconn_do_disconnect      ( struct api_msg_msg *msg);
-void lwip_netconn_do_listen          ( struct api_msg_msg *msg);
-void lwip_netconn_do_send            ( struct api_msg_msg *msg);
-void lwip_netconn_do_recv            ( struct api_msg_msg *msg);
-void lwip_netconn_do_write           ( struct api_msg_msg *msg);
-void lwip_netconn_do_getaddr         ( struct api_msg_msg *msg);
-void lwip_netconn_do_close           ( struct api_msg_msg *msg);
-void lwip_netconn_do_shutdown        ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_newconn         ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_delconn         ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_bind            ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_connect         ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_disconnect      ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_listen          ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_send            ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_recv            ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_write           ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_getaddr         ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_close           ( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_shutdown        ( struct api_msg_msg *msg);
 #if LWIP_IGMP || (LWIP_IPV6 && LWIP_IPV6_MLD)
-void lwip_netconn_do_join_leave_group( struct api_msg_msg *msg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_join_leave_group( struct api_msg_msg *msg);
 #endif /* LWIP_IGMP || (LWIP_IPV6 && LWIP_IPV6_MLD) */
 
 #if LWIP_DNS
-void lwip_netconn_do_gethostbyname(void *arg);
+LWIP_NETCONN_SCOPE void lwip_netconn_do_gethostbyname(void *arg);
 #endif /* LWIP_DNS */
 
-struct netconn* netconn_alloc(enum netconn_type t, netconn_callback callback);
-void netconn_free(struct netconn *conn);
+LWIP_NETCONN_SCOPE struct netconn* netconn_alloc(enum netconn_type t, netconn_callback callback);
+LWIP_NETCONN_SCOPE void netconn_free(struct netconn *conn);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* LWIP_NETCONN */
+#endif /* LWIP_NETCONN || LWIP_SOCKET */
 
 #endif /* LWIP_HDR_API_MSG_H */

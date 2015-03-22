@@ -54,6 +54,12 @@ extern "C" {
 #endif /* IP_HDRINCL */
 #define IP_HDRINCL  NULL
 
+/** pbufs passed to IP must have a ref-count of 1 as their payload pointer
+    gets altered as the packet is passed down the stack */
+#ifndef LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX
+#define LWIP_IP_CHECK_PBUF_REF_COUNT_FOR_TX(p) LWIP_ASSERT("p->ref == 1", (p)->ref == 1)
+#endif
+
 #if LWIP_NETIF_HWADDRHINT
 #define IP_PCB_ADDRHINT ;u8_t addr_hint
 #else
@@ -110,8 +116,10 @@ struct ip_pcb {
 /* Global variables of this module, kept in a struct for efficient access using base+index. */
 struct ip_globals
 {
-  /** The interface that provided the packet for the current callback invocation. */
+  /** The interface that accepted the packet for the current callback invocation. */
   struct netif *current_netif;
+  /** The interface that received the packet for the current callback invocation. */
+  struct netif *current_input_netif;
   /** Header of the input packet currently being processed. */
   const struct ip_hdr *current_ip4_header;
 #if LWIP_IPV6
@@ -128,10 +136,15 @@ struct ip_globals
 extern struct ip_globals ip_data;
 
 
-/** Get the interface that received the current packet.
+/** Get the interface that accepted the current packet.
+ * This may or may not be the receiving netif, depending on your netif/network setup.
  * This function must only be called from a receive callback (udp_recv,
  * raw_recv, tcp_accept). It will return NULL otherwise. */
 #define ip_current_netif()      (ip_data.current_netif)
+/** Get the interface that received the current packet.
+ * This function must only be called from a receive callback (udp_recv,
+ * raw_recv, tcp_accept). It will return NULL otherwise. */
+#define ip_current_input_netif() (ip_data.current_input_netif)
 /** Get the IP header of the current packet.
  * This function must only be called from a receive callback (udp_recv,
  * raw_recv, tcp_accept). It will return NULL otherwise. */

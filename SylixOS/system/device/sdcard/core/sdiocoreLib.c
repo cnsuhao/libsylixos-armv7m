@@ -106,7 +106,6 @@ INT API_SdioCoreDevReset (PLW_SDCORE_DEVICE   psdcoredev)
     } else {
         ucAbort |= 0x08;
     }
-
     iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_ABORT, ucAbort, LW_NULL);
 
     return  (iRet);
@@ -329,6 +328,78 @@ INT API_SdioCoreDevFuncDis (PLW_SDCORE_DEVICE   psdcoredev,
 __err:
     SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "enable func(%d) failed.\r\n", psdiofunc->FUNC_uiNum);
     return  (PX_ERROR);
+}
+/*********************************************************************************************************
+** 函数名称: API_SdioCoreDevFuncIntEn
+** 功能描述: 使能一个功能的中断
+** 输    入: psdcoredev       核心设备传输对象
+**           psdiofunc        功能描述对象
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+INT API_SdioCoreDevFuncIntEn (PLW_SDCORE_DEVICE   psdcoredev,
+                              SDIO_FUNC          *psdiofunc)
+{
+    INT     iRet;
+    UINT8   ucReg;
+
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IENX, 0, &ucReg);
+    if (iRet) {
+        goto    __err;
+    }
+
+    ucReg |= 1 << psdiofunc->FUNC_uiNum;
+    ucReg |= 1;
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IENX, ucReg, LW_NULL);
+    if (iRet) {
+        goto    __err;
+    }
+
+    return  (ERROR_NONE);
+
+__err:
+    SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "enable func(%d) interrupt failed.\r\n",
+                      psdiofunc->FUNC_uiNum);
+
+    return  (iRet);
+}
+/*********************************************************************************************************
+** 函数名称: API_SdioCoreDevFuncIntDis
+** 功能描述: 禁止一个功能的中断
+** 输    入: psdcoredev       核心设备传输对象
+**           psdiofunc        功能描述对象
+** 输    出: ERROR CODE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+INT API_SdioCoreDevFuncIntDis (PLW_SDCORE_DEVICE   psdcoredev,
+                               SDIO_FUNC          *psdiofunc)
+{
+    INT     iRet;
+    UINT8   ucReg;
+
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_IENX, 0, &ucReg);
+    if (iRet) {
+        goto    __err;
+    }
+
+    ucReg &= ~(1 << psdiofunc->FUNC_uiNum);
+    if (!(ucReg & 0xfe)) {
+        ucReg = 0;
+    }
+    iRet = API_SdioCoreDevRwDirect(psdcoredev, 1, 0, SDIO_CCCR_IENX, ucReg, LW_NULL);
+    if (iRet) {
+        goto    __err;
+    }
+
+    return  (ERROR_NONE);
+
+__err:
+    SDCARD_DEBUG_MSGX(__ERRORMESSAGE_LEVEL, "disable func(%d) interrupt failed.\r\n",
+                      psdiofunc->FUNC_uiNum);
+
+    return  (iRet);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdioCoreDevFuncBlkSzSet
@@ -870,7 +941,6 @@ INT API_SdioCoreDevReadCCCR (PLW_SDCORE_DEVICE   psdcoredev, SDIO_CCCR *psdioccc
         goto    __err;
     }
     psdiocccr->CCCR_uiSdVsn = ucData & 0x0f;
-
 
     iRet = API_SdioCoreDevRwDirect(psdcoredev, 0, 0, SDIO_CCCR_CAPS, 0, &ucData);
     if (iRet != ERROR_NONE) {

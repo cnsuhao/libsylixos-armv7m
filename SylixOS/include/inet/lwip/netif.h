@@ -70,8 +70,8 @@ extern "C" {
 /** Whether the network interface is 'up'. This is
  * a software flag used to control whether this network
  * interface is enabled and processes traffic.
- * It is set by the startup code (for static IP configuration) or
- * by dhcp/autoip when an address has been assigned.
+ * It must be set by the startup code before this netif can be used
+ * (also for dhcp/autoip).
  */
 #define NETIF_FLAG_UP           0x01U
 /** If set, the netif has broadcast capability.
@@ -80,9 +80,9 @@ extern "C" {
 /** If set, the netif is one end of a point-to-point connection.
  * Set by the netif driver in its init function. */
 #define NETIF_FLAG_POINTTOPOINT 0x04U
-/** If set, the interface is configured using DHCP.
- * Set by the DHCP code when starting or stopping DHCP. */
-#define NETIF_FLAG_DHCP         0x08U
+/** If set, the netif has MLD6 capability.
+ * Set by the netif driver in its init function. */
+#define NETIF_FLAG_MLD6         0x08U
 /** If set, the interface has an active link
  *  (set by the network interface driver).
  * Either set by the netif driver in its init function (if the link
@@ -123,7 +123,7 @@ typedef err_t (*netif_input_fn)(struct pbuf *p, struct netif *inp);
  * @param ipaddr The IP address to which the packet shall be sent
  */
 typedef err_t (*netif_output_fn)(struct netif *netif, struct pbuf *p,
-       ip_addr_t *ipaddr);
+       const ip_addr_t *ipaddr);
 #if LWIP_IPV6
 /** Function prototype for netif->output_ip6 functions. Called by lwIP when a packet
  * shall be sent. For ethernet netif, set this to 'ethip6_output' and set
@@ -134,7 +134,7 @@ typedef err_t (*netif_output_fn)(struct netif *netif, struct pbuf *p,
  * @param ipaddr The IPv6 address to which the packet shall be sent
  */
 typedef err_t (*netif_output_ip6_fn)(struct netif *netif, struct pbuf *p,
-       ip6_addr_t *ipaddr);
+       const ip6_addr_t *ipaddr);
 #endif /* LWIP_IPV6 */
 /** Function prototype for netif->linkoutput functions. Only used for ethernet
  * netifs. This function is called by ARP when a packet shall be sent.
@@ -147,11 +147,11 @@ typedef err_t (*netif_linkoutput_fn)(struct netif *netif, struct pbuf *p);
 typedef void (*netif_status_callback_fn)(struct netif *netif);
 /** Function prototype for netif igmp_mac_filter functions */
 typedef err_t (*netif_igmp_mac_filter_fn)(struct netif *netif,
-       ip_addr_t *group, u8_t action);
+       const ip_addr_t *group, u8_t action);
 #if LWIP_IPV6 && LWIP_IPV6_MLD
 /** Function prototype for netif mld_mac_filter functions */
 typedef err_t (*netif_mld_mac_filter_fn)(struct netif *netif,
-       ip6_addr_t *group, u8_t action);
+       const ip6_addr_t *group, u8_t action);
 #endif /* LWIP_IPV6 && LWIP_IPV6_MLD */
 
 /** Generic data structure used for all lwIP network interfaces.
@@ -210,7 +210,10 @@ struct netif {
   void (*down)(struct netif *); /* make net device down */
   void *wireless_handlers; /* iw_handler_def ptr */
   void *wireless_data; /* iw_public_data ptr */
-  void *reserve[4];
+  long flags2; /* sylixos externed flags */
+#define NETIF_FLAG2_DHCP        1
+#define NETIF_FLAG2_PROMISC     2
+  void *reserve[3];
 #endif /* SYLIXOS */
   /** This field can be set by the device driver and could point
    *  to state information for the device. */
@@ -318,12 +321,12 @@ extern struct netif *netif_default;
 
 void netif_init(void);
 
-struct netif *netif_add(struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask,
-      ip_addr_t *gw, void *state, netif_init_fn init, netif_input_fn input);
+struct netif *netif_add(struct netif *netif, const ip_addr_t *ipaddr, const ip_addr_t *netmask,
+      const ip_addr_t *gw, void *state, netif_init_fn init, netif_input_fn input);
 
 void
-netif_set_addr(struct netif *netif, ip_addr_t *ipaddr, ip_addr_t *netmask,
-      ip_addr_t *gw);
+netif_set_addr(struct netif *netif, const ip_addr_t *ipaddr, const ip_addr_t *netmask,
+      const ip_addr_t *gw);
 void netif_remove(struct netif * netif);
 
 /* Returns a network interface given its name. The name is of the form
@@ -334,9 +337,9 @@ struct netif *netif_find(char *name);
 
 void netif_set_default(struct netif *netif);
 
-void netif_set_ipaddr(struct netif *netif, ip_addr_t *ipaddr);
-void netif_set_netmask(struct netif *netif, ip_addr_t *netmask);
-void netif_set_gw(struct netif *netif, ip_addr_t *gw);
+void netif_set_ipaddr(struct netif *netif, const ip_addr_t *ipaddr);
+void netif_set_netmask(struct netif *netif, const ip_addr_t *netmask);
+void netif_set_gw(struct netif *netif, const ip_addr_t *gw);
 
 void netif_set_up(struct netif *netif);
 void netif_set_down(struct netif *netif);
@@ -369,6 +372,11 @@ void netif_set_link_callback(struct netif *netif, netif_status_callback_fn link_
 #define netif_get_igmp_mac_filter(netif) (((netif) != NULL) ? ((netif)->igmp_mac_filter) : NULL)
 #endif /* LWIP_IGMP */
 
+#if LWIP_IPV6 && LWIP_IPV6_MLD
+#define netif_set_mld_mac_filter(netif, function) do { if((netif) != NULL) { (netif)->mld_mac_filter = function; }}while(0)
+#define netif_get_mld_mac_filter(netif) (((netif) != NULL) ? ((netif)->mld_mac_filter) : NULL)
+#endif /* LWIP_IPV6 && LWIP_IPV6_MLD */
+
 #if ENABLE_LOOPBACK
 err_t netif_loop_output(struct netif *netif, struct pbuf *p);
 void netif_poll(struct netif *netif);
@@ -381,8 +389,9 @@ void netif_poll_all(void);
 #define netif_ip6_addr(netif, i)  (&((netif)->ip6_addr[(i)]))
 #define netif_ip6_addr_state(netif, i)  ((netif)->ip6_addr_state[(i)])
 #define netif_ip6_addr_set_state(netif, i, state)  ((netif)->ip6_addr_state[(i)] = (state))
-s8_t netif_get_ip6_addr_match(struct netif * netif, ip6_addr_t * ip6addr);
-void netif_create_ip6_linklocal_address(struct netif * netif, u8_t from_mac_48bit);
+s8_t netif_get_ip6_addr_match(struct netif *netif, ip6_addr_t *ip6addr);
+void netif_create_ip6_linklocal_address(struct netif *netif, u8_t from_mac_48bit);
+err_t netif_add_ip6_address(struct netif *netif, ip6_addr_t *ip6addr, s8_t *chosen_idx);
 #endif /* LWIP_IPV6 */
 
 #if LWIP_NETIF_HWADDRHINT

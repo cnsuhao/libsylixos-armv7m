@@ -87,6 +87,10 @@
 #define SDHCI_CMD_RESP_TYPE_LONG        0x01
 #define SDHCI_CMD_RESP_TYPE_SHORT       0x02
 #define SDHCI_CMD_RESP_TYPE_SHORT_BUSY  0x03
+#define SDHCI_CMD_TYPE_NORMAL           0x00
+#define SDHCI_CMD_TYPE_SUSPEND          0x40
+#define SDHCI_CMD_TYPE_RESUME           0x80
+#define SDHCI_CMD_TYPE_ABORT            0xc0
 
 #define SDHCI_MAKE_CMD(cmd, flg)        (((cmd & 0xff) << 8) | (flg & 0xff))
 
@@ -337,7 +341,7 @@
                                          SDHCI_INT_DATA_CRC     | \
                                          SDHCI_INT_DATA_END_BIT | \
                                          SDHCI_INT_ADMA_ERROR)
-#define SDHCI_INT_ALL_MASK              ((unsigned int)-1)
+#define SDHCI_INT_ALL_MASK              (~SDHCI_INT_CARD_INT)
 
 /*********************************************************************************************************
   自动 CMD12 错误状态寄存器.
@@ -380,7 +384,7 @@
                                                                         /*  for more max current        */
 
 /*********************************************************************************************************
-  设置(force set, 就是主动产生中断)ACMD12错误寄存器.
+  设置(force set, 即主动产生中断)ACMD12错误寄存器.
 *********************************************************************************************************/
 
 #define SDHCI_SET_ACMD12_ERROR          0x50
@@ -456,6 +460,9 @@
 struct _sdhci_drv_funcs;                                                /*  标准主控驱动函数声明        */
 typedef struct _sdhci_drv_funcs SDHCI_DRV_FUNCS;
 
+struct _sdhci_quirk_op;
+typedef struct _sdhci_quirk_op SDHCI_QUIRK_OP;
+
 typedef struct lw_sdhci_host_attr {
     SDHCI_DRV_FUNCS *SDHCIHOST_pdrvfuncs;                               /*  标准主控驱动函数结构指针    */
                                                                         /*  内部使用 驱动无需提供       */
@@ -467,7 +474,34 @@ typedef struct lw_sdhci_host_attr {
     ULONG            SDHCIHOST_ulIntVector;                             /*  控制器在 CPU 中的中断向量   */
     UINT32           SDHCIHOST_uiMaxClock;                              /*  如果控制器没有内部时钟,用户 */
                                                                         /*  需要提供时钟源              */
+    /*
+     * 控制器怪异行为描述:
+     * 有些控制器虽然按照 SDHCI 标准规范设计, 但在实现时存在一些
+     * 不符合规范的地方(如某些寄存器的位定义, 某些功能不支持等).
+     * SDHCIHOST_pquirkop:
+     *    主要针对不同的寄存器位设置, 由驱动编写者自行实现.
+     *    如果该域为 NULL, 或相关的操作方法为 NULL, 则内部会使用
+     *    对应的标准操作.
+     * SDHCIHOST_uiQuirkFlag:
+     *    主要针对不同的特性开关, 如是否使用 ACMD12 等.
+     */
+    SDHCI_QUIRK_OP  *SDHCIHOST_pquirkop;
+    UINT32           SDHCIHOST_uiQuirkFlag;
+#define SDHCI_QUIRK_FLG_DONOT_RESET_ON_EVERY_TRANSACTION      (1 << 0)  /*  每一次传输前不需要复位控制器*/
+#define SDHCI_QUIRK_FLG_REENABLE_INTS_ON_EVERY_TRANSACTION    (1 << 1)  /*  传输后禁止, 传输前使能中断  */
+#define SDHCI_QUIRK_FLG_DO_RESET_ON_TRANSACTION_ERROR         (1 << 2)  /*  传输错误时复位控制器        */
+#define SDHCI_QUIRK_FLG_DONOT_CHECK_BUSY_BEFORE_CMD_SEND      (1 << 3)  /*  发送命令前不执行忙检查      */
+#define SDHCI_QUIRK_FLG_DONOT_USE_ACMD12                      (1 << 4)  /*  不使用 Auto CMD12           */
+#define SDHCI_QUIRK_FLG_DONOT_SET_POWER                       (1 << 5)  /*  不操作控制器电源的开/关     */
+#define SDHCI_QUIRK_FLG_DO_RESET_AFTER_SET_POWER_ON           (1 << 6)  /*  当打开电源后执行控制器复位  */
+#define SDHCI_QUIRK_FLG_DONOT_SET_VOLTAGE                     (1 << 7)  /*  不操作控制器的电压          */
+#define SDHCI_QUIRK_FLG_CANNOT_SDIO_INT                       (1 << 8)  /*  控制器不能发出 SDIO 中断    */
+#define SDHCI_QUIRK_FLG_RECHECK_INTS_AFTER_ISR                (1 << 9)  /*  中断服务后再次处理中断状态  */
+
+    VOID            *SDHCIHOST_pvUsrSpec;                               /*  用户驱动特殊数据            */
 } LW_SDHCI_HOST_ATTR, *PLW_SDHCI_HOST_ATTR;
+
+#define SDHCI_QUIRK_FLG(pattr, flg)   ((pattr)->SDHCIHOST_uiQuirkFlag & (flg))
 
 /*********************************************************************************************************
   SD 标准主控驱动结构体
@@ -518,6 +552,48 @@ struct _sdhci_drv_funcs {
         ((pattr)->SDHCIHOST_pdrvfuncs->sdhciWriteB)((pattr)->SDHCIHOST_ulBasePoint + lReg, ucByte)
 
 /*********************************************************************************************************
+  SD 标准主控为兼容一些不符合标准的怪异(quirk)行为 或 有些由硬件自行定义的特性 操作
+  注意: 所有函数的第一个参数是 使用 API_SdhciHostCreate() 时用户驱动传入的 psdhcihostattr 的<一份拷贝>,
+        而不是原始的那个参数对象, 因此, 如果下面的方法实现确实依赖于更多的内部数据, 则必须将这些内
+        部数据保存到 SDHCIHOST_pvUsrSpec 这个结构成员里, 而不是使用扩展结构体的方式.
+*********************************************************************************************************/
+
+struct _sdhci_quirk_op {
+    INT     (*SDHCIQOP_pfuncClockSet)
+            (
+            PLW_SDHCI_HOST_ATTR  psdhcihostattr,
+            UINT32               uiClock
+            );
+    INT     (*SDHCIQOP_pfuncClockStop)
+            (
+            PLW_SDHCI_HOST_ATTR  psdhcihostattr
+            );
+    INT     (*SDHCIQOP_pfuncBusWidthSet)
+            (
+            PLW_SDHCI_HOST_ATTR  psdhcihostattr,
+            UINT32               uiBusWidth
+            );
+    INT     (*SDHCIQOP_pfuncResponseGet)
+            (
+            PLW_SDHCI_HOST_ATTR  psdhcihostattr,
+            UINT32               uiRespFlag,
+            UINT32              *puiRespOut
+            );
+    VOID    (*SDHCIQOP_pfuncIsrEnterHook)
+            (
+            PLW_SDHCI_HOST_ATTR  psdhcihostattr
+            );
+    VOID    (*SDHCIQOP_pfuncIsrExitHook)
+            (
+            PLW_SDHCI_HOST_ATTR  psdhcihostattr
+            );
+    BOOL    (*SDHCIQOP_pfuncIsCardWp)
+            (
+            PLW_SDHCI_HOST_ATTR  psdhcihostattr
+            );
+};
+
+/*********************************************************************************************************
   SD 标准主控制器操作
 *********************************************************************************************************/
 
@@ -532,11 +608,11 @@ LW_API INT        API_SdhciHostTransferModSet(PVOID    pvHost, INT   iTmod);
   SD 标准主控制器设备操作
 *********************************************************************************************************/
 
-LW_API VOID       API_SdhciDeviceCheckNotify(PVOID pvHost, INT iDevSta);
+LW_API VOID       API_SdhciDeviceCheckNotify(PVOID  pvHost, INT iDevSta);
 
-LW_API INT        API_SdhciDeviceUsageInc(PVOID     pvDevice);
-LW_API INT        API_SdhciDeviceUsageDec(PVOID     pvDevice);
-LW_API INT        API_SdhciDeviceUsageGet(PVOID     pvDevice);
+LW_API INT        API_SdhciDeviceUsageInc(PVOID     pvHost);
+LW_API INT        API_SdhciDeviceUsageDec(PVOID     pvHost);
+LW_API INT        API_SdhciDeviceUsageGet(PVOID     pvHost);
 
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0)      */
                                                                         /*  (LW_CFG_SDCARD_EN > 0)      */

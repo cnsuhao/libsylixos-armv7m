@@ -81,7 +81,6 @@ struct sd_host {
 #define SDHOST_CAP_HIGHSPEED    (1 << 0)                            /*  支持高速传输                    */
 #define SDHOST_CAP_DATA_4BIT    (1 << 1)                            /*  支持4位数据传输                 */
 #define SDHOST_CAP_DATA_8BIT    (1 << 2)                            /*  支持8位数据传输                 */
-#define SDHOST_CAP_SDIO_IRQ     (1 << 3)                            /*  能发出sdio 中断                 */
 
     VOID          (*SDHOST_pfuncSpicsEn)(SD_HOST *psdhost);
     VOID          (*SDHOST_pfuncSpicsDis)(SD_HOST *psdhost);
@@ -103,6 +102,7 @@ struct sd_host {
 #define SDHOST_DEVSTA_EXIST             1                           /*  卡状态:存在                     */
 
     VOID          (*SDHOST_pfuncSdioIntEn)(SD_HOST *psdhost, BOOL bEnable);
+    BOOL          (*SDHOST_pfuncIsCardWp)(SD_HOST *psdhost);
 
     VOID          (*SDHOST_pfuncDevAttach)(SD_HOST *psdhost, CPCHAR cpcDevName);
     VOID          (*SDHOST_pfuncDevDetach)(SD_HOST *psdhost);
@@ -119,11 +119,12 @@ LW_API INT   API_SdmHostUnRegister(CPCHAR cpcHostName);
 
 LW_API INT   API_SdmHostCapGet(PLW_SDCORE_DEVICE psdcoredev, INT *piCapbility);
 LW_API VOID  API_SdmHostInterEn(PLW_SDCORE_DEVICE psdcoredev, BOOL bEnable);
+LW_API BOOL  API_SdmHostIsCardWp(PLW_SDCORE_DEVICE psdcoredev);
 
 LW_API INT   API_SdmSdDrvRegister(SD_DRV *psddrv);
 LW_API INT   API_SdmSdDrvUnRegister(SD_DRV *psddrv);
 
-LW_API VOID  API_SdmEventNotify(CPCHAR cpcHostName, INT iEvtType);
+LW_API INT   API_SdmEventNotify(CPCHAR cpcHostName, INT iEvtType);
 
 #endif                                                              /*  __SDDRVM_H                      */
 /*********************************************************************************************************

@@ -97,7 +97,7 @@ static VOID  __netCloseAll (VOID)
     
 #if LWIP_DHCP > 0
     for (; netif != LW_NULL; netif = netif->next) {
-        if ((netif->flags & NETIF_FLAG_DHCP) && (netif->dhcp)) {
+        if (netif->dhcp && netif->dhcp->pcb) {
             netifapi_netif_common(netif, NULL, dhcp_release);           /*  解除 DHCP 租约, 同时停止网卡*/
             netifapi_dhcp_stop(netif);                                  /*  释放资源                    */
         }
