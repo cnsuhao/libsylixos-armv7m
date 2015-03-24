@@ -29,6 +29,7 @@
 2009.11.03  可移动设备一旦发生磁盘媒质改变. 立即不允许读写. 等待重新创建.
 2010.03.09  块读写时如果出现错误, 需要打印 _DebugHandle();
 2010.05.05  修正创建块设备时对操作方法的判断. 块设备复位和获取状态不再是必须的方法.
+2015.03.24  __blockIoDevGet() 不需要信号量保护, 保护由上层文件系统承担.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -152,9 +153,7 @@ PLW_BLK_DEV  __blockIoDevGet (INT  iIndex)
         return  (LW_NULL);
     }
     
-    __BLOCKIO_DEV_LOCK();
     pblkd = _G_pblkdBLockIoTbl[iIndex];
-    __BLOCKIO_DEV_UNLOCK();
     
     return  (pblkd);
 }

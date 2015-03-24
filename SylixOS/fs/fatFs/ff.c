@@ -2395,13 +2395,10 @@ FRESULT validate (	/* FR_OK(0): The object is valid, !=0: Invalid */
 	FIL *fil = (FIL*)obj;	/* Assuming offset of .fs and .id in the FIL/FATDIR structure is identical */
 
 
-	if (!fil || !fil->fs || !fil->fs->fs_type || fil->fs->id != fil->id)
+	if (!fil || !fil->fs || !fil->fs->fs_type || fil->fs->id != fil->id || (disk_status(fil->fs->drv) & STA_NOINIT))
 		return FR_INVALID_OBJECT;
 
 	ENTER_FF(fil->fs);		/* Lock file system */
-
-	if (disk_status(fil->fs->drv) & STA_NOINIT)
-		return FR_NOT_READY;
 
 	return FR_OK;
 }
@@ -3818,21 +3815,20 @@ FRESULT f_unlink (
 			}
 			if (res == FR_OK) {
 				dclst = ld_clust(dj.fs, dir);
-				if (dir[DIR_Attr] & AM_DIR) {	/* Is it a sub-dir? */
-					if (!dclst) {
-						res = FR_INT_ERR;
-					} else {					/* Make sure the sub-directory is empty */
-						mem_cpy(&sdj, &dj, sizeof (FATDIR));
-						sdj.sclust = dclst;
-						res = dir_sdi(&sdj, 2);		/* Exclude dot entries */
-						if (res == FR_OK) {
-							res = dir_read(&sdj, 0);	/* Read an item */
-							if (res == FR_OK		/* Not empty directory */
+				if (dclst && (dir[DIR_Attr] & AM_DIR)) {	/* Is it a sub-directory ? */
 #if _FS_RPATH
-							|| dclst == dj.fs->cdir	/* or current directory */
+					if (dclst == dj.fs->cdir) {		 		/* Is it the current directory? */
+						res = FR_DENIED;
+					} else
 #endif
-							) res = FR_DENIED;
-							if (res == FR_NO_FILE) res = FR_OK;	/* It is empty */
+					{
+						mem_cpy(&sdj, &dj, sizeof (FATDIR));	/* Open the sub-directory */
+						sdj.sclust = dclst;
+						res = dir_sdi(&sdj, 2);
+						if (res == FR_OK) {
+							res = dir_read(&sdj, 0);			/* Read an item (excluding dot entries) */
+							if (res == FR_OK) res = FR_DENIED;	/* Not empty? (cannot remove) */
+							if (res == FR_NO_FILE) res = FR_OK;	/* Empty? (can remove) */
 						}
 					}
 				}
@@ -3891,21 +3887,20 @@ FRESULT f_unlink_ex (
 			}
 			if (res == FR_OK) {
 				dclst = ld_clust(dj.fs, dir);
-				if (dir[DIR_Attr] & AM_DIR) {	/* Is it a sub-dir? */
-					if (!dclst) {
-						res = FR_INT_ERR;
-					} else {					/* Make sure the sub-directory is empty */
-						mem_cpy(&sdj, &dj, sizeof (FATDIR));
-						sdj.sclust = dclst;
-						res = dir_sdi(&sdj, 2);		/* Exclude dot entries */
-						if (res == FR_OK) {
-							res = dir_read(&sdj, 0);	/* Read an item */
-							if (res == FR_OK		/* Not empty directory */
+				if (dclst && (dir[DIR_Attr] & AM_DIR)) {	/* Is it a sub-directory ? */
 #if _FS_RPATH
-							|| dclst == dj.fs->cdir	/* or current directory */
+					if (dclst == dj.fs->cdir) {		 		/* Is it the current directory? */
+						res = FR_DENIED;
+					} else
 #endif
-							) res = FR_DENIED;
-							if (res == FR_NO_FILE) res = FR_OK;	/* It is empty */
+					{
+						mem_cpy(&sdj, &dj, sizeof (FATDIR));	/* Open the sub-directory */
+						sdj.sclust = dclst;
+						res = dir_sdi(&sdj, 2);
+						if (res == FR_OK) {
+							res = dir_read(&sdj, 0);			/* Read an item (excluding dot entries) */
+							if (res == FR_OK) res = FR_DENIED;	/* Not empty? (cannot remove) */
+							if (res == FR_NO_FILE) res = FR_OK;	/* Empty? (can remove) */
 						}
 					}
 				}

@@ -332,6 +332,7 @@ extern  UINT32  __inetHostTableGetItem(CPCHAR  pcHost);                 /*  ±¾µØ
 #define ETHARP_SUPPORT_VLAN             1                               /*  IEEE 802.1q VLAN            */
 #define ETH_PAD_SIZE                    LW_CFG_LWIP_ETH_PAD_SIZE
 #define ETHARP_SUPPORT_STATIC_ENTRIES   1
+#define ETHARP_TABLE_MATCH_NETIF        1
 
 /*********************************************************************************************************
   loop interface

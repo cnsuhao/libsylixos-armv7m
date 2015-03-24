@@ -20,6 +20,7 @@
 **
 ** BUG:
 2014.12.31  支持 ff10c 接口.
+2015.03.24  重新设计获取磁盘状态接口.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -32,17 +33,18 @@
 /*********************************************************************************************************
   函数声明
 *********************************************************************************************************/
-INT  __blockIoDevRead(INT     iIndex, 
-                      VOID   *pvBuffer, 
-                      ULONG   ulStartSector, 
-                      ULONG   ulSectorCount);
-INT  __blockIoDevWrite(INT     iIndex, 
-                       VOID   *pvBuffer, 
-                       ULONG   ulStartSector, 
-                       ULONG   ulSectorCount);
-INT  __blockIoDevReset(INT     iIndex);
-INT  __blockIoDevStatus(INT     iIndex);
-INT  __blockIoDevIoctl(INT  iIndex, INT  iCmd, LONG  lArg);
+PLW_BLK_DEV     __blockIoDevGet(INT  iIndex);
+INT             __blockIoDevRead(INT     iIndex, 
+                                 VOID   *pvBuffer, 
+                                 ULONG   ulStartSector, 
+                                 ULONG   ulSectorCount);
+INT             __blockIoDevWrite(INT     iIndex, 
+                                  VOID   *pvBuffer, 
+                                  ULONG   ulStartSector, 
+                                  ULONG   ulSectorCount);
+INT             __blockIoDevReset(INT     iIndex);
+INT             __blockIoDevStatus(INT     iIndex);
+INT             __blockIoDevIoctl(INT  iIndex, INT  iCmd, LONG  lArg);
 /*********************************************************************************************************
 ** 函数名称: disk_initialize
 ** 功能描述: 初始化块设备
@@ -56,10 +58,10 @@ DSTATUS  disk_initialize (BYTE  ucDriver)
     REGISTER INT    iError = __blockIoDevIoctl((INT)ucDriver, FIODISKINIT, 0);
     
     if (iError < 0) {
-        return  ((BYTE)(STA_NOINIT | STA_NODISK));
+        return  ((DSTATUS)(STA_NOINIT | STA_NODISK));
     
     } else {
-        return  ((BYTE)ERROR_NONE);
+        return  ((DSTATUS)ERROR_NONE);
     }
 }
 /*********************************************************************************************************
@@ -72,7 +74,20 @@ DSTATUS  disk_initialize (BYTE  ucDriver)
 *********************************************************************************************************/
 DSTATUS  disk_status (BYTE  ucDriver)
 {
-    return  ((BYTE)__blockIoDevStatus((INT)ucDriver)); 
+    DSTATUS     dstat = 0;
+    PLW_BLK_DEV pblk  = __blockIoDevGet((INT)ucDriver);
+
+    if (!pblk) {
+        return  (STA_NODISK);
+    }
+    
+    if ((pblk->BLKD_iFlag & O_ACCMODE) == O_RDONLY) {
+        dstat |= STA_PROTECT;
+    }
+    
+    dstat |= (DSTATUS)__blockIoDevStatus((INT)ucDriver);
+    
+    return  (dstat);
 }
 /*********************************************************************************************************
 ** 函数名称: disk_status
