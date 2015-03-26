@@ -985,12 +985,12 @@ extern VOID  nat_ip_input_hook(struct pbuf *p, struct netif *inp);
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-PVOID ip_route_hook (PVOID pvDest)
+PVOID ip_route_hook (const PVOID pvDest)
 {
-extern struct netif *sys_ip_route_hook(ip_addr_t *ipaddrDest);
+extern struct netif  *sys_ip_route_hook(const ip_addr_t *ipaddrDest);
 
-    ip_addr_t    *dest = (ip_addr_t *)pvDest;
-    struct netif *netif;
+    const  ip_addr_t *dest = (const ip_addr_t *)pvDest;
+    struct netif     *netif;
     
     netif = sys_ip_route_hook(dest);
 

@@ -131,7 +131,7 @@ static INT __rtSafeRun (FUNCPTR  pfuncHook,
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static PLW_RT_ENTRY __rtMatch (ip_addr_t *pipaddrDest)
+static PLW_RT_ENTRY __rtMatch (const ip_addr_t *pipaddrDest)
 {
     INT             iHash = LW_RT_HASHINDEX(pipaddrDest);
     PLW_LIST_LINE   plineTemp;
@@ -688,7 +688,7 @@ VOID rt_netif_remove_hook (struct netif *netif)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-struct netif *sys_ip_route_hook (ip_addr_t *pipaddrDest)
+struct netif *sys_ip_route_hook (const ip_addr_t *pipaddrDest)
 {
     PLW_RT_ENTRY    prte;
 
