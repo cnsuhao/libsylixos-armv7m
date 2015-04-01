@@ -527,14 +527,16 @@ lwip_accept(int s, struct sockaddr *addr, socklen_t *addrlen)
     return -1;
   }
 
+  /* sylixos fixed, first conn type check must before call netconn_accept() */
+  if (NETCONNTYPE_GROUP(netconn_type(sock->conn)) != NETCONN_TCP) {
+    sock_set_errno(sock, EOPNOTSUPP);
+    return EOPNOTSUPP;
+  }
+
   /* wait for a new connection */
   err = netconn_accept(sock->conn, &newconn);
   if (err != ERR_OK) {
     LWIP_DEBUGF(SOCKETS_DEBUG, ("lwip_accept(%d): netconn_acept failed, err=%d\n", s, err));
-    if (NETCONNTYPE_GROUP(netconn_type(sock->conn)) != NETCONN_TCP) {
-      sock_set_errno(sock, EOPNOTSUPP);
-      return EOPNOTSUPP;
-    }
     sock_set_errno(sock, err_to_errno(err));
     return -1;
   }
@@ -2699,8 +2701,8 @@ static void lwip_socket_drop_registered_memberships(int s)
 
   for (i = 0; i < LWIP_SOCKET_MAX_MEMBERSHIPS; i++) {
     if (socket_ipv4_multicast_memberships[i].sa == sa) {
-      netconn_join_leave_group(sockets[s].conn, &socket_ipv4_multicast_memberships[i].if_addr,
-        &socket_ipv4_multicast_memberships[i].multi_addr, NETCONN_LEAVE);
+      netconn_join_leave_group(sockets[s].conn, &socket_ipv4_multicast_memberships[i].multi_addr,
+        &socket_ipv4_multicast_memberships[i].if_addr, NETCONN_LEAVE);
       socket_ipv4_multicast_memberships[i].sa = 0;
       ip_addr_set_zero(&socket_ipv4_multicast_memberships[i].if_addr);
       ip_addr_set_zero(&socket_ipv4_multicast_memberships[i].multi_addr);

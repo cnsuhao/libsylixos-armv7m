@@ -858,6 +858,7 @@ SylixOS/net/lwip/src/netif/ppp/ipcp.c \
 SylixOS/net/lwip/src/netif/ppp/ipv6cp.c \
 SylixOS/net/lwip/src/netif/ppp/lcp.c \
 SylixOS/net/lwip/src/netif/ppp/magic.c \
+SylixOS/net/lwip/src/netif/ppp/mppe.c \
 SylixOS/net/lwip/src/netif/ppp/multilink.c \
 SylixOS/net/lwip/src/netif/ppp/ppp.c \
 SylixOS/net/lwip/src/netif/ppp/pppcrypt.c \
@@ -1254,9 +1255,9 @@ DSYMBOL  = -DSYLIXOS
 ifeq ($(DEBUG_LEVEL), debug)
 OPTIMIZE = -O0 -g3 -gdwarf-2
 else
-OPTIMIZE = -O2 -Os -g1 -gdwarf-2										#you can try use O3
-endif
-
+OPTIMIZE = -O2 -g1 -gdwarf-2											# Do NOT use -O3 and -Os
+endif										    						# -Os is not align for function
+																		# loop and jump.
 #*********************************************************************************************************
 # rm command parameter
 #*********************************************************************************************************

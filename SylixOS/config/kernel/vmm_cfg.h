@@ -33,30 +33,6 @@
 #define LW_CFG_VMM_MAX_ORDER                  11                        /*  根据性能与连续分页情况决定  */
                                                                         /*  非特殊情况, 不需要改动      */
 /*********************************************************************************************************
-*                                        虚拟内存页表相关配置
-*********************************************************************************************************/
-
-#define LW_CFG_VMM_PAGE_SHIFT                 12                        /*  2^12 = 4096                 */
-#define LW_CFG_VMM_PAGE_SIZE                  (1ul << LW_CFG_VMM_PAGE_SHIFT)
-#define LW_CFG_VMM_PAGE_MASK                  (~(LW_CFG_VMM_PAGE_SIZE - 1))
-
-#define LW_CFG_VMM_PMD_SHIFT                  20                        /*  NO PMD same as PGD          */
-#define LW_CFG_VMM_PMD_SIZE                   (1ul << LW_CFG_VMM_PMD_SHIFT)
-#define LW_CFG_VMM_PMD_MASK                   (~(LW_CFG_VMM_PMD_SIZE - 1))
-
-#define LW_CFG_VMM_PGD_SHIFT                  20                        /*  2^20 = 1MB                  */
-#define LW_CFG_VMM_PGD_SIZE                   (1ul << LW_CFG_VMM_PGD_SHIFT)
-#define LW_CFG_VMM_PGD_MASK                   (~(LW_CFG_VMM_PGD_SIZE - 1))
-
-/*********************************************************************************************************
-*                                        转换条目相关, 每一层所包含的表项个数
-*********************************************************************************************************/
-
-#define LW_CFG_VMM_PTRS_PER_PGD               256                       /*  PGD 拥有的转换条目数        */
-#define LW_CFG_VMM_PTRS_PER_PMD               1                         /*  PMD 拥有的转换条目数        */
-#define LW_CFG_VMM_PTRS_PER_PTE               1024                      /*  PTE 拥有的转换条目数        */
-
-/*********************************************************************************************************
 *                                        物理页面区域设置
 *********************************************************************************************************/
 
