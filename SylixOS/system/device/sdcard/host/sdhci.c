@@ -2191,7 +2191,7 @@ static INT  __sdhciTransTaskInit (__SDHCI_TRANS *psdhcitrans)
         hSdioIntSem = API_SemaphoreCCreate("sdhcisdio_sem",
                                            0,
                                            4096,
-                                           LW_OPTION_WAIT_FIFO,
+                                           LW_OPTION_OBJECT_GLOBAL,
                                            LW_NULL);
     }
 
@@ -2202,9 +2202,10 @@ static INT  __sdhciTransTaskInit (__SDHCI_TRANS *psdhcitrans)
     psdhcitrans->SDHCITS_hSdioIntSem = hSdioIntSem;
 
     threadattr = API_ThreadAttrGetDefault();
-    threadattr.THREADATTR_pvArg           = (PVOID)psdhcitrans;
-    threadattr.THREADATTR_ucPriority      = __SDHCI_SDIOINTSVR_PRIO;
-    threadattr.THREADATTR_stStackByteSize = __SDHCI_SDIOINTSVR_STKSZ;
+    threadattr.THREADATTR_pvArg            = (PVOID)psdhcitrans;
+    threadattr.THREADATTR_ucPriority       = __SDHCI_SDIOINTSVR_PRIO;
+    threadattr.THREADATTR_stStackByteSize  = __SDHCI_SDIOINTSVR_STKSZ;
+    threadattr.THREADATTR_ulOption        |= LW_OPTION_OBJECT_GLOBAL;
     hSdioIntThread = API_ThreadCreate("t_sdhcisdio",
                                       __sdhciSdioIntSvr,
                                       &threadattr,

@@ -74,7 +74,7 @@ extern LW_LIST_LINE_HEADER      _G_plineVProcHeader;
 *********************************************************************************************************/
 INT __moduleVerifyVersion (CPCHAR  pcModuleName, CPCHAR  pcVersion, ULONG  ulType)
 {
-    ULONG       ulKoComNewest = __SYLIXOS_MAKEVER(1, 0, 0);             /*  内核模块兼容的最大版本号    */
+    ULONG       ulKoComNewest = __SYLIXOS_VERSION;                      /*  内核模块兼容的最大版本号    */
     ULONG       ulKoComOldest = __SYLIXOS_MAKEVER(1, 0, 0);             /*  内核模块兼容的最小版本号    */
     
     ULONG       ulSoComNewest = __SYLIXOS_MAKEVER(1, 9, 9);             /*  应用动态库兼容的最大版本号  */

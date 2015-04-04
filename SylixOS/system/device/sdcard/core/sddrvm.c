@@ -848,7 +848,7 @@ static INT  __sdmDebugLibInit (VOID)
     _G_hsdmevtMsgQ = API_MsgQueueCreate("sdm_dbgmsgq",
                                         12,
                                         sizeof(__SDM_EVT_MSG),
-                                        LW_OPTION_WAIT_FIFO,
+                                        LW_OPTION_WAIT_FIFO | LW_OPTION_OBJECT_GLOBAL,
                                         LW_NULL);
     if (_G_hsdmevtMsgQ == LW_OBJECT_HANDLE_INVALID) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create message queue failed.\r\n");
@@ -859,6 +859,7 @@ static INT  __sdmDebugLibInit (VOID)
     threadAttr.THREADATTR_pvArg            = LW_NULL;
     threadAttr.THREADATTR_ucPriority       = __SDM_DEBUG_THREAD_PRIO;
     threadAttr.THREADATTR_stStackByteSize  = __SDM_DEBUG_THREAD_STKSZ;
+    threadAttr.THREADATTR_ulOption        |= LW_OPTION_OBJECT_GLOBAL;
     _G_hsdmevtHandle = API_ThreadCreate("t_sdmdbgevth",
                                         __sdmDebugEvtHandle,
                                         &threadAttr,
