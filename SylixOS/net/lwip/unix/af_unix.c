@@ -66,8 +66,8 @@ extern void  __unix_socket_event(AF_UNIX_T  *pafunix, LW_SEL_TYPE type, INT  iSo
 #define __AF_UNIX_ADDROFFSET        offsetof(struct sockaddr_un, sun_path)
 #define __AF_UNIX_DEF_FLAG          0777
 #define __AF_UNIX_DEF_BUFMAX        65536                               /*  默认为 64K 接收缓冲         */
-#define __AF_UNIX_DEF_BUFMIN        (LW_CFG_KB_SIZE * 16)               /*  最小接收缓冲大小            */
-#define __AF_UNIX_PIPE_BUF          (LW_CFG_KB_SIZE * 16)               /*  一次原子操作的数据大小      */
+#define __AF_UNIX_DEF_BUFMIN        (LW_CFG_KB_SIZE * 8)                /*  最小接收缓冲大小            */
+#define __AF_UNIX_PIPE_BUF          (LW_CFG_KB_SIZE * 8)                /*  一次原子操作的数据大小      */
 #define __AF_UNIX_PART_256          128                                 /*  256 字节内存池数量          */
 #define __AF_UNIX_PART_512          64                                  /*  512 字节内存池数量          */
 /*********************************************************************************************************

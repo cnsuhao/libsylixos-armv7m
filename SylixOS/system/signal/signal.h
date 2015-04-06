@@ -248,7 +248,11 @@
 #define SIGEV_THREAD           3                                        /*  invoke sigev_notify_function*/
                                                                         /*  as if it were the start     */
                                                                         /*  function of a new thread.   */
-                                                                        
+
+#ifdef __SYLIXOS_KERNEL
+#define SIGEV_NOTIFY_MASK      0x3
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
+
 #define SIGEV_THREAD_ID        4                                        /*  As for SIGEV_SIGNAL, but the*/
                                                                         /*  signal is targeted at the   */
                                                                         /*  thread whose ID is given in */

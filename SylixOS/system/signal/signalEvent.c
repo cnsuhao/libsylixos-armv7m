@@ -127,13 +127,24 @@ static INT  _doSigEventInternal (LW_OBJECT_HANDLE  ulId, PSIGNAL_EVENT_ARG   psi
     REGISTER PLW_CLASS_TCB       ptcb;
              LW_CLASS_SIGPEND    sigpend;
              LW_SEND_VAL         sendval;
+             INT                 iNotify;
              INT                 iError = PX_ERROR;
              
     struct sigevent  *psigevent = &psigea->SE_event.SE_sigevent;
     struct siginfo   *psiginfo  = &psigea->SE_event.SE_siginfo;
-      
-    if (psigevent->sigev_notify == SIGEV_THREAD_ID) {                   /*  向指定线程发送信号          */
-        ulId = psigevent->sigev_notify_thread_id;
+
+#if LW_CFG_POSIX_EN > 0
+    iNotify = psigevent->sigev_notify & (~SIGEV_THREAD_ID);
+    if (psigevent->sigev_notify & SIGEV_THREAD_ID) {
+        ulId = psigevent->sigev_notify_thread_id;                       /*  向指定线程发送信号          */
+    }
+#else
+    iNotify = psigevent->sigev_notify;
+#endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
+    
+    if ((iNotify != SIGEV_SIGNAL) &&
+        (iNotify != SIGEV_THREAD)) {
+        goto    __out;
     }
     
 #if LW_CFG_MODULELOADER_EN > 0
@@ -160,7 +171,7 @@ static INT  _doSigEventInternal (LW_OBJECT_HANDLE  ulId, PSIGNAL_EVENT_ARG   psi
                       psigevent->sigev_value.sival_ptr,
                       LW_NULL);
                       
-    if ((psigevent->sigev_notify == SIGEV_THREAD) &&
+    if ((iNotify == SIGEV_THREAD) &&
         (psigevent->sigev_notify_function)) {
 #if LW_CFG_POSIX_EN > 0
         pthread_t   tid;
@@ -186,7 +197,7 @@ static INT  _doSigEventInternal (LW_OBJECT_HANDLE  ulId, PSIGNAL_EVENT_ARG   psi
     sigpend.SIGPEND_siginfo.si_signo = psigevent->sigev_signo;          /*  以 sigevent 为主            */
     sigpend.SIGPEND_siginfo.si_errno = errno;
     sigpend.SIGPEND_siginfo.si_value = psigevent->sigev_value;
-    sigpend.SIGPEND_iNotify          = psigevent->sigev_notify;
+    sigpend.SIGPEND_iNotify          = iNotify;
     
 #if LW_CFG_SMP_EN > 0
     if (LW_NCPUS > 1) {                                                 /*  正工作在 SMP 多核模式       */
@@ -256,14 +267,6 @@ INT  _doSigEvent (LW_OBJECT_HANDLE  ulId, struct sigevent *psigevent, INT  iSigC
         return  (PX_ERROR);
     }
     
-    if ((psigevent->sigev_notify != SIGEV_NONE)   &&
-        (psigevent->sigev_notify != SIGEV_SIGNAL) &&
-        (psigevent->sigev_notify != SIGEV_THREAD) &&
-        (psigevent->sigev_notify != SIGEV_THREAD_ID)) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
-    }
-    
     if (psigevent->sigev_notify == SIGEV_NONE) {                        /*  不发送信号                  */
         return  (ERROR_NONE);
     }
@@ -320,14 +323,6 @@ INT  _doSigEventEx (LW_OBJECT_HANDLE  ulId, struct sigevent *psigevent, struct s
     LW_TCB_GET_CUR_SAFE(ptcbCur);
     
     if (!psigevent || !psiginfo) {
-        _ErrorHandle(EINVAL);
-        return  (PX_ERROR);
-    }
-    
-    if ((psigevent->sigev_notify != SIGEV_NONE)   &&
-        (psigevent->sigev_notify != SIGEV_SIGNAL) &&
-        (psigevent->sigev_notify != SIGEV_THREAD) &&
-        (psigevent->sigev_notify != SIGEV_THREAD_ID)) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }

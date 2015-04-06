@@ -140,8 +140,8 @@ static LW_SPINLOCK_DEFINE       (_G_slSdmHostLock);
 static LW_LIST_LINE_HEADER       _G_plineSddrvHeader   = LW_NULL;
 static LW_LIST_LINE_HEADER       _G_plineSdmhostHeader = LW_NULL;
 
-#define __SDM_HOST_LOCK()        LW_SPIN_LOCK_IRQ(&_G_slSdmHostLock, &iregInterLevel)
-#define __SDM_HOST_UNLOCK()      LW_SPIN_UNLOCK_IRQ(&_G_slSdmHostLock, iregInterLevel)
+#define __SDM_HOST_LOCK()        LW_SPIN_LOCK_QUICK(&_G_slSdmHostLock, &iregInterLevel)
+#define __SDM_HOST_UNLOCK()      LW_SPIN_UNLOCK_QUICK(&_G_slSdmHostLock, iregInterLevel)
 
 static __SDM_HOST_DRV_FUNCS      _G_sdmhostdrvfuncs;
 /*********************************************************************************************************
@@ -650,9 +650,9 @@ static INT __sdmSdioIntHandle (__SDM_HOST *psdmhost)
         __sdiobaseDevIrqHandle(psdmdev->SDMDEV_psddrv, psdmdev->SDMDEV_pvDevPriv);
         return  (ERROR_NONE);
     }
+#endif                                                                  /*  LW_CFG_SDCARD_SDIO_EN > 0   */
 
     return  (PX_ERROR);
-#endif                                                                  /*  LW_CFG_SDCARD_SDIO_EN > 0   */
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: __sdmHostFind
@@ -848,7 +848,7 @@ static INT  __sdmDebugLibInit (VOID)
     _G_hsdmevtMsgQ = API_MsgQueueCreate("sdm_dbgmsgq",
                                         12,
                                         sizeof(__SDM_EVT_MSG),
-                                        LW_OPTION_WAIT_FIFO | LW_OPTION_OBJECT_GLOBAL,
+                                        LW_OPTION_WAIT_FIFO,
                                         LW_NULL);
     if (_G_hsdmevtMsgQ == LW_OBJECT_HANDLE_INVALID) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "create message queue failed.\r\n");
@@ -859,7 +859,6 @@ static INT  __sdmDebugLibInit (VOID)
     threadAttr.THREADATTR_pvArg            = LW_NULL;
     threadAttr.THREADATTR_ucPriority       = __SDM_DEBUG_THREAD_PRIO;
     threadAttr.THREADATTR_stStackByteSize  = __SDM_DEBUG_THREAD_STKSZ;
-    threadAttr.THREADATTR_ulOption        |= LW_OPTION_OBJECT_GLOBAL;
     _G_hsdmevtHandle = API_ThreadCreate("t_sdmdbgevth",
                                         __sdmDebugEvtHandle,
                                         &threadAttr,

@@ -205,6 +205,7 @@ static INT  __tshellNetstat (INT  iArgC, PCHAR  *ppcArgV)
             break;
         }
     }
+    getopt_free();
     
 __show:
     if ((bRaw    == LW_FALSE) && (bUdp    == LW_FALSE) &&

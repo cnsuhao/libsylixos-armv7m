@@ -1016,8 +1016,6 @@ ULONG  _sigTimeOutRecalc (ULONG  ulOrgKernelTime, ULONG  ulOrgTimeOut)
 *********************************************************************************************************/
 LW_SEND_VAL  _doSignal (PLW_CLASS_TCB  ptcb, PLW_CLASS_SIGPEND   psigpend)
 {
-
-
     REGISTER struct siginfo      *psiginfo = &psigpend->SIGPEND_siginfo;
     REGISTER INT                  iSigNo   = psiginfo->si_signo;
 

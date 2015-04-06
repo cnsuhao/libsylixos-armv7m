@@ -314,6 +314,10 @@ VOID    bspTickInit(VOID);
 VOID    bspDelayUs(ULONG ulUs);
 VOID    bspDelayNs(ULONG ulNs);
 
+#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
+VOID    bspTickHighResolution(struct timespec *ptv);
+#endif                                                                  /*  LW_CFG_TIME_HIGH_...        */
+
 /*********************************************************************************************************
   内核关键位置回调函数
 *********************************************************************************************************/

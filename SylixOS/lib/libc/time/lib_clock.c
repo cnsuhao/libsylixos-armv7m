@@ -42,6 +42,22 @@ clock_t  lib_clock (VOID)
     return  ((clock_t)API_TimeGet());
 }
 /*********************************************************************************************************
+** 函数名称: bspTickHighResolution
+** 功能描述: BSP 通过读取定时器当前计数值, 计算出一个针对上一次 tick 中断到当前的精确时间.
+** 输　入  : NONE
+** 输　出  : 对上一次 tick 中断到当前的精确时间, 单位为纳秒
+** 全局变量: 
+** 调用模块: 
+** 说  明  : 这里使用 weak 是为了兼容老版本的 BSP.
+*********************************************************************************************************/
+#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
+
+VOID __attribute__((weak)) bspTickHighResolution (struct timespec *tv)
+{
+}
+
+#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
+/*********************************************************************************************************
 ** 函数名称: lib_clock_gettime
 ** 功能描述: 
 ** 输　入  : 
@@ -95,6 +111,10 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
         return  (PX_ERROR);
     }
     
+#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
+    bspTickHighResolution(tv);                                          /*  高精度时间分辨率计算        */
+#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
+
     return  (ERROR_NONE);
 }
 /*********************************************************************************************************
@@ -139,9 +159,7 @@ INT  lib_clock_nanosleep (clockid_t  clockid, int  iFlags,
     INTREG           iregInterLevel;
     struct timespec  tvValue;
 
-    (VOID)clockid;
-    
-    if (clockid != CLOCK_REALTIME) {
+    if ((clockid != CLOCK_REALTIME) && (clockid != CLOCK_MONOTONIC)) {
         _ErrorHandle(ENOTSUP);
         return  (PX_ERROR);
     }
@@ -153,24 +171,37 @@ INT  lib_clock_nanosleep (clockid_t  clockid, int  iFlags,
     
     tvValue = *rqtp;
     
-    if (iFlags == TIMER_ABSTIME) {
+    if (iFlags == TIMER_ABSTIME) {                                      /*  绝对时间                    */
         struct timespec  tvNow;
-        LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
-        tvNow = _K_tvTODCurrent;
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
         
+        LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+        if (clockid == CLOCK_REALTIME) {
+            tvNow = _K_tvTODCurrent;
+        } else {
+            tvNow = _K_tvTODMono;
+        }
+        LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+    
+#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
+        bspTickHighResolution(&tvNow);
+#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
+
         if ((rqtp->tv_sec < tvNow.tv_sec) ||
             ((rqtp->tv_sec == tvNow.tv_sec) &&
              (rqtp->tv_nsec < tvNow.tv_nsec))) {
             _ErrorHandle(EINVAL);
             return  (PX_ERROR);
-        } else {
-            __timespecSub(&tvValue, &tvNow);
         }
-    }
+        
+        __timespecSub(&tvValue, &tvNow);
+        
+        return  (nanosleep(&tvValue, LW_NULL));
     
-    return  (nanosleep(&tvValue, rmtp));
+    } else {
+        return  (nanosleep(&tvValue, rmtp));
+    }
 }
+
 #endif                                                                  /*  LW_CFG_RTC_EN               */
 /*********************************************************************************************************
   END

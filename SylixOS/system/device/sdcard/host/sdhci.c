@@ -81,8 +81,8 @@
 /*********************************************************************************************************
   传输事务线操作宏定义
 *********************************************************************************************************/
-#define __SDHCI_TRANS_LOCK(pt)    LW_SPIN_LOCK_IRQ(&pt->SDHCITS_slLock, &iregInterLevel)
-#define __SDHCI_TRANS_UNLOCK(pt)  LW_SPIN_UNLOCK_IRQ(&pt->SDHCITS_slLock, iregInterLevel)
+#define __SDHCI_TRANS_LOCK(pt)    LW_SPIN_LOCK(&pt->SDHCITS_slLock)
+#define __SDHCI_TRANS_UNLOCK(pt)  LW_SPIN_UNLOCK(&pt->SDHCITS_slLock)
 /*********************************************************************************************************
   适用于控制器能发出 SDIO 硬件中断的情况
 *********************************************************************************************************/
@@ -856,7 +856,6 @@ static INT __sdhciTransferNorm (__PSDHCI_HOST       psdhcihost,
                                 INT                 iNum)
 {
     __PSDHCI_TRANS  psdhcitrans;
-    INTREG          iregInterLevel;
     INT             iError;
     INT             i = 0;
 
@@ -918,7 +917,6 @@ static INT __sdhciTransferSdma (__PSDHCI_HOST       psdhcihost,
                                 INT                 iNum)
 {
     __PSDHCI_TRANS  psdhcitrans;
-    INTREG          iregInterLevel;
     INT             iError;
     INT             i = 0;
 
@@ -1918,7 +1916,6 @@ static INT __sdhciDataReadNorm (__PSDHCI_TRANS    psdhcitrans)
     UINT32              uiChunk;
     UINT32              uiData;
     UINT8              *pucBuffer;
-    INTREG              iregInterLevel;
 
     psdhcihostattr = &psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr;
     uiBlkSize      = psdhcitrans->SDHCITS_uiBlkSize;
@@ -1964,7 +1961,6 @@ static INT __sdhciDataWriteNorm (__PSDHCI_TRANS    psdhcitrans)
     UINT32              uiChunk;
     UINT32              uiData;
     UINT8              *pucBuffer;
-    INTREG              iregInterLevel;
 
     psdhcihostattr = &psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr;
     uiBlkSize      = psdhcitrans->SDHCITS_uiBlkSize;
@@ -2448,7 +2444,6 @@ static irqreturn_t   __sdhciTransIrq (VOID *pvArg, ULONG ulVector)
     LW_SDHCI_HOST_ATTR  *psdhcihostattr = &psdhcihost->SDHCIHS_sdhcihostattr;
     BOOL                 bSdioInt       = LW_FALSE;
 
-    INTREG               iregInterLevel;
     UINT32               uiIntSta;
     irqreturn_t          irqret;
 

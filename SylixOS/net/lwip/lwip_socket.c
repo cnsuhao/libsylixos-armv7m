@@ -44,6 +44,7 @@
 2014.11.07  AF_PACKET ioctl() 支持基本网口操作.
 2015.03.02  加入 socket 复位操作, 回收 socket 首先需要设置 SO_LINGER 为立即关闭模式.
 2015.03.17  netif ioctl 仅负责混杂模式的设置.
+2015.04.06  *_socket_event() 不再需要 socket lock 保护.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -163,7 +164,6 @@ void  __lwip_socket_event (int  lwipfd, LW_SEL_TYPE type, INT  iSoErr)
     PLW_LIST_LINE   plineTemp;
     SOCKET_T       *psock;
 
-    __SOCKET_LOCK();
     for (plineTemp  = _G_plineSocket[iHash];
          plineTemp != LW_NULL;
          plineTemp  = _list_line_get_next(plineTemp)) {
@@ -175,7 +175,6 @@ void  __lwip_socket_event (int  lwipfd, LW_SEL_TYPE type, INT  iSoErr)
             break;
         }
     }
-    __SOCKET_UNLOCK();
 }
 /*********************************************************************************************************
 ** 函数名称: __unix_socket_event
@@ -193,7 +192,6 @@ void  __unix_socket_event (AF_UNIX_T  *pafunix, LW_SEL_TYPE type, INT  iSoErr)
     PLW_LIST_LINE   plineTemp;
     SOCKET_T       *psock;
 
-    __SOCKET_LOCK();
     for (plineTemp  = _G_plineSocket[iHash];
          plineTemp != LW_NULL;
          plineTemp  = _list_line_get_next(plineTemp)) {
@@ -205,7 +203,6 @@ void  __unix_socket_event (AF_UNIX_T  *pafunix, LW_SEL_TYPE type, INT  iSoErr)
             break;
         }
     }
-    __SOCKET_UNLOCK();
 }
 /*********************************************************************************************************
 ** 函数名称: __packet_socket_event
@@ -223,7 +220,6 @@ void  __packet_socket_event (AF_PACKET_T *pafpacket, LW_SEL_TYPE type, INT  iSoE
     PLW_LIST_LINE   plineTemp;
     SOCKET_T       *psock;
     
-    __SOCKET_LOCK();
     for (plineTemp  = _G_plineSocket[iHash];
          plineTemp != LW_NULL;
          plineTemp  = _list_line_get_next(plineTemp)) {
@@ -235,7 +231,6 @@ void  __packet_socket_event (AF_PACKET_T *pafpacket, LW_SEL_TYPE type, INT  iSoE
             break;
         }
     }
-    __SOCKET_UNLOCK();
 }
 /*********************************************************************************************************
 ** 函数名称: __ifConfSize

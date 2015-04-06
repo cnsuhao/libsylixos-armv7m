@@ -1227,13 +1227,6 @@ int  mq_notify (mqd_t  mqd, const struct sigevent  *pnotify)
             errno = EINVAL;
             return  (PX_ERROR);
         }
-        if ((pnotify->sigev_notify != SIGEV_NONE)   &&
-            (pnotify->sigev_notify != SIGEV_SIGNAL) &&
-            (pnotify->sigev_notify != SIGEV_THREAD) &&
-            (pnotify->sigev_notify != SIGEV_THREAD_ID)) {
-            errno = EINVAL;
-            return  (PX_ERROR);
-        }
         __PX_MQ_LOCK(pmq);                                              /*  锁定消息队列                */
         pmq->PMSG_pmsgntf.PMSGNTF_sigevent   = *pnotify;
         pmq->PMSG_pmsgntf.PMSGNTF_ulThreadId = API_ThreadIdSelf();

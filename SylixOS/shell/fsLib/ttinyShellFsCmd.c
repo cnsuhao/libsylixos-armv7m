@@ -1639,6 +1639,7 @@ static INT  __tshellFsCmdMount (INT  iArgC, PCHAR  ppcArgV[])
         fprintf(stderr, "option error!\n");
         return  (-ERROR_TSHELL_EPARAM);
     }
+    getopt_free();
     
     pcDev = ppcArgV[iOptInd];
     pcFs  = ppcArgV[iOptInd + 1];

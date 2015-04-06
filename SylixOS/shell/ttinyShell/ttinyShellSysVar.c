@@ -29,6 +29,7 @@
 2012.09.21  加入对 locale 环境变量的初始化.
 2013.01.23  加入对 NFS_CLIENT_PROTO 环境变量初始化.
 2013.06.12  SylixOS 默认不再使用 ftk 图形界面, 转而使用 Qt 图形界面.
+2015.04.06  去掉 GUILIB GUIFONT ... 默认环境变量.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -62,9 +63,6 @@ VOID  __tshellSysVarInit (VOID)
     /*
      *  图形界面
      */
-    API_TShellExec("GUILIB=/qt/lib");                                   /*  GUI 基础全局库地址          */
-    API_TShellExec("GUIFONT=wqy-microhei.ttc");                         /*  GUI 默认字库"文泉易(微米黑)"*/
-    
     API_TShellExec("KEYBOARD=/dev/input/keyboard0");                    /*  HID 设备                    */
     API_TShellExec("MOUSE=/dev/input/mouse0:/dev/input/touch0");
     
@@ -90,15 +88,15 @@ VOID  __tshellSysVarInit (VOID)
     API_TShellExec("NFS_CLIENT_AUTH=AUTH_UNIX");                        /*  NFS 默认使用 auth_unix      */
     API_TShellExec("NFS_CLIENT_PROTO=udp");                             /*  NFS 默认使用 udp 协议       */
 
-    API_TShellExec("PATH=" _PATH_DEFPATH ":${GUILIB}");                 /*  PATH 启动时默认路径         */
-    API_TShellExec("LD_LIBRARY_PATH=" _PATH_LIBPATH ":${GUILIB}");      /*  LD_LIBRARY_PATH 默认值      */
+    API_TShellExec("PATH=" _PATH_DEFPATH);                              /*  PATH 启动时默认路径         */
+    API_TShellExec("LD_LIBRARY_PATH=" _PATH_LIBPATH);                   /*  LD_LIBRARY_PATH 默认值      */
     
     /*
      *  多国语言与编码
      */
     API_TShellExec("LANG=C");                                           /*  系统默认 locale 为 "C"      */
     API_TShellExec("LC_ALL=");                                          /*  推荐不要使用此变量          */
-    API_TShellExec("PATH_LOCALE=/usr/share/locale");                    /*  注意:需要从 BSD 系统将 UTF-8*/
+    API_TShellExec("PATH_LOCALE=" _PATH_LOCALE);                        /*  注意:需要从 BSD 系统将 UTF-8*/
                                                                         /*  目录拷贝到这里              */
     
     /*

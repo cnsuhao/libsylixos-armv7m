@@ -281,8 +281,8 @@ static INT  __mount (CPCHAR  pcDevName, CPCHAR  pcVolName, CPCHAR  pcFileSystem,
         return  (PX_ERROR);
     }
     
-    if ((lib_strcmp(pcFileSystem, __LW_MOUNT_NFS_FS) == 0) ||
-        (lib_strcmp(pcFileSystem, __LW_MOUNT_RAM_FS) == 0)) {           /*  NFS 或者 RAM FS             */
+    if ((lib_strcmp(pcFs, __LW_MOUNT_NFS_FS) == 0) ||
+        (lib_strcmp(pcFs, __LW_MOUNT_RAM_FS) == 0)) {                   /*  NFS 或者 RAM FS             */
         iFd = -1;                                                       /*  不需要操作设备文件          */
     
     } else {
