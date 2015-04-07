@@ -49,9 +49,9 @@ extern LW_OBJECT_HANDLE    _K_ulInterShowLock;
   全局变量
 *********************************************************************************************************/
 static const CHAR   _G_cInterInfoHdr1[] = "\n\
- IRQ      NAME        ENTRY   CLEAR    PARAM   ENABLE RND PREEMPTIVE";
+ IRQ      NAME        ENTRY   CLEAR    PARAM   ENABLE RND PREEMPT";
 static const CHAR   _G_cInterInfoHdr2[] = "\n\
----- -------------- -------- -------- -------- ------ --- ----------";
+---- -------------- -------- -------- -------- ------ --- -------";
 #if LW_CFG_INTER_INFO > 0
 static const CHAR   _G_cNestingInfoHdr[] = "\n\
  CPU  MAX NESTING      IPI\n\
@@ -105,8 +105,8 @@ VOID   API_InterShow (VOID)
         API_InterVectorIsEnable((ULONG)i, &bIsEnable);
         
         pcIsEnable = (bIsEnable)                        ? "true" : "false";
-        pcRnd      = (ulFlag & LW_IRQ_FLAG_SAMPLE_RAND) ? "*"    : "";
-        pcPreem    = (ulFlag & LW_IRQ_FLAG_PREEMPTIVE)  ? "*"    : "";
+        pcRnd      = (ulFlag & LW_IRQ_FLAG_SAMPLE_RAND) ? "yes"  : "";
+        pcPreem    = (ulFlag & LW_IRQ_FLAG_PREEMPTIVE)  ? "yes"  : "";
         
         pidesc = LW_IVEC_GET_IDESC(i);
         
@@ -115,7 +115,7 @@ VOID   API_InterShow (VOID)
              plineTemp  = _list_line_get_next(plineTemp)) {
             
             piaction = _LIST_ENTRY(plineTemp, LW_CLASS_INTACT, IACT_plineManage);
-            printf("%4d %-14s %8lx %8lx %8lx %-6s %-3s %-10s ",
+            printf("%4d %-14s %8lx %8lx %8lx %-6s %-3s %-7s ",
                    i, 
                    piaction->IACT_cInterName, 
                    (ULONG)piaction->IACT_pfuncIsr, 
@@ -143,7 +143,7 @@ VOID   API_InterShow (VOID)
 #if LW_CFG_SMP_EN > 0
         printf("%5d %11ld %13lld\n", i, LW_CPU_GET_NESTING_MAX(i), LW_CPU_GET_IPI_CNT(i));
 #else
-        printf("%5d %11ld *\n", i, LW_CPU_GET_NESTING_MAX(i));
+        printf("%5d %11ld Not SMP\n", i, LW_CPU_GET_NESTING_MAX(i));
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     }
     

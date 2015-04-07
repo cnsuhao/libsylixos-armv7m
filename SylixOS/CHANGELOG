@@ -1,6 +1,24 @@
 HISTORY
 
-(CVS HEAD)
+(GIT HEAD)
+
+++ New features:
+
+    2015-04-05: han.hui
+    加入高分辨率时钟获取接口.
+    
+++ Bugfixes:
+
+    2015-04-07: han.hui
+    修正 ARM 中断嵌套接口, 提高中断响应速度.
+    
+    2015-04-05: han.hui
+    修正 SIGEV_THREAD_ID 错误.
+    
+    2015-04-05: han.hui
+    修正 SD 中断处理错误.
+
+(STABLE-1.0.0)
 
 ++ New features:
 
@@ -583,7 +601,7 @@ HISTORY
     2012-03-23: han.hui
     SylixOS 根目录中加入 CHANGELOG 文件.
     
-++ Bugfixes:.
+++ Bugfixes:
 
     2014-12-22: han.hui
     修正 GDB Non-STOP 模式错误.

@@ -42,9 +42,7 @@
 LW_API
 VOID  API_InterVectorIsr (ULONG  ulVector)
 {
-    INTREG              iregInterLevel;
     PLW_CLASS_CPU       pcpu;
-    
     PLW_LIST_LINE       plineTemp;
     PLW_CLASS_INTDESC   pidesc;
     PLW_CLASS_INTACT    piaction;
@@ -58,15 +56,16 @@ VOID  API_InterVectorIsr (ULONG  ulVector)
                       ulVector, pcpu->CPU_ulInterNesting, LW_NULL);
     
 #if LW_CFG_SMP_EN > 0
-    if ((pcpu->CPU_ulIPIVector != __ARCH_ULONG_MAX) && 
-        (pcpu->CPU_ulIPIVector == ulVector)) {                          /*  核间中断                    */
+    if (pcpu->CPU_ulIPIVector == ulVector) {                            /*  核间中断                    */
         _SmpProcIpi(pcpu);
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
     pidesc = LW_IVEC_GET_IDESC(ulVector);
     
+#if LW_CFG_SMP_EN > 0
     LW_SPIN_LOCK(&pidesc->IDESC_slLock);                                /*  锁住 spinlock               */
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     
     for (plineTemp  = pidesc->IDESC_plineAction;
          plineTemp != LW_NULL;
@@ -85,15 +84,9 @@ VOID  API_InterVectorIsr (ULONG  ulVector)
         }
     }
     
-#if LW_CFG_INTER_INFO > 0
-    iregInterLevel = KN_INT_DISABLE();
-    if (pcpu->CPU_ulInterNestingMax < pcpu->CPU_ulInterNesting) {
-        pcpu->CPU_ulInterNestingMax = pcpu->CPU_ulInterNesting;
-    }
-    KN_INT_ENABLE(iregInterLevel);
-#endif
-    
+#if LW_CFG_SMP_EN > 0
     LW_SPIN_UNLOCK(&pidesc->IDESC_slLock);                              /*  解锁 spinlock               */
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
     
     __LW_CPU_INT_EXIT_HOOK(ulVector, pcpu->CPU_ulInterNesting);
     

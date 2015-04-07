@@ -23,6 +23,16 @@
 #include "dtrace.h"
 #include "../mm/mmu/armMmuCommon.h"
 /*********************************************************************************************************
+  向量使能与禁能锁
+*********************************************************************************************************/
+#if LW_CFG_SMP_EN > 0
+#define VECTOR_OP_LOCK()    LW_SPIN_LOCK_IGNIRQ(&_K_slVectorTable)
+#define VECTOR_OP_UNLOCK()  LW_SPIN_UNLOCK_IGNIRQ(&_K_slVectorTable)
+#else
+#define VECTOR_OP_LOCK()
+#define VECTOR_OP_UNLOCK()
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+/*********************************************************************************************************
 ** 函数名称: archIntHandle
 ** 功能描述: bspIntHandle 需要调用此函数处理中断
 ** 输　入  : ulVector         中断向量
@@ -30,7 +40,7 @@
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : 如果对应 vector 中断允许嵌套, 则需要在对应的中断服务函数中再次使能对应中断 vector.
+** 注  意  : 
 *********************************************************************************************************/
 VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
 {
@@ -43,14 +53,19 @@ VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
     }
 
     if (bPreemptive) {
-        __ARCH_INT_VECTOR_DISABLE(ulVector);                            /*  屏蔽此中断源                */
+        VECTOR_OP_LOCK();
+        __ARCH_INT_VECTOR_DISABLE(ulVector);                            /*  屏蔽 vector 中断            */
+        VECTOR_OP_UNLOCK();
         KN_INT_ENABLE_FORCE();                                          /*  允许中断                    */
     }
 
     API_InterVectorIsr(ulVector);
     
     if (bPreemptive) {
-        KN_INT_DISABLE();                                               /*  屏蔽中断                    */
+        KN_INT_DISABLE();                                               /*  禁能中断                    */
+        VECTOR_OP_LOCK();
+        __ARCH_INT_VECTOR_ENABLE(ulVector);                             /*  允许 vector 中断            */
+        VECTOR_OP_UNLOCK();
     }
 }
 /*********************************************************************************************************

@@ -59,6 +59,8 @@ static VOID  __interPrimaryStackInit (VOID)
 {
     REGISTER INT        i;
     
+    LW_SPIN_INIT(&_K_slVectorTable);
+    
     for (i = 0; i < LW_CFG_MAX_PROCESSORS; i++) {
 #if CPU_STK_GROWTH == 0
         _K_pstkInterruptBase[i] = &_K_stkInterruptStack[i][0];
@@ -167,37 +169,6 @@ static VOID  __miscSecondarySmpInit (ULONG   ulCPUId)
 
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 /*********************************************************************************************************
-** 函数名称: __hookInit
-** 功能描述: hook 初始化
-** 输　入  : 
-** 输　出  : 
-** 全局变量: 
-** 调用模块:
-*********************************************************************************************************/
-static VOID  __hookInit (VOID)
-{
-    _K_hookKernel.HOOK_ThreadCreate    = LW_NULL;                       /*  线程建立钩子                */
-    _K_hookKernel.HOOK_ThreadDelete    = LW_NULL;                       /*  线程删除钩子                */
-    _K_hookKernel.HOOK_ThreadSwap      = LW_NULL;                       /*  线程切换钩子                */
-    _K_hookKernel.HOOK_ThreadTick      = LW_NULL;                       /*  系统时钟中断钩子            */
-    _K_hookKernel.HOOK_ThreadInit      = LW_NULL;                       /*  线程初始化钩子              */
-    _K_hookKernel.HOOK_ThreadIdle      = LW_NULL;                       /*  空闲线程钩子                */
-    _K_hookKernel.HOOK_KernelInitBegin = LW_NULL;                       /*  内核初始化开始钩子          */
-    _K_hookKernel.HOOK_KernelInitEnd   = LW_NULL;                       /*  内核初始化结束钩子          */
-    _K_hookKernel.HOOK_KernelReboot    = LW_NULL;                       /*  内核重新启动钩子            */
-    _K_hookKernel.HOOK_WatchDogTimer   = LW_NULL;                       /*  看门狗定时器钩子            */
-
-    _K_hookKernel.HOOK_ObjectCreate = LW_NULL;                          /*  创建内核对象钩子            */
-    _K_hookKernel.HOOK_ObjectDelete = LW_NULL;                          /*  删除内核对象钩子            */
-    _K_hookKernel.HOOK_FdCreate     = LW_NULL;                          /*  文件描述符创建钩子          */
-    _K_hookKernel.HOOK_FdDelete     = LW_NULL;                          /*  文件描述符删除钩子          */
-    
-    _K_hookKernel.HOOK_CpuIdleEnter = LW_NULL;                          /*  CPU 进入空闲模式            */
-    _K_hookKernel.HOOK_CpuIdleExit  = LW_NULL;                          /*  CPU 退出空闲模式            */
-    _K_hookKernel.HOOK_CpuIntEnter  = LW_NULL;                          /*  CPU 进入中断(异常)模式      */
-    _K_hookKernel.HOOK_CpuIntExit   = LW_NULL;                          /*  CPU 退出中断(异常)模式      */
-}
-/*********************************************************************************************************
 ** 函数名称: _GlobalPrimaryInit
 ** 功能描述: 初始化零散全局变量
 ** 输　入  : NONE
@@ -221,7 +192,6 @@ VOID _GlobalPrimaryInit (VOID)
     __cpuPrimaryInit();                                                 /*  CPU 结构初始化              */
     __interPrimaryStackInit();                                          /*  首先初始化中断堆栈          */
     __miscPrimarySmpInit();                                             /*  SMP 相关初始化              */
-    __hookInit();                                                       /*  hook 初始化                 */
     
     /*
      *  内核关键性状态变量初始化

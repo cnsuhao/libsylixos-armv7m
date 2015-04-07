@@ -35,12 +35,16 @@
 LW_API  
 ULONG  API_InterVectorEnable (ULONG  ulVector)
 {
+    INTREG  iregInterLevel;
+
     if (_Inter_Vector_Invalid(ulVector)) {
         _ErrorHandle(ERROR_KERNEL_VECTOR_NULL);
         return  (ERROR_KERNEL_VECTOR_NULL);
     }
 
+    LW_SPIN_LOCK_QUICK(&_K_slVectorTable, &iregInterLevel);
     __ARCH_INT_VECTOR_ENABLE(ulVector);
+    LW_SPIN_UNLOCK_QUICK(&_K_slVectorTable, iregInterLevel);
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_INT, MONITOR_EVENT_INT_VECT_EN, ulVector, LW_NULL);
     
@@ -53,17 +57,24 @@ ULONG  API_InterVectorEnable (ULONG  ulVector)
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : 如果 ulVector 为可嵌套中断, 则在中断上下文中禁能本中断, 退出中断时会自动打开. 
+             所以禁能操作需要在任务状态下操作.
+
                                            API 函数
 *********************************************************************************************************/
 LW_API  
 ULONG  API_InterVectorDisable (ULONG  ulVector)
 {
+    INTREG  iregInterLevel;
+    
     if (_Inter_Vector_Invalid(ulVector)) {
         _ErrorHandle(ERROR_KERNEL_VECTOR_NULL);
         return  (ERROR_KERNEL_VECTOR_NULL);
     }
 
+    LW_SPIN_LOCK_QUICK(&_K_slVectorTable, &iregInterLevel);
     __ARCH_INT_VECTOR_DISABLE(ulVector);
+    LW_SPIN_UNLOCK_QUICK(&_K_slVectorTable, iregInterLevel);
     
     MONITOR_EVT_LONG1(MONITOR_EVENT_ID_INT, MONITOR_EVENT_INT_VECT_DIS, ulVector, LW_NULL);
     

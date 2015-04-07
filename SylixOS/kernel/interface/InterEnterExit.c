@@ -148,6 +148,13 @@ VOID    API_InterExit (VOID)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
     pcpu = LW_CPU_GET_CUR();
+    
+#if LW_CFG_INTER_INFO > 0
+    if (pcpu->CPU_ulInterNestingMax < pcpu->CPU_ulInterNesting) {
+        pcpu->CPU_ulInterNestingMax = pcpu->CPU_ulInterNesting;
+    }
+#endif                                                                  /*  LW_CFG_INTER_INFO > 0       */
+
     if (pcpu->CPU_ulInterNesting) {                                     /*  系统中断嵌套层数--          */
         pcpu->CPU_ulInterNesting--;
     }

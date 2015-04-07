@@ -35,6 +35,7 @@
 2013.03.16  加入进程回调.
 2013.05.02  这里已经加入资源管理, 进程允许安装回调.
 2014.08.10  加入系统错误回调.
+2015.04.07  优化回调删除操作.
 *********************************************************************************************************/
 /*********************************************************************************************************
 注意：
@@ -143,7 +144,7 @@ ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         break;
         
     case LW_OPTION_THREAD_IDLE_HOOK:                                    /*  空闲线程钩子                */
-        if (API_KernelIsRunning()) {
+        if (LW_SYS_STATUS_IS_RUNNING()) {
             __SHEAP_FREE(pfuncnode);                                    /*  释放内存                    */
             _DebugHandle(__ERRORMESSAGE_LEVEL, "can not add idle hook in running status.\r\n");
             _ErrorHandle(ERROR_KERNEL_RUNNING);
@@ -336,6 +337,7 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
 {
              INTREG                 iregInterLevel;
              PLW_HOOK_CB            phookcb;
+             LW_HOOK_FUNC          *ppfunc;
              
              PLW_FUNC_NODE          pfuncnode;
     REGISTER PLW_LIST_LINE          plinePtr;
@@ -358,90 +360,112 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
     
     case LW_OPTION_THREAD_CREATE_HOOK:                                  /*  线程建立钩子                */
         phookcb = &_G_hookcbCreate;
+        ppfunc  = &_K_hookKernel.HOOK_ThreadCreate;
         break;
         
     case LW_OPTION_THREAD_DELETE_HOOK:                                  /*  线程删除钩子                */
         phookcb = &_G_hookcbDelete;
+        ppfunc  = &_K_hookKernel.HOOK_ThreadDelete;
         break;
         
     case LW_OPTION_THREAD_SWAP_HOOK:                                    /*  线程切换钩子                */
         phookcb = &_G_hookcbSwap;
+        ppfunc  = &_K_hookKernel.HOOK_ThreadSwap;
         break;
         
     case LW_OPTION_THREAD_TICK_HOOK:                                    /*  系统时钟中断钩子            */
         phookcb = &_G_hookcbTick;
+        ppfunc  = &_K_hookKernel.HOOK_ThreadTick;
         break;
         
     case LW_OPTION_THREAD_INIT_HOOK:                                    /*  线程初始化钩子              */
         phookcb = &_G_hookcbInit;
+        ppfunc  = &_K_hookKernel.HOOK_ThreadInit;
         break;
         
     case LW_OPTION_THREAD_IDLE_HOOK:                                    /*  空闲线程钩子                */
         phookcb = &_G_hookcbIdle;
+        ppfunc  = &_K_hookKernel.HOOK_ThreadIdle;
         break;
         
     case LW_OPTION_KERNEL_INITBEGIN:                                    /*  内核初始化开始钩子          */
         phookcb = &_G_hookcbInitBegin;
+        ppfunc  = &_K_hookKernel.HOOK_KernelInitBegin;
         break;
         
     case LW_OPTION_KERNEL_INITEND:                                      /*  内核初始化结束钩子          */
         phookcb = &_G_hookcbInitEnd;
+        ppfunc  = &_K_hookKernel.HOOK_KernelInitEnd;
         break;
         
     case LW_OPTION_KERNEL_REBOOT:                                       /*  内核重新启动                */
         phookcb = &_G_hookcbReboot;
+        ppfunc  = &_K_hookKernel.HOOK_KernelReboot;
         break;
         
     case LW_OPTION_WATCHDOG_TIMER:                                      /*  看门狗定时器钩子            */
         phookcb = &_G_hookcbWatchDog;
+        ppfunc  = &_K_hookKernel.HOOK_WatchDogTimer;
         break;
         
     case LW_OPTION_OBJECT_CREATE_HOOK:                                  /*  创建内核对象钩子            */
         phookcb = &_G_hookcbObjectCreate;
+        ppfunc  = &_K_hookKernel.HOOK_ObjectCreate;
         break;
     
     case LW_OPTION_OBJECT_DELETE_HOOK:                                  /*  删除内核对象钩子            */
         phookcb = &_G_hookcbObjectDelete;
+        ppfunc  = &_K_hookKernel.HOOK_ObjectDelete;
         break;
     
     case LW_OPTION_FD_CREATE_HOOK:                                      /*  文件描述符创建钩子          */
         phookcb = &_G_hookcbFdCreate;
+        ppfunc  = &_K_hookKernel.HOOK_FdCreate;
         break;
     
     case LW_OPTION_FD_DELETE_HOOK:                                      /*  文件描述符删除钩子          */
         phookcb = &_G_hookcbFdDelete;
+        ppfunc  = &_K_hookKernel.HOOK_FdDelete;
         break;
         
     case LW_OPTION_CPU_IDLE_ENTER:                                      /*  CPU 进入空闲模式            */
         phookcb = &_G_hookcbCpuIdleEnter;
+        ppfunc  = &_K_hookKernel.HOOK_CpuIdleEnter;
         break;
     
     case LW_OPTION_CPU_IDLE_EXIT:                                       /*  CPU 退出空闲模式            */
         phookcb = &_G_hookcbCpuIdleExit;
+        ppfunc  = &_K_hookKernel.HOOK_CpuIdleExit;
         break;
     
     case LW_OPTION_CPU_INT_ENTER:                                       /*  CPU 进入中断(异常)模式      */
         phookcb = &_G_hookcbCpuIntEnter;
+        ppfunc  = &_K_hookKernel.HOOK_CpuIntEnter;
         break;
     
     case LW_OPTION_CPU_INT_EXIT:                                        /*  CPU 退出中断(异常)模式      */
         phookcb = &_G_hookcbCpuIntExit;
+        ppfunc  = &_K_hookKernel.HOOK_CpuIntExit;
         break;
         
     case LW_OPTION_STACK_OVERFLOW_HOOK:                                 /*  堆栈溢出                    */
         phookcb = &_G_hookcbStkOverflow;
+        ppfunc  = &_K_hookKernel.HOOK_StkOverflow;
         break;
     
     case LW_OPTION_FATAL_ERROR_HOOK:                                    /*  致命错误                    */
         phookcb = &_G_hookcbFatalError;
+        ppfunc  = &_K_hookKernel.HOOK_FatalError;
         break;
             
     case LW_OPTION_VPROC_CREATE_HOOK:                                   /*  进程建立钩子                */
         phookcb = &_G_hookcbVpCreate;
+        ppfunc  = &_K_hookKernel.HOOK_VpCreate;
         break;
         
     case LW_OPTION_VPROC_DELETE_HOOK:                                   /*  进程删除钩子                */
         phookcb = &_G_hookcbVpDelete;
+        ppfunc  = &_K_hookKernel.HOOK_VpDelete;
         break;
     
     default:
@@ -457,14 +481,15 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
          plinePtr  = _list_line_get_next(plinePtr)) {                   /*  开始查询                    */
          
         pfuncnode = (PLW_FUNC_NODE)plinePtr;
-         
         if (pfuncnode->FUNCNODE_hookfuncPtr == hookfuncPtr) {
-            
             iregInterLevel = KN_INT_DISABLE();                          /*  关闭中断                    */
             if (plinePtr == phookcb->HOOKCB_plineHookOp) {              /*  是否为当前操作的指针        */
                 phookcb->HOOKCB_plineHookOp = _list_line_get_next(plinePtr);
             }
             _List_Line_Del(plinePtr, &phookcb->HOOKCB_plineHookHeader);
+            if (phookcb->HOOKCB_plineHookHeader == LW_NULL) {
+                *ppfunc = LW_NULL;                                      /*  此向量不再拥有回调函数      */
+            }
             KN_INT_ENABLE(iregInterLevel);                              /*  打开中断                    */
              
             LW_SPIN_UNLOCK(&phookcb->HOOKCB_slHook);
