@@ -813,7 +813,7 @@ static ssize_t  __yaffsRead (PLW_FD_ENTRY   pfdentry,
     if (pyaffile->YAFFIL_iFileType == __YAFFS_FILE_TYPE_NODE) {
         sstReadNum = (ssize_t)yaffs_pread(pyaffile->YAFFIL_iFd,
                                           (PVOID)pcBuffer, (unsigned int)stMaxBytes, 
-                                          (unsigned int)pfdentry->FDENTRY_oftPtr);
+                                          pfdentry->FDENTRY_oftPtr);
         if (sstReadNum > 0) {
             pfdentry->FDENTRY_oftPtr += (off_t)sstReadNum;              /*  更新文件指针                */
         }
@@ -846,7 +846,7 @@ static ssize_t  __yaffsPRead (PLW_FD_ENTRY   pfdentry,
     if (pyaffile->YAFFIL_iFileType == __YAFFS_FILE_TYPE_NODE) {
         sstReadNum = (ssize_t)yaffs_pread(pyaffile->YAFFIL_iFd,
                                           (PVOID)pcBuffer, (unsigned int)stMaxBytes, 
-                                          (unsigned int)oftPos);
+                                          oftPos);
     }
     __YAFFS_OPUNLOCK();
     
@@ -875,7 +875,7 @@ static ssize_t  __yaffsWrite (PLW_FD_ENTRY  pfdentry,
     if (pyaffile->YAFFIL_iFileType == __YAFFS_FILE_TYPE_NODE) {
         sstWriteNum = (ssize_t)yaffs_pwrite(pyaffile->YAFFIL_iFd,
                                             (CPVOID)pcBuffer, (unsigned int)stNBytes,
-                                            (unsigned int)pfdentry->FDENTRY_oftPtr);
+                                            pfdentry->FDENTRY_oftPtr);
         if (sstWriteNum > 0) {
             struct yaffs_stat   yafstat;
             pfdentry->FDENTRY_oftPtr += (off_t)sstWriteNum;             /*  更新文件指针                */
@@ -920,7 +920,7 @@ static ssize_t  __yaffsPWrite (PLW_FD_ENTRY  pfdentry,
     if (pyaffile->YAFFIL_iFileType == __YAFFS_FILE_TYPE_NODE) {
         sstWriteNum = (ssize_t)yaffs_pwrite(pyaffile->YAFFIL_iFd,
                                             (CPVOID)pcBuffer, (unsigned int)stNBytes,
-                                            (unsigned int)oftPos);
+                                            oftPos);
         if (sstWriteNum > 0) {
             struct yaffs_stat   yafstat;
             yaffs_fstat(pyaffile->YAFFIL_iFd, &yafstat);
