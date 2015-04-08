@@ -55,6 +55,7 @@ __LW_RETU_FUNC_DECLARE(time_t, timegm, (struct tm *ptm))
 __LW_RETU_FUNC_DECLARE(double, difftime, (time_t time1, time_t time2))
 
 __LW_RETU_FUNC_DECLARE(clock_t, clock, (void))
+__LW_RETU_FUNC_DECLARE(int, clock_getres, (clockid_t  clockid, struct timespec *res))
 __LW_RETU_FUNC_DECLARE(int, clock_gettime, (clockid_t  clockid, struct timespec  *tv))
 __LW_RETU_FUNC_DECLARE(int, clock_settime, (clockid_t  clockid, const struct timespec  *tv))
 __LW_RETU_FUNC_DECLARE(int, clock_nanosleep, (clockid_t  clockid, int  iFlags, 

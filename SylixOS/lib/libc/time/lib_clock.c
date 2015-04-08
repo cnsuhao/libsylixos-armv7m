@@ -28,6 +28,14 @@
 #include "../SylixOS/loader/include/loader_vppatch.h"
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
 /*********************************************************************************************************
+  高分辨率时钟接口
+*********************************************************************************************************/
+#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
+#define LW_TIME_HIGH_RESOLUTION(tv)     bspTickHighResolution(tv)
+#else
+#define LW_TIME_HIGH_RESOLUTION(tv)
+#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
+/*********************************************************************************************************
 ** 函数名称: lib_clock
 ** 功能描述: 
 ** 输　入  : 
@@ -42,21 +50,26 @@ clock_t  lib_clock (VOID)
     return  ((clock_t)API_TimeGet());
 }
 /*********************************************************************************************************
-** 函数名称: bspTickHighResolution
-** 功能描述: BSP 通过读取定时器当前计数值, 计算出一个针对上一次 tick 中断到当前的精确时间.
-** 输　入  : NONE
-** 输　出  : 对上一次 tick 中断到当前的精确时间, 单位为纳秒
+** 函数名称: lib_clock_getres
+** 功能描述: 
+** 输　入  : 
+** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
-** 说  明  : 这里使用 weak 是为了兼容老版本的 BSP.
+** 注  意  : 这里并没有判断真正的时钟精度.
 *********************************************************************************************************/
-#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
-
-VOID __attribute__((weak)) bspTickHighResolution (struct timespec *tv)
+INT  lib_clock_getres (clockid_t  clockid, struct timespec *res)
 {
+    if (!res) {
+        _ErrorHandle(EINVAL);
+        return  (PX_ERROR);
+    }
+    
+    res->tv_sec  = 0;
+    res->tv_nsec = 1;
+    
+    return  (ERROR_NONE);
 }
-
-#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
 /*********************************************************************************************************
 ** 函数名称: lib_clock_gettime
 ** 功能描述: 
@@ -78,11 +91,13 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
     if (clockid == CLOCK_REALTIME) {
         LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
         *tv = _K_tvTODCurrent;
+        LW_TIME_HIGH_RESOLUTION(tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
     
     } else if (clockid == CLOCK_MONOTONIC) {
         LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
         *tv = _K_tvTODMono;
+        LW_TIME_HIGH_RESOLUTION(tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
     
     } else if (clockid == CLOCK_PROCESS_CPUTIME_ID) {
@@ -94,6 +109,7 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
         }
         LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         __tickToTimespec(pvproc->VP_clockUser + pvproc->VP_clockSystem, tv);
+        LW_TIME_HIGH_RESOLUTION(tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 #else
         _ErrorHandle(ENOSYS);
@@ -104,16 +120,13 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
         LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         LW_TCB_GET_CUR(ptcbCur);
         __tickToTimespec(ptcbCur->TCB_ulCPUTicks, tv);
+        LW_TIME_HIGH_RESOLUTION(tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
     
     } else {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
-    
-#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
-    bspTickHighResolution(tv);                                          /*  高精度时间分辨率计算        */
-#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
 
     return  (ERROR_NONE);
 }
@@ -180,11 +193,8 @@ INT  lib_clock_nanosleep (clockid_t  clockid, int  iFlags,
         } else {
             tvNow = _K_tvTODMono;
         }
+        LW_TIME_HIGH_RESOLUTION(&tvNow);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
-    
-#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
-        bspTickHighResolution(&tvNow);
-#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
 
         if ((rqtp->tv_sec < tvNow.tv_sec) ||
             ((rqtp->tv_sec == tvNow.tv_sec) &&

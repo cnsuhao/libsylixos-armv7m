@@ -181,7 +181,7 @@ struct module {
 #define THIS_MODULE  LW_NULL
 
 /*********************************************************************************************************
-    POSIX TIME ns
+  POSIX TIME ns
 *********************************************************************************************************/
 
 #define __TIMEVAL_NSEC_MAX     1000000000
@@ -193,7 +193,7 @@ struct timespec {                                                       /*  POSI
 };
 
 /*********************************************************************************************************
-    POSIX TIME us
+  POSIX TIME us
 *********************************************************************************************************/
 
 #define __TIMEVAL_USEC_MAX     1000000
@@ -204,7 +204,7 @@ struct timeval {
 };
 
 /*********************************************************************************************************
-    POSIX itimer
+  POSIX itimer
 *********************************************************************************************************/
 
 struct itimerval {
@@ -213,7 +213,7 @@ struct itimerval {
 };
 
 /*********************************************************************************************************
-    POSIX timer
+  POSIX timer
 *********************************************************************************************************/
 
 struct itimerspec {
@@ -267,7 +267,7 @@ struct sigvec {
 };
 
 /*********************************************************************************************************
-    POSIX 分散缓冲区
+  POSIX 分散缓冲区
 *********************************************************************************************************/
 
 struct iovec {
@@ -276,7 +276,7 @@ struct iovec {
 };
 
 /*********************************************************************************************************
-    signal rel(sigval siginfo sigevent)
+  signal rel(sigval siginfo sigevent)
 *********************************************************************************************************/
 
 typedef union sigval {
@@ -357,7 +357,7 @@ typedef struct sigevent {
 } sigevent_t;
 
 /*********************************************************************************************************
-    POSIX TIME ns
+  POSIX TIME ns
 *********************************************************************************************************/
 
 struct tm {
@@ -398,8 +398,9 @@ typedef struct {
 #define LW_SPINLOCK_DEFINE(sl)      spinlock_t      sl                  /*  为了兼容性, SMP 或 UP 都定义*/
 
 /*********************************************************************************************************
-    POSIX TIME timeval & timespec to Tick
+  POSIX TIME timeval & timespec to Tick
 *********************************************************************************************************/
+#ifdef  __SYLIXOS_KERNEL
 
 static LW_INLINE  ULONG   __timevalToTick (const struct timeval  *ptv)
 {
@@ -442,7 +443,7 @@ static LW_INLINE  INT64   __timespecToTick64 (const struct timespec  *ptv)
 }
 
 /*********************************************************************************************************
-    POSIX TIME Tick to timeval & timespec  
+  POSIX TIME Tick to timeval & timespec  
 *********************************************************************************************************/
 
 static LW_INLINE  VOID   __tickToTimeval (ULONG  ulTicks, struct timeval  *ptv)
@@ -470,7 +471,22 @@ static LW_INLINE  VOID   __tick64ToTimespec (INT64  i64Ticks, struct timespec  *
 }
 
 /*********************************************************************************************************
-    POSIX TIME sub two struct timespec
+  POSIX TIME add two struct timespec
+*********************************************************************************************************/
+
+static LW_INLINE  VOID   __timespecAdd (struct timespec  *ptv1, const struct timespec  *ptv2)
+{
+    ptv1->tv_sec  += ptv2->tv_sec;
+    ptv1->tv_nsec += ptv2->tv_nsec;
+    
+    if (ptv1->tv_nsec >= __TIMEVAL_NSEC_MAX) {
+        ptv1->tv_sec++; 
+        ptv1->tv_nsec -= __TIMEVAL_NSEC_MAX;
+    }
+}
+
+/*********************************************************************************************************
+  POSIX TIME sub two struct timespec
 *********************************************************************************************************/
 
 static LW_INLINE  VOID   __timespecSub (struct timespec  *ptv1, const struct timespec  *ptv2)
@@ -481,6 +497,7 @@ static LW_INLINE  VOID   __timespecSub (struct timespec  *ptv1, const struct tim
     if (ptv1->tv_nsec >= __TIMEVAL_NSEC_MAX) {
         ptv1->tv_sec++; 
         ptv1->tv_nsec -= __TIMEVAL_NSEC_MAX;
+    
     } else if (ptv1->tv_nsec < 0) {
         ptv1->tv_sec--; 
         ptv1->tv_nsec += __TIMEVAL_NSEC_MAX;
@@ -488,7 +505,7 @@ static LW_INLINE  VOID   __timespecSub (struct timespec  *ptv1, const struct tim
 }
 
 /*********************************************************************************************************
-    POSIX TIME check if has left time
+  POSIX TIME check if has left time
 *********************************************************************************************************/
 
 static LW_INLINE INT  __timespecLeftTime (const struct timespec  *ptv1, const struct timespec  *ptv2)
@@ -497,6 +514,7 @@ static LW_INLINE INT  __timespecLeftTime (const struct timespec  *ptv1, const st
              (ptv1->tv_sec == ptv2->tv_sec && ptv1->tv_nsec < ptv2->tv_nsec));
 }
 
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
 #endif                                                                  /*  __K_PTYPE_H                 */
 /*********************************************************************************************************
   END

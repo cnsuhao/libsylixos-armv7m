@@ -255,8 +255,47 @@ __wait_again:
     return  (0);
 }
 /*********************************************************************************************************
+** 函数名称: __timeGetHighResolution
+** 功能描述: 获得当前高精度时间 (使用 CLOCK_MONOTONIC)
+** 输　入  : ptv       高精度时间
+** 全局变量: NONE
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __timeGetHighResolution (struct timespec  *ptv)
+{
+    INTREG  iregInterLevel;
+    
+    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    *ptv = _K_tvTODMono;
+#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
+    bspTickHighResolution(ptv);                                         /*  高精度时间分辨率计算        */
+#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+}
+/*********************************************************************************************************
+** 函数名称: __timePassNsec
+** 功能描述: 平静等待指定的纳秒数 (一个 tick 时间以内)
+** 输　入  : lNsec     纳秒数
+** 全局变量: NONE
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __timePassNsec (LONG  lNsec)
+{
+#if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
+    struct timespec  tvStart, tvTemp;
+    
+    __timeGetHighResolution(&tvStart);
+    do {
+        __timeGetHighResolution(&tvTemp);
+        __timespecSub(&tvTemp, &tvStart);
+    } while ((tvTemp.tv_sec == 0) && (tvTemp.tv_nsec < lNsec));
+#else
+    bspDelayNs((ULONG)lNsec);                                           /*  使用 BSP 断延迟函数         */
+#endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
+}
+/*********************************************************************************************************
 ** 函数名称: nanosleep 
-** 功能描述: 使调用此函数的线程睡眠一个指定的时间, 睡眠过程中可能被信号惊醒!!! (POSIX)
+** 功能描述: 使调用此函数的线程睡眠一个指定的时间, 睡眠过程中可能被信号唤醒. (POSIX)
 ** 输　入  : rqtp         睡眠的时间
 **           rmtp         保存剩余时间的结构.
 ** 输　出  : ERROR_NONE  or  PX_ERROR
@@ -282,18 +321,22 @@ INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
 	REGISTER ULONG                 ulError;
              ULONG                 ulTick;
              
+             struct timespec        tvStart;
+             struct timespec        tvTemp;
+             
     if (!rqtp) {                                                        /*  指定时间为空                */
         _ErrorHandle(EINVAL);
         return (PX_ERROR);
     }
+    
     if (rqtp->tv_nsec >= __TIMEVAL_NSEC_MAX) {                          /*  时间格式错误                */
         _ErrorHandle(EINVAL);
         return (PX_ERROR);
     }
     
     ulTick = __timespecToTick((struct timespec *)rqtp);
-    if (!ulTick) {
-        bspDelayNs((ULONG)rqtp->tv_nsec);                               /*  使用 BSP 断延迟函数         */
+    if (!ulTick) {                                                      /*  不到一个 tick               */
+        __timePassNsec(rqtp->tv_nsec);                                  /*  平静度过 nsec               */
         if (rmtp) {
             rmtp->tv_sec  = 0;                                          /*  不存在时间差别              */
             rmtp->tv_nsec = 0;
@@ -301,11 +344,9 @@ INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
         return  (ERROR_NONE);
     }
     
-__wait_again:
-    if (!ulTick) {                                                      /*  不进行延迟                  */
-        return  (ERROR_NONE);
-    }
+    __timeGetHighResolution(&tvStart);                                  /*  记录开始的时间              */
     
+__wait_again:
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
@@ -325,37 +366,39 @@ __wait_again:
     
     iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
     if (iSchedRet == LW_SIGNAL_EINTR) {
-        iRetVal =  PX_ERROR;                                            /*  被信号激活                  */
-        ulError =  EINTR;
-    
-    } else if (iSchedRet == LW_SIGNAL_RESTART) {
-        ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        goto    __wait_again;
+        iRetVal = PX_ERROR;                                             /*  被信号激活                  */
+        ulError = EINTR;
     
     } else {
-        iRetVal =  ERROR_NONE;                                          /*  自然唤醒                    */
-        ulError =  ERROR_NONE;
+        if (iSchedRet == LW_SIGNAL_RESTART) {                           /*  信号要求重启等待            */
+            ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);           /*  重新计算等待时间            */
+            if (ulTick != 0ul) {
+                goto    __wait_again;                                   /*  重新等待剩余的 tick         */
+            }
+        }
+        iRetVal = ERROR_NONE;                                           /*  自然唤醒                    */
+        ulError = ERROR_NONE;
     }
     
-    if (rmtp) {
-        ULONG           ulTimeTemp;
-        
-        struct timespec tvNow;
-        struct timespec tvThen;
-        
-        __KERNEL_TIME_GET(ulTimeTemp, ULONG);                           /*  记录系统时间                */
-        
-        __tickToTimespec(ulKernelTime, &tvThen);                        /*  等待前的时间                */
-        __tickToTimespec(ulTimeTemp,   &tvNow);                         /*  等待后的时间                */
-    
-        __timespecSub(&tvNow, &tvThen);                                 /*  计算时间差                  */
-        
-        if (__timespecLeftTime(&tvNow, (struct timespec *)rqtp)) {      /*  是否存在差别                */
-            *rmtp = *rqtp;
-            __timespecSub(rmtp, &tvNow);                                /*  计算时间偏差                */
-        } else {
+    if (ulError ==  ERROR_NONE) {                                       /*  tick 已经延迟结束           */
+        __timeGetHighResolution(&tvTemp);
+        __timespecSub(&tvTemp, &tvStart);                               /*  计算已经延迟的时间          */
+        if (__timespecLeftTime(&tvTemp, (struct timespec *)rqtp)) {     /*  还有剩余时间需要延迟        */
+            __timePassNsec(rqtp->tv_nsec - tvTemp.tv_nsec);             /*  平静度过 nsec               */
+        }
+        if (rmtp) {
             rmtp->tv_sec  = 0;                                          /*  不存在时间差别              */
             rmtp->tv_nsec = 0;
+        }
+    
+    } else {                                                            /*  信号唤醒                    */
+        if (rmtp) {
+            *rmtp = *rqtp;
+            __timeGetHighResolution(&tvTemp);
+            __timespecSub(&tvTemp, &tvStart);                           /*  计算已经延迟的时间          */
+            if (__timespecLeftTime(&tvTemp, rmtp)) {                    /*  没有延迟够                  */
+                __timespecSub(rmtp, &tvTemp);                           /*  计算没有延迟够的时间        */
+            }
         }
     }
              

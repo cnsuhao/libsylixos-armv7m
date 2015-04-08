@@ -166,6 +166,7 @@ typedef struct {
     struct sigevent            TIMER_sigevent;                          /*  定时器信号相关属性          */
                                                                         /*  SIGEV_THREAD 必须使能 POSIX */
     UINT64                     TIMER_u64Overrun;                        /*  timer_getoverrun            */
+    clockid_t                  TIMER_clockid;                           /*  仅对 POSIX 定时器有效       */
     
 #if LW_CFG_TIMERFD_EN > 0
     PVOID                      TIMER_pvTimerfd;                         /*  timerfd 结构                */

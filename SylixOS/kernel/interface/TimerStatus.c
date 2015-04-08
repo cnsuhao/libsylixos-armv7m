@@ -19,19 +19,21 @@
 ** 描        述: 获得定时器相关状态
 
 ** BUG
-2007.10.20  加入 _DebugHandle() 功能。
+2007.10.20  加入 _DebugHandle() 功能.
+2015.04.07  加入 API_TimerStatusEx() 扩展接口.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-** 函数名称: API_TimerStatus
-** 功能描述: 获得定时器相关状态
+** 函数名称: API_TimerStatusEx
+** 功能描述: 获得定时器相关状态扩展接口, 仅提供 POSIX 接口内部使用
 ** 输　入  : 
 **           ulId                        定时器句柄
 **           pbTimerRunning              定时器是否在运行
 **           pulOption                   定时器选项
 **           pulCounter                  定时器当前计数值
 **           pulInterval                 间隔时间, 为 0 表示单次运行
+**           pclockid                    POSIX 时间类型
 ** 输　出  : ERROR_CODE
 ** 全局变量: 
 ** 调用模块: 
@@ -40,11 +42,12 @@
 #if	((LW_CFG_HTIMER_EN > 0) || (LW_CFG_ITIMER_EN > 0)) && (LW_CFG_MAX_TIMERS > 0)
 
 LW_API  
-ULONG  API_TimerStatus (LW_OBJECT_HANDLE          ulId,
-                        BOOL                     *pbTimerRunning,
-                        ULONG                    *pulOption,
-                        ULONG                    *pulCounter,
-                        ULONG                    *pulInterval)
+ULONG  API_TimerStatusEx (LW_OBJECT_HANDLE          ulId,
+                          BOOL                     *pbTimerRunning,
+                          ULONG                    *pulOption,
+                          ULONG                    *pulCounter,
+                          ULONG                    *pulInterval,
+                          clockid_t                *pclockid)
 {
              INTREG                    iregInterLevel;
     REGISTER UINT16                    usIndex;
@@ -107,9 +110,37 @@ ULONG  API_TimerStatus (LW_OBJECT_HANDLE          ulId,
         *pulInterval = ptmr->TIMER_ulCounterSave;
     }
     
+    if (pclockid) {
+        *pclockid = ptmr->TIMER_clockid;
+    }
+    
     __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
     
     return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: API_TimerStatus
+** 功能描述: 获得定时器相关状态
+** 输　入  : 
+**           ulId                        定时器句柄
+**           pbTimerRunning              定时器是否在运行
+**           pulOption                   定时器选项
+**           pulCounter                  定时器当前计数值
+**           pulInterval                 间隔时间, 为 0 表示单次运行
+** 输　出  : ERROR_CODE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG  API_TimerStatus (LW_OBJECT_HANDLE          ulId,
+                        BOOL                     *pbTimerRunning,
+                        ULONG                    *pulOption,
+                        ULONG                    *pulCounter,
+                        ULONG                    *pulInterval)
+{
+    return  (API_TimerStatusEx(ulId, pbTimerRunning, pulOption,
+                               pulCounter, pulInterval, LW_NULL));
 }
 
 #endif                                                                  /*  ((LW_CFG_HTIMER_EN > 0)     */

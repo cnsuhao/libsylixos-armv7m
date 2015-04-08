@@ -50,7 +50,7 @@ VOID  _RtcInit (VOID)
     _K_tvTODCurrent.tv_sec  = timeNow;
     _K_tvTODCurrent.tv_nsec = 0;
     
-    _K_tvTODMono.tv_sec  = timeNow;
+    _K_tvTODMono.tv_sec  = 0;
     _K_tvTODMono.tv_nsec = 0;
 #endif                                                                  /*  LW_CFG_RTC_EN > 0           */
 }

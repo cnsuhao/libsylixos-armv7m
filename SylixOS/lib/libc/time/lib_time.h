@@ -86,6 +86,7 @@ time_t       lib_timegm(struct tm *ptm);                                /*  UTC 
 double       lib_difftime(time_t time1, time_t time2);
 
 clock_t      lib_clock(VOID);
+INT          lib_clock_getres(clockid_t   clockid, struct timespec *res);
 INT          lib_clock_gettime(clockid_t  clockid, struct timespec  *tv);
 INT          lib_clock_settime(clockid_t  clockid, const struct timespec  *tv);
 INT          lib_clock_nanosleep(clockid_t  clockid, int  iFlags, 

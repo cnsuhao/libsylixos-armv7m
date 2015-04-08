@@ -744,6 +744,14 @@ LW_API ULONG            API_TimerStatus(LW_OBJECT_HANDLE          ulId,
                                         ULONG                    *pulCounter,
                                         ULONG                    *pulInterval);
                                                                         /*  获得一个定时器状态          */
+                                                                        
+LW_API ULONG            API_TimerStatusEx(LW_OBJECT_HANDLE          ulId,
+                                          BOOL                     *pbTimerRunning,
+                                          ULONG                    *pulOption,
+                                          ULONG                    *pulCounter,
+                                          ULONG                    *pulInterval,
+                                          clockid_t                *pclockid);
+                                                                        /*  获得一个定时器状态扩展接口  */
 
 LW_API ULONG            API_TimerGetName(LW_OBJECT_HANDLE  ulId, 
                                          PCHAR             pcName);     /*  获得定时器名字              */

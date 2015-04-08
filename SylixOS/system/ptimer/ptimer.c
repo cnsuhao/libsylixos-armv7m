@@ -35,6 +35,7 @@
 2013.10.08  加入 setitimer 与 getitimer 函数.
 2013.11.20  支持 timerfd 功能.
 2014.09.29  加入对 ITIMER_VIRTUAL 与 ITIMER_PROF 支持.
+2015.04.07  加入 clock id 类型的支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -57,10 +58,8 @@ static VOID  __ptimerThreadDeleteHook(LW_OBJECT_HANDLE  ulId);
 /*********************************************************************************************************
 ** 函数名称: __ptimerHookInstall
 ** 功能描述: 定时器任务删除回调安装
-** 输　入  : clockid      时间基准
-**           sigeventT    信号时间
-**           ptimer       定时器句柄
-** 输　出  : ERROR_NONE  or  PX_ERROR
+** 输　入  : NONE
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
@@ -117,6 +116,11 @@ INT  timer_create_internal (clockid_t  clockid, struct sigevent *sigeventT,
         return  (PX_ERROR);
     }
     
+    if ((clockid != CLOCK_REALTIME) && (clockid != CLOCK_MONOTONIC)) {  /*  支持 REAL 与 MONO 时钟      */
+        _ErrorHandle(ENOTSUP);
+        return  (PX_ERROR);
+    }
+    
     if (sigeventT) {
         if (!__issig(sigeventT->sigev_signo)) {                         /*  检查信号有效性              */
             _ErrorHandle(EINVAL);
@@ -138,6 +142,7 @@ INT  timer_create_internal (clockid_t  clockid, struct sigevent *sigeventT,
     ptmr = &_K_tmrBuffer[_ObjectGetIndex(ulTimer)];
     ptmr->TIMER_ulThreadId = API_ThreadIdSelf();
     ptmr->TIMER_ulTimer    = ulTimer;                                   /*  定义为 posix 定时器         */
+    ptmr->TIMER_clockid    = clockid;
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
     if (sigeventT == LW_NULL) {
@@ -355,18 +360,21 @@ INT  timer_settime (timer_t                  timer,
     REGISTER ULONG       ulOption;
     
     LW_OBJECT_HANDLE     ulTimer = timer;
+    clockid_t            clockidTimer;
     
     if (!timer) {
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }
     
+    ulError = API_TimerStatusEx((LW_OBJECT_HANDLE)timer, &bIsRunning,
+                                LW_NULL, &ulCounter, &ulInterval, 
+                                &clockidTimer);                         /*  获得定时器状态              */
+    if (ulError) {
+        return  (PX_ERROR);
+    }
+    
     if (ptvOld) {
-        ulError = API_TimerStatus((LW_OBJECT_HANDLE)timer, &bIsRunning,
-                                  LW_NULL, &ulCounter, &ulInterval);    /*  获得定时器状态              */
-        if (ulError) {
-            return  (PX_ERROR);
-        }
         if (bIsRunning == LW_FALSE) {
             ptvOld->it_interval.tv_sec  = 0;
             ptvOld->it_interval.tv_nsec = 0;
@@ -401,7 +409,7 @@ INT  timer_settime (timer_t                  timer,
         struct timespec  tvNow;
         struct timespec  tvValue = ptvNew->it_value;
         
-        lib_clock_gettime(CLOCK_REALTIME, &tvNow);                      /*  使用 realtime               */
+        lib_clock_gettime(clockidTimer, &tvNow);                        /*  使用 clockidTimer           */
         
         if ((ptvNew->it_value.tv_sec < tvNow.tv_sec) ||
             ((ptvNew->it_value.tv_sec == tvNow.tv_sec) &&

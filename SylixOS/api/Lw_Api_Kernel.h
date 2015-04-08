@@ -359,11 +359,11 @@
 
 #define Lw_Timer_Status                         API_TimerStatus
 #define Lw_Timer_Info                           API_TimerStatus
+#define Lw_Timer_StatusEx                       API_TimerStatusEx
+#define Lw_Timer_InfoEx                         API_TimerStatusEx
 
 #define Lw_Timer_GetName                        API_TimerGetName
-
 #define Lw_Timer_HTicks                         API_TimerHTicks
-
 #define Lw_Timer_HGetFrequency                  API_TimerHGetFrequency
 
 /*********************************************************************************************************
