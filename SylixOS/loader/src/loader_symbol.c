@@ -377,7 +377,7 @@ INT __moduleSymGetValue (LW_LD_EXEC_MODULE  *pmodule, BOOL  bIsWeak,
         return  (ERROR_NONE);
     }
     
-    fprintf(stderr, "can not find symbol: %s\n", pcSymName);
+    fprintf(stderr, "library %s can not find symbol: %s\n", pmodule->EMOD_pcModulePath, pcSymName);
 
     return  (PX_ERROR);
 }
