@@ -60,6 +60,7 @@ typedef size_t     *PLW_STACK;
 
 #define LW_IRQ_NONE         0
 #define LW_IRQ_HANDLED      1
+#define LW_IRQ_HANDLED_DISV 2                                           /*  中断处理结束并且屏蔽本中断  */
 #define LW_IRQ_RETVAL(x)    ((x) != 0)
 
 #endif                                                                  /*  __SYLIXOS_KERNEL            */

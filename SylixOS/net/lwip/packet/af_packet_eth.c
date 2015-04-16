@@ -16,7 +16,10 @@
 **
 ** 文件创建日期: 2014 年 03 月 21 日
 **
-** 描        述: AF_PACKET 以太网类型支持
+** 描        述: AF_PACKET 以太网类型支持.
+**
+** BUG:
+2015.04.16  修正 __packetEthRawSendto() 内存泄露问题.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -67,12 +70,6 @@ errno_t  __packetEthRawSendto (CPVOID                pvPacket,
     if (!netif_is_up(pnetif)) {
         UNLOCK_TCPIP_CORE();
         return  (ENETDOWN);
-    }
-    
-    pbuf_hdr = pbuf_alloc(PBUF_RAW, ETH_HLEN + ETH_PAD_SIZE, PBUF_RAM); /*  分配带有 PAD 的报头         */
-    if (pbuf_hdr == LW_NULL) {
-        UNLOCK_TCPIP_CORE();
-        return  (ENOMEM);
     }
     
 #if ETH_PAD_SIZE

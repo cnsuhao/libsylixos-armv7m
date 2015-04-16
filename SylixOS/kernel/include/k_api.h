@@ -923,7 +923,7 @@ LW_API ULONG            API_InterVectorSetFlag(ULONG  ulVector, ULONG  ulFlag);
 LW_API ULONG            API_InterVectorGetFlag(ULONG  ulVector, ULONG  *pulFlag);
                                                                         /*  获取中断向量属性            */
 
-LW_API VOID             API_InterVectorIsr(ULONG    ulVector);          /*  中断服务程序，BSP中断调用   */
+LW_API irqreturn_t      API_InterVectorIsr(ULONG    ulVector);          /*  中断服务程序，BSP中断调用   */
 
 #if LW_CFG_SMP_EN > 0
 LW_API VOID             API_InterVectorIpi(ULONG  ulCPUId, 

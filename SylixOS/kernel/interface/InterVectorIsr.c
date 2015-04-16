@@ -33,20 +33,20 @@
 ** 函数名称: API_InterVectorIsr
 ** 功能描述: 向量中断总服务
 ** 输　入  : ulVector                      中断向量号 (arch 层函数需要保证此参数正确)
-** 输　出  : NONE
+** 输　出  : 中断返回值
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : 这里并不处理中断嵌套, 他需要 arch 层移植函数支持.
                                            API 函数
 *********************************************************************************************************/
 LW_API
-VOID  API_InterVectorIsr (ULONG  ulVector)
+irqreturn_t  API_InterVectorIsr (ULONG  ulVector)
 {
     PLW_CLASS_CPU       pcpu;
     PLW_LIST_LINE       plineTemp;
     PLW_CLASS_INTDESC   pidesc;
     PLW_CLASS_INTACT    piaction;
-    irqreturn_t         irqret;
+    irqreturn_t         irqret = LW_IRQ_NONE;
            
     pcpu = LW_CPU_GET_CUR();                                            /*  中断处理程序中, 不会改变 CPU*/
     
@@ -92,6 +92,8 @@ VOID  API_InterVectorIsr (ULONG  ulVector)
     
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_INT, MONITOR_EVENT_INT_EXIT, 
                       ulVector, pcpu->CPU_ulInterNesting, LW_NULL);
+                      
+    return  (irqret);
 }
 /*********************************************************************************************************
 ** 函数名称: API_InterVectorIpi

@@ -44,6 +44,8 @@
 *********************************************************************************************************/
 VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
 {
+    REGISTER irqreturn_t irqret;
+
     if (_Inter_Vector_Invalid(ulVector)) {
         return;                                                         /*  向量号不正确                */
     }
@@ -59,12 +61,19 @@ VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
         KN_INT_ENABLE_FORCE();                                          /*  允许中断                    */
     }
 
-    API_InterVectorIsr(ulVector);
+    irqret = API_InterVectorIsr(ulVector);                              /*  调用中断服务程序            */
     
     if (bPreemptive) {
         KN_INT_DISABLE();                                               /*  禁能中断                    */
+        if (irqret != LW_IRQ_HANDLED_DISV) {
+            VECTOR_OP_LOCK();
+            __ARCH_INT_VECTOR_ENABLE(ulVector);                         /*  允许 vector 中断            */
+            VECTOR_OP_UNLOCK();
+        }
+    
+    } else if (irqret == LW_IRQ_HANDLED_DISV) {
         VECTOR_OP_LOCK();
-        __ARCH_INT_VECTOR_ENABLE(ulVector);                             /*  允许 vector 中断            */
+        __ARCH_INT_VECTOR_DISABLE(ulVector);                            /*  屏蔽 vector 中断            */
         VECTOR_OP_UNLOCK();
     }
 }
