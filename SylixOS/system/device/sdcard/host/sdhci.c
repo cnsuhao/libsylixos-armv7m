@@ -370,13 +370,15 @@ static LW_INLINE INT __sdhciCmdRespType (PLW_SD_COMMAND psdcmd)
 
     return  (iType);
 }
+
 static LW_INLINE VOID __sdhciSdmaAddrUpdate (__PSDHCI_HOST psdhcihost, LONG lSysAddr)
 {
     SDHCI_WRITEL(&psdhcihost->SDHCIHS_sdhcihostattr,
                  SDHCI_SYS_SDMA,
                  (UINT32)lSysAddr);
 }
-static LW_INLINE VOID __sdhciHostRest (__PSDHCI_HOST psdhcihost, UINT8 ucBitMask)
+
+static LW_INLINE VOID __sdhciHostReset (__PSDHCI_HOST psdhcihost, UINT8 ucBitMask)
 {
     INT     iTimeOut = 1000;
 
@@ -392,6 +394,7 @@ static LW_INLINE VOID __sdhciHostRest (__PSDHCI_HOST psdhcihost, UINT8 ucBitMask
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "host rest timeout.\r\n");
     }
 }
+
 static LW_INLINE VOID __sdhciDmaSelect (__PSDHCI_HOST psdhcihost, UINT8 ucDmaType)
 {
     UINT8 ucHostCtrl;
@@ -403,6 +406,7 @@ static LW_INLINE VOID __sdhciDmaSelect (__PSDHCI_HOST psdhcihost, UINT8 ucDmaTyp
                  SDHCI_HOST_CONTROL,
                  ucHostCtrl);
 }
+
 static LW_INLINE VOID __sdhciIntClear (__PSDHCI_HOST psdhcihost)
 {
     SDHCI_WRITEL(&psdhcihost->SDHCIHS_sdhcihostattr, SDHCI_INT_STATUS, SDHCI_INT_ALL_MASK);
@@ -491,7 +495,7 @@ LW_API PVOID  API_SdhciHostCreate (CPCHAR               pcAdapterName,
     }
     psdhcihost->SDHCIHS_psdhcisdmhost = psdhcisdmhost;                  /*  创建 SDM 层 HOST 对象       */
 
-    __sdhciHostRest(psdhcihost, SDHCI_SFRST_CMD | SDHCI_SFRST_DATA);
+    __sdhciHostReset(psdhcihost, SDHCI_SFRST_CMD | SDHCI_SFRST_DATA);
 
     if (!SDHCI_QUIRK_FLG(psdhcihostattr, SDHCI_QUIRK_FLG_DONOT_SET_VOLTAGE)) {
         UINT32 uiVoltage = psdhcihost->SDHCIHS_sdhcicap.SDHCICAP_uiVoltage;
@@ -1367,8 +1371,8 @@ static INT __sdhciPowerOn (__PSDHCI_HOST  psdhcihost)
         SDHCI_WRITEB(psdhcihostattr, SDHCI_POWER_CONTROL, ucPow);
 
         if (SDHCI_QUIRK_FLG(psdhcihostattr, SDHCI_QUIRK_FLG_DO_RESET_AFTER_SET_POWER_ON)) {
-            __sdhciHostRest(psdhcihost, SDHCI_SFRST_CMD);
-            __sdhciHostRest(psdhcihost, SDHCI_SFRST_DATA);
+            __sdhciHostReset(psdhcihost, SDHCI_SFRST_CMD);
+            __sdhciHostReset(psdhcihost, SDHCI_SFRST_DATA);
         }
     }
 
@@ -2351,7 +2355,7 @@ static INT  __sdhciTransStart (__SDHCI_TRANS *psdhcitrans)
 
     if (!SDHCI_QUIRK_FLG(&psdhcitrans->SDHCITS_psdhcihost->SDHCIHS_sdhcihostattr,
                          SDHCI_QUIRK_FLG_DONOT_RESET_ON_EVERY_TRANSACTION)) {
-        __sdhciHostRest(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_DATA | SDHCI_SFRST_CMD);
+        __sdhciHostReset(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_DATA | SDHCI_SFRST_CMD);
     }
 
 
@@ -2647,12 +2651,12 @@ static INT  __sdhciTransCmdHandle (__SDHCI_TRANS *psdhcitrans, UINT32 uiIntSta)
                             SDHCI_QUIRK_FLG_DO_RESET_ON_TRANSACTION_ERROR)) {
             if (uiIntSta & (SDHCI_INT_TIMEOUT | SDHCI_INT_CRC)) {
                 if (!psdhcitrans->SDHCITS_bCmdFinish) {
-                    __sdhciHostRest(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_CMD);
+                    __sdhciHostReset(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_CMD);
                 }
 
                 if ((!psdhcitrans->SDHCITS_bDatFinish) ||
                     (SD_CMD_TEST_RSP(psdhcitrans->SDHCITS_psdcmd, SD_RSP_BUSY))) {
-                    __sdhciHostRest(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_DATA);
+                    __sdhciHostReset(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_DATA);
                 }
             }
         }
@@ -2711,7 +2715,7 @@ static INT __sdhciTransDatHandle (__SDHCI_TRANS *psdhcitrans, UINT32 uiIntSta)
             if (uiIntSta & (SDHCI_INT_DATA_TIMEOUT | SDHCI_INT_DATA_CRC)) {
                 if ((!psdhcitrans->SDHCITS_bDatFinish) ||
                     (SD_CMD_TEST_RSP(psdhcitrans->SDHCITS_psdcmd, SD_RSP_BUSY))) {
-                    __sdhciHostRest(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_DATA);
+                    __sdhciHostReset(psdhcitrans->SDHCITS_psdhcihost, SDHCI_SFRST_DATA);
                 }
             }
         }
