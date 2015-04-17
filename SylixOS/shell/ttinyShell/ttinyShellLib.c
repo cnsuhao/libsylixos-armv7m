@@ -63,6 +63,7 @@
 2013.01.23  shell 当系统命令和可执行文件名重复时, 优先运行文件. 
 2014.07.23  shell 加入标准文件重定向支持.
 2014.08.27  __tshellRestart() 如果判断是在等待其他任务, 则使用 kill 操作.
+2014.04.17  对重定向描述符的回收需要在内核 IO 环境中中进行.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -212,6 +213,22 @@ ULONG  __tshellUndef (PCHAR  pcCmd, PCHAR  pcKeyword, PCHAR  *ppcParam)
     return  (__tshellVarDefine(pcCmd));
 }
 /*********************************************************************************************************
+** 函数名称: __tshellCloseRedir
+** 功能描述: ttiny shell 关闭 wrapper 创建的重定向描述符
+** 输　入  : iFd               文件描述符
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __tshellCloseRedir (INT  iFd)
+{
+    if (iFd >= 0) {
+        __KERNEL_SPACE_ENTER();                                         /*  这些文件创建时保证是内核里的*/
+        close(iFd);
+        __KERNEL_SPACE_EXIT();
+    }
+}
+/*********************************************************************************************************
 ** 函数名称: __tshellRedir
 ** 功能描述: 分析重定向字串并打卡相关的文件
 ** 输　入  : pcString     重定向字串
@@ -280,7 +297,7 @@ static INT  __tshellRedir (PCHAR  pcString, PCHAR  pcRedir, LW_OBJECT_HANDLE ulM
                 return  (PX_ERROR);
             }
             
-            API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);
+            API_ThreadCleanupPush(__tshellCloseRedir, (PVOID)iFd);
             (*piPopCnt)++;
             
             if (iOutOpt & STD_OUT) {
@@ -297,7 +314,7 @@ static INT  __tshellRedir (PCHAR  pcString, PCHAR  pcRedir, LW_OBJECT_HANDLE ulM
             return  (PX_ERROR);
         }
         
-        API_ThreadCleanupPush((VOIDFUNCPTR)close, (PVOID)iFd);
+        API_ThreadCleanupPush(__tshellCloseRedir, (PVOID)iFd);
         (*piPopCnt)++;
         
         API_IoTaskStdSet(ulMe, STD_IN, iFd);

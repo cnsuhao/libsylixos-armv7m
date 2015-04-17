@@ -18,6 +18,9 @@ HISTORY
     2015-04-05: han.hui
     修正 SD 中断处理错误.
 
+    2015-04-17: han.hui
+    修正重定向文件描述符回收错误.
+    
 (STABLE-1.0.0)
 
 ++ New features:
