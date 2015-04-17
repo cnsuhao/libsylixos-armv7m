@@ -945,6 +945,7 @@ SylixOS/posix/pthread/pthread_mutex.c \
 SylixOS/posix/pthread/pthread_rwlock.c \
 SylixOS/posix/pthread/pthread_spinlock.c \
 SylixOS/posix/resource/resource.c \
+SylixOS/posix/sched/sched_rms.c \
 SylixOS/posix/sched/sched.c \
 SylixOS/posix/semaphore/semaphore.c \
 SylixOS/posix/spawn/spawn.c \

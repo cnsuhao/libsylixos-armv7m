@@ -378,6 +378,9 @@ __wait_again:
     
     ulEventOption = pevent->EVENT_ulOption;
     
+    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_MSGQ, MONITOR_EVENT_MSGQ_PEND, 
+                      ulId, ulTimeOut, LW_NULL);
+    
     iSchedRet = __KERNEL_EXIT();                                        /*  µ÷¶ÈÆ÷½âËø                  */
     if (iSchedRet == LW_SIGNAL_EINTR) {
         if (ulEventOption & LW_OPTION_SIGNAL_INTER) {

@@ -45,6 +45,7 @@
 2015.03.02  加入 socket 复位操作, 回收 socket 首先需要设置 SO_LINGER 为立即关闭模式.
 2015.03.17  netif ioctl 仅负责混杂模式的设置.
 2015.04.06  *_socket_event() 不再需要 socket lock 保护.
+2015.04.17  将无线扩展 ioctl 专门封装.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -502,14 +503,20 @@ static INT  __ifSubIoctlIf (INT  iCmd, PVOID  pvArg)
         if (pnetif->flags & (NETIF_FLAG_ETHERNET | NETIF_FLAG_ETHARP)) {
             INT i;
             INT iIsUp = netif_is_up(pnetif);
-            netif_set_down(pnetif);                                     /*  关闭网口                    */
-            for (i = 0; i < IFHWADDRLEN; i++) {
-                pnetif->hwaddr[i] = pifreq->ifr_hwaddr.sa_data[i];
+            if (pnetif->ioctl) {
+                netif_set_down(pnetif);                                 /*  关闭网口                    */
+                iRet = pnetif->ioctl(pnetif, SIOCSIFHWADDR, pvArg);
+                if (iRet == ERROR_NONE) {
+                    for (i = 0; i < IFHWADDRLEN; i++) {
+                        pnetif->hwaddr[i] = pifreq->ifr_hwaddr.sa_data[i];
+                    }
+                }
+                if (iIsUp) {
+                    netif_set_up(pnetif);                               /*  重启网口                    */
+                }
+            } else {
+                _ErrorHandle(ENOTSUP);
             }
-            if (iIsUp) {
-                netif_set_up(pnetif);                                   /*  重启网口                    */
-            }
-            iRet = ERROR_NONE;
         } else {
             _ErrorHandle(EINVAL);
         }
@@ -880,26 +887,43 @@ static INT  __ifIoctlInet (INT  iCmd, PVOID  pvArg)
         break;
     
     default:
-#if LW_CFG_NET_WIRELESS_EN > 0
-        if ((iCmd >= SIOCIWFIRST) &&
-            (iCmd <= SIOCIWLASTPRIV)) {                                 /*  无线连接设置                */
-            LWIP_NETIF_LOCK();                                          /*  进入临界区                  */
-            iRet = wext_handle_ioctl(iCmd, (struct ifreq *)pvArg);
-            LWIP_NETIF_UNLOCK();                                        /*  退出临界区                  */
-            if (iRet) {
-                _ErrorHandle(lib_abs(iRet));
-                iRet = PX_ERROR;
-            }
-        } else
-#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
-        {
-            _ErrorHandle(ENOSYS);
-        }
+        _ErrorHandle(ENOSYS);
         break;
     }
     
     return  (iRet);
 }
+/*********************************************************************************************************
+** 函数名称: __ifIoctlWireless
+** 功能描述: WEXT 网络接口 ioctl 操作
+** 输　入  : iCmd      命令
+**           pvArg     参数
+** 输　出  : 处理结果
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+#if LW_CFG_NET_WIRELESS_EN > 0
+
+static INT  __ifIoctlWireless (INT  iCmd, PVOID  pvArg)
+{
+    INT     iRet = PX_ERROR;
+    
+    if ((iCmd >= SIOCIWFIRST) && (iCmd <= SIOCIWLASTPRIV)) {            /*  无线连接设置                */
+        LWIP_NETIF_LOCK();                                              /*  进入临界区                  */
+        iRet = wext_handle_ioctl(iCmd, (struct ifreq *)pvArg);
+        LWIP_NETIF_UNLOCK();                                            /*  退出临界区                  */
+        if (iRet) {
+            _ErrorHandle(lib_abs(iRet));
+            iRet = PX_ERROR;
+        }
+    } else {
+        _ErrorHandle(ENOSYS);
+    }
+    
+    return  (iRet);
+}
+
+#endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
 /*********************************************************************************************************
 ** 函数名称: __ifIoctlPacket
 ** 功能描述: PACKET 网络接口 ioctl 操作
@@ -1338,7 +1362,7 @@ static INT  __socketIoctl (SOCKET_T *psock, INT  iCmd, PVOID  pvArg)
 #if LW_CFG_NET_WIRELESS_EN > 0
                 if ((iCmd >= SIOCIWFIRST) &&
                     (iCmd <= SIOCIWLASTPRIV)) {                         /*  无线连接设置                */
-                    iRet = __ifIoctlInet(iCmd, pvArg);
+                    iRet = __ifIoctlWireless(iCmd, pvArg);
                 } else 
 #endif                                                                  /*  LW_CFG_NET_WIRELESS_EN > 0  */
                 {

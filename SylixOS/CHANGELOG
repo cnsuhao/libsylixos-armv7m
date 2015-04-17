@@ -7,6 +7,9 @@ HISTORY
     2015-04-05: han.hui
     加入高分辨率时钟获取接口.
     
+    2015-04-17: han.hui
+    加入 sched_rms 高精度单调周期接口, 可支持纳秒级精度周期控制.
+    
 ++ Bugfixes:
 
     2015-04-07: han.hui

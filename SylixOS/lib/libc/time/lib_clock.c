@@ -88,42 +88,50 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
         return  (PX_ERROR);
     }
     
-    if (clockid == CLOCK_REALTIME) {
+    switch (clockid) {
+    
+    case CLOCK_REALTIME:
         LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
         *tv = _K_tvTODCurrent;
         LW_TIME_HIGH_RESOLUTION(tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+        break;
     
-    } else if (clockid == CLOCK_MONOTONIC) {
+    case CLOCK_MONOTONIC:
         LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
         *tv = _K_tvTODMono;
         LW_TIME_HIGH_RESOLUTION(tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
-    
-    } else if (clockid == CLOCK_PROCESS_CPUTIME_ID) {
+        break;
+        
+    case CLOCK_PROCESS_CPUTIME_ID:
 #if LW_CFG_MODULELOADER_EN > 0
-        LW_LD_VPROC *pvproc = __LW_VP_GET_CUR_PROC();
-        if (pvproc == LW_NULL) {
-            _ErrorHandle(ENOSYS);
-            return  (PX_ERROR);
+        {
+            LW_LD_VPROC *pvproc = __LW_VP_GET_CUR_PROC();
+            if (pvproc == LW_NULL) {
+                _ErrorHandle(ESRCH);
+                return  (PX_ERROR);
+            }
+            LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
+            __tickToTimespec(pvproc->VP_clockUser + pvproc->VP_clockSystem, tv);
+            LW_TIME_HIGH_RESOLUTION(tv);
+            LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
         }
-        LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
-        __tickToTimespec(pvproc->VP_clockUser + pvproc->VP_clockSystem, tv);
-        LW_TIME_HIGH_RESOLUTION(tv);
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 #else
         _ErrorHandle(ENOSYS);
         return  (PX_ERROR);
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
-
-    } else if (clockid == CLOCK_THREAD_CPUTIME_ID) {
+        break;
+        
+    case CLOCK_THREAD_CPUTIME_ID:
         LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         LW_TCB_GET_CUR(ptcbCur);
         __tickToTimespec(ptcbCur->TCB_ulCPUTicks, tv);
         LW_TIME_HIGH_RESOLUTION(tv);
         LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
-    
-    } else {
+        break;
+        
+    default:
         _ErrorHandle(EINVAL);
         return  (PX_ERROR);
     }

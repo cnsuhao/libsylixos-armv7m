@@ -39,6 +39,7 @@
 2013.08.28  加入内核事件监控器.
 2014.01.01  API_KernelTicksContext() 需要锁定调度器.
 2014.07.04  系统内核支持 tod 时钟微调.
+2015.04.17  tod 时间的更新必须放在中断上下文中.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -48,6 +49,17 @@
 #if LW_CFG_MODULELOADER_EN > 0
 #include "../SylixOS/loader/include/loader_vppatch.h"
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+/*********************************************************************************************************
+  时间更新
+*********************************************************************************************************/
+#define TOD_UPDATE(tod, step_nsec)                      \
+        do {                                            \
+            (tod)->tv_nsec += step_nsec;                \
+            if ((tod)->tv_nsec >= __TIMEVAL_NSEC_MAX) { \
+                (tod)->tv_nsec -= __TIMEVAL_NSEC_MAX;   \
+                (tod)->tv_sec++;                        \
+            }                                           \
+        } while (0)
 /*********************************************************************************************************
 ** 函数名称: __kernelTODTicks
 ** 功能描述: 通知一个时钟到达, 更新 TOD 时间
@@ -69,27 +81,21 @@ VOID  __kernelTODTicks (VOID)
     INTREG      iregInterLevel;
     
     LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    
     if (_K_iTODDelta > 0) {                                             /*  需要加快系统时钟一个 TICK   */
         _K_iTODDelta--;
         lNsec = lNsecStd << 1;                                          /*  加快一个 tick               */
+    
     } else if (_K_iTODDelta < 0) {
         _K_iTODDelta++;
         goto    __tod_tick_over;                                        /*  系统 tod 时间停止一个 tick  */
+    
     } else {
         lNsec = lNsecStd;
     }
     
-    _K_tvTODCurrent.tv_nsec += lNsec;                                   /*  CLOCK_REALTIME              */
-    if (_K_tvTODCurrent.tv_nsec >= __TIMEVAL_NSEC_MAX) {                /*  是否产生秒进位              */
-        _K_tvTODCurrent.tv_nsec -= __TIMEVAL_NSEC_MAX;
-        _K_tvTODCurrent.tv_sec  += 1;                                   /*  产生秒进位                  */
-    }
-
-    _K_tvTODMono.tv_nsec += lNsec;                                      /*  CLOCK_MONOTONIC             */
-    if (_K_tvTODMono.tv_nsec >= __TIMEVAL_NSEC_MAX) {                   /*  是否产生秒进位              */
-        _K_tvTODMono.tv_nsec -= __TIMEVAL_NSEC_MAX;
-        _K_tvTODMono.tv_sec  += 1;                                      /*  产生秒进位                  */
-    }
+    TOD_UPDATE(&_K_tvTODCurrent, lNsec);                                /*  CLOCK_REALTIME              */
+    TOD_UPDATE(&_K_tvTODMono, lNsec);                                   /*  CLOCK_MONOTONIC             */
     
 __tod_tick_over:
     LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
@@ -114,10 +120,6 @@ VOID  API_KernelTicks (VOID)
     if (!LW_SYS_STATUS_IS_RUNNING()) {                                  /*  系统没有启动                */
         return;
     }
-
-#if LW_CFG_RTC_EN > 0
-    __kernelTODTicks();                                                 /*  更新 TOD 时间               */
-#endif
 
     LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  关闭中断同时锁住 spinlock   */
     _K_i64KernelTime++;                                                 /*  tick++                      */
@@ -152,6 +154,10 @@ VOID  API_KernelTicksContext (VOID)
     REGISTER INT            i;
              PLW_CLASS_CPU  pcpu;
              PLW_CLASS_TCB  ptcb;
+             
+#if LW_CFG_RTC_EN > 0
+    __kernelTODTicks();                                                 /*  更新 TOD 时间               */
+#endif                                                                  /*  LW_CFG_RTC_EN > 0           */
     
     LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  关闭中断同时锁住 spinlock   */
     

@@ -217,7 +217,6 @@ UINT  sleep (UINT    uiSeconds)
         return  (0);
     }
     
-__wait_again:
     if (!ulTick) {                                                      /*  不进行延迟                  */
         return  (0);
     }
@@ -229,6 +228,7 @@ __wait_again:
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLEEP, 
                       ptcbCur->TCB_ulId, ulTick, LW_NULL);
     
+__wait_again:
     iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核                    */
     
     ppcb = _GetPcb(ptcbCur);
@@ -249,7 +249,9 @@ __wait_again:
         
     } else if (iSchedRet == LW_SIGNAL_RESTART) {
         ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        goto    __wait_again;
+        if (ulTick != 0ul) {
+            goto    __wait_again;
+        }
     }
     
     return  (0);
@@ -282,13 +284,18 @@ static VOID  __timeGetHighResolution (struct timespec  *ptv)
 static VOID  __timePassNsec (LONG  lNsec)
 {
 #if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
-    struct timespec  tvStart, tvTemp;
+    struct timespec  tvEnd, tvNow;
     
-    __timeGetHighResolution(&tvStart);
+    __timeGetHighResolution(&tvEnd);
+    tvEnd.tv_nsec += lNsec;
+    if (tvEnd.tv_nsec >= __TIMEVAL_NSEC_MAX) {
+        tvEnd.tv_nsec -= __TIMEVAL_NSEC_MAX;
+        tvEnd.tv_sec++;
+    }
+    
     do {
-        __timeGetHighResolution(&tvTemp);
-        __timespecSub(&tvTemp, &tvStart);
-    } while ((tvTemp.tv_sec == 0) && (tvTemp.tv_nsec < lNsec));
+        __timeGetHighResolution(&tvNow);
+    } while (__timespecLeftTime(&tvNow, &tvEnd));
 #else
     bspDelayNs((ULONG)lNsec);                                           /*  使用 BSP 断延迟函数         */
 #endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
@@ -310,19 +317,19 @@ static VOID  __timePassNsec (LONG  lNsec)
 LW_API  
 INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
 {
-             INTREG                iregInterLevel;
+             INTREG             iregInterLevel;
              
-             PLW_CLASS_TCB         ptcbCur;
-    REGISTER PLW_CLASS_PCB         ppcb;
-	REGISTER ULONG                 ulKernelTime;
-	REGISTER INT                   iRetVal;
-	         INT                   iSchedRet;
+             PLW_CLASS_TCB      ptcbCur;
+    REGISTER PLW_CLASS_PCB      ppcb;
+	REGISTER ULONG              ulKernelTime;
+	REGISTER INT                iRetVal;
+	         INT                iSchedRet;
 	
-	REGISTER ULONG                 ulError;
-             ULONG                 ulTick;
+	REGISTER ULONG              ulError;
+             ULONG              ulTick;
              
-             struct timespec        tvStart;
-             struct timespec        tvTemp;
+             struct timespec    tvStart;
+             struct timespec    tvTemp;
              
     if (!rqtp) {                                                        /*  指定时间为空                */
         _ErrorHandle(EINVAL);
@@ -346,7 +353,6 @@ INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
     
     __timeGetHighResolution(&tvStart);                                  /*  记录开始的时间              */
     
-__wait_again:
     __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
     
     LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
@@ -354,6 +360,7 @@ __wait_again:
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLEEP, 
                       ptcbCur->TCB_ulId, ulTick, LW_NULL);
     
+__wait_again:
     iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核                    */
     
     ppcb = _GetPcb(ptcbCur);
