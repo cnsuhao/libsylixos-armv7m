@@ -43,7 +43,7 @@ static  PVOID  _PowerMThread (PVOID  pvArg)
     PLW_CLASS_WAKEUP_NODE   pwun;
 
     for (;;) {
-        ULONG   ulCounter = LW_CFG_TICKS_PER_SEC;
+        ULONG   ulCounter = LW_TICK_HZ;
         
         __POWERM_LOCK();                                                /*  上锁                        */
                            
@@ -67,7 +67,7 @@ static  PVOID  _PowerMThread (PVOID  pvArg)
         
         __POWERM_UNLOCK();                                              /*  解锁                        */
         
-        API_TimeSleep(LW_CFG_TICKS_PER_SEC);                            /*  等待一秒                    */
+        API_TimeSleep(LW_TICK_HZ);                                      /*  等待一秒                    */
     }
     
     return  (LW_NULL);

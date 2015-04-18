@@ -88,7 +88,7 @@ VOID  API_INetNatInit (VOID)
     _G_ulNatTimer = API_TimerCreate("nat_timer", LW_OPTION_ITIMER | LW_OPTION_OBJECT_GLOBAL, LW_NULL);
     
     API_TimerStart(_G_ulNatTimer, 
-                   (LW_CFG_TICKS_PER_SEC * 60),
+                   (LW_TICK_HZ * 60),
                    LW_OPTION_AUTO_RESTART,
                    (PTIMER_CALLBACK_ROUTINE)__natTimer,
                    LW_NULL);                                            /*  每分钟执行一次              */

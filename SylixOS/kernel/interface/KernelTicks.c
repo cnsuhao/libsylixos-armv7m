@@ -75,23 +75,21 @@
 
 VOID  __kernelTODTicks (VOID)
 {
-    static LONG lNsecStd = (1000 * 1000 * 1000) / LW_CFG_TICKS_PER_SEC; /*  一个 tick 有多少 nsec       */
-           LONG lNsec;
-           
-    INTREG      iregInterLevel;
+    INTREG  iregInterLevel;
+    LONG    lNsec;
     
     LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
     
     if (_K_iTODDelta > 0) {                                             /*  需要加快系统时钟一个 TICK   */
         _K_iTODDelta--;
-        lNsec = lNsecStd << 1;                                          /*  加快一个 tick               */
+        lNsec = LW_NSEC_PER_TICK << 1;                                  /*  加快一个 tick               */
     
     } else if (_K_iTODDelta < 0) {
         _K_iTODDelta++;
         goto    __tod_tick_over;                                        /*  系统 tod 时间停止一个 tick  */
     
     } else {
-        lNsec = lNsecStd;
+        lNsec = LW_NSEC_PER_TICK;
     }
     
     TOD_UPDATE(&_K_tvTODCurrent, lNsec);                                /*  CLOCK_REALTIME              */

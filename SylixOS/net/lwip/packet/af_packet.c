@@ -628,7 +628,7 @@ static ULONG  __packetTicksToMs (ULONG  ulTicks)
     if (ulTicks == LW_OPTION_WAIT_INFINITE) {
         ulMs = 0;
     } else {
-        ulMs = (ulTicks * 1000) / LW_CFG_TICKS_PER_SEC;
+        ulMs = (ulTicks * 1000) / LW_TICK_HZ;
     }
     
     return  (ulMs);

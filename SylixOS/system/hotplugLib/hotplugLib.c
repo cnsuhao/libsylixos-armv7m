@@ -355,7 +355,7 @@ static VOID  _hotplugThread (VOID)
     ULONG  ulError;
     
     for (;;) {
-        ulError = _jobQueueExec(&_G_jobqHotplug, LW_CFG_HOTPLUG_POLL_RATE);
+        ulError = _jobQueueExec(&_G_jobqHotplug, LW_HOTPLUG_SEC * LW_TICK_HZ);
         if (ulError) {                                                  /*  需要处理轮询事件            */
             PLW_HOTPLUG_POLLNODE    phppn;
             PLW_LIST_LINE           plineTemp;

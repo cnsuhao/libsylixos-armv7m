@@ -388,7 +388,7 @@ INT  API_INetPing6 (struct in6_addr  *pin6addr,
             ulTime2 = API_TimeGet();
             ulTime2 = (ulTime2 >= ulTime1) ? (ulTime2 - ulTime1) 
                     : ((__ARCH_ULONG_MAX - ulTime1) + ulTime2 + 1);
-            ulTime2 = ((ulTime2 * 1000) / LW_CFG_TICKS_PER_SEC);        /*  转为毫秒数                  */
+            ulTime2 = ((ulTime2 * 1000) / LW_TICK_HZ);                  /*  转为毫秒数                  */
                     
             printf("Reply from %s: bytes=%d time=%ldms hoplim=%d\n", inet6_ntoa_r(*pin6addr, 
                                                                      cInetAddr, 

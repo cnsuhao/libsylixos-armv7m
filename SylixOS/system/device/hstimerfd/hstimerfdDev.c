@@ -44,16 +44,16 @@ static INT      _hstmrfdIoctl(PLW_HSTMRFD_FILE  phstmrfdfil, INT    iRequest, LO
 *********************************************************************************************************/
 static LW_INLINE  VOID   __hstickToTimespec (ULONG  ulHsticks, struct timespec  *ptv)
 {
-    ptv->tv_sec  = (time_t)(ulHsticks / LW_CFG_TICKS_HTIMER_PER_SEC);
-    ptv->tv_nsec = (LONG)(ulHsticks % LW_CFG_TICKS_HTIMER_PER_SEC) 
-                 * ((1000 * 1000 * 1000) / LW_CFG_TICKS_HTIMER_PER_SEC);
+    ptv->tv_sec  = (time_t)(ulHsticks / LW_HTIMER_HZ);
+    ptv->tv_nsec = (LONG)(ulHsticks % LW_HTIMER_HZ) 
+                 * ((1000 * 1000 * 1000) / LW_HTIMER_HZ);
 }
 static LW_INLINE  ULONG  __timespecToHstick (const struct timespec  *ptv)
 {
     REGISTER ULONG     ulHsticks;
     
-    ulHsticks  = (ULONG)(ptv->tv_sec * LW_CFG_TICKS_HTIMER_PER_SEC);
-    ulHsticks += (((((ptv->tv_nsec / 1000) * LW_CFG_TICKS_HTIMER_PER_SEC) / 100) / 100) / 100);
+    ulHsticks  = (ULONG)(ptv->tv_sec * LW_HTIMER_HZ);
+    ulHsticks += (((((ptv->tv_nsec / 1000) * LW_HTIMER_HZ) / 100) / 100) / 100);
     
     return  (ulHsticks);
 }
@@ -128,7 +128,7 @@ INT  API_HstimerfdDevCreate (VOID)
 LW_API  
 int  hstimerfd_hz (void)
 {
-    return  (LW_CFG_TICKS_HTIMER_PER_SEC);
+    return  (LW_HTIMER_HZ);
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: hstimerfd_create

@@ -52,12 +52,12 @@ PVOID  _ITimerThread (PVOID  pvArg)
     
     for (;;) {
         PLW_CLASS_WAKEUP_NODE  pwun;
-        ULONG                  ulCounter = LW_CFG_ITIMER_RATE;
+        ULONG                  ulCounter = LW_ITIMER_RATE;
         
 #if (LW_CFG_RMS_EN > 0) && (LW_CFG_MAX_RMSS > 0)
-        API_RmsPeriod(ulRms, LW_CFG_ITIMER_RATE);                       /*  使用 RMS 进行周期运行       */
+        API_RmsPeriod(ulRms, LW_ITIMER_RATE);                           /*  使用 RMS 进行周期运行       */
 #else
-        API_TimeSleep(LW_CFG_ITIMER_RATE);                              /*  等待一个扫描周期            */
+        API_TimeSleep(LW_ITIMER_RATE);                                  /*  等待一个扫描周期            */
 #endif
 
         iregInterLevel = __KERNEL_ENTER_IRQ();                          /*  进入内核同时关闭中断        */

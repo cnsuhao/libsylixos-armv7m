@@ -885,7 +885,7 @@ ssize_t  _TyReadVtime (TY_DEV_ID  ptyDev,
     }
     
     if (__TTY_CC(ptyDev, VMIN) == 0) {                                  /*  首次等待时间                */
-        ulTimeout = ((ULONG)(__TTY_CC(ptyDev, VTIME) * 100) * LW_CFG_TICKS_PER_SEC / 1000);
+        ulTimeout = ((ULONG)(__TTY_CC(ptyDev, VTIME) * 100) * LW_TICK_HZ / 1000);
     } else {
         ulTimeout = LW_OPTION_WAIT_INFINITE;
     }
@@ -927,7 +927,7 @@ __re_read:
     }
         
     if (__TTY_CC(ptyDev, VMIN)) {                                       /*  VMIN 不为 0 设置间隔等待    */
-        ulTimeout = ((ULONG)(__TTY_CC(ptyDev, VTIME) * 100) * LW_CFG_TICKS_PER_SEC / 1000);
+        ulTimeout = ((ULONG)(__TTY_CC(ptyDev, VTIME) * 100) * LW_TICK_HZ / 1000);
     }
     
     if (ptyDev->TYDEV_iOpt & OPT_LINE) {                                /*  行模式                      */

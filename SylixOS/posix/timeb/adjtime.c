@@ -51,8 +51,8 @@ int  adjtime (const struct timeval *delta, struct timeval *olddelta)
             _ErrorHandle(ENOTSUP);
             return  (PX_ERROR);
         }
-        iDelta  = (INT32)delta->tv_sec * LW_CFG_TICKS_PER_SEC;
-        iDelta += (INT32)((((delta->tv_usec * LW_CFG_TICKS_PER_SEC) / 100) / 100) / 100);
+        iDelta  = (INT32)delta->tv_sec * LW_TICK_HZ;
+        iDelta += (INT32)((((delta->tv_usec * LW_TICK_HZ) / 100) / 100) / 100);
         API_TimeTodAdj(&iDelta, &iOldDelta);
     
     } else {
@@ -60,9 +60,9 @@ int  adjtime (const struct timeval *delta, struct timeval *olddelta)
     }
     
     if (olddelta) {
-        olddelta->tv_sec  = (time_t)(iOldDelta / LW_CFG_TICKS_PER_SEC);
-        olddelta->tv_usec = (LONG)(iOldDelta % LW_CFG_TICKS_PER_SEC) * ((100 * 100 * 100)
-                          / LW_CFG_TICKS_PER_SEC);
+        olddelta->tv_sec  = (time_t)(iOldDelta / LW_TICK_HZ);
+        olddelta->tv_usec = (LONG)(iOldDelta % LW_TICK_HZ) * ((100 * 100 * 100)
+                          / LW_TICK_HZ);
     }
     
     return  (ERROR_NONE);

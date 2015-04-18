@@ -86,6 +86,18 @@
 #define LW_HANDLE_SELF                  LW_ID_SELF
 
 /*********************************************************************************************************
+  KERNEL TIMING
+*********************************************************************************************************/
+
+#ifdef __SYLIXOS_KERNEL
+#define LW_TICK_HZ                      _K_timingKernel.TIMING_ulTickHz
+#define LW_NSEC_PER_TICK                _K_timingKernel.TIMING_ulNsecPerTick
+#define LW_HTIMER_HZ                    _K_timingKernel.TIMING_ulHTimerHz
+#define LW_ITIMER_RATE                  _K_timingKernel.TIMING_ulITimerRate
+#define LW_HOTPLUG_SEC                  _K_timingKernel.TIMING_ulHotplugSec
+#endif
+
+/*********************************************************************************************************
   micro-second
 *********************************************************************************************************/
 #define LW_MSECOND_TO_TICK_1(ulMs)      \

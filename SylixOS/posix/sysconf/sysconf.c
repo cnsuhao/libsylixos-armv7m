@@ -57,7 +57,7 @@ long  sysconf (int name)
         return  (LW_CFG_SHELL_MAX_KEYWORDLEN);
         
     case _SC_CLK_TCK:
-        return  (LW_CFG_TICKS_PER_SEC);
+        return  (LW_TICK_HZ);
         
     case _SC_DELAYTIMER_MAX:
         return  (__ARCH_INT_MAX);

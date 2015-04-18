@@ -1178,7 +1178,7 @@ LW_API
 INT API_MiiPhyMonitorStart (VOID)
 {
     if ((API_TimerStart(_G_hMiiTimer,                                   /* Start Phy Monitor            */
-                        (MII_LINK_CHK_DELAY * LW_CFG_TICKS_PER_SEC),
+                        (MII_LINK_CHK_DELAY * LW_TICK_HZ),
                         LW_OPTION_AUTO_RESTART,
                         (PTIMER_CALLBACK_ROUTINE)__miiPhyMonitor,
                         LW_NULL)) == MII_ERROR) {
@@ -1270,7 +1270,7 @@ INT API_MiiLibInit (VOID)
     _G_plineMiiList = LW_NULL;                                          /* Initialize mii List          */
 
     if ((API_TimerStart(_G_hMiiTimer,                                   /* Start Phy Monitor            */
-                        (MII_LINK_CHK_DELAY * LW_CFG_TICKS_PER_SEC),
+                        (MII_LINK_CHK_DELAY * LW_TICK_HZ),
                         LW_OPTION_AUTO_RESTART,
                         (PTIMER_CALLBACK_ROUTINE)__miiPhyMonitor,
                         LW_NULL)) != ERROR_NONE) {

@@ -90,7 +90,7 @@ VOID    API_CPUUsageShow (INT  iWaitSec, INT  iTimes)
             
             iWaitSec = (iWaitSec >  0) ? iWaitSec : 1;
             iWaitSec = (iWaitSec < 10) ? iWaitSec : 10;
-            API_TimeSleep((ULONG)iWaitSec * LW_CFG_TICKS_PER_SEC);
+            API_TimeSleep((ULONG)iWaitSec * LW_TICK_HZ);
             
             ioctl(STD_IN, FIOSETOPTIONS, iOptionNoAbort);               /*  ²»ÔÊÐí control-C ²Ù×÷       */
         }

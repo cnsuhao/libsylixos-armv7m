@@ -292,8 +292,6 @@
 *********************************************************************************************************/
 
 #define LW_CFG_HOTPLUG_EN                       1       /*  是否允许系统提供热插拔消息支持              */
-#define LW_CFG_HOTPLUG_POLL_RATE                LW_CFG_TICKS_PER_SEC
-                                                        /*  热插拔循环检测周期 (粗略估计)               */
 #define LW_CFG_HOTPLUG_OPTION                   LW_OPTION_THREAD_STK_CHK
                                                         /*  热插拔消息服务线程选项                      */
 #define LW_CFG_HOTPLUG_MAX_MSGS                 8       /*  最大并发消息数量(即系统可缓冲的消息数量)    */

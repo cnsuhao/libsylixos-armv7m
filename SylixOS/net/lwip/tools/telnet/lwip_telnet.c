@@ -288,7 +288,7 @@ static VOID  __telnetCommunication (INT  iDevFd)
                                    sizeof(_G_cTelnetAbort));            /*  停止 shell                  */
         }
         
-        if (i == (LW_CFG_TICKS_PER_SEC * 3)) {                          /*  如果 3 秒还没有退出, kill   */
+        if (i == (LW_TICK_HZ * 3)) {                                    /*  如果 3 秒还没有退出, kill   */
             union sigval        sigvalue;
             sigvalue.sival_int = PX_ERROR;
             sigqueue(ulShell, SIGABRT, sigvalue);                       /*  发送信号, 异常终止          */

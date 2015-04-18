@@ -335,7 +335,7 @@ void  sys_sem_signal (sys_sem_t *psem)
 u32_t  sys_arch_sem_wait (sys_sem_t *psem, u32_t timeout)
 {
     ULONG       ulError;
-    ULONG       ulTimeout = (ULONG)((timeout * LW_CFG_TICKS_PER_SEC) / 1000);
+    ULONG       ulTimeout = (ULONG)((timeout * LW_TICK_HZ) / 1000);
                                                                         /*  转为 TICK 数                */
     ULONG       ulOldTime = API_TimeGet();
     ULONG       ulNowTime;
@@ -362,7 +362,7 @@ u32_t  sys_arch_sem_wait (sys_sem_t *psem, u32_t timeout)
                   ? (ulNowTime -  ulOldTime) 
                   : (__ARCH_ULONG_MAX - ulOldTime + ulNowTime + 1);     /*  计算 TICK 时差              */
     
-        timeout   = (u32_t)((ulNowTime * 1000) / LW_CFG_TICKS_PER_SEC); /*  转为毫秒数                  */
+        timeout   = (u32_t)((ulNowTime * 1000) / LW_TICK_HZ);           /*  转为毫秒数                  */
         
         return  (timeout);
     }
@@ -550,7 +550,7 @@ err_t  sys_mbox_trypost (sys_mbox_t *pmbox, void *msg)
 u32_t   sys_arch_mbox_fetch (sys_mbox_t *pmbox, void  **msg, u32_t  timeout)
 {
     ULONG       ulError;
-    ULONG       ulTimeout = (ULONG)((timeout * LW_CFG_TICKS_PER_SEC) / 1000);
+    ULONG       ulTimeout = (ULONG)((timeout * LW_TICK_HZ) / 1000);
                                                                         /*  转为 TICK 数                */
     size_t      stMsgLen  = 0;
     PVOID       pvMsg;
@@ -582,7 +582,7 @@ u32_t   sys_arch_mbox_fetch (sys_mbox_t *pmbox, void  **msg, u32_t  timeout)
                   ? (ulNowTime -  ulOldTime) 
                   : (__ARCH_ULONG_MAX - ulOldTime + ulNowTime + 1);     /*  计算 TICK 时差              */
     
-        timeout   = (u32_t)((ulNowTime * 1000) / LW_CFG_TICKS_PER_SEC); /*  转为毫秒数                  */
+        timeout   = (u32_t)((ulNowTime * 1000) / LW_TICK_HZ);           /*  转为毫秒数                  */
         if (msg) {
             *msg = pvMsg;                                               /*  需要保存消息                */
         }
@@ -786,7 +786,7 @@ u32_t  sys_now (void)
 {
     UINT64      ullTemp = (UINT64)API_TimeGet64();                      /*  使用 64 位, 避免溢出        */
     
-    ullTemp = ((ullTemp * 1000) / LW_CFG_TICKS_PER_SEC);                /*  变换为毫秒计数              */
+    ullTemp = ((ullTemp * 1000) / LW_TICK_HZ);                          /*  变换为毫秒计数              */
     
     return  ((u32_t)(ullTemp % ((u32_t)~0)));                           /*  返回                        */
 }

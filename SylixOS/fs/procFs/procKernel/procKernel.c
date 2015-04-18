@@ -215,7 +215,7 @@ static ssize_t  __procFsKernelTickRead (PLW_PROCFS_NODE  p_pfsn,
                               __PROCFS_BUFFER_SIZE_TICK, 0,
                               "tick rate : %d hz\n"
                               "tick      : %lld\n",                     /*  使用 64bit 系统时间         */
-                              LW_CFG_TICKS_PER_SEC,
+                              LW_TICK_HZ,
                               API_TimeGet64());                         /*  将信息打印到缓冲            */
         API_ProcFsNodeSetRealFileSize(p_pfsn, stRealSize);
     }

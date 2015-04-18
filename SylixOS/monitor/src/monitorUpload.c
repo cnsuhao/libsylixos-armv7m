@@ -41,7 +41,7 @@
   上传参数
 *********************************************************************************************************/
 #define MONITOR_EVENT_VERSION   "0.0.2"
-#define MONITOR_EVENT_TIMEOUT   (LW_CFG_TICKS_PER_SEC * 2)
+#define MONITOR_EVENT_TIMEOUT   (LW_TICK_HZ * 2)
 /*********************************************************************************************************
   上传节点
 *********************************************************************************************************/
@@ -278,7 +278,7 @@ static INT  __monitorUploadHello (INT  iFd)
     struct timeval  tvTo = {5, 0};
                  
     fdprintf(iFd, cMonitor, bspInfoCpu(), LW_CFG_CPU_WORD_LENGHT, LW_CFG_CPU_ENDIAN,
-                            __SYLIXOS_VERSTR, LW_CFG_TICKS_PER_SEC,
+                            __SYLIXOS_VERSTR, LW_TICK_HZ,
                             MONITOR_EVENT_VERSION);
                             
     if (waitread(iFd, &tvTo) < 1) {

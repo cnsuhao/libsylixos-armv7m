@@ -32,7 +32,7 @@
 LW_API  
 ULONG  API_TimerHGetFrequency (VOID)
 {
-    return  (LW_CFG_TICKS_HTIMER_PER_SEC);
+    return  (LW_HTIMER_HZ);
 }
 /*********************************************************************************************************
   END

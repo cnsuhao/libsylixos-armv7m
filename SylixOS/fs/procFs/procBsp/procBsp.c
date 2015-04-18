@@ -282,7 +282,7 @@ static ssize_t  __procFsBspAuxvRead (PLW_PROCFS_NODE  p_pfsn,
         pelfauxv++;
         
         pelfauxv->a_type     = AT_CLKTCK;
-        pelfauxv->a_un.a_val = LW_CFG_TICKS_PER_SEC;
+        pelfauxv->a_un.a_val = LW_TICK_HZ;
         pelfauxv++;
         
         pelfauxv->a_type     = AT_PAGESZ;

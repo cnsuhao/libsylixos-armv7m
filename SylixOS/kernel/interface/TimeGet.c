@@ -40,7 +40,7 @@
 LW_API  
 ULONG  API_TimeGetFrequency (VOID)
 {
-    return  (LW_CFG_TICKS_PER_SEC);
+    return  (LW_TICK_HZ);
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: API_TimeGet

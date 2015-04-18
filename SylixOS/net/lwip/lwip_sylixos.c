@@ -122,7 +122,7 @@ VOID  __netSnmpGetTimestamp (UINT32  *puiTimestamp)
         /*
          *  uiTimestamp 是以 10 毫秒为单位
          */
-        *puiTimestamp = (UINT32)((i64Ticks * LW_CFG_TICKS_PER_SEC * 10) / 1000);
+        *puiTimestamp = (UINT32)((i64Ticks * LW_TICK_HZ * 10) / 1000);
     }
 }
 /*********************************************************************************************************

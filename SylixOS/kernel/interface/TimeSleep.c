@@ -161,7 +161,7 @@ __wait_again:
 LW_API  
 VOID    API_TimeSSleep (ULONG   ulSeconds)
 {
-    API_TimeSleep(ulSeconds * LW_CFG_TICKS_PER_SEC);
+    API_TimeSleep(ulSeconds * LW_TICK_HZ);
 }
 /*********************************************************************************************************
 ** 函数名称: API_TimeMSleep
@@ -210,7 +210,7 @@ UINT  sleep (UINT    uiSeconds)
 	REGISTER ULONG                 ulKernelTime;
 	         INT                   iSchedRet;
 	         
-	         ULONG                 ulTick = (ULONG)(uiSeconds * LW_CFG_TICKS_PER_SEC);
+	         ULONG                 ulTick = (ULONG)(uiSeconds * LW_TICK_HZ);
     
     if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
         _ErrorHandle(ERROR_KERNEL_IN_ISR);
@@ -242,7 +242,7 @@ __wait_again:
     iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
     if (iSchedRet == LW_SIGNAL_EINTR) {
         ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        uiSeconds = (UINT)(ulTick / LW_CFG_TICKS_PER_SEC);
+        uiSeconds = (UINT)(ulTick / LW_TICK_HZ);
         
         _ErrorHandle(EINTR);                                            /*  被信号激活                  */
         return  (uiSeconds);                                            /*  剩余秒数                    */

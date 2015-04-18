@@ -40,7 +40,7 @@ hrtime_t  lib_gethrtime (VOID)
     
     lib_clock_gettime(CLOCK_MONOTONIC, &tm);
     
-    return  ((((hrtime_t)tm.tv_sec) * 1000000000) + tm.tv_nsec);
+    return  ((((hrtime_t)tm.tv_sec) * __TIMEVAL_NSEC_MAX) + tm.tv_nsec);
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: lib_gethrvtime
@@ -60,7 +60,7 @@ hrtime_t  lib_gethrvtime (VOID)
     
     ulTicks = (ULONG)tmsBuf.tms_utime + tmsBuf.tms_stime;
     
-    return  ((hrtime_t)ulTicks * ((1000 * 1000 * 1000) / LW_CFG_TICKS_PER_SEC));
+    return  ((hrtime_t)ulTicks * (__TIMEVAL_NSEC_MAX / LW_TICK_HZ));
 #else
     return  (0);
 #endif                                                                  /*  LW_CFG_POSIX_EN > 0         */

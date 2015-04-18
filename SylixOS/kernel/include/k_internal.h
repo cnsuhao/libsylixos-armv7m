@@ -659,6 +659,122 @@ INT            _doSigEventEx(LW_OBJECT_HANDLE  ulId,
         _jobQueueExec(&_K_jobqKernel, LW_OPTION_NOT_WAIT)
 
 /*********************************************************************************************************
+  POSIX TIME timeval & timespec to Tick
+*********************************************************************************************************/
+
+static LW_INLINE  ULONG   __timevalToTick (const struct timeval  *ptv)
+{
+    REGISTER ULONG     ulTicks;
+    
+    ulTicks  = (ULONG)(ptv->tv_sec * LW_TICK_HZ);
+    ulTicks += ((((ptv->tv_usec * LW_TICK_HZ) / 100) / 100) / 100);
+    
+    return  (ulTicks);
+}
+
+static LW_INLINE  INT64   __timevalToTick64 (const struct timeval  *ptv)
+{
+    REGISTER INT64     i64Ticks;
+    
+    i64Ticks  = (INT64)(ptv->tv_sec * LW_TICK_HZ);
+    i64Ticks += (((((INT64)ptv->tv_usec * LW_TICK_HZ) / 100) / 100) / 100);
+    
+    return  (i64Ticks);
+}
+
+static LW_INLINE  ULONG   __timespecToTick (const struct timespec  *ptv)
+{
+    REGISTER ULONG     ulTicks;
+    
+    ulTicks  = (ULONG)(ptv->tv_sec * LW_TICK_HZ);
+    ulTicks += (((((ptv->tv_nsec / 1000) * LW_TICK_HZ) / 100) / 100) / 100);
+    
+    return  (ulTicks);
+}
+
+static LW_INLINE  INT64   __timespecToTick64 (const struct timespec  *ptv)
+{
+    REGISTER INT64     i64Ticks;
+    
+    i64Ticks  = (INT64)(ptv->tv_sec * LW_TICK_HZ);
+    i64Ticks += ((((((INT64)ptv->tv_nsec / 1000) * LW_TICK_HZ) / 100) / 100) / 100);
+    
+    return  (i64Ticks);
+}
+
+/*********************************************************************************************************
+  POSIX TIME Tick to timeval & timespec  
+*********************************************************************************************************/
+
+static LW_INLINE  VOID   __tickToTimeval (ULONG  ulTicks, struct timeval  *ptv)
+{
+    ptv->tv_sec  = (time_t)(ulTicks / LW_TICK_HZ);
+    ptv->tv_usec = (LONG)(ulTicks % LW_TICK_HZ) * ((100 * 100 * 100) / LW_TICK_HZ);
+}
+
+static LW_INLINE  VOID   __tick64ToTimeval (INT64  i64Ticks, struct timeval  *ptv)
+{
+    ptv->tv_sec  = (time_t)(i64Ticks / LW_TICK_HZ);
+    ptv->tv_usec = (LONG)(i64Ticks % LW_TICK_HZ) * ((100 * 100 * 100) / LW_TICK_HZ);
+}
+
+static LW_INLINE  VOID   __tickToTimespec (ULONG  ulTicks, struct timespec  *ptv)
+{
+    ptv->tv_sec  = (time_t)(ulTicks / LW_TICK_HZ);
+    ptv->tv_nsec = (LONG)(ulTicks % LW_TICK_HZ) * ((1000 * 1000 * 1000) / LW_TICK_HZ);
+}
+
+static LW_INLINE  VOID   __tick64ToTimespec (INT64  i64Ticks, struct timespec  *ptv)
+{
+    ptv->tv_sec  = (time_t)(i64Ticks / LW_TICK_HZ);
+    ptv->tv_nsec = (LONG)(i64Ticks % LW_TICK_HZ) * ((1000 * 1000 * 1000) / LW_TICK_HZ);
+}
+
+/*********************************************************************************************************
+  POSIX TIME add two struct timespec
+*********************************************************************************************************/
+
+static LW_INLINE  VOID   __timespecAdd (struct timespec  *ptv1, const struct timespec  *ptv2)
+{
+    ptv1->tv_sec  += ptv2->tv_sec;
+    ptv1->tv_nsec += ptv2->tv_nsec;
+    
+    if (ptv1->tv_nsec >= __TIMEVAL_NSEC_MAX) {
+        ptv1->tv_sec++; 
+        ptv1->tv_nsec -= __TIMEVAL_NSEC_MAX;
+    }
+}
+
+/*********************************************************************************************************
+  POSIX TIME sub two struct timespec
+*********************************************************************************************************/
+
+static LW_INLINE  VOID   __timespecSub (struct timespec  *ptv1, const struct timespec  *ptv2)
+{
+    ptv1->tv_sec  -= ptv2->tv_sec;
+    ptv1->tv_nsec -= ptv2->tv_nsec;
+    
+    if (ptv1->tv_nsec >= __TIMEVAL_NSEC_MAX) {
+        ptv1->tv_sec++; 
+        ptv1->tv_nsec -= __TIMEVAL_NSEC_MAX;
+    
+    } else if (ptv1->tv_nsec < 0) {
+        ptv1->tv_sec--; 
+        ptv1->tv_nsec += __TIMEVAL_NSEC_MAX;
+    }
+}
+
+/*********************************************************************************************************
+  POSIX TIME check if has left time
+*********************************************************************************************************/
+
+static LW_INLINE INT  __timespecLeftTime (const struct timespec  *ptv1, const struct timespec  *ptv2)
+{
+    return  (ptv1->tv_sec < ptv2->tv_sec ||
+             (ptv1->tv_sec == ptv2->tv_sec && ptv1->tv_nsec < ptv2->tv_nsec));
+}
+
+/*********************************************************************************************************
   KERNEL HOOK
 *********************************************************************************************************/
 
