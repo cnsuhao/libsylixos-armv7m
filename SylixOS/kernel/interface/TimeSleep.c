@@ -275,24 +275,19 @@ static VOID  __timeGetHighResolution (struct timespec  *ptv)
     LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
 }
 /*********************************************************************************************************
-** 函数名称: __timePassNsec
-** 功能描述: 平静等待指定的纳秒数 (一个 tick 时间以内)
-** 输　入  : lNsec     纳秒数
+** 函数名称: __timePassSpec
+** 功能描述: 平静等待指定的短时间
+** 输　入  : ptv       短时间
 ** 全局变量: NONE
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID  __timePassNsec (LONG  lNsec)
+static VOID  __timePassSpec (const struct timespec  *ptv)
 {
 #if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
     struct timespec  tvEnd, tvNow;
     
     __timeGetHighResolution(&tvEnd);
-    tvEnd.tv_nsec += lNsec;
-    if (tvEnd.tv_nsec >= __TIMEVAL_NSEC_MAX) {
-        tvEnd.tv_nsec -= __TIMEVAL_NSEC_MAX;
-        tvEnd.tv_sec++;
-    }
-    
+    __timespecAdd(&tvEnd, ptv);
     do {
         __timeGetHighResolution(&tvNow);
     } while (__timespecLeftTime(&tvNow, &tvEnd));
@@ -343,7 +338,7 @@ INT  nanosleep (const struct timespec  *rqtp, struct timespec  *rmtp)
     
     ulTick = __timespecToTick((struct timespec *)rqtp);
     if (!ulTick) {                                                      /*  不到一个 tick               */
-        __timePassNsec(rqtp->tv_nsec);                                  /*  平静度过 nsec               */
+        __timePassSpec(rqtp);                                           /*  平静度过                    */
         if (rmtp) {
             rmtp->tv_sec  = 0;                                          /*  不存在时间差别              */
             rmtp->tv_nsec = 0;
@@ -390,14 +385,15 @@ __wait_again:
     if (ulError ==  ERROR_NONE) {                                       /*  tick 已经延迟结束           */
         __timeGetHighResolution(&tvTemp);
         __timespecSub(&tvTemp, &tvStart);                               /*  计算已经延迟的时间          */
-        if (__timespecLeftTime(&tvTemp, (struct timespec *)rqtp)) {     /*  还有剩余时间需要延迟        */
-            __timePassNsec(rqtp->tv_nsec - tvTemp.tv_nsec);             /*  平静度过 nsec               */
+        if (__timespecLeftTime(&tvTemp, rqtp)) {                        /*  还有剩余时间需要延迟        */
+            struct timespec  tvNeed = *rqtp;
+            __timespecSub(&tvNeed, &tvTemp);
+            __timePassSpec(&tvNeed);                                    /*  平静度过                    */
         }
         if (rmtp) {
             rmtp->tv_sec  = 0;                                          /*  不存在时间差别              */
             rmtp->tv_nsec = 0;
         }
-    
     } else {                                                            /*  信号唤醒                    */
         if (rmtp) {
             *rmtp = *rqtp;
