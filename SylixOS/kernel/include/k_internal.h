@@ -775,6 +775,20 @@ static LW_INLINE INT  __timespecLeftTime (const struct timespec  *ptv1, const st
 }
 
 /*********************************************************************************************************
+  Macros for converting between `struct timeval' and `struct timespec'.
+*********************************************************************************************************/
+
+#define LW_TIMEVAL_TO_TIMESPEC(tv, ts) {        \
+        (ts)->tv_sec  = (tv)->tv_sec;           \
+        (ts)->tv_nsec = (tv)->tv_usec * 1000;   \
+}
+
+#define LW_TIMESPEC_TO_TIMEVAL(tv, ts) {        \
+        (tv)->tv_sec  = (ts)->tv_sec;           \
+        (tv)->tv_usec = (ts)->tv_nsec / 1000;   \
+}
+
+/*********************************************************************************************************
   KERNEL HOOK
 *********************************************************************************************************/
 

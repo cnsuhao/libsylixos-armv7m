@@ -92,7 +92,7 @@ __wait_again:
 }
 /*********************************************************************************************************
 ** 函数名称: API_TimeSleepEx
-** 功能描述: 线程睡眠函数
+** 功能描述: 线程睡眠函数 (精度为 TICK HZ)
 ** 输　入  : ulTick            睡眠的时间
 **           bSigRet           是否允许信号唤醒
 ** 输　出  : ERROR_NONE or EINTR
@@ -149,7 +149,7 @@ __wait_again:
 }
 /*********************************************************************************************************
 ** 函数名称: API_TimeSSleep
-** 功能描述: 线程睡眠函数
+** 功能描述: 线程睡眠函数 (精度为 TICK HZ)
 ** 输　入  : ulSeconds            睡眠的时间 (秒)
 ** 输　出  : 
 ** 全局变量: 
@@ -165,7 +165,7 @@ VOID    API_TimeSSleep (ULONG   ulSeconds)
 }
 /*********************************************************************************************************
 ** 函数名称: API_TimeMSleep
-** 功能描述: 线程睡眠函数
+** 功能描述: 线程睡眠函数 (精度为 TICK HZ)
 ** 输　入  : ulMSeconds            睡眠的时间 (毫秒)
 ** 输　出  : 
 ** 全局变量: 
@@ -186,75 +186,6 @@ VOID    API_TimeMSleep (ULONG   ulMSeconds)
     ulTicks = LW_MSECOND_TO_TICK_1(ulMSeconds);
     
     API_TimeSleep(ulTicks);
-}
-/*********************************************************************************************************
-** 函数名称: sleep 
-** 功能描述: sleep()会令目前的线程暂停，直到达到参数 uiSeconds 所指定的时间，或是被信号所中断。(POSIX)
-** 输　入  : uiSeconds         睡眠的秒数
-** 输　出  : 若进程暂停到参数 uiSeconds 所指定的时间则返回 0，若有信号中断则返回剩余秒数。
-
-             error == EINTR    表示被信号激活.
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-                                           
-                                       (不得在中断中调用)
-*********************************************************************************************************/
-LW_API  
-UINT  sleep (UINT    uiSeconds)
-{
-             INTREG                iregInterLevel;
-             
-             PLW_CLASS_TCB         ptcbCur;
-    REGISTER PLW_CLASS_PCB         ppcb;
-	REGISTER ULONG                 ulKernelTime;
-	         INT                   iSchedRet;
-	         
-	         ULONG                 ulTick = (ULONG)(uiSeconds * LW_TICK_HZ);
-    
-    if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
-        _ErrorHandle(ERROR_KERNEL_IN_ISR);
-        return  (0);
-    }
-    
-    if (!ulTick) {                                                      /*  不进行延迟                  */
-        return  (0);
-    }
-    
-    __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
-    
-    LW_TCB_GET_CUR_SAFE(ptcbCur);                                       /*  当前任务控制块              */
-    
-    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_SLEEP, 
-                      ptcbCur->TCB_ulId, ulTick, LW_NULL);
-    
-__wait_again:
-    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核                    */
-    
-    ppcb = _GetPcb(ptcbCur);
-    __DEL_FROM_READY_RING(ptcbCur, ppcb);                               /*  从就绪表中删除              */
-    
-    ptcbCur->TCB_ulDelay = ulTick;
-    __ADD_TO_WAKEUP_LINE(ptcbCur);                                      /*  加入等待扫描链              */
-    
-    __KERNEL_TIME_GET_NO_SPINLOCK(ulKernelTime, ULONG);                 /*  记录系统时间                */
-    
-    iSchedRet = __KERNEL_EXIT_IRQ(iregInterLevel);                      /*  调度器解锁                  */
-    if (iSchedRet == LW_SIGNAL_EINTR) {
-        ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        uiSeconds = (UINT)(ulTick / LW_TICK_HZ);
-        
-        _ErrorHandle(EINTR);                                            /*  被信号激活                  */
-        return  (uiSeconds);                                            /*  剩余秒数                    */
-        
-    } else if (iSchedRet == LW_SIGNAL_RESTART) {
-        ulTick = _sigTimeOutRecalc(ulKernelTime, ulTick);               /*  重新计算等待时间            */
-        if (ulTick != 0ul) {
-            goto    __wait_again;
-        }
-    }
-    
-    return  (0);
 }
 /*********************************************************************************************************
 ** 函数名称: __timeGetHighResolution
@@ -410,7 +341,7 @@ __wait_again:
 }
 /*********************************************************************************************************
 ** 函数名称: usleep 
-** 功能描述: 使调用此函数的线程睡眠一个指定的时间(us 为单位), 睡眠过程中可能被信号惊醒!!! (POSIX)
+** 功能描述: 使调用此函数的线程睡眠一个指定的时间(us 为单位), 睡眠过程中可能被信号唤醒. (POSIX)
 ** 输　入  : usecondTime       时间 (us)
 ** 输　出  : ERROR_NONE  or  PX_ERROR
              error == EINTR    表示被信号激活.
@@ -429,6 +360,31 @@ INT  usleep (usecond_t   usecondTime)
     ts.tv_nsec = (LONG)(usecondTime % 1000000) * 1000ul;
     
     return  (nanosleep(&ts, LW_NULL));
+}
+/*********************************************************************************************************
+** 函数名称: sleep 
+** 功能描述: sleep() 会令目前的线程暂停, 直到达到参数 uiSeconds 所指定的时间, 或是被信号所唤醒. (POSIX)
+** 输　入  : uiSeconds         睡眠的秒数
+** 输　出  : 若进程暂停到参数 uiSeconds 所指定的时间则返回 0, 若有信号中断则返回剩余秒数.
+**           error == EINTR    表示被信号激活.
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+                                           
+                                       (不得在中断中调用)
+*********************************************************************************************************/
+LW_API  
+UINT  sleep (UINT    uiSeconds)
+{
+    struct timespec  rqtp;
+    struct timespec  rmtp;
+    
+    rqtp.tv_sec  = (time_t)uiSeconds;
+    rqtp.tv_nsec = 0;
+    
+    nanosleep(&rqtp, &rmtp);
+    
+    return  ((UINT)rmtp.tv_sec);
 }
 /*********************************************************************************************************
   END
