@@ -137,7 +137,7 @@ VOID  _ThreadDisjoinWakeup (PLW_CLASS_TCB  ptcbDes, PLW_CLASS_TCB  ptcbWakeup, P
     INTREG  iregInterLevel;
     
     if (ptcbWakeup->TCB_ppvJoinRetValSave) {                            /*  等待返回值                  */
-        *ptcbWakeup->TCB_ppvJoinRetValSave = LW_NULL;                   /*  保存返回值                  */
+        *ptcbWakeup->TCB_ppvJoinRetValSave = pvArg;                     /*  保存返回值                  */
     }
     
     MONITOR_EVT_LONG2(MONITOR_EVENT_ID_THREAD, MONITOR_EVENT_THREAD_DETACH, 
