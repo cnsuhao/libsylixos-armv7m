@@ -1009,6 +1009,10 @@ int link_input_hook (PVOID  pvPBuf, PVOID  pvNetif)
 {
 extern INT packet_link_input(struct pbuf *p, struct netif *inp, BOOL bOutgo);
 
+    if (!netif_is_up((struct netif *)pvNetif)) {
+        return  (1);                                                    /*  没有使能的网卡不接收        */
+    }
+
     return  (packet_link_input((struct pbuf *)pvPBuf, (struct netif *)pvNetif, LW_FALSE));
 }
 /*********************************************************************************************************

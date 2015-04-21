@@ -67,7 +67,7 @@ errno_t  __packetEthRawSendto (CPVOID                pvPacket,
         UNLOCK_TCPIP_CORE();
         return  (ENXIO);
     }
-    if (!netif_is_up(pnetif)) {
+    if (!netif_is_up(pnetif) || !netif_is_link_up(pnetif)) {
         UNLOCK_TCPIP_CORE();
         return  (ENETDOWN);
     }
@@ -146,7 +146,7 @@ errno_t  __packetEthDgramSendto (CPVOID                pvPacket,
         UNLOCK_TCPIP_CORE();
         return  (ENXIO);
     }
-    if (!netif_is_up(pnetif)) {
+    if (!netif_is_up(pnetif) || !netif_is_link_up(pnetif)) {
         UNLOCK_TCPIP_CORE();
         return  (ENETDOWN);
     }
