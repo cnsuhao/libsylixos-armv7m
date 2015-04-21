@@ -573,14 +573,11 @@ static INT  __tshellIfUp (INT  iArgC, PCHAR  *ppcArgV)
     if (netif_is_up(netif)) {                                           /*  网卡是否已经启动            */
 #if LWIP_DHCP > 0                                                       /*  首先关闭网卡                */
         if (netif->dhcp && netif->dhcp->pcb) {
-            netifapi_netif_common(netif, NULL, dhcp_release);           /*  解除 DHCP 租约, 同时停止网卡*/
+            netifapi_netif_common(netif, NULL, dhcp_release);           /*  解除 DHCP 租约              */
             netifapi_dhcp_stop(netif);                                  /*  释放资源                    */
-        } else {
-            netifapi_netif_set_down(netif);                             /*  禁用网卡                    */
         }
-#else
-        netifapi_netif_set_down(netif);                                 /*  禁用网卡                    */
 #endif                                                                  /*  LWIP_DHCP > 0               */
+        netifapi_netif_set_down(netif);                                 /*  禁用网卡                    */
     }
 
     netifapi_netif_set_up(netif);                                       /*  启动网卡                    */
@@ -641,14 +638,12 @@ static INT  __tshellIfDown (INT  iArgC, PCHAR  *ppcArgV)
 
 #if LWIP_DHCP > 0
     if (netif->dhcp && netif->dhcp->pcb) {
-        netifapi_netif_common(netif, NULL, dhcp_release);               /*  解除 DHCP 租约, 同时停止网卡*/
+        netifapi_netif_common(netif, NULL, dhcp_release);               /*  解除 DHCP 租约              */
         netifapi_dhcp_stop(netif);                                      /*  释放资源                    */
-    } else {
-        netifapi_netif_set_down(netif);                                 /*  禁用网卡                    */
     }
-#else
-    netifapi_netif_set_down(netif);                                     /*  禁用网卡                    */
 #endif                                                                  /*  LWIP_DHCP > 0               */
+
+    netifapi_netif_set_down(netif);                                     /*  禁用网卡                    */
 
     printf("net interface \"%s\" set down.\n", ppcArgV[1]);
     return  (ERROR_NONE);

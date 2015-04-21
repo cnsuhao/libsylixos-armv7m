@@ -58,12 +58,9 @@ INT  if_down (const char *ifname)
             if (pnetif->dhcp && pnetif->dhcp->pcb) {
                 netifapi_netif_common(pnetif, NULL, dhcp_release);      /*  解除 DHCP 租约, 同时停止网卡*/
                 netifapi_dhcp_stop(pnetif);                             /*  释放资源                    */
-            } else {
-                netifapi_netif_set_down(pnetif);                        /*  禁用网卡                    */
             }
-#else
-            netifapi_netif_set_down(pnetif);                            /*  禁用网卡                    */
 #endif                                                                  /*  LWIP_DHCP > 0               */
+            netifapi_netif_set_down(pnetif);                            /*  禁用网卡                    */
             iError = ERROR_NONE;
         } else {
             _ErrorHandle(EALREADY);

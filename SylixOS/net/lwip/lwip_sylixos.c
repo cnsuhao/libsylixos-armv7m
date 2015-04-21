@@ -88,7 +88,9 @@ static VOID  __netCloseAll (VOID)
     PLW_DEV_HDR      pdevhdr;
     PCHAR            pcTail;
     
+#if LWIP_DHCP > 0
     struct netif    *netif = netif_list;
+#endif                                                                  /*  LWIP_DHCP > 0               */
     
     pdevhdr = iosDevFind(LWIP_SYLIXOS_SOCKET_NAME, &pcTail);
     if (pdevhdr) {
@@ -102,8 +104,6 @@ static VOID  __netCloseAll (VOID)
             netifapi_dhcp_stop(netif);                                  /*  ÊÍ·Å×ÊÔ´                    */
         }
     }
-#else
-    (VOID)netif;
 #endif                                                                  /*  LWIP_DHCP > 0               */
 }
 /*********************************************************************************************************
