@@ -64,10 +64,10 @@ VOID  _EventSetBlock (PLW_CLASS_EVENTSET        pes,
     ptcbCur->TCB_pesnPtr = pesn;
 #endif
     
-    pesn->EVENTSETNODE_pesEventSet     = (PVOID)pes;
-    pesn->EVENTSETNODE_ulEventSets     = ulEvents;
-    pesn->EVENTSETNODE_ucWaitType      = ucWaitType;
-    pesn->EVENTSETNODE_ptcbMe          = (PVOID)ptcbCur;
+    pesn->EVENTSETNODE_pesEventSet = (PVOID)pes;
+    pesn->EVENTSETNODE_ulEventSets = ulEvents;
+    pesn->EVENTSETNODE_ucWaitType  = ucWaitType;
+    pesn->EVENTSETNODE_ptcbMe      = (PVOID)ptcbCur;
     
     _List_Line_Add_Ahead(&pesn->EVENTSETNODE_lineManage, &pes->EVENTSET_plineWaitList);
     

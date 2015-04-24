@@ -20,6 +20,7 @@
 **
 ** BUG:
 2013.07.18  去掉 cpu 信息中 优先级的记录, 1.0.0-rc40 以后的 SylixOS 不再使用. 
+2015.04.24  核间中断加入专有的清除函数.
 *********************************************************************************************************/
 
 #ifndef __K_CPU_H
@@ -80,6 +81,9 @@ typedef struct __lw_cpu {
     LW_SPINLOCK_DEFINE      (CPU_slIpi);                                /*  核间中断锁                  */
     PLW_LIST_RING            CPU_pringMsg;                              /*  自定义核间中断参数          */
     ULONG                    CPU_ulIPIVector;                           /*  核间中断向量                */
+    FUNCPTR                  CPU_pfuncIPIClear;                         /*  核间中断清除函数            */
+    PVOID                    CPU_pvIPIArg;                              /*  核间中断清除参数            */
+    
     INT64                    CPU_iIPICnt;                               /*  核间中断次数                */
     volatile ULONG           CPU_ulIPIPend;                             /*  核间中断标志码              */
 

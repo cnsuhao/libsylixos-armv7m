@@ -96,7 +96,7 @@ LW_OBJECT_HANDLE  API_SemaphoreBCreate (CPCHAR             pcName,
     pwqTemp->WAITQUEUE_usWaitNum = 0;                                   /*  没有线程                    */
     
     for (ulI = 0; ulI < __THREAD_PRIORITY_Q_NUM; ulI++) {               /*  初始化等待队列              */
-        pwqTemp->WAITQUEUE_wlWaitList.WAITLIST_pringPRIOList[ulI] = LW_NULL;       
+        pwqTemp->WAITQUEUE_wlWaitList.WAITLIST_pringPRIOList[ulI] = LW_NULL;
     }
     
     ulIdTemp = _MakeObjectId(_OBJECT_SEM_B, 

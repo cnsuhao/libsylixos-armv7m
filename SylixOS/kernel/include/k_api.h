@@ -928,6 +928,11 @@ LW_API irqreturn_t      API_InterVectorIsr(ULONG    ulVector);          /*  中断
 #if LW_CFG_SMP_EN > 0
 LW_API VOID             API_InterVectorIpi(ULONG  ulCPUId, 
                                            ULONG  ulIPIVector);         /*  设置核间中断向量号          */
+                                           
+LW_API VOID             API_InterVectorIpiEx(ULONG    ulCPUId, 
+                                             ULONG    ulIPIVector, 
+                                             FUNCPTR  pfuncClear, 
+                                             PVOID    pvArg);           /*  设置核间中断向量号          */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
 LW_API PVOID            API_InterStackBaseGet(VOID);                    /*  获得当前中断堆栈首地址      */

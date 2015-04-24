@@ -21,6 +21,7 @@
 ** BUG:
 2013.07.29  此文件改名为 _CandTable.c 表示候选运行表操作.
 2014.01.10  将候选表放入 CPU 结构中.
+2015.04.22  加入 _CandTableResel() 提高运算速度.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -57,7 +58,7 @@ static PLW_CLASS_TCB  _CandSeekThread (PLW_CLASS_PCBBMAP  ppcbbmap, UINT8  ucPri
     return  (ptcb);
 }
 /*********************************************************************************************************
-** 函数名称: _CandTableSelect
+** 函数名称: _CandTableFill
 ** 功能描述: 选择一个最该执行线程放入候选表.
 ** 输　入  : pcpu          CPU 结构
 ** 输　出  : NONE
@@ -72,8 +73,37 @@ static VOID  _CandTableFill (PLW_CLASS_CPU   pcpu)
              UINT8              ucPriority;
 
     ppcbbmap = _SchedSeekPriority(pcpu, &ucPriority);
-    ptcb     = _CandSeekThread(ppcbbmap, ucPriority);                   /*  确定可以候选运行的线程      */
-    ppcb     = &ppcbbmap->PCBM_pcb[ucPriority];
+    _BugHandle((ppcbbmap == LW_NULL), LW_TRUE, "serious error!.\r\n");  /*  就绪表不应该为 NULL         */
+    
+    ptcb = _CandSeekThread(ppcbbmap, ucPriority);                       /*  确定可以候选运行的线程      */
+    ppcb = &ppcbbmap->PCBM_pcb[ucPriority];
+    
+    LW_CAND_TCB(pcpu) = ptcb;                                           /*  保存新的可执行线程          */
+    ptcb->TCB_ulCPUId = pcpu->CPU_ulCPUId;                              /*  记录 CPU 号                 */
+    ptcb->TCB_bIsCand = LW_TRUE;                                        /*  进入候选运行表              */
+    _DelTCBFromReadyRing(ptcb, ppcb);                                   /*  从就绪环中退出              */
+    
+    if (_PcbIsEmpty(ppcb)) {
+        __DEL_RDY_MAP(ptcb);                                            /*  从就绪表中删除              */
+    }
+}
+/*********************************************************************************************************
+** 函数名称: _CandTableResel
+** 功能描述: 选择一个最该执行线程放入候选表.
+** 输　入  : pcpu          CPU 结构
+**           ppcbbmap      优先级位图
+**           ucPriority    需要运行任务的优先级
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  _CandTableResel (PLW_CLASS_CPU   pcpu, PLW_CLASS_PCBBMAP  ppcbbmap, UINT8  ucPriority)
+{
+    REGISTER PLW_CLASS_TCB      ptcb;
+    REGISTER PLW_CLASS_PCB      ppcb;
+    
+    ptcb = _CandSeekThread(ppcbbmap, ucPriority);                       /*  确定可以候选运行的线程      */
+    ppcb = &ppcbbmap->PCBM_pcb[ucPriority];
     
     LW_CAND_TCB(pcpu) = ptcb;                                           /*  保存新的可执行线程          */
     ptcb->TCB_ulCPUId = pcpu->CPU_ulCPUId;                              /*  记录 CPU 号                 */
@@ -235,9 +265,10 @@ VOID _CandTableTryDel (PLW_CLASS_TCB  ptcb, PLW_CLASS_PCB  ppcb)
 *********************************************************************************************************/
 VOID _CandTableUpdate (PLW_CLASS_CPU   pcpu)
 {
-             UINT8          ucPriority;
-    REGISTER PLW_CLASS_TCB  ptcbCand;
-             BOOL           bNeedRotate = LW_FALSE;
+             UINT8              ucPriority;
+    REGISTER PLW_CLASS_TCB      ptcbCand;
+             PLW_CLASS_PCBBMAP  ppcbbmap;
+             BOOL               bNeedRotate = LW_FALSE;
 
     if (!LW_CPU_IS_ACTIVE(pcpu)) {                                      /*  CPU 必须为激活状态          */
         return;
@@ -249,7 +280,12 @@ VOID _CandTableUpdate (PLW_CLASS_CPU   pcpu)
         return;
     }
     
-    _SchedSeekPriority(pcpu, &ucPriority);                              /*  当前就绪表中最高优先级      */
+    ppcbbmap = _SchedSeekPriority(pcpu, &ucPriority);                   /*  当前就绪表中最高优先级      */
+    if (ppcbbmap == LW_NULL) {
+        LW_CAND_ROT(pcpu) = LW_FALSE;                                   /*  清除优先级卷绕标志          */
+        return;
+    }
+    
     if (ptcbCand->TCB_usSchedCounter == 0) {                            /*  已经没有时间片了            */
         if (LW_PRIO_IS_HIGH_OR_EQU(ucPriority, 
                                    ptcbCand->TCB_ucPriority)) {         /*  是否需要轮转                */
@@ -264,7 +300,7 @@ VOID _CandTableUpdate (PLW_CLASS_CPU   pcpu)
     
     if (bNeedRotate) {                                                  /*  存在更需要运行的线程        */
         _CandTableEmpty(pcpu);                                          /*  清空候选表                  */
-        _CandTableFill(pcpu);                                           /*  重新填充候选表              */
+        _CandTableResel(pcpu, ppcbbmap, ucPriority);                    /*  重新选择任务执行            */
     }
     
     LW_CAND_ROT(pcpu) = LW_FALSE;                                       /*  清除优先级卷绕标志          */

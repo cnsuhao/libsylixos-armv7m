@@ -26,6 +26,7 @@
 2013.08.28  加入内核事件监视器.
 2014.04.21  中断被处理后不在遍历后面的中断服务函数.
 2014.05.09  加入对中断计数器的处理.
+2014.05.09  提高 SMP 中断处理速度.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -58,21 +59,23 @@ irqreturn_t  API_InterVectorIsr (ULONG  ulVector)
 #if LW_CFG_SMP_EN > 0
     if (pcpu->CPU_ulIPIVector == ulVector) {                            /*  核间中断                    */
         _SmpProcIpi(pcpu);
-    }
+        if (pcpu->CPU_pfuncIPIClear) {
+            pcpu->CPU_pfuncIPIClear(pcpu->CPU_pvIPIArg, ulVector);      /*  清除核间中断                */
+        }
+    } else
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-
-    pidesc = LW_IVEC_GET_IDESC(ulVector);
-    
-#if LW_CFG_SMP_EN > 0
-    LW_SPIN_LOCK(&pidesc->IDESC_slLock);                                /*  锁住 spinlock               */
-#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
-    
-    for (plineTemp  = pidesc->IDESC_plineAction;
-         plineTemp != LW_NULL;
-         plineTemp  = _list_line_get_next(plineTemp)) {
+    {
+        pidesc = LW_IVEC_GET_IDESC(ulVector);
         
-        piaction = _LIST_ENTRY(plineTemp, LW_CLASS_INTACT, IACT_plineManage);
-        if (piaction->IACT_pfuncIsr) {
+#if LW_CFG_SMP_EN > 0
+        LW_SPIN_LOCK(&pidesc->IDESC_slLock);                            /*  锁住 spinlock               */
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+        
+        for (plineTemp  = pidesc->IDESC_plineAction;
+             plineTemp != LW_NULL;
+             plineTemp  = _list_line_get_next(plineTemp)) {
+            
+            piaction = _LIST_ENTRY(plineTemp, LW_CLASS_INTACT, IACT_plineManage);
             irqret = piaction->IACT_pfuncIsr(piaction->IACT_pvArg, ulVector);
             if (LW_IRQ_RETVAL(irqret)) {                                /*  中断是否已经被处理          */
                 piaction->IACT_iIntCnt[pcpu->CPU_ulCPUId]++;
@@ -82,11 +85,11 @@ irqreturn_t  API_InterVectorIsr (ULONG  ulVector)
                 break;
             }
         }
-    }
-    
+        
 #if LW_CFG_SMP_EN > 0
-    LW_SPIN_UNLOCK(&pidesc->IDESC_slLock);                              /*  解锁 spinlock               */
+        LW_SPIN_UNLOCK(&pidesc->IDESC_slLock);                          /*  解锁 spinlock               */
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+    }
     
     __LW_CPU_INT_EXIT_HOOK(ulVector, pcpu->CPU_ulInterNesting);
     
@@ -94,6 +97,34 @@ irqreturn_t  API_InterVectorIsr (ULONG  ulVector)
                       ulVector, pcpu->CPU_ulInterNesting, LW_NULL);
                       
     return  (irqret);
+}
+/*********************************************************************************************************
+** 函数名称: API_InterVectorIpiEx
+** 功能描述: 设置核间中断向量   
+             BSP 在系统启动前调用此函数, 每个 CPU 都要设置, SylixOS 允许不同的 CPU 核间中断向量不同.
+** 输　入  : 
+**           ulCPUId                       CPU ID
+**           ulIPIVector                   核间中断向量号
+**           pfuncClear                    核间中断清除函数
+**           pvArg                         核间中断参数
+** 输　出  : 
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+#if LW_CFG_SMP_EN > 0
+
+LW_API
+VOID  API_InterVectorIpiEx (ULONG  ulCPUId, ULONG  ulIPIVector, FUNCPTR  pfuncClear, PVOID  pvArg)
+{
+    PLW_CLASS_CPU   pcpu;
+    
+    if (ulCPUId < LW_CFG_MAX_PROCESSORS) {
+        pcpu = LW_CPU_GET(ulCPUId);
+        pcpu->CPU_ulIPIVector   = ulIPIVector;
+        pcpu->CPU_pfuncIPIClear = pfuncClear;
+        pcpu->CPU_pvIPIArg      = pvArg;
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: API_InterVectorIpi
@@ -107,14 +138,10 @@ irqreturn_t  API_InterVectorIsr (ULONG  ulVector)
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
-#if LW_CFG_SMP_EN > 0
-
 LW_API
 VOID  API_InterVectorIpi (ULONG  ulCPUId, ULONG  ulIPIVector)
 {
-    if (ulCPUId < LW_CFG_MAX_PROCESSORS) {
-        LW_CPU_GET(ulCPUId)->CPU_ulIPIVector = ulIPIVector;
-    }
+    API_InterVectorIpiEx(ulCPUId, ulIPIVector, LW_NULL, LW_NULL);
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */

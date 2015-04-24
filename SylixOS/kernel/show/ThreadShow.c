@@ -34,6 +34,7 @@
             加入显示扩展接口, 可以显示指定进程内的线程.
 2014.05.05  加入 pend show 功能, 可以查看正在阻塞的线程信息.
 2014.06.02  pend 类型的显示更加详尽.
+2015.04.22  pend 事件更加详细.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -56,8 +57,8 @@ static const CHAR   _G_cThreadInfoHdr[] = "\n\
       NAME         TID    PID  PRI STAT  ERRNO     DELAY   PAGEFAILS FPU CPU\n\
 ---------------- ------- ----- --- ---- ------- ---------- --------- --- ---\n";
 static const CHAR   _G_cThreadPendHdr[] = "\n\
-      NAME         TID    PID  PRI STAT    DELAY       PEND EVENT    OWNER\n\
----------------- ------- ----- --- ---- ---------- ---------------- -------\n";
+      NAME         TID    PID  STAT    DELAY          PEND EVENT        OWNER\n\
+---------------- ------- ----- ---- ---------- ----------------------- -------\n";
 /*********************************************************************************************************
 ** 函数名称: API_ThreadShowEx
 ** 功能描述: 显示所有的线程的信息
@@ -141,7 +142,7 @@ VOID    API_ThreadShowEx (pid_t  pid)
             pcPendType = "STOP";
             
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_WSTAT) {    /*  等待状态转换                */
-            pcPendType = "WSTAT";
+            pcPendType = "WSTA";
         
         } else {
             pcPendType = "RDY";                                         /*  就绪态                      */
@@ -183,17 +184,25 @@ VOID    API_ThreadShowEx (pid_t  pid)
 LW_API  
 VOID    API_ThreadPendShowEx (pid_t  pid)
 {
+#define MAKE_ID(type, index)    \
+        _MakeObjectId(type, LW_CFG_PROCESSOR_NUMBER, index)
+
     REGISTER INT                i;
     REGISTER INT                iThreadCounter = 0;
     REGISTER PLW_CLASS_TCB      ptcb;
              PLW_CLASS_TCB      ptcbOwner;
              LW_CLASS_TCB_DESC  tcbdesc;
              PLW_CLASS_EVENT    pevent;
-             
+#if (LW_CFG_EVENTSET_EN > 0) && (LW_CFG_MAX_EVENTSETS > 0)
+             PLW_CLASS_EVENTSET pes;
+#endif                                                                  /*  (LW_CFG_EVENTSET_EN > 0)    */
+                                                                        /*  (LW_CFG_MAX_EVENTSETS > 0)  */
              PCHAR              pcPendType = LW_NULL;
              pid_t              pidGet;
              CHAR               cEventName[LW_CFG_OBJECT_NAME_SIZE];
+             LW_OBJECT_HANDLE   ulEvent;
              LW_OBJECT_HANDLE   ulOwner;
+             
     
     if (LW_CPU_GET_CUR_NESTING()) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "called from ISR.\r\n");
@@ -211,8 +220,31 @@ VOID    API_ThreadPendShowEx (pid_t  pid)
         }
         
         __KERNEL_ENTER();                                               /*  锁定内核                    */
-        pevent = ptcb->TCB_peventPtr;
-        if (pevent) {
+        if (ptcb->TCB_peventPtr) {                                      /*  等待事件                    */
+            pevent = ptcb->TCB_peventPtr;
+            switch (pevent->EVENT_ucType) {
+            
+            case LW_TYPE_EVENT_MSGQUEUE:    
+                ulEvent = MAKE_ID(_OBJECT_MSGQUEUE, pevent->EVENT_usIndex);
+                break;
+            
+            case LW_TYPE_EVENT_SEMC:
+                ulEvent = MAKE_ID(_OBJECT_SEM_C, pevent->EVENT_usIndex);
+                break;
+                
+            case LW_TYPE_EVENT_SEMB:
+                ulEvent = MAKE_ID(_OBJECT_SEM_B, pevent->EVENT_usIndex);
+                break;
+            
+            case LW_TYPE_EVENT_MUTEX:
+                ulEvent = MAKE_ID(_OBJECT_SEM_M, pevent->EVENT_usIndex);
+                break;
+                
+            default:
+                ulEvent = LW_OBJECT_HANDLE_INVALID;
+                break;
+            }
+            
             lib_strlcpy(cEventName, pevent->EVENT_cEventName, LW_CFG_OBJECT_NAME_SIZE);
             if ((pevent->EVENT_ucType == LW_TYPE_EVENT_MUTEX) &&
                 (pevent->EVENT_pvTcbOwn)) {
@@ -221,8 +253,18 @@ VOID    API_ThreadPendShowEx (pid_t  pid)
             } else {
                 ulOwner   = LW_OBJECT_HANDLE_INVALID;
             }
+        
+#if (LW_CFG_EVENTSET_EN > 0) && (LW_CFG_MAX_EVENTSETS > 0)
+        } else if (ptcb->TCB_pesnPtr) {                                 /*  等待事件标志组              */
+            pes     = (PLW_CLASS_EVENTSET)ptcb->TCB_pesnPtr->EVENTSETNODE_pesEventSet;
+            ulEvent = MAKE_ID(_OBJECT_EVENT_SET, pes->EVENTSET_usIndex);
+            lib_strlcpy(cEventName, pes->EVENTSET_cEventSetName, LW_CFG_OBJECT_NAME_SIZE);
+            ulOwner = LW_OBJECT_HANDLE_INVALID;
+#endif                                                                  /*  (LW_CFG_EVENTSET_EN > 0)    */
+                                                                        /*  (LW_CFG_MAX_EVENTSETS > 0)  */
         } else {
             cEventName[0] = PX_EOS;
+            ulEvent       = LW_OBJECT_HANDLE_INVALID;
             ulOwner       = LW_OBJECT_HANDLE_INVALID;
         }
         __KERNEL_EXIT();                                                /*  解锁内核                    */
@@ -272,30 +314,30 @@ VOID    API_ThreadPendShowEx (pid_t  pid)
             pcPendType = "STOP";
             
         } else if (tcbdesc.TCBD_usStatus & LW_THREAD_STATUS_WSTAT) {    /*  等待状态转换                */
-            pcPendType = "WSTAT";
+            pcPendType = "WSTA";
         
         } else {
             continue;                                                   /*  就绪态                      */
         }
         
         if (ulOwner) {
-            printf("%-16s %7lx %5d %3d %-4s %10lu %-16s %7lx\n",
+            printf("%-16s %7lx %5d %-4s %10lu %8lx:%-16s %7lx\n",
                    tcbdesc.TCBD_cThreadName,                            /*  线程名                      */
                    tcbdesc.TCBD_ulId,                                   /*  ID 号                       */
                    pidGet,                                              /*  所属进程 ID                 */
-                   tcbdesc.TCBD_ucPriority,                             /*  优先级                      */
                    pcPendType,                                          /*  状态                        */
                    tcbdesc.TCBD_ulWakeupLeft,                           /*  等待计数器                  */
+                   ulEvent,
                    cEventName,
                    ulOwner);
         } else {
-            printf("%-16s %7lx %5d %3d %-4s %10lu %-16s\n",
+            printf("%-16s %7lx %5d %-4s %10lu %8lx:%-16s\n",
                    tcbdesc.TCBD_cThreadName,                            /*  线程名                      */
                    tcbdesc.TCBD_ulId,                                   /*  ID 号                       */
                    pidGet,                                              /*  所属进程 ID                 */
-                   tcbdesc.TCBD_ucPriority,                             /*  优先级                      */
                    pcPendType,                                          /*  状态                        */
                    tcbdesc.TCBD_ulWakeupLeft,                           /*  等待计数器                  */
+                   ulEvent,
                    cEventName);
         }
         iThreadCounter++;

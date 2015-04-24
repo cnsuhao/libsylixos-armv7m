@@ -58,6 +58,7 @@ VOID  _AddTCBToReadyRing (PLW_CLASS_TCB  ptcb, PLW_CLASS_PCB  ppcb, BOOL  bIsHea
     default:
         if (ptcb->TCB_ucSchedActivate == LW_SCHED_ACT_OTHER) {
             _List_Ring_Add_Last(&ptcb->TCB_ringReady, &ppcb->PCB_pringReadyHeader);
+        
         } else {
             _List_Ring_Add_Front(&ptcb->TCB_ringReady, &ppcb->PCB_pringReadyHeader);
         }

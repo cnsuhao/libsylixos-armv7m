@@ -29,23 +29,26 @@
 static LW_INLINE PLW_CLASS_PCBBMAP  _SchedSeekPriority (PLW_CLASS_CPU  pcpu, UINT8 *ucPriority)
 {
 #if LW_CFG_SMP_EN > 0
-    UINT8               ucLocal, ucGlobal;
-    PLW_CLASS_PCBBMAP   ppcbbmap;
+    REGISTER PLW_CLASS_PCBBMAP  ppcbbmap;
+    REGISTER UINT8              ucLocal, ucGlobal;
     
-    if (_BitmapIsEmpty(LW_CPU_RDY_BMAP(pcpu))) {
-        ppcbbmap    = LW_GLOBAL_RDY_PCBBMAP();
-        ucGlobal    = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
-        *ucPriority = ucGlobal;
+    if (_BitmapIsEmpty(LW_CPU_RDY_BMAP(pcpu))) {                        /*  CPU 本地就绪表空            */
+        if (_BitmapIsEmpty(LW_GLOBAL_RDY_BMAP())) {
+            return  (LW_NULL);                                          /*  就绪表中无任务              */
+        }
+        *ucPriority = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
+        return  (LW_GLOBAL_RDY_PCBBMAP());
     
-    } else if (_BitmapIsEmpty(LW_GLOBAL_RDY_BMAP())) {
-        ppcbbmap    = LW_CPU_RDY_PCBBMAP(pcpu);
-        ucGlobal    = _BitmapHigh(LW_CPU_RDY_BMAP(pcpu));
-        *ucPriority = ucGlobal;
-        
-    } else {
+    } else {                                                            /*  CPU 本地就绪表非空          */
+        if (_BitmapIsEmpty(LW_GLOBAL_RDY_BMAP())) {
+            *ucPriority = _BitmapHigh(LW_CPU_RDY_BMAP(pcpu));
+            return  (LW_CPU_RDY_PCBBMAP(pcpu));
+        }
+
         ucLocal  = _BitmapHigh(LW_CPU_RDY_BMAP(pcpu));
         ucGlobal = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
-        if (LW_PRIO_IS_HIGH(ucLocal, ucGlobal)) {
+        
+        if (LW_PRIO_IS_HIGH_OR_EQU(ucLocal, ucGlobal)) {                /*  同优先级, 优先执行 local    */
             ppcbbmap    = LW_CPU_RDY_PCBBMAP(pcpu);
             *ucPriority = ucLocal;
         
@@ -53,13 +56,17 @@ static LW_INLINE PLW_CLASS_PCBBMAP  _SchedSeekPriority (PLW_CLASS_CPU  pcpu, UIN
             ppcbbmap    = LW_GLOBAL_RDY_PCBBMAP();
             *ucPriority = ucGlobal;
         }
+        
+        return  (ppcbbmap);
     }
-    
-    return  (ppcbbmap);
 #else
-    *ucPriority = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
+    if (_BitmapIsEmpty(LW_GLOBAL_RDY_BMAP())) {                         /*  就绪表中无任务              */
+        return  (LW_NULL);
     
-    return  (LW_GLOBAL_RDY_PCBBMAP());
+    } else {
+        *ucPriority = _BitmapHigh(LW_GLOBAL_RDY_BMAP());
+        return  (LW_GLOBAL_RDY_PCBBMAP());
+    }
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 }
 

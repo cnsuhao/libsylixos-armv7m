@@ -27,6 +27,9 @@ HISTORY
     2015-04-17: han.hui
     修正重定向文件描述符回收错误.
     
+    2015-04-24: han.hui
+    修正多核调度就绪表问题.
+    
 (STABLE-1.0.0)
 
 ++ New features:

@@ -35,7 +35,7 @@
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
-** 函数名称: _SchedGetCandidate
+** 函数名称: _SchedGetCand
 ** 功能描述: 获的需要运行的线程表 (被调用时已经锁定了调度器 spinlock)
 ** 输　入  : ptcbRunner        需要运行的 TCB 列表 (大小等于 CPU 数量)
 **           ulCPUIdCur        当前 CPU ID
@@ -86,8 +86,8 @@ VOID  _SchedTick (VOID)
             if (ptcb->TCB_ucSchedPolicy == LW_OPTION_SCHED_RR) {        /*  round-robin 线程            */
                 if (ptcb->TCB_usSchedCounter == 0) {                    /*  时间片已经耗尽              */
                     if (LW_CAND_ROT(pcpu) == LW_FALSE) {
-                        _SchedSeekPriority(pcpu, &ucPriority);          /*  就绪未运行任务的最高优先级  */
-                        if (LW_PRIO_IS_HIGH_OR_EQU(ucPriority,
+                        if (_SchedSeekPriority(pcpu, &ucPriority) &&    /*  就绪未运行任务的最高优先级  */
+                            LW_PRIO_IS_HIGH_OR_EQU(ucPriority,
                                                    ptcb->TCB_ucPriority)) {
                             LW_CAND_ROT(pcpu) = LW_TRUE;                /*  下次调度时检查轮转          */
                         }
@@ -122,8 +122,8 @@ VOID  _SchedYield (PLW_CLASS_TCB  ptcb, PLW_CLASS_PCB  ppcb)
 
     if (__LW_THREAD_IS_RUNNING(ptcb)) {                                 /*  必须正在执行                */
         pcpu = LW_CPU_GET_CUR();
-        _SchedSeekPriority(pcpu, &ucPriority);                          /*  就绪未运行任务的最高优先级  */
-        if (LW_PRIO_IS_HIGH_OR_EQU(ucPriority,
+        if (_SchedSeekPriority(pcpu, &ucPriority) &&                    /*  就绪未运行任务的最高优先级  */
+            LW_PRIO_IS_HIGH_OR_EQU(ucPriority,
                                    ptcb->TCB_ucPriority)) {
             ptcb->TCB_usSchedCounter = 0;                               /*  没收剩余时间片              */
             LW_CAND_ROT(LW_CPU_GET(ptcb->TCB_ulCPUId)) = LW_TRUE;       /*  下次调度时检查轮转          */
