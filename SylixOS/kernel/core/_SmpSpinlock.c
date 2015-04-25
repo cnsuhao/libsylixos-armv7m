@@ -121,10 +121,7 @@ INT  _SmpSpinUnlock (spinlock_t *psl)
     
     KN_SMP_MB();
     iRet = __ARCH_SPIN_UNLOCK(psl);
-    if (iRet != LW_SPIN_OK) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unlock error!\r\n");
-        while (1);
-    }
+    _BugHandle((iRet != LW_SPIN_OK), LW_TRUE, "unlock error!\r\n");
     
     pcpuCur = LW_CPU_GET_CUR();
     if (!pcpuCur->CPU_ulInterNesting) {
@@ -208,10 +205,7 @@ VOID  _SmpSpinUnlockIgnIrq (spinlock_t *psl)
     
     KN_SMP_MB();
     iRet = __ARCH_SPIN_UNLOCK(psl);
-    if (iRet != LW_SPIN_OK) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unlock error!\r\n");
-        while (1);
-    }
+    _BugHandle((iRet != LW_SPIN_OK), LW_TRUE, "unlock error!\r\n");
     
     pcpuCur = LW_CPU_GET_CUR();
     if (!pcpuCur->CPU_ulInterNesting) {
@@ -292,10 +286,7 @@ INT  _SmpSpinUnlockIrq (spinlock_t *psl, INTREG  iregInterLevel)
     
     KN_SMP_MB();
     iRet = __ARCH_SPIN_UNLOCK(psl);
-    if (iRet != LW_SPIN_OK) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unlock error!\r\n");
-        while (1);
-    }
+    _BugHandle((iRet != LW_SPIN_OK), LW_TRUE, "unlock error!\r\n");
     
     pcpuCur = LW_CPU_GET_CUR();
     if (!pcpuCur->CPU_ulInterNesting) {
@@ -331,10 +322,7 @@ VOID  _SmpSpinUnlockIrqQuick (spinlock_t *psl, INTREG  iregInterLevel)
 
     KN_SMP_MB();
     iRet = __ARCH_SPIN_UNLOCK(psl);
-    if (iRet != LW_SPIN_OK) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unlock error!\r\n");
-        while (1);
-    }
+    _BugHandle((iRet != LW_SPIN_OK), LW_TRUE, "unlock error!\r\n");
     
     pcpuCur = LW_CPU_GET_CUR();
     if (!pcpuCur->CPU_ulInterNesting) {
@@ -359,10 +347,7 @@ VOID  _SmpSpinUnlockSched (spinlock_t *psl, PLW_CLASS_TCB ptcbOwner)
     
     KN_SMP_MB();
     iRet = __ARCH_SPIN_UNLOCK(psl);
-    if (iRet != LW_SPIN_OK) {
-        _DebugHandle(__ERRORMESSAGE_LEVEL, "unlock error!\r\n");
-        while (1);
-    }
+    _BugHandle((iRet != LW_SPIN_OK), LW_TRUE, "unlock error!\r\n");
     
     pcpuCur = LW_CPU_GET_CUR();
     if (!pcpuCur->CPU_ulInterNesting) {
