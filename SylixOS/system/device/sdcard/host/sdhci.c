@@ -217,6 +217,7 @@ struct __sdhci_sdm_host {
     SD_CALLBACK     SDHCISDMH_callbackChkDev;
     PVOID           SDHCISDMH_pvCallBackArg;
     PVOID           SDHCISDMH_pvDevAttached;
+    PVOID           SDHCISDMH_pvSdmHost;
 };
 /*********************************************************************************************************
   全局变量
@@ -527,6 +528,28 @@ __err0:
     __SHEAP_FREE(psdhcihost);
 
     return  (LW_NULL);
+}
+/*********************************************************************************************************
+** 函数名称: API_SdhciSdmHostGet
+** 功能描述: 获得 SDM Host 对象
+** 输    入: pvHost    SDHCI 主控器指针
+** 输    出: SDHCI 控制器对应的 SDM 控制器对象
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+LW_API PVOID   API_SdhciSdmHostGet (PVOID pvHost)
+{
+    __PSDHCI_HOST   psdhcihost;
+    PVOID           pvSdmHost;
+
+    if (!pvHost) {
+        return  (LW_NULL);
+    }
+
+    psdhcihost = (__PSDHCI_HOST)pvHost;
+    pvSdmHost  = psdhcihost->SDHCIHS_psdhcisdmhost->SDHCISDMH_pvSdmHost;
+
+    return  (pvSdmHost);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdhciHostDelete
@@ -1466,6 +1489,7 @@ static __SDHCI_SDM_HOST *__sdhciSdmHostNew (__PSDHCI_HOST   psdhcihost)
     __SDHCI_SDM_HOST *psdhcisdmhost;
     SD_HOST          *psdhost;
     INT               iCapablity;
+    PVOID             pvSdmHost;
 
     if (!psdhcihost) {
         return  (LW_NULL);
@@ -1498,11 +1522,14 @@ static __SDHCI_SDM_HOST *__sdhciSdmHostNew (__PSDHCI_HOST   psdhcihost)
     psdhcisdmhost->SDHCISDMH_psdhcihost    = psdhcihost;
     psdhcihost->SDHCIHS_psdhcisdmhost      = psdhcisdmhost;
 
-    if (API_SdmHostRegister(psdhost) != ERROR_NONE) {
+    pvSdmHost = API_SdmHostRegister(psdhost);
+    if (!pvSdmHost) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "can't register into sdm modules.\r\n");
         __SHEAP_FREE(psdhcisdmhost);
         return  (LW_NULL);
+
     }
+    psdhcisdmhost->SDHCISDMH_pvSdmHost = pvSdmHost;
 
     return  (psdhcisdmhost);
 }
@@ -1516,10 +1543,10 @@ static __SDHCI_SDM_HOST *__sdhciSdmHostNew (__PSDHCI_HOST   psdhcihost)
 *********************************************************************************************************/
 static INT __sdhciSdmHostDel ( __SDHCI_SDM_HOST  *psdhcisdmhost)
 {
-    CPCHAR  cpcHostName;
+    PVOID  pvSdmHost;
 
-    cpcHostName = psdhcisdmhost->SDHCISDMH_sdhost.SDHOST_cpcName;
-    if (API_SdmHostUnRegister(cpcHostName) != ERROR_NONE) {
+    pvSdmHost = psdhcisdmhost->SDHCISDMH_pvSdmHost;
+    if (API_SdmHostUnRegister(pvSdmHost) != ERROR_NONE) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "can't unregister from sdm modules.\r\n");
         return  (PX_ERROR);
     }
@@ -2565,7 +2592,7 @@ static PVOID  __sdhciSdioIntSvr (VOID *pvArg)
         while (1) {
             __SDHCI_SDIO_REQUEST(psdhcitrans);
             for (i = 0; i < iDoIntCnt; i++) {
-                iError = API_SdmEventNotify(__SDHCI_HOST_NAME(psdhcihost),
+                iError = API_SdmEventNotify(psdhcihost->SDHCIHS_psdhcisdmhost->SDHCISDMH_pvSdmHost,
                                             SDM_EVENT_SDIO_INTERRUPT);
                 if (iError != ERROR_NONE) {
                     /*
@@ -2606,7 +2633,7 @@ static PVOID  __sdhciSdioIntSvr (VOID *pvArg)
     } else {
         while (1) {
             __SDHCI_SDIO_WAIT(psdhcitrans);
-            API_SdmEventNotify(__SDHCI_HOST_NAME(psdhcihost),
+            API_SdmEventNotify(psdhcihost->SDHCIHS_psdhcisdmhost->SDHCISDMH_pvSdmHost,
                                SDM_EVENT_SDIO_INTERRUPT);
             __sdhciSdioIntEn(psdhcihost, LW_TRUE);
         }

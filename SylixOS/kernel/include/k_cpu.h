@@ -41,8 +41,8 @@ typedef struct __lw_cpu {
     /*
      *  运行线程情况
      */
-    PLW_CLASS_TCB            CPU_ptcbTCBCur;                            /*  当前 TCB                    */
-    PLW_CLASS_TCB            CPU_ptcbTCBHigh;                           /*  需要运行的高优先 TCB        */
+    volatile PLW_CLASS_TCB   CPU_ptcbTCBCur;                            /*  当前 TCB                    */
+    volatile PLW_CLASS_TCB   CPU_ptcbTCBHigh;                           /*  需要运行的高优先 TCB        */
     
 #if LW_CFG_COROUTINE_EN > 0
     /*
@@ -62,19 +62,19 @@ typedef struct __lw_cpu {
     /*
      *  候选运行结构
      */
-    LW_CLASS_CAND            CPU_cand;                                  /*  候选运行的线程              */
+    volatile LW_CLASS_CAND   CPU_cand;                                  /*  候选运行的线程              */
+
+    /*
+     *  内核锁定状态
+     */
+    volatile INT             CPU_iKernelCounter;                        /*  内核状态计数器              */
 
     /*
      *  当前核就绪表
      */
 #if LW_CFG_SMP_EN > 0
     LW_CLASS_PCBBMAP         CPU_pcbbmapReady;                          /*  当前 CPU 就绪表             */
-#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
-    /*
-     *  内核锁定状态
-     */
-    volatile INT             CPU_iKernelCounter;                        /*  内核状态计数器              */
-
+    
     /*
      *  核间中断待处理标志, 这里最多有 ULONG 位数个核间中断类型, 和 CPU 硬件中断向量原理相同
      */
@@ -104,6 +104,7 @@ typedef struct __lw_cpu {
 #define LW_IPI_FLUSH_CACHE_MSK  (1 << LW_IPI_FLUSH_CACHE)
 #define LW_IPI_DOWN_MSK         (1 << LW_IPI_DOWN)
 #define LW_IPI_CALL_MSK         (1 << LW_IPI_CALL)
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 
     /*
      *  spinlock 等待表
@@ -125,8 +126,8 @@ typedef struct __lw_cpu {
     /*
      *  中断信息
      */
-    ULONG                    CPU_ulInterNesting;                        /*  中断嵌套计数器              */
-    ULONG                    CPU_ulInterNestingMax;                     /*  中断嵌套最大值              */
+    volatile ULONG           CPU_ulInterNesting;                        /*  中断嵌套计数器              */
+    volatile ULONG           CPU_ulInterNestingMax;                     /*  中断嵌套最大值              */
     ULONG                    CPU_ulInterError[LW_CFG_MAX_INTER_SRC];    /*  中断错误信息                */
     
 #if LW_CFG_CPU_FPU_EN > 0
@@ -195,6 +196,7 @@ extern LW_CLASS_CPU          _K_cpuTable[];                             /*  处理
 /*********************************************************************************************************
   CPU 核间中断
 *********************************************************************************************************/
+#if LW_CFG_SMP_EN > 0
 
 #define LW_CPU_ADD_IPI_PEND(id, ipi_msk)    \
         (_K_cpuTable[(id)].CPU_ulIPIPend |= (ipi_msk))                  /*  加入指定 CPU 核间中断 pend  */
@@ -216,6 +218,7 @@ extern LW_CLASS_CPU          _K_cpuTable[];                             /*  处理
 
 #define LW_CPU_GET_IPI_CNT(id)          (_K_cpuTable[(id)].CPU_iIPICnt)
 
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 /*********************************************************************************************************
   CPU 中断信息
 *********************************************************************************************************/

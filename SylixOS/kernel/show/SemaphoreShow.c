@@ -123,7 +123,7 @@ VOID    API_SemaphoreShow (LW_OBJECT_HANDLE  ulId)
         _ErrorHandle(ERROR_KERNEL_HANDLE_NULL);                         /*  句柄类型错误                */
         return;
     }
-    event      = *pevent;                                               /*  拷贝信息                    */
+    event = *pevent;                                                    /*  拷贝信息                    */
     LW_SPIN_UNLOCK_QUICK(&pevent->EVENT_slLock, iregInterLevel);        /*  打开中断, 同时打开 spinlock */
     
     pcWaitType = (event.EVENT_ulOption & LW_OPTION_WAIT_PRIORITY)

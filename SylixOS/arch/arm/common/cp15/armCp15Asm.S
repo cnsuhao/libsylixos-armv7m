@@ -124,8 +124,13 @@ FUNC_DEF(armSyncBusMode)
 ;*********************************************************************************************************/
 
 FUNC_DEF(armWaitForInterrupt)
+#if __SYLIXOS_ARM_ARCH__ >= 7
+    ARM_DSB()
+    WFI
+#else
     MOV     R0, #0
     MCR     p15, 0, R0, c7, c0, 4
+#endif
     BX      LR
     FUNC_END()
     

@@ -159,8 +159,8 @@ ULONG  API_InterVectorConnectEx (ULONG              ulVector,
     } else {                                                            /*  非队列服务式中断向量        */
         if (pidesc->IDESC_plineAction) {
             piactionOld = _LIST_ENTRY(pidesc->IDESC_plineAction, 
-                                  LW_CLASS_INTACT, 
-                                  IACT_plineManage);
+                                      LW_CLASS_INTACT, 
+                                      IACT_plineManage);
             piactionOld->IACT_pfuncIsr   = piaction->IACT_pfuncIsr;
             piactionOld->IACT_pfuncClear = piaction->IACT_pfuncClear;
             piactionOld->IACT_pvArg      = piaction->IACT_pvArg;

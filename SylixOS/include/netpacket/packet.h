@@ -93,13 +93,13 @@ struct tpacket_req {
 };
 
 struct tpacket_hdr {
-    u_long      tp_status;
-    u_int       tp_len;
-    u_int       tp_snaplen;
-    u_short     tp_mac;
-    u_short     tp_net;
-    u_int       tp_sec;
-    u_int       tp_usec;
+    volatile u_long      tp_status;
+    volatile u_int       tp_len;
+    volatile u_int       tp_snaplen;
+    volatile u_short     tp_mac;
+    volatile u_short     tp_net;
+    volatile u_int       tp_sec;
+    volatile u_int       tp_usec;
 };
 
 #define TPACKET_ALIGNMENT       16
@@ -107,14 +107,14 @@ struct tpacket_hdr {
 #define TPACKET_HDRLEN          (TPACKET_ALIGN(sizeof(struct tpacket_hdr)) + sizeof(struct sockaddr_ll))
 
 struct tpacket2_hdr {
-    u_int32_t   tp_status;
-    u_int32_t   tp_len;
-    u_int32_t   tp_snaplen;
-    u_int16_t   tp_mac;
-    u_int16_t   tp_net;
-    u_int32_t   tp_sec;
-    u_int32_t   tp_nsec;
-    u_int16_t   tp_vlan_tci;
+    volatile u_int32_t   tp_status;
+    volatile u_int32_t   tp_len;
+    volatile u_int32_t   tp_snaplen;
+    volatile u_int16_t   tp_mac;
+    volatile u_int16_t   tp_net;
+    volatile u_int32_t   tp_sec;
+    volatile u_int32_t   tp_nsec;
+    volatile u_int16_t   tp_vlan_tci;
 };
 
 #define TPACKET2_HDRLEN         (TPACKET_ALIGN(sizeof(struct tpacket2_hdr)) + sizeof(struct sockaddr_ll))

@@ -47,7 +47,7 @@
         _BugFormat((!__LW_THREAD_IS_READY(ptcb)), LW_TRUE,  \
                    "scheduler candidate serious error, "    \
                    "ptcb %p, name \"%s\", status 0x%x.\r\n",    \
-                   ptcb, ptcb->TCB_cThreadName, ptcb->TCB_usStatus)
+                   ptcb, ptcb->TCB_cThreadName, ptcb->TCB_usStatus);
 #else
 #define __LW_SCHEDULER_BUG_TRACE(ptcb)
 #endif                                                                  /*  __LW_SCHEDULER_BUG_TRACE_EN */
@@ -78,7 +78,7 @@
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : 当另一个核没有被任务锁定, 且产生了调度器卷绕, 并且没有在处理 sched 核间中断, 则发送核间中断.
+** 注  意  : 当另一个核产生了调度器卷绕, 并且没有在处理 sched 核间中断, 则发送核间中断.
 *********************************************************************************************************/
 #if LW_CFG_SMP_EN > 0
 
@@ -93,7 +93,7 @@ static VOID  _SchedSmpNotify (ULONG  ulCPUIdCur)
             if (!LW_CPU_IS_ACTIVE(pcpu)) {                              /*  目标 CPU 必须是激活状态     */
                 continue;
             }
-            if ((__SHOULD_SCHED(pcpu, 0)) && LW_CAND_ROT(pcpu) &&
+            if (LW_CAND_ROT(pcpu) &&
                 ((LW_CPU_GET_IPI_PEND(i) & LW_IPI_SCHED_MSK) == 0)) {
                 _SmpSendIpi(i, LW_IPI_SCHED, 0);                        /*  产生核间中断                */
             }
@@ -136,7 +136,7 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
 
     bspCpuDown(ulCPUId);                                                /*  BSP 停止 CPU                */
     
-    _BugHandle(LW_TRUE, LW_TRUE, "CPU Down error!\r\n")                 /*  不会运行到这里              */
+    _BugHandle(LW_TRUE, LW_TRUE, "CPU Down error!\r\n");                /*  不会运行到这里              */
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */

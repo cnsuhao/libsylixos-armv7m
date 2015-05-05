@@ -486,9 +486,8 @@ typedef struct __lw_tcb {
     ULONG                 TCB_ulCPULock;                                /*  锁定运行的 CPU ID           */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
-    ULONG                 TCB_ulCPUId;                                  /*  优先使用的 CPU 号           */
-                                                                        /*  如果正在运行, 表示运行 CPU  */
-    BOOL                  TCB_bIsCand;                                  /*  是否在候选运行表中          */
+    volatile ULONG        TCB_ulCPUId;                                  /*  如果正在运行, 表示运行 CPU  */
+    volatile BOOL         TCB_bIsCand;                                  /*  是否在候选运行表中          */
 
 #if LW_CFG_SMP_EN > 0
     struct __lw_tcb      *TCB_ptcbWaitStatus;                           /*  等待状态修改的目标线程      */
@@ -563,8 +562,8 @@ typedef struct __lw_tcb {
 #define TCB_ulWatchDog    TCB_wunWatchDog.WUN_ulCounter
 #endif
     
-    ULONG                 TCB_ulThreadLockCounter;                      /*  线程锁定计数器              */
-    ULONG                 TCB_ulThreadSafeCounter;                      /*  线程安全模式标志            */
+    volatile ULONG        TCB_ulThreadLockCounter;                      /*  线程锁定计数器              */
+    volatile ULONG        TCB_ulThreadSafeCounter;                      /*  线程安全模式标志            */
     
 #if LW_CFG_THREAD_DEL_EN > 0
     struct __lw_tcb      *TCB_ptcbDeleteMe;                             /*  要将本线程删除的 TCB        */
@@ -757,8 +756,8 @@ typedef LW_CLASS_TCB_DESC   *PLW_CLASS_TCB_DESC;
 *********************************************************************************************************/
 
 typedef struct {
-    UINT32                BMAP_uiMap;                                   /*  主位图掩码                  */
-    UINT32                BMAP_uiSubMap[(LW_PRIO_LOWEST >> 5) + 1];     /*  辅位图掩码                  */
+    volatile UINT32       BMAP_uiMap;                                   /*  主位图掩码                  */
+    volatile UINT32       BMAP_uiSubMap[(LW_PRIO_LOWEST >> 5) + 1];     /*  辅位图掩码                  */
 } LW_CLASS_BMAP;
 typedef LW_CLASS_BMAP    *PLW_CLASS_BMAP;
 
@@ -869,8 +868,8 @@ typedef LW_CLASS_SEGMENT    *PLW_CLASS_SEGMENT;
 *********************************************************************************************************/
 
 typedef struct {
-    PLW_CLASS_TCB       CAND_ptcbCand;                                  /*  候选运行线程                */
-    BOOL                CAND_bNeedRotate;                               /*  可能产生了优先级卷绕        */
+    volatile PLW_CLASS_TCB  CAND_ptcbCand;                              /*  候选运行线程                */
+    volatile BOOL           CAND_bNeedRotate;                           /*  可能产生了优先级卷绕        */
 } LW_CLASS_CAND;
 typedef LW_CLASS_CAND  *PLW_CLASS_CAND;
 

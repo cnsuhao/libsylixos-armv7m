@@ -248,6 +248,12 @@ VOID    armL2Sync(VOID);
 #endif                                                                  /*  __GNUC__                    */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
+#ifdef __GNUC__
+#define KN_BARRIER()    __asm__ __volatile__ ("" : : : "memory")
+#else
+#define KN_BARRIER()
+#endif                                                                  /*  __SYLIXOS_ARM_ARCH__ >= 7   */
+
 /*********************************************************************************************************
   ARM 处理器浮点运算器 
   注意: neon 对应的浮点运算器为 ARM_FPU_VFPv3 或者 ARM_FPU_VFPv4

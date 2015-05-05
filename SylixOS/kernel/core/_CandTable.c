@@ -159,10 +159,8 @@ BOOL  _CandTableTryAdd (PLW_CLASS_TCB  ptcb, PLW_CLASS_PCB  ppcb)
 
     if (ptcb->TCB_bCPULock) {                                           /*  任务锁定 CPU                */
         pcpu = LW_CPU_GET(ptcb->TCB_ulCPULock);
-        if (!LW_CPU_IS_ACTIVE(pcpu)) {                                  /*  CPU 必须为激活状态          */
-            _BugFormat(!LW_CPU_IS_ACTIVE(pcpu), LW_TRUE,
-                       "CPU Inactive %ld.\r\n", ptcb->TCB_ulCPULock);
-        }
+        _BugFormat(!LW_CPU_IS_ACTIVE(pcpu), LW_TRUE,
+                   "CPU Inactive %ld.\r\n", ptcb->TCB_ulCPULock);       /*  CPU 必须为激活状态          */
         
         ptcbCand = LW_CAND_TCB(pcpu);
         if (ptcbCand == LW_NULL) {                                      /*  候选表为空                  */
@@ -277,7 +275,7 @@ VOID _CandTableUpdate (PLW_CLASS_CPU   pcpu)
     ptcbCand = LW_CAND_TCB(pcpu);
     if (ptcbCand == LW_NULL) {                                          /*  当前没有候选线程            */
         _CandTableFill(pcpu);
-        return;
+        goto    __update_done;
     }
     
     ppcbbmap = _SchedSeekPriority(pcpu, &ucPriority);                   /*  当前就绪表中最高优先级      */
@@ -303,6 +301,7 @@ VOID _CandTableUpdate (PLW_CLASS_CPU   pcpu)
         _CandTableResel(pcpu, ppcbbmap, ucPriority);                    /*  重新选择任务执行            */
     }
     
+__update_done:
     LW_CAND_ROT(pcpu) = LW_FALSE;                                       /*  清除优先级卷绕标志          */
 }
 /*********************************************************************************************************

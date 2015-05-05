@@ -80,13 +80,26 @@ BOOL  _UpSpinTryLock (spinlock_t *psl)
 *********************************************************************************************************/
 INT  _UpSpinUnlock (spinlock_t *psl)
 {
-    PLW_CLASS_CPU   pcpuCur = LW_CPU_GET_CUR();
+    INTREG          iregInterLevel;
+    PLW_CLASS_CPU   pcpuCur   = LW_CPU_GET_CUR();
+    BOOL            bTrySched = LW_FALSE;
+    
+    iregInterLevel = KN_INT_DISABLE();
     
     if (!pcpuCur->CPU_ulInterNesting) {
         __THREAD_LOCK_DEC(pcpuCur->CPU_ptcbTCBCur);                     /*  解除任务锁定                */
         if (__SHOULD_SCHED(pcpuCur, 0)) {
-            return  (_ThreadSched(pcpuCur->CPU_ptcbTCBCur));            /*  尝试一次调度                */
+            bTrySched = LW_TRUE;                                        /*  需要尝试调度                */
         }
+    }
+    
+    KN_INT_ENABLE(iregInterLevel);
+    
+    if (bTrySched) {
+        return  (_ThreadSched(pcpuCur->CPU_ptcbTCBCur));
+    
+    } else {
+        return  (ERROR_NONE);
     }
     
     return  (ERROR_NONE);
@@ -192,15 +205,23 @@ BOOL  _UpSpinTryLockIrq (spinlock_t *psl, INTREG  *piregInterLevel)
 *********************************************************************************************************/
 INT  _UpSpinUnlockIrq (spinlock_t *psl, INTREG  iregInterLevel)
 {
-    PLW_CLASS_CPU   pcpuCur = LW_CPU_GET_CUR();
-    
-    KN_INT_ENABLE(iregInterLevel);
+    PLW_CLASS_CPU   pcpuCur   = LW_CPU_GET_CUR();
+    BOOL            bTrySched = LW_FALSE;
     
     if (!pcpuCur->CPU_ulInterNesting) {
         __THREAD_LOCK_DEC(pcpuCur->CPU_ptcbTCBCur);                     /*  解除任务锁定                */
         if (__SHOULD_SCHED(pcpuCur, 0)) {
-            return  (_ThreadSched(pcpuCur->CPU_ptcbTCBCur));            /*  尝试一次调度                */
+            bTrySched = LW_TRUE;                                        /*  需要尝试调度                */
         }
+    }
+    
+    KN_INT_ENABLE(iregInterLevel);
+    
+    if (bTrySched) {
+        return  (_ThreadSched(pcpuCur->CPU_ptcbTCBCur));
+    
+    } else {
+        return  (ERROR_NONE);
     }
     
     return  (ERROR_NONE);
@@ -218,11 +239,11 @@ VOID  _UpSpinUnlockIrqQuick (spinlock_t *psl, INTREG  iregInterLevel)
 {
     PLW_CLASS_CPU   pcpuCur = LW_CPU_GET_CUR();
     
-    KN_INT_ENABLE(iregInterLevel);
-    
     if (!pcpuCur->CPU_ulInterNesting) {
         __THREAD_LOCK_DEC(pcpuCur->CPU_ptcbTCBCur);                     /*  解锁任务在当前 CPU          */
     }
+    
+    KN_INT_ENABLE(iregInterLevel);
 }
 /*********************************************************************************************************
 ** 函数名称: _UpSpinUnlockSched

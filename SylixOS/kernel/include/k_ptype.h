@@ -382,17 +382,17 @@ struct tm {
 struct __lw_cpu;
 
 typedef struct {
-    volatile SPINLOCKTYPE    SL_sltData;                                /*  自旋锁                      */
-    struct __lw_cpu         *SL_pcpuOwner;                              /*  CPU 标识                    */
-    ULONG                    SL_ulCounter;                              /*  锁定计数器                  */
+    volatile SPINLOCKTYPE       SL_sltData;                             /*  自旋锁                      */
+    volatile struct __lw_cpu   *SL_pcpuOwner;                           /*  CPU 标识                    */
+    ULONG                       SL_ulCounter;                           /*  锁定计数器                  */
 
     union {
-        LW_LIST_LINE_HEADER  SLQ_plineHeader;                           /*  可实现 PRIORITY 等待        */
-        LW_LIST_RING_HEADER  SLQ_pringHeader;                           /*  可实现 FIFO     等待        */
+        LW_LIST_LINE_HEADER     SLQ_plineHeader;                        /*  可实现 PRIORITY 等待        */
+        LW_LIST_RING_HEADER     SLQ_pringHeader;                        /*  可实现 FIFO     等待        */
     } SL_slq;
 
-#define SL_plineHeader       SL_slq.SLQ_plineHeader                     /*  PRIORITY 表头               */
-#define SL_pringHeader       SL_slq.SLQ_pringHeader                     /*  FIFO 表头                   */
+#define SL_plineHeader          SL_slq.SLQ_plineHeader                  /*  PRIORITY 表头               */
+#define SL_pringHeader          SL_slq.SLQ_pringHeader                  /*  FIFO 表头                   */
 } spinlock_t;
 
 #define LW_SPINLOCK_DEFINE(sl)      spinlock_t      sl                  /*  为了兼容性, SMP 或 UP 都定义*/

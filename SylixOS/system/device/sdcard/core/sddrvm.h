@@ -114,8 +114,8 @@ struct sd_host {
 
 LW_API INT   API_SdmLibInit(VOID);
 
-LW_API INT   API_SdmHostRegister(SD_HOST *psdhost);
-LW_API INT   API_SdmHostUnRegister(CPCHAR cpcHostName);
+LW_API PVOID API_SdmHostRegister(SD_HOST *psdhost);
+LW_API INT   API_SdmHostUnRegister(PVOID  pvSdmHost);
 
 LW_API INT   API_SdmHostCapGet(PLW_SDCORE_DEVICE psdcoredev, INT *piCapbility);
 LW_API VOID  API_SdmHostInterEn(PLW_SDCORE_DEVICE psdcoredev, BOOL bEnable);
@@ -124,7 +124,7 @@ LW_API BOOL  API_SdmHostIsCardWp(PLW_SDCORE_DEVICE psdcoredev);
 LW_API INT   API_SdmSdDrvRegister(SD_DRV *psddrv);
 LW_API INT   API_SdmSdDrvUnRegister(SD_DRV *psddrv);
 
-LW_API INT   API_SdmEventNotify(CPCHAR cpcHostName, INT iEvtType);
+LW_API INT   API_SdmEventNotify(PVOID pvSdmHost, INT iEvtType);
 
 #endif                                                              /*  __SDDRVM_H                      */
 /*********************************************************************************************************

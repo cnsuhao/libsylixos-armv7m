@@ -21,6 +21,8 @@
 ** BUG:
 2014.11.07  增加孤儿设备管理,这允许先插入设备,再注册驱动后,设备能够正确创建.
 2015.03.11  增加卡写保护功能支持.
+2015.05.04  host 设备 event 操作参数改为 host 句柄, 提高速度.
+            将 host 自旋锁改为 mutex 信号量.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -69,7 +71,7 @@ struct __sdm_sd_dev {
 };
 
 struct __sdm_host_chan {
-    __SDM_HOST_DRV_FUNCS    *SDMHOSTCHAAN_pdrvfuncs;
+    __SDM_HOST_DRV_FUNCS    *SDMHOSTCHAN_pdrvfuncs;
 };
 
 struct __sdm_host_drv_funcs {
@@ -112,6 +114,7 @@ static INT         __sdmCallbackUnInstall(SD_HOST *psdhost);
 
 static VOID        __sdmSpiCsEn(__SDM_HOST_CHAN *psdmhostchan);
 static VOID        __sdmSpiCsDis(__SDM_HOST_CHAN *psdmhostchan);
+static VOID        __sdmEventNewDrv(VOID);
 /*********************************************************************************************************
   SDM 内部调试相关
   使用独立的线程处理事件, 方便跟踪调试
@@ -121,7 +124,7 @@ static VOID        __sdmSpiCsDis(__SDM_HOST_CHAN *psdmhostchan);
 #define __SDM_DEBUG_THREAD_STKSZ    (8 * 1024)
 
 typedef struct {
-    CPCHAR        EVTMSG_cpcHostName;
+    PVOID         EVTMSG_pvSdmHost;
     INT           EVTMSG_iEvtType;
 } __SDM_EVT_MSG;
 
@@ -129,19 +132,19 @@ static LW_OBJECT_HANDLE             _G_hsdmevtHandle = LW_OBJECT_HANDLE_INVALID;
 static LW_OBJECT_HANDLE             _G_hsdmevtMsgQ   = LW_OBJECT_HANDLE_INVALID;
 
 static INT    __sdmDebugLibInit(VOID);
-static VOID   __sdmDebugEvtNotify(CPCHAR cpcHostName, INT iEvtType);
-static PVOID  __sdmDebugEvtHandle(VOID *pvArg);
+static VOID   __sdmDebugEvtNotify(PVOID  pvSdmHost, INT iEvtType);
+static PVOID  __sdmDebugEvtHandle(VOID  *pvArg);
 #endif                                                                  /*   __SDM_DEBUG_EN > 0         */
 /*********************************************************************************************************
   全局变量
 *********************************************************************************************************/
-static LW_SPINLOCK_DEFINE       (_G_slSdmHostLock);
+static LW_OBJECT_HANDLE          _G_ulSdmHostLock      = LW_OBJECT_HANDLE_INVALID;
 
 static LW_LIST_LINE_HEADER       _G_plineSddrvHeader   = LW_NULL;
 static LW_LIST_LINE_HEADER       _G_plineSdmhostHeader = LW_NULL;
 
-#define __SDM_HOST_LOCK()        LW_SPIN_LOCK_QUICK(&_G_slSdmHostLock, &iregInterLevel)
-#define __SDM_HOST_UNLOCK()      LW_SPIN_UNLOCK_QUICK(&_G_slSdmHostLock, iregInterLevel)
+#define __SDM_HOST_LOCK()        API_SemaphoreMPend(_G_ulSdmHostLock, LW_OPTION_WAIT_INFINITE)
+#define __SDM_HOST_UNLOCK()      API_SemaphoreMPost(_G_ulSdmHostLock)
 
 static __SDM_HOST_DRV_FUNCS      _G_sdmhostdrvfuncs;
 /*********************************************************************************************************
@@ -160,7 +163,11 @@ LW_API INT   API_SdmLibInit (VOID)
 
     API_SdLibInit();
 
-    LW_SPIN_INIT(&_G_slSdmHostLock);
+    if (_G_ulSdmHostLock == LW_OBJECT_HANDLE_INVALID) {
+        _G_ulSdmHostLock =  API_SemaphoreMCreate("sdm_lock", LW_PRIO_DEF_CEILING, 
+                                                 LW_OPTION_WAIT_PRIORITY | 
+                                                 LW_OPTION_OBJECT_GLOBAL, LW_NULL);
+    }
 
 #if __SDM_DEBUG_EN > 0
     __sdmDebugLibInit();
@@ -171,12 +178,12 @@ LW_API INT   API_SdmLibInit (VOID)
 /*********************************************************************************************************
 ** 函数名称: API_SdmHostRegister
 ** 功能描述: 向 SDM 注册一个 HOST 信息
-** 输    入: pHost        Host 信息, 注意 SDM 内部会直接引用该对象, 因此该对象需要持续有效
-** 输    出: ERROR CODE
+** 输    入: psdhost       Host 信息, 注意 SDM 内部会直接引用该对象, 因此该对象需要持续有效
+** 输    出: 控制器句柄
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-LW_API INT   API_SdmHostRegister (SD_HOST *psdhost)
+LW_API PVOID   API_SdmHostRegister (SD_HOST *psdhost)
 {
     __SDM_HOST *psdmhost;
 
@@ -186,7 +193,7 @@ LW_API INT   API_SdmHostRegister (SD_HOST *psdhost)
         !psdhost->SDHOST_pfuncCallbackUnInstall) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "host must provide: name, callback install"
                                                " method and callback uninstall method.\r\n");
-        return  (PX_ERROR);
+        return  (LW_NULL);
     }
 
     if (psdhost->SDHOST_iType == SDHOST_TYPE_SPI) {
@@ -194,7 +201,7 @@ LW_API INT   API_SdmHostRegister (SD_HOST *psdhost)
             !psdhost->SDHOST_pfuncSpicsEn) {
             SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "spi type host must provide:"
                                                    " spi chip select method.\r\n");
-            return  (PX_ERROR);
+            return  (LW_NULL);
         }
     }
 
@@ -205,46 +212,42 @@ LW_API INT   API_SdmHostRegister (SD_HOST *psdhost)
     if (psdmhost) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "there is already a same "
                                                "name host registered.\r\n");
-        return  (PX_ERROR);
+        return  (LW_NULL);
     }
 
     psdmhost = (__SDM_HOST *)__SHEAP_ALLOC(sizeof(__SDM_HOST));
     if (!psdmhost) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "system memory low.\r\n");
-        return  (PX_ERROR);
+        return  (LW_NULL);
     }
 
     psdmhost->SDMHOST_psdhost         = psdhost;
     psdmhost->SDMHOST_psdmdevAttached = LW_NULL;
     psdmhost->SDMHOST_bDevIsOrphan    = LW_FALSE;
 
-    psdmhost->SDMHOST_sdmhostchan.SDMHOSTCHAAN_pdrvfuncs = &_G_sdmhostdrvfuncs;
+    psdmhost->SDMHOST_sdmhostchan.SDMHOSTCHAN_pdrvfuncs = &_G_sdmhostdrvfuncs;
 
     __sdmHostInsert(psdmhost);
 
-    return  (ERROR_NONE);
+    return  ((PVOID)psdmhost);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SdmHostUnRegister
 ** 功能描述: 从 SDM 注销一个 HOST 信息
-** 输    入: cpcHostName      主控的名称
+** 输    入: pvSdmHost      控制器句柄
 ** 输    出: ERROR CODE
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-LW_API INT   API_SdmHostUnRegister (CPCHAR cpcHostName)
+LW_API INT   API_SdmHostUnRegister (PVOID  pvSdmHost)
 {
     __SDM_HOST *psdmhost;
 
-    if (!cpcHostName) {
+    if (!pvSdmHost) {
         return  (PX_ERROR);
     }
 
-    psdmhost = __sdmHostFind(cpcHostName);
-    if (!psdmhost) {
-        return  (PX_ERROR);
-    }
-
+    psdmhost = (__SDM_HOST *)pvSdmHost;
     if (psdmhost->SDMHOST_psdmdevAttached) {
         SDCARD_DEBUG_MSG(__ERRORMESSAGE_LEVEL, "there is always a device attached.\r\n");
         return  (PX_ERROR);
@@ -403,48 +406,33 @@ LW_API INT   API_SdmSdDrvUnRegister (SD_DRV *psddrv)
 /*********************************************************************************************************
 ** 函数名称: API_SdmEventNotify
 ** 功能描述: 向 SDM 通知事件
-** 输    入: cpcHostName      控制器名称
+** 输    入: pvSdmHost        控制器句柄
 **           iEvtType         事件类型
 ** 输    出: ERROR CODE
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
-LW_API INT  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
+LW_API INT  API_SdmEventNotify (PVOID pvSdmHost, INT iEvtType)
 {
-    INTREG             iregInterLevel;
-    PLW_LIST_LINE      plineTemp;
-    __SDM_HOST        *psdmhost = LW_NULL;
-    INT                iError   = ERROR_NONE;
+    __SDM_HOST *psdmhost;
+    INT         iError = ERROR_NONE;
 
 #if __SDM_DEBUG_EN > 0
-    __sdmDebugEvtNotify(cpcHostName, iEvtType);
+    __sdmDebugEvtNotify(pvSdmHost, iEvtType);
     return  (ERROR_NONE);
 #endif                                                                  /*   __SDM_DEBUG_EN > 0         */
 
     /*
      * 当注册一个新的驱动后, 遍历所有 Host 上的孤儿设备
      */
-    if ((iEvtType == SDM_EVENT_NEW_DRV) && !cpcHostName) {
-        __SDM_HOST_LOCK();
-        for (plineTemp  = _G_plineSdmhostHeader;
-             plineTemp != LW_NULL;
-             plineTemp  = _list_line_get_next(plineTemp)) {
-
-            psdmhost = _LIST_ENTRY(plineTemp, __SDM_HOST, SDMHOST_lineManage);
-            if (!psdmhost->SDMHOST_psdmdevAttached &&
-                 psdmhost->SDMHOST_bDevIsOrphan) {
-                hotplugEvent((VOIDFUNCPTR)__sdmDevCreate, (PVOID)psdmhost, 0, 0, 0, 0, 0);
-            }
-        }
-        __SDM_HOST_UNLOCK();
-
-        return  (ERROR_NONE);
+    if ((iEvtType == SDM_EVENT_NEW_DRV) && !pvSdmHost) {
+        return  (hotplugEvent(__sdmEventNewDrv, 0, 0, 0, 0, 0, 0));
     }
 
     /*
      * 处理Host传来的事件
      */
-    psdmhost = __sdmHostFind(cpcHostName);
+    psdmhost = (__SDM_HOST *)pvSdmHost;
     if (!psdmhost) {
         return  (PX_ERROR);
     }
@@ -452,11 +440,11 @@ LW_API INT  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
     switch (iEvtType) {
     
     case SDM_EVENT_DEV_INSERT:
-        hotplugEvent((VOIDFUNCPTR)__sdmDevCreate, (PVOID)psdmhost, 0, 0, 0, 0, 0);
+        iError = hotplugEvent((VOIDFUNCPTR)__sdmDevCreate, (PVOID)psdmhost, 0, 0, 0, 0, 0);
         break;
 
     case SDM_EVENT_DEV_REMOVE:
-        hotplugEvent((VOIDFUNCPTR)__sdmDevDelete, (PVOID)psdmhost, 0, 0, 0, 0, 0);
+        iError = hotplugEvent((VOIDFUNCPTR)__sdmDevDelete, (PVOID)psdmhost, 0, 0, 0, 0, 0);
         break;
 
     case SDM_EVENT_SDIO_INTERRUPT:
@@ -464,10 +452,37 @@ LW_API INT  API_SdmEventNotify (CPCHAR cpcHostName, INT iEvtType)
         break;
 
     default:
+        iError = PX_ERROR;
         break;
     }
 
     return  (iError);
+}
+/*********************************************************************************************************
+** 函数名称: __sdmEventNewDrv
+** 功能描述: 当注册一个新的驱动后, 遍历所有 Host 上的孤儿设备
+** 输    入: NONE
+** 输    出: NONE
+** 全局变量:
+** 调用模块:
+*********************************************************************************************************/
+static VOID  __sdmEventNewDrv (VOID)
+{
+    PLW_LIST_LINE   plineTemp;
+    __SDM_HOST     *psdmhost;
+    
+    __SDM_HOST_LOCK();
+    for (plineTemp  = _G_plineSdmhostHeader;
+         plineTemp != LW_NULL;
+         plineTemp  = _list_line_get_next(plineTemp)) {
+
+        psdmhost = _LIST_ENTRY(plineTemp, __SDM_HOST, SDMHOST_lineManage);
+        if (!psdmhost->SDMHOST_psdmdevAttached &&
+             psdmhost->SDMHOST_bDevIsOrphan) {
+            hotplugEvent((VOIDFUNCPTR)__sdmDevCreate, (PVOID)psdmhost, 0, 0, 0, 0, 0);
+        }
+    }
+    __SDM_HOST_UNLOCK();
 }
 /*********************************************************************************************************
 ** 函数名称: __sdmDevCreate
@@ -664,9 +679,8 @@ static INT __sdmSdioIntHandle (__SDM_HOST *psdmhost)
 *********************************************************************************************************/
 static __SDM_HOST *__sdmHostFind (CPCHAR cpcName)
 {
-    REGISTER PLW_LIST_LINE      plineTemp;
-    REGISTER __SDM_HOST        *psdmhost = LW_NULL;
-    INTREG                      iregInterLevel;
+    REGISTER PLW_LIST_LINE  plineTemp;
+    REGISTER __SDM_HOST    *psdmhost = LW_NULL;
 
     if (cpcName == LW_NULL) {
         return  (LW_NULL);
@@ -700,8 +714,6 @@ static __SDM_HOST *__sdmHostFind (CPCHAR cpcName)
 *********************************************************************************************************/
 static VOID  __sdmHostInsert (__SDM_HOST *psdmhost)
 {
-    INTREG   iregInterLevel;
-
     __SDM_HOST_LOCK();
     _List_Line_Add_Ahead(&psdmhost->SDMHOST_lineManage, &_G_plineSdmhostHeader);
     __SDM_HOST_UNLOCK();
@@ -716,8 +728,6 @@ static VOID  __sdmHostInsert (__SDM_HOST *psdmhost)
 *********************************************************************************************************/
 static VOID  __sdmHostDelete (__SDM_HOST *psdmhost)
 {
-    INTREG   iregInterLevel;
-
     __SDM_HOST_LOCK();
     _List_Line_Del(&psdmhost->SDMHOST_lineManage, &_G_plineSdmhostHeader);
     __SDM_HOST_UNLOCK();
@@ -882,32 +892,31 @@ static INT  __sdmDebugLibInit (VOID)
 #if __SDM_DEBUG_EN > 0
 static PVOID  __sdmDebugEvtHandle (VOID *pvArg)
 {
-    INTREG             iregInterLevel;
     PLW_LIST_LINE      plineTemp;
     __SDM_HOST        *psdmhost;
 
-    CPCHAR             cpcHostName;
+    PVOID              pvSdmHost;
     INT                iEvtType;
 
     __SDM_EVT_MSG      sdmevtmsg;
     size_t             stLen;
-    INT                iRet;
+    ULONG              ulRet;
 
     while (1) {
-        iRet = API_MsgQueueReceive(_G_hsdmevtMsgQ,
-                                   (PVOID)&sdmevtmsg,
-                                   sizeof(__SDM_EVT_MSG),
-                                   &stLen,
-                                   LW_OPTION_WAIT_INFINITE);
-        if (iRet != ERROR_NONE) {
+        ulRet = API_MsgQueueReceive(_G_hsdmevtMsgQ,
+                                    (PVOID)&sdmevtmsg,
+                                    sizeof(__SDM_EVT_MSG),
+                                    &stLen,
+                                    LW_OPTION_WAIT_INFINITE);
+        if (ulRet != ERROR_NONE) {
             printk(KERN_EMERG"__sdmDebugEvtHandle() error.\r\n");
             continue;
         }
 
-        iEvtType    = sdmevtmsg.EVTMSG_iEvtType;
-        cpcHostName = sdmevtmsg.EVTMSG_cpcHostName;
-
-        if ((iEvtType == SDM_EVENT_NEW_DRV) && !cpcHostName) {
+        pvSdmHost = sdmevtmsg.EVTMSG_pvSdmHost;
+        iEvtType  = sdmevtmsg.EVTMSG_iEvtType;
+        
+        if ((iEvtType == SDM_EVENT_NEW_DRV) && !pvSdmHost) {
             __SDM_HOST_LOCK();
             for (plineTemp  = _G_plineSdmhostHeader;
                  plineTemp != LW_NULL;
@@ -923,7 +932,7 @@ static PVOID  __sdmDebugEvtHandle (VOID *pvArg)
             continue;
         }
 
-        psdmhost = __sdmHostFind(cpcHostName);
+        psdmhost = (__SDM_HOST *)pvSdmHost;
         if (!psdmhost) {
             continue;
         }
@@ -953,18 +962,20 @@ static PVOID  __sdmDebugEvtHandle (VOID *pvArg)
 /*********************************************************************************************************
 ** 函数名称: __sdmDebugEvtHandle
 ** 功能描述: SDM 内部事件通知
-** 输    入: pvArg     线程参数
+** 输    入: pvSdmHost     控制器句柄
+**           iEvtType      事件类型
 ** 输    出: NONE
 ** 全局变量:
 ** 调用模块:
 *********************************************************************************************************/
 #if __SDM_DEBUG_EN > 0
-static VOID  __sdmDebugEvtNotify (CPCHAR cpcHostName, INT iEvtType)
+static VOID  __sdmDebugEvtNotify (PVOID  pvSdmHost, INT iEvtType)
 {
     __SDM_EVT_MSG   sdmevtmsg;
 
-    sdmevtmsg.EVTMSG_iEvtType    = iEvtType;
-    sdmevtmsg.EVTMSG_cpcHostName = cpcHostName;
+    sdmevtmsg.EVTMSG_pvSdmHost = pvSdmHost;
+    sdmevtmsg.EVTMSG_iEvtType  = iEvtType;
+    
     API_MsgQueueSend(_G_hsdmevtMsgQ,
                      &sdmevtmsg,
                      sizeof(__SDM_EVT_MSG));

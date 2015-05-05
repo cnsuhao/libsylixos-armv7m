@@ -600,6 +600,7 @@ struct _sdhci_quirk_op {
 LW_API PVOID      API_SdhciHostCreate(CPCHAR               pcAdapterName,
                                       PLW_SDHCI_HOST_ATTR  psdhcihostattr);
 LW_API INT        API_SdhciHostDelete(PVOID    pvHost);
+LW_API PVOID      API_SdhciSdmHostGet(PVOID    pvHost);
 
 LW_API INT        API_SdhciHostTransferModGet(PVOID    pvHost);
 LW_API INT        API_SdhciHostTransferModSet(PVOID    pvHost, INT   iTmod);

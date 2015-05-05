@@ -307,7 +307,7 @@ __wait_again:
         
         } else {
             LW_SPIN_UNLOCK_QUICK(&pes->EVENTSET_slLock, 
-                               iregInterLevel);                         /*  打开中断, 同时打开 spinlock */
+                                 iregInterLevel);                       /*  打开中断, 同时打开 spinlock */
             _ErrorHandle(ERROR_EVENTSET_WAS_DELETED);                   /*  已经被删除                  */
             return  (ERROR_EVENTSET_WAS_DELETED);
         }
