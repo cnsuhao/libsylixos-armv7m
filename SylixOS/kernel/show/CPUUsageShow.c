@@ -80,6 +80,7 @@ VOID    API_CPUUsageShow (INT  iWaitSec, INT  iTimes)
     for (iCounter = 0; iCounter < iTimes; iCounter++) {
     
         API_ThreadCPUUsageRefresh();                                    /*  刷新统计变量                */
+        API_ThreadCPUUsageOn();
         printf("CPU usage checking, please wait...\n");
         
         {
@@ -95,6 +96,7 @@ VOID    API_CPUUsageShow (INT  iWaitSec, INT  iTimes)
             ioctl(STD_IN, FIOSETOPTIONS, iOptionNoAbort);               /*  不允许 control-C 操作       */
         }
         
+        API_ThreadCPUUsageOff();
         printf("CPU usage show >>\n");
         printf(_G_cCPUUsageInfoHdr);                                    /*  打印欢迎信息                */
         

@@ -128,6 +128,10 @@
 #define Lw_Thread_StackCheck                    API_ThreadStackCheck
 #define Lw_Thread_GetStackMini                  API_ThreadGetStackMini
 
+#define Lw_Thread_CPUUsageOn                   API_ThreadCPUUsageOn
+#define Lw_Thread_CPUUsageOff                  API_ThreadCPUUsageOff
+#define Lw_Thread_CPUUsageIsOn                 API_ThreadCPUUsageIsOn
+
 #define Lw_Thread_GetCPUUsage                   API_ThreadGetCPUUsage
 #define Lw_Thread_GetCPUUsageAll                API_ThreadGetCPUUsageAll
 #define Lw_Thread_CPUUsageRefresh               API_ThreadCPUUsageRefresh

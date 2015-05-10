@@ -216,7 +216,7 @@ VOID _GlobalPrimaryInit (VOID)
 #endif                                                                  /*  LW_CFG_SOFTWARE_WATCHDOG_EN */
     
 #if LW_CFG_THREAD_CPU_USAGE_CHK_EN > 0
-    __LW_TICK_CPUUSAGE_ENABLE();                                        /*  启动 CPU 利用率测试         */
+    __LW_TICK_CPUUSAGE_DISABLE();                                       /*  关闭 CPU 利用率测试         */
 #endif                                                                  /*  LW_CFG_THREAD_CPU_USAGE_... */
 }
 /*********************************************************************************************************

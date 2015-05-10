@@ -26,6 +26,50 @@
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
 /*********************************************************************************************************
+** 函数名称: API_ThreadCPUUsageOn
+** 功能描述: 启动 CPU 利用率测算
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+#if LW_CFG_THREAD_CPU_USAGE_CHK_EN > 0
+
+LW_API
+VOID  API_ThreadCPUUsageOn (VOID)
+{
+    __LW_TICK_CPUUSAGE_ENABLE();                                        /*  重新打开测量                */
+}
+/*********************************************************************************************************
+** 函数名称: API_ThreadCPUUsageOff
+** 功能描述: 关闭 CPU 利用率测算
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+VOID  API_ThreadCPUUsageOff (VOID)
+{
+    __LW_TICK_CPUUSAGE_DISABLE();
+}
+/*********************************************************************************************************
+** 函数名称: API_ThreadCPUUsageIsOn
+** 功能描述: 查看 CPU 利用率测算是否打开
+** 输　入  : NONE
+** 输　出  : 是否打开
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API
+BOOL  API_ThreadCPUUsageIsOn (VOID)
+{
+    return  (__LW_TICK_CPUUSAGE_ISENABLE());
+}
+/*********************************************************************************************************
 ** 函数名称: API_ThreadGetCPUUsage
 ** 功能描述: 获得线程CPU利用率
 ** 输　入  : ulId                          要检查的线程ID
@@ -39,8 +83,6 @@
                                            
                                        (不得在中断中调用)
 *********************************************************************************************************/
-#if LW_CFG_THREAD_CPU_USAGE_CHK_EN > 0
-
 LW_API  
 ULONG  API_ThreadGetCPUUsage (LW_OBJECT_HANDLE  ulId, 
                               UINT8            *pucThreadUsage,
@@ -141,7 +183,6 @@ INT  API_ThreadGetCPUUsageAll (LW_OBJECT_HANDLE  ulId[],
         return  (iIndex);
     }
     
-    __LW_TICK_CPUUSAGE_DISABLE();                                       /*  关闭测量                    */
     __KERNEL_ENTER();                                                   /*  进入内核                    */
     
     ulCPUAllTicks  = (_K_ulCPUUsageTicks == 0) ? 1 : _K_ulCPUUsageTicks;
@@ -184,11 +225,11 @@ INT  API_ThreadGetCPUUsageAll (LW_OBJECT_HANDLE  ulId[],
         }
     }
     
-    __LW_TICK_CPUUSAGE_ENABLE();                                        /*  重新打开测量                */
     __KERNEL_EXIT();                                                    /*  退出内核                    */
     
     return  (iIndex);
 }
+
 #endif                                                                  /*  LW_CFG_THREAD_CPU_USAGE...  */
 /*********************************************************************************************************
   END

@@ -335,6 +335,12 @@ LW_API ULONG            API_ThreadStackCheck(LW_OBJECT_HANDLE  ulId,
 LW_API ULONG            API_ThreadGetStackMini(VOID);                   /*  获得线程最小许可堆栈大小    */
 
 #if LW_CFG_THREAD_CPU_USAGE_CHK_EN > 0
+LW_API VOID             API_ThreadCPUUsageOn(VOID);
+
+LW_API VOID             API_ThreadCPUUsageOff(VOID);
+
+LW_API BOOL             API_ThreadCPUUsageIsOn(VOID);
+
 LW_API ULONG            API_ThreadGetCPUUsage(LW_OBJECT_HANDLE  ulId, 
                                               UINT8            *pucThreadUsage,
                                               UINT8            *pucCPUUsage,

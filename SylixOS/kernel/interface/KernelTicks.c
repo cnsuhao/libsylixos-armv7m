@@ -141,7 +141,8 @@ VOID  API_KernelTicks (VOID)
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : vprocTickHook() 可能会激活新的任务, 会在中断退出时会尝试调度.
+** 注  意  : vprocTickHook() 可能会激活新的任务, 会在中断退出时会尝试调度. 
+             所以这里允许在 QUICK 操作中打开中断.
 
                                            API 函数
 *********************************************************************************************************/
@@ -153,7 +154,7 @@ VOID  API_KernelTicksContext (VOID)
              PLW_CLASS_CPU  pcpu;
              PLW_CLASS_TCB  ptcb;
              
-    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核并关闭中断          */
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  锁定内核并关闭中断          */
     
 #if LW_CFG_RTC_EN > 0
     __kernelTODUpdate();                                                /*  更新 TOD 时间               */
@@ -189,7 +190,7 @@ VOID  API_KernelTicksContext (VOID)
     
     _SchedTick();                                                       /*  处理所有 CPU 线程的时间片   */
     
-    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);                 /*  退出内核并打开中断          */
 }
 /*********************************************************************************************************
   END

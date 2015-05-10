@@ -30,8 +30,8 @@
 /*********************************************************************************************************
 ** 函数名称: API_ThreadCPUUsageRefresh
 ** 功能描述: 刷新线程CPU利用率
-** 输　入  : 
-** 输　出  : 
+** 输　入  : NONE
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
@@ -45,6 +45,7 @@ ULONG  API_ThreadCPUUsageRefresh (VOID)
 {
     REGISTER PLW_CLASS_TCB         ptcb;
              PLW_LIST_LINE         plineList;
+             BOOL                  bNeedOn = LW_FALSE;
              
     if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
         _DebugHandle(__ERRORMESSAGE_LEVEL, "called from ISR.\r\n");
@@ -58,8 +59,15 @@ ULONG  API_ThreadCPUUsageRefresh (VOID)
         return  (ERROR_KERNEL_NOT_RUNNING);
     }
     
-    __LW_TICK_CPUUSAGE_DISABLE();                                       /*  关闭测量                    */
+    
+    
+    
     __KERNEL_ENTER();                                                   /*  进入内核                    */
+    if (__LW_TICK_CPUUSAGE_ISENABLE()) {
+        __LW_TICK_CPUUSAGE_DISABLE();                                   /*  关闭测量                    */
+        bNeedOn = LW_TRUE;
+    }
+    
     for (plineList  = _K_plineTCBHeader;
          plineList != LW_NULL;
          plineList  = _list_line_get_next(plineList)) {
@@ -68,10 +76,15 @@ ULONG  API_ThreadCPUUsageRefresh (VOID)
          ptcb->TCB_ulCPUUsageTicks       = 0ul;
          ptcb->TCB_ulCPUUsageKernelTicks = 0ul;
     }
+    
     _K_ulCPUUsageTicks       = 1ul;                                     /*  避免除 0 错误               */
     _K_ulCPUUsageKernelTicks = 0ul;
+    
+    if (bNeedOn) {
+        __LW_TICK_CPUUSAGE_ENABLE();                                    /*  重新打开测量                */
+    }
     __KERNEL_EXIT();                                                    /*  退出内核                    */
-    __LW_TICK_CPUUSAGE_ENABLE();                                        /*  重新打开测量                */
+    
     
     return  (ERROR_NONE);
 }
