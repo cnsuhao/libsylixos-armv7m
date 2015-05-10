@@ -65,7 +65,16 @@ static LW_INLINE BOOL __can_preemptive (PLW_CLASS_CPU  pcpu, ULONG  ulMaxLockCou
   判断调度是否可执行宏. (没有嵌套发生并且有线程请求调度被激活)
 *********************************************************************************************************/
 
-#define __SHOULD_SCHED(pcpuCur, ulMaxLockCounter)   __can_preemptive(pcpuCur, ulMaxLockCounter)
+#define __COULD_SCHED(pcpu, ulMaxLockCounter)    __can_preemptive(pcpu, ulMaxLockCounter)
+
+/*********************************************************************************************************
+  判断是否需要调度
+*********************************************************************************************************/
+
+#if LW_CFG_SMP_EN > 0
+#define __ISNEED_SCHED(pcpu, ulMaxLockCounter)   (__COULD_SCHED(pcpu, ulMaxLockCounter) && \
+                                                  LW_CAND_ROT(pcpu))
+#endif
 
 #endif                                                                  /*  __INLUNPREEMPTIVECHECK_H    */
 /*********************************************************************************************************

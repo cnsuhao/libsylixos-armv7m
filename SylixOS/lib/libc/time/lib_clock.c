@@ -91,17 +91,17 @@ INT  lib_clock_gettime (clockid_t  clockid, struct timespec  *tv)
     switch (clockid) {
     
     case CLOCK_REALTIME:
-        LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+        LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         *tv = _K_tvTODCurrent;
         LW_TIME_HIGH_RESOLUTION(tv);
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+        LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
         break;
     
     case CLOCK_MONOTONIC:
-        LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+        LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         *tv = _K_tvTODMono;
         LW_TIME_HIGH_RESOLUTION(tv);
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+        LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
         break;
         
     case CLOCK_PROCESS_CPUTIME_ID:
@@ -160,9 +160,9 @@ INT  lib_clock_settime (clockid_t  clockid, const struct timespec  *tv)
         return  (PX_ERROR);
     }
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     _K_tvTODCurrent = *tv;
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
     
     return  (ERROR_NONE);
 }
@@ -195,14 +195,14 @@ INT  lib_clock_nanosleep (clockid_t  clockid, int  iFlags,
     if (iFlags == TIMER_ABSTIME) {                                      /*  ¾ø¶ÔÊ±¼ä                    */
         struct timespec  tvNow;
         
-        LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+        LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
         if (clockid == CLOCK_REALTIME) {
             tvNow = _K_tvTODCurrent;
         } else {
             tvNow = _K_tvTODMono;
         }
         LW_TIME_HIGH_RESOLUTION(&tvNow);
-        LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+        LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 
         if ((rqtp->tv_sec < tvNow.tv_sec) ||
             ((rqtp->tv_sec == tvNow.tv_sec) &&

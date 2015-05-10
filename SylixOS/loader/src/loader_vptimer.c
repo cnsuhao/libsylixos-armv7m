@@ -33,7 +33,7 @@
 extern LW_LIST_LINE_HEADER      _G_plineVProcHeader;
 /*********************************************************************************************************
 ** 函数名称: vprocItimerHook
-** 功能描述: 进程定时器 tick hook
+** 功能描述: 进程定时器 tick hook (中断上下文中且锁定内核状态被调用)
 ** 输　入  : iWhich        类型, ITIMER_REAL / ITIMER_VIRTUAL / ITIMER_PROF
 **           pitValue      定时参数
 **           pitOld        当前参数

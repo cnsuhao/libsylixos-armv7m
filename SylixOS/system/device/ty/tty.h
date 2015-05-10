@@ -86,7 +86,6 @@ typedef struct {
     BOOL                    TYDEVWRSTAT_bCR;                            /*  CR 字符是否需要被添加       */
     BOOL                    TYDEVWRSTAT_bCanceled;                      /*  写操作被禁止了              */
     BOOL                    TYDEVWRSTAT_bFlushingWrtBuf;                /*  操作关键区域时的标志        */
-    BOOL                    TYDEVWRSTAT_bWrtBufBusy;                    /*  线程正在操作写缓冲          */
 } TY_DEV_WR_STATE;
 
 /*********************************************************************************************************

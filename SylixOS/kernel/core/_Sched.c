@@ -72,6 +72,13 @@
 #define __LW_TASK_SAVE_FPU(ptcbCur, bIntSwitch)
 #endif
 /*********************************************************************************************************
+  任务状态迁移判断
+*********************************************************************************************************/
+#if LW_CFG_SMP_EN > 0
+#define __LW_STATUS_CHANGE_EN(ptcb, pcpu)           (!(pcpu)->CPU_ulInterNesting && \
+                                                     (__THREAD_LOCK_GET(ptcb) <= 1ul))
+#endif
+/*********************************************************************************************************
 ** 函数名称: _SchedSmpNotify
 ** 功能描述: 通知需要调度的 CPU
 ** 输　入  : ulCPUIdCur 当前 CPU ID
@@ -230,7 +237,7 @@ INT  _Schedule (VOID)
     
 #if LW_CFG_SMP_EN > 0
     if (ptcbCur->TCB_plineStatusReqHeader) {                            /*  请求当前任务改变状态        */
-        if (__THREAD_LOCK_GET(ptcbCur) <= 1ul) {                        /*  是否可以进行状态切换        */
+        if (__LW_STATUS_CHANGE_EN(ptcbCur, pcpuCur)) {                  /*  是否可以进行状态切换        */
             _ThreadStatusChangeCur(pcpuCur);                            /*  检查是否需要进行状态切换    */
         }
     }
@@ -279,7 +286,7 @@ VOID  _ScheduleInt (VOID)
     
 #if LW_CFG_SMP_EN > 0
     LW_CPU_CLR_IPI_PEND(ulCPUId, LW_IPI_SCHED_MSK);                     /*  清除核间调度中断标志        */
-    if (__THREAD_LOCK_GET(ptcbCur) <= 1ul) {                            /*  是否可以进行状态切换        */
+    if (__LW_STATUS_CHANGE_EN(ptcbCur, pcpuCur)) {                      /*  是否可以进行状态切换        */
         if (ptcbCur->TCB_plineStatusReqHeader) {                        /*  请求当前任务改变状态        */
             _ThreadStatusChangeCur(pcpuCur);                            /*  检查是否需要进行状态切换    */
         }

@@ -127,7 +127,7 @@ INT  _SmpSpinUnlock (spinlock_t *psl)
     if (!pcpuCur->CPU_ulInterNesting) {
         ptcbCur = pcpuCur->CPU_ptcbTCBCur;
         __THREAD_LOCK_DEC(ptcbCur);                                     /*  解除任务锁定                */
-        if (__SHOULD_SCHED(pcpuCur, 0)) {
+        if (__ISNEED_SCHED(pcpuCur, 0)) {
             bTrySched = LW_TRUE;                                        /*  需要尝试调度                */
         }
     }
@@ -292,7 +292,7 @@ INT  _SmpSpinUnlockIrq (spinlock_t *psl, INTREG  iregInterLevel)
     if (!pcpuCur->CPU_ulInterNesting) {
         ptcbCur = pcpuCur->CPU_ptcbTCBCur;
         __THREAD_LOCK_DEC(ptcbCur);                                     /*  解除任务锁定                */
-        if (__SHOULD_SCHED(pcpuCur, 0)) {
+        if (__ISNEED_SCHED(pcpuCur, 0)) {
             bTrySched = LW_TRUE;                                        /*  需要尝试调度                */
         }
     }

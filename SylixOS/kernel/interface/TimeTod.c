@@ -40,14 +40,14 @@ VOID  API_TimeTodAdj (INT32  *piDelta, INT32 *piOldDelta)
 {
     INTREG      iregInterLevel;
 
-    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     if (piOldDelta) {
         *piOldDelta = _K_iTODDelta;
     }
     if (piDelta) {
         _K_iTODDelta = *piDelta;
     }
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 }
 /*********************************************************************************************************
   END

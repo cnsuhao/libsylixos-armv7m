@@ -60,7 +60,7 @@ INT  API_ThreadUnlock (VOID)
     iregInterLevel = KN_INT_DISABLE();                                  /*  关中断, 禁止 CPU 调度       */
     
     pcpuCur = LW_CPU_GET_CUR();
-    if (__SHOULD_SCHED(pcpuCur, 0)) {
+    if (__COULD_SCHED(pcpuCur, 0)) {
         bTrySched = LW_TRUE;                                            /*  需要尝试调度                */
     }
     

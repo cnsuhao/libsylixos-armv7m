@@ -40,6 +40,7 @@
 2014.01.01  API_KernelTicksContext() 需要锁定调度器.
 2014.07.04  系统内核支持 tod 时钟微调.
 2015.04.17  tod 时间的更新必须放在中断上下文中.
+2015.05.07  CLOCK_MONOTONIC 不随 adjust 调整.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -60,25 +61,26 @@
                 (tod)->tv_sec++;                        \
             }                                           \
         } while (0)
+#define TICK_UPDATE()                                   \
+        do {                                            \
+            _K_i64KernelTime++;                         \
+        } while (0)
 /*********************************************************************************************************
-** 函数名称: __kernelTODTicks
+** 函数名称: __kernelTODUpdate
 ** 功能描述: 通知一个时钟到达, 更新 TOD 时间
-** 输　入  : 
-** 输　出  : 
+** 输　入  : NONE
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : _K_i64TODDelta 为 adjtime 所设置, 用来修正系统 tod 时钟.
-
-                                           API 函数
 *********************************************************************************************************/
 #if LW_CFG_RTC_EN > 0
 
-VOID  __kernelTODTicks (VOID)
+static LW_INLINE VOID __kernelTODUpdate (VOID)
 {
-    INTREG  iregInterLevel;
     LONG    lNsec;
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    TOD_UPDATE(&_K_tvTODMono, LW_NSEC_PER_TICK);                        /*  CLOCK_MONOTONIC             */
     
     if (_K_iTODDelta > 0) {                                             /*  需要加快系统时钟一个 TICK   */
         _K_iTODDelta--;
@@ -86,20 +88,33 @@ VOID  __kernelTODTicks (VOID)
     
     } else if (_K_iTODDelta < 0) {
         _K_iTODDelta++;
-        goto    __tod_tick_over;                                        /*  系统 tod 时间停止一个 tick  */
+        return;                                                         /*  系统 tod 时间停止一个 tick  */
     
     } else {
         lNsec = LW_NSEC_PER_TICK;
     }
     
     TOD_UPDATE(&_K_tvTODCurrent, lNsec);                                /*  CLOCK_REALTIME              */
-    TOD_UPDATE(&_K_tvTODMono, lNsec);                                   /*  CLOCK_MONOTONIC             */
-    
-__tod_tick_over:
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
 }
 
 #endif                                                                  /*  LW_CFG_RTC_EN > 0           */
+/*********************************************************************************************************
+** 函数名称: __kernelTickUpdate
+** 功能描述: 通知一个时钟到达, 更新 TICK 时间
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static LW_INLINE VOID  __kernelTickUpdate (VOID)
+{
+    TICK_UPDATE();
+    
+#if LW_CFG_TIME_TICK_HOOK_EN > 0
+    bspTickHook(_K_i64KernelTime);                                      /*  调用系统时钟钩子函数        */
+    __LW_THREAD_TICK_HOOK(_K_i64KernelTime);
+#endif
+}
 /*********************************************************************************************************
 ** 函数名称: API_KernelTicks
 ** 功能描述: 通知系统到达一个实时时钟 TICK 可以在中断中调用，也可以在线程中调用
@@ -112,23 +127,6 @@ __tod_tick_over:
 LW_API
 VOID  API_KernelTicks (VOID)
 {
-             INTREG  iregInterLevel;
-    REGISTER INT64   i64Tick;
-
-    if (!LW_SYS_STATUS_IS_RUNNING()) {                                  /*  系统没有启动                */
-        return;
-    }
-
-    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  关闭中断同时锁住 spinlock   */
-    _K_i64KernelTime++;                                                 /*  tick++                      */
-    i64Tick = _K_i64KernelTime;
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-    
-#if LW_CFG_TIME_TICK_HOOK_EN > 0
-    bspTickHook(i64Tick);                                               /*  调用系统时钟钩子函数        */
-    __LW_THREAD_TICK_HOOK(i64Tick);
-#endif
-
 #if LW_CFG_SOFTWARE_WATCHDOG_EN > 0
     _WatchDogTick();                                                    /*  处理看门狗链表              */
 #endif                                                                  /*  LW_CFG_SOFTWARE_WATCHDOG... */
@@ -138,11 +136,13 @@ VOID  API_KernelTicks (VOID)
 }
 /*********************************************************************************************************
 ** 函数名称: API_KernelTicksContext
-** 功能描述: 处理系统时钟中断, 此函数必须在中断中被调用! 否则 _SchedSliceTick 将不能准确的计算时间片.
+** 功能描述: 处理系统时钟中断. (此函数必须在中断中被调用)
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
+** 注  意  : vprocTickHook() 可能会激活新的任务, 会在中断退出时会尝试调度.
+
                                            API 函数
 *********************************************************************************************************/
 LW_API
@@ -153,11 +153,14 @@ VOID  API_KernelTicksContext (VOID)
              PLW_CLASS_CPU  pcpu;
              PLW_CLASS_TCB  ptcb;
              
-#if LW_CFG_RTC_EN > 0
-    __kernelTODTicks();                                                 /*  更新 TOD 时间               */
-#endif                                                                  /*  LW_CFG_RTC_EN > 0           */
+    iregInterLevel = __KERNEL_ENTER_IRQ();                              /*  进入内核并关闭中断          */
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  关闭中断同时锁住 spinlock   */
+#if LW_CFG_RTC_EN > 0
+    __kernelTODUpdate();                                                /*  更新 TOD 时间               */
+#endif                                                                  /*  LW_CFG_RTC_EN > 0           */
+    __kernelTickUpdate();                                               /*  更新 TICK 时间              */
+    
+    KN_INT_ENABLE(iregInterLevel);                                      /*  允许其他中断进入            */
     
 #if LW_CFG_SMP_EN > 0
     for (i = 0; i < LW_NCPUS; i++) {                                    /*  遍历所有的核                */
@@ -182,9 +185,11 @@ VOID  API_KernelTicksContext (VOID)
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
     
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);                 /*  打开中断, 同时打开 spinlock */
-
+    iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
+    
     _SchedTick();                                                       /*  处理所有 CPU 线程的时间片   */
+    
+    __KERNEL_EXIT_IRQ(iregInterLevel);                                  /*  退出内核并打开中断          */
 }
 /*********************************************************************************************************
   END

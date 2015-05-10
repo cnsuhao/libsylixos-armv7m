@@ -34,6 +34,7 @@
 2013.05.01  内核启动参数加入堆内存越界的相关检查.
 2013.07.17  引入新的多核初始化机制.
 2014.08.08  将内核启动参数调整放在独立的文件中.
+2015.05.07  优化 SMP 系统主从核启动步骤.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -41,9 +42,13 @@
   SMP 同步变量
 *********************************************************************************************************/
 #if LW_CFG_SMP_EN > 0
-static volatile BOOL            _K_bMultiTaskStart = LW_FALSE;          /*  系统进入多任务模式          */
-static volatile ULONG           _K_ulHoldingPen    = 0ul;               /*  主核 starthook 完毕         */
-#define LW_HOLDING_PEN_START    0xdeadbeef                              /*  启动从核的模数              */
+static volatile BOOL            _K_bPrimaryGo = LW_FALSE;               /*  主核是否已经开始多任务状态  */
+#define KN_PRIMARY_GO()         _K_bPrimaryGo = LW_TRUE;
+#define KN_PRIMARY_IS_GO()      _K_bPrimaryGo
+
+static volatile ULONG           _K_ulSecondaryHold  = 0ul;              /*  从核等待                    */
+#define KN_SECONDARY_GO()       _K_ulSecondaryHold  = 0xdeadbeef;
+#define KN_SECONDARY_WAIT()     _K_ulSecondaryHold != 0xdeadbeef
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 /*********************************************************************************************************
   函数声明
@@ -68,7 +73,7 @@ static  VOID  _KernelPrimaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
     
 #if LW_CFG_SMP_EN > 0
     KN_SMP_MB();                                                        /*  内存屏障, 确保之前操作已处理*/
-    _K_bMultiTaskStart = LW_TRUE;                                       /*  通知从核可以进入多任务模式  */
+    KN_PRIMARY_GO();                                                    /*  通知从核可以进入多任务模式  */
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
     pcpuCur->CPU_iKernelCounter = 0;                                    /*  允许调度                    */
@@ -95,10 +100,10 @@ static  VOID  _KernelPrimaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
 
 static  VOID  _KernelSecondaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
 {
-    ULONG           i;
     PLW_CLASS_TCB   ptcbOrg;
     
-    while (_K_bMultiTaskStart == LW_FALSE) {
+    KN_SMP_MB();
+    while (KN_PRIMARY_IS_GO() == LW_FALSE) {                            /*  等待主核运行                */
         LW_SPINLOCK_DELAY();                                            /*  短延迟并释放总线            */
     }
 
@@ -108,17 +113,6 @@ static  VOID  _KernelSecondaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
     LW_SPIN_UNLOCK_SCHED(&_K_slKernel, ptcbOrg);
     
     pcpuCur->CPU_iKernelCounter = 0;                                    /*  允许调度                    */
-    KN_SMP_MB();
-    
-    for (i = 0; i < LW_NCPUS; i++) {
-        if (!LW_CPU_IS_ACTIVE(LW_CPU_GET(i))) {
-            break;
-        }
-    }
-    
-    if (i >= LW_NCPUS) {                                                /*  所有的 CPU 都已经运行       */
-        _K_ulHoldingPen = 0;                                            /*  防止系统重启时判断出错      */
-    }
     KN_SMP_MB();
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "secondary cpu multi-task start...\r\n");
@@ -168,7 +162,7 @@ static  VOID  _KernelPrimaryEntry (PLW_CLASS_CPU   pcpuCur)
 static VOID  _KernelBootSecondary (VOID)
 {
     KN_SMP_MB();                                                        /*  内存屏障, 确保之前操作已处理*/
-    _K_ulHoldingPen = LW_HOLDING_PEN_START;                             /*  通知从核可以进行基本初始化  */
+    KN_SECONDARY_GO();                                                  /*  通知从核可以进行基本初始化  */
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */
@@ -261,7 +255,8 @@ VOID  API_KernelPrimaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 
 VOID  API_KernelSecondaryStart (PKERNEL_START_ROUTINE  pfuncStartHook)
 {
-    while (_K_ulHoldingPen != LW_HOLDING_PEN_START) {
+    KN_SMP_MB();
+    while (KN_SECONDARY_WAIT()) {
         LW_SPINLOCK_DELAY();                                            /*  短延迟并释放总线            */
     }
     

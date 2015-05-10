@@ -40,11 +40,9 @@ VOID  _RtcInit (VOID)
     struct tm   tmNow = {
         0, 0, 0, 1, 0, (2000 - 1900), 6, 0, 0
     };
-    time_t      timeNow;
     
-    LW_SPIN_INIT(&_K_slKernelRtc);                                      /*  初始化 rtc spinlock         */
+    time_t  timeNow = lib_timegm(&tmNow);
     
-    timeNow  = lib_timegm(&tmNow);
     timezone = (-(3600 * 8));                                           /*  默认为东8区 CST-8:00:00     */
     
     _K_tvTODCurrent.tv_sec  = timeNow;

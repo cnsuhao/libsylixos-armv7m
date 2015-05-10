@@ -46,7 +46,7 @@
 *********************************************************************************************************/
 PLW_CLASS_TCB  _SchedGetCand (PLW_CLASS_CPU  pcpuCur, ULONG  ulCurMaxLock)
 {
-    if (!__SHOULD_SCHED(pcpuCur, ulCurMaxLock)) {                       /*  当前执行线程不能调度        */
+    if (!__COULD_SCHED(pcpuCur, ulCurMaxLock)) {                        /*  当前执行线程不能调度        */
         return  (pcpuCur->CPU_ptcbTCBCur);
         
     } else {                                                            /*  可以执行线程切换            */
@@ -58,7 +58,7 @@ PLW_CLASS_TCB  _SchedGetCand (PLW_CLASS_CPU  pcpuCur, ULONG  ulCurMaxLock)
 }
 /*********************************************************************************************************
 ** 函数名称: _SchedTick
-** 功能描述: 时间片处理 (tick 中断服务程序中被调用)
+** 功能描述: 时间片处理 (tick 中断服务程序中被调用, 进入内核且关闭中断状态)
 ** 输　入  : NONE
 ** 输　出  : NONE
 ** 全局变量: 
@@ -66,13 +66,10 @@ PLW_CLASS_TCB  _SchedGetCand (PLW_CLASS_CPU  pcpuCur, ULONG  ulCurMaxLock)
 *********************************************************************************************************/
 VOID  _SchedTick (VOID)
 {
-             INTREG         iregInterLevel;
     REGISTER PLW_CLASS_CPU  pcpu;
     REGISTER PLW_CLASS_TCB  ptcb;
              UINT8          ucPriority;
              INT            i;
-             
-    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);                  /*  锁内核 spinlock 关闭中断    */
              
 #if LW_CFG_SMP_EN > 0
     for (i = 0; i < LW_NCPUS; i++) {
@@ -101,8 +98,6 @@ VOID  _SchedTick (VOID)
 #if LW_CFG_SMP_EN > 0
     }
 #endif                                                                  /*  LW_CFG_SMP_EN               */
-    
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);                 /*  解锁内核 spinlock 打开中断  */
 }
 /*********************************************************************************************************
 ** 函数名称: _SchedYield

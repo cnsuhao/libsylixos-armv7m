@@ -198,12 +198,12 @@ static VOID  __timeGetHighResolution (struct timespec  *ptv)
 {
     INTREG  iregInterLevel;
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     *ptv = _K_tvTODMono;
 #if LW_CFG_TIME_HIGH_RESOLUTION_EN > 0
     bspTickHighResolution(ptv);                                         /*  高精度时间分辨率计算        */
 #endif                                                                  /*  LW_CFG_TIME_HIGH_RESOLUT... */
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 }
 /*********************************************************************************************************
 ** 函数名称: __timePassSpec

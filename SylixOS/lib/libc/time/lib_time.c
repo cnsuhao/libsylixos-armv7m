@@ -37,9 +37,9 @@ time_t  lib_time (time_t *time)
     INTREG        iregInterLevel;
     time_t        timetmp;
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     timetmp = _K_tvTODCurrent.tv_sec;
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 
     if (time) {
         *time = timetmp;
@@ -60,9 +60,9 @@ time_t  lib_timelocal (time_t *time)
     INTREG        iregInterLevel;
     time_t        timetmp;
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     timetmp = UTC2LOCAL(_K_tvTODCurrent.tv_sec);
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 
     if (time) {
         *time = timetmp;
@@ -83,9 +83,9 @@ time_t  time (time_t *time)
     INTREG        iregInterLevel;
     time_t        timetmp;
     
-    LW_SPIN_LOCK_QUICK(&_K_slKernelRtc, &iregInterLevel);
+    LW_SPIN_LOCK_QUICK(&_K_slKernel, &iregInterLevel);
     timetmp = _K_tvTODCurrent.tv_sec;
-    LW_SPIN_UNLOCK_QUICK(&_K_slKernelRtc, iregInterLevel);
+    LW_SPIN_UNLOCK_QUICK(&_K_slKernel, iregInterLevel);
 
     if (time) {
         *time = timetmp;

@@ -53,6 +53,7 @@
 2014.05.20  tty 设备删除更加安全.
 2014.08.03  FIOWBUFSET 时需要激活等待写的线程.
 2014.12.08  修正 _TyIRd() 忘记释放 spinlock 错误.
+2015.05.07  优化中断程序操作.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -61,6 +62,7 @@
 /*********************************************************************************************************
   termios header file
 *********************************************************************************************************/
+#include "limits.h"
 #include "termios.h"
 #include "sys/ioctl.h"
 /*********************************************************************************************************
@@ -329,7 +331,7 @@ static VOID  _TyFlushRd (TY_DEV_ID  ptyDev)
     TYDEV_LOCK(ptyDev, return);                                         /*  等待设备使用权              */
     
     ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_TRUE;
-    KN_SMP_WMB();
+    KN_SMP_MB();
     
     rngFlush(ptyDev->TYDEV_vxringidRdBuf);                              /*  清除缓冲区                  */
     
@@ -339,7 +341,7 @@ static VOID  _TyFlushRd (TY_DEV_ID  ptyDev)
     ptyDev->TYDEV_ucInBytesLeft = 0;
     
     _TyRdXoff(ptyDev, LW_FALSE);                                        /*  可以允许对方发送            */
-    KN_SMP_WMB();
+    KN_SMP_MB();
     
     ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_FALSE;
     
@@ -585,7 +587,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
     case FIORBUFSET:                                                    /*  重新设置读缓冲的大小        */
         TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_TRUE;
-        KN_SMP_WMB();
+        KN_SMP_MB();
         ringId = rngCreate((INT)lArg);                                  /*  重新建立缓冲区              */
         if (ringId) {
             if (ptyDev->TYDEV_vxringidRdBuf) {
@@ -595,7 +597,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
         } else {
             iStatus = PX_ERROR;
         }
-        KN_SMP_WMB();
+        KN_SMP_MB();
         ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf = LW_FALSE;
         TYDEV_UNLOCK(ptyDev);                                           /*  释放设备使用权              */
         break;
@@ -603,7 +605,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
     case FIOWBUFSET:                                                    /*  重新设置写缓冲区            */
         TYDEV_LOCK(ptyDev, return (PX_ERROR));                          /*  等待设备使用权              */
         ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_TRUE;
-        KN_SMP_WMB();
+        KN_SMP_MB();
         ringId = rngCreate((INT)lArg);                                  /*  重新建立缓冲区              */
         if (ringId) {
             if (ptyDev->TYDEV_vxringidWrBuf) {
@@ -620,7 +622,7 @@ INT  _TyIoctl (TY_DEV_ID  ptyDev,
                                         : ((INT)lArg);                  /*  确定写激活门限              */
             LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);
         }
-        KN_SMP_WMB();
+        KN_SMP_MB();
         ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf = LW_FALSE;
         
         API_SemaphoreBPost(ptyDev->TYDEV_hWrtSyncSemB);                 /*  释放信号量                  */
@@ -799,11 +801,7 @@ ssize_t  _TyWrite (TY_DEV_ID  ptyDev,
     ptyDev->TYDEV_iAbortFlag &= ~OPT_WABORT;                            /*  清除 abort                  */
     
     while (stNBytes > 0) {
-        if (LW_CPU_GET_CUR_NESTING()) {                                 /*  中断调用                    */
-            ulError = API_SemaphoreBTryPend(ptyDev->TYDEV_hWrtSyncSemB);
-        } else {                                                        /*  普通调用                    */
-            ulError = API_SemaphoreBPend(ptyDev->TYDEV_hWrtSyncSemB, ptyDev->TYDEV_ulWTimeOut);
-        }
+        ulError = API_SemaphoreBPend(ptyDev->TYDEV_hWrtSyncSemB, ptyDev->TYDEV_ulWTimeOut);
         if (ulError) {
             _ErrorHandle(ERROR_IO_DEVICE_TIMEOUT);                      /*   超时                       */
             return  (sstNbStart - stNBytes);
@@ -823,13 +821,11 @@ ssize_t  _TyWrite (TY_DEV_ID  ptyDev,
             return  (sstNbStart - stNBytes);
         }
         
-        ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bWrtBufBusy = LW_TRUE;    /*  开始操作缓冲区              */
         LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel);     /*  锁定 spinlock 并关闭中断    */
         iBytesput = rngBufPut(ptyDev->TYDEV_vxringidWrBuf, 
                               pcBuffer, 
                               (INT)stNBytes);                           /*  将数据写入缓冲区            */
         LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
-        ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bWrtBufBusy = LW_FALSE;   /*  缓冲区操作结束              */
         
         _TyTxStartup(ptyDev);                                           /*  启动设备发送                */
         
@@ -876,13 +872,7 @@ ssize_t  _TyReadVtime (TY_DEV_ID  ptyDev,
     REGISTER INT           iFreeBytes;
     
     REGISTER ULONG         ulError;
-            
              ULONG         ulTimeout;                                   /*  间隔时间                    */
-    
-    if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
-        _ErrorHandle(ERROR_KERNEL_IN_ISR);
-        return  (0);
-    }
     
     if (__TTY_CC(ptyDev, VMIN) == 0) {                                  /*  首次等待时间                */
         ulTimeout = ((ULONG)(__TTY_CC(ptyDev, VTIME) * 100) * LW_TICK_HZ / 1000);
@@ -1024,8 +1014,7 @@ __re_read:
     ptyDev->TYDEV_iAbortFlag &= ~OPT_RABORT;                            /*  清除 abort                  */
     
     for (;;) {
-        if (LW_CPU_GET_CUR_NESTING() || 
-            (__TTY_CC(ptyDev, VMIN) == 0)) {                            /*  中断调用或无需等待          */
+        if (__TTY_CC(ptyDev, VMIN) == 0) {                              /*  无需等待                    */
             ulError = API_SemaphoreBTryPend(ptyDev->TYDEV_hRdSyncSemB);
         } else {                                                        /*  普通调用                    */
             ulError = API_SemaphoreBPend(ptyDev->TYDEV_hRdSyncSemB, ptyDev->TYDEV_ulRTimeOut);
@@ -1155,9 +1144,9 @@ INT  _TyITx (TY_DEV_ID  ptyDev, PCHAR  pcChar)
         
     } else if (ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bCR) {             /*  是否需要追加 CR 字符        */
         *pcChar = '\n';
-        ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bCR = LW_FALSE;
-        
-        LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
+        ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bCR   = LW_FALSE;
+        ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bBusy = LW_TRUE;
+        goto    __release_wrt;                                          /*  解锁写操作                  */
         
     } else {
         if (__RNG_ELEM_GET(ringId, pcChar, iNTemp) == 0) {              /*  从缓冲区取出数据            */
@@ -1175,6 +1164,7 @@ INT  _TyITx (TY_DEV_ID  ptyDev, PCHAR  pcChar)
                 ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bCR = LW_TRUE;    /*  下一次发送的数据为 LF       */
             }
             
+__release_wrt:
             if (rngFreeBytes(ringId) == ptyDev->TYDEV_iWrtThreshold) {  /*  可以激活下一个需要写的线程  */
                 LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);  
                                                                         /*  解锁 spinlock 打开中断      */
@@ -1290,9 +1280,63 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
             cInchar = '\n';                                             /*  进行转意                    */
         }
         
-        if ((iOpt & OPT_ECHO) &&                                        /*  需要进行终端回显            */
-            (!ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bWrtBufBusy && 
-             !ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf)) { /*  缓冲区综合条件允许          */
+        ringId = ptyDev->TYDEV_vxringidRdBuf;
+        bReleaseTaskLevel = LW_FALSE;                                   /*  开始对输入缓冲区操作        */
+        
+        if (!(iOpt & OPT_LINE)) {                                       /*  不是行模式                  */
+            if (RNG_ELEM_PUT(ringId, cInchar, iNTemp) == 0) {           /*  写入输入队列                */
+                iStatus = PX_ERROR;
+            }
+            if (rngNBytes(ringId) == 1) {
+                bReleaseTaskLevel = LW_TRUE;                            /*  需要激活等待线程            */
+            }
+            
+        } else {                                                        /*  属于行模式                  */
+            iFreeBytes = rngFreeBytes(ringId);                          /*  获得空闲字节的个数          */
+            
+            if (__TTY_BACKSPACE(ptyDev, cInchar)) {                     /*  退格键                      */
+                if (ptyDev->TYDEV_ucInNBytes) {
+                    ptyDev->TYDEV_ucInNBytes--;
+                }
+            
+            } else if (cInchar == __TTY_CC(ptyDev, VKILL)) {            /*  删除一行                    */
+                ptyDev->TYDEV_ucInNBytes = 0;
+            
+            } else if (cInchar == __TTY_CC(ptyDev, VEOF)) {             /*  结束键                      */
+                if (iFreeBytes > 0) {
+                    bReleaseTaskLevel = LW_TRUE;                        /*  立即激活任务                */
+                }
+            
+            } else {                                                    /*  其他键                      */
+                if (iFreeBytes >= 2) {                                  /*  空闲区超过 2 个字符         */
+                    if ((iFreeBytes >= (ptyDev->TYDEV_ucInNBytes + 3)) &&
+                        (ptyDev->TYDEV_ucInNBytes < (MAX_CANON - 1))) {
+                        ptyDev->TYDEV_ucInNBytes++;
+                    } else {
+                        iStatus = PX_ERROR;                             /*  没有剩余空间                */
+                    }
+                    
+                    rngPutAhead(ringId, cInchar, 
+                                (INT)ptyDev->TYDEV_ucInNBytes);
+                                
+                    if (cInchar == '\n') {
+                        bReleaseTaskLevel = LW_TRUE;                    /*  立即激活任务                */
+                    }
+                
+                } else {                                                /*  完全没有空间                */
+                    iStatus = PX_ERROR;                                 /*  没有剩余空间                */
+                }
+            }
+            
+            if (bReleaseTaskLevel) {
+                rngPutAhead( ringId, (CHAR)ptyDev->TYDEV_ucInNBytes, 0);
+                rngMoveAhead(ringId, (INT) ptyDev->TYDEV_ucInNBytes + 1);
+                ptyDev->TYDEV_ucInNBytes = 0;
+            }
+        }
+        
+        if ((iOpt & OPT_ECHO) && (iStatus != PX_ERROR) &&               /*  需要进行终端回显            */
+            !ptyDev->TYDEV_tydevwrstat.TYDEVWRSTAT_bFlushingWrtBuf) {   /*  缓冲区综合条件允许          */
             
             ringId = ptyDev->TYDEV_vxringidWrBuf;                       /*  TTY 输出缓冲区              */
             
@@ -1339,96 +1383,20 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
             LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
         }
         
-        LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel);     /*  锁定 spinlock 并关闭中断    */
-        if (ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf) {     /*  输入缓冲区是否被 FLUSH      */
-            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);
-                                                                        /*  解锁 spinlock 打开中断      */
-            return  (PX_ERROR);
-        }
-        
-        ringId = ptyDev->TYDEV_vxringidRdBuf;
-        bReleaseTaskLevel = LW_FALSE;                                   /*  开始对输入缓冲区操作        */
-        
-        if (!(iOpt & OPT_LINE)) {                                       /*  不是行模式                  */
-            if (RNG_ELEM_PUT(ringId, cInchar, iNTemp) == 0) {           /*  写入输入队列                */
-                iStatus = PX_ERROR;
+        if ((iOpt & OPT_TANDEM) && !(iOpt & OPT_LINE)) {                /*  流控制模式                  */
+            LW_SPIN_LOCK_QUICK(&ptyDev->TYDEV_slLock, &iregInterLevel); /*  锁定 spinlock 并关闭中断    */
+            if (ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bFlushingRdBuf) { /*  输入缓冲区是否被 FLUSH      */
+                LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);
+                return  (PX_ERROR);
             }
-            if (rngNBytes(ringId) == 1) {
-                bReleaseTaskLevel = LW_TRUE;                            /*  需要激活等待线程            */
-            }
-            
-        } else {                                                        /*  属于行模式                  */
-            iFreeBytes = rngFreeBytes(ringId);                          /*  获得空闲字节的个数          */
-            
-            if (__TTY_BACKSPACE(ptyDev, cInchar)) {                     /*  退格键                      */
-                if (ptyDev->TYDEV_ucInNBytes) {
-                    ptyDev->TYDEV_ucInNBytes--;
-                }
-            
-            } else if (cInchar == __TTY_CC(ptyDev, VKILL)) {            /*  删除一行                    */
-                ptyDev->TYDEV_ucInNBytes = 0;
-            
-            } else if (cInchar == __TTY_CC(ptyDev, VEOF)) {             /*  结束键                      */
-                if (iFreeBytes > 0) {
-                    bReleaseTaskLevel = LW_TRUE;                        /*  立即激活任务                */
-                }
-            
-            } else {                                                    /*  其他键                      */
-                if (iFreeBytes >= 2) {                                  /*  空闲区超过 2 个字符         */
-                    if (iFreeBytes >= (ptyDev->TYDEV_ucInNBytes + 2)) {
-                        ptyDev->TYDEV_ucInNBytes++;
-                    } else {
-                        iStatus = PX_ERROR;                             /*  没有剩余空间                */
-                    }
-                    
-                    rngPutAhead(ringId, cInchar, 
-                                (INT)ptyDev->TYDEV_ucInNBytes);
-                                
-                    if (cInchar == '\n') {
-                        bReleaseTaskLevel = LW_TRUE;                    /*  立即激活任务                */
-                    }
-                
-                } else {                                                /*  完全没有空间                */
-                    iStatus = PX_ERROR;                                 /*  没有剩余空间                */
-                }
-            }
-            
-            if (bReleaseTaskLevel) {
-                rngPutAhead( ringId, (CHAR)ptyDev->TYDEV_ucInNBytes, 0);
-                rngMoveAhead(ringId, (INT) ptyDev->TYDEV_ucInNBytes + 1);
-                ptyDev->TYDEV_ucInNBytes = 0;
-            }
-        }
-        
-        if (iOpt & OPT_TANDEM) {                                        /*  流控制模式                  */
+            ringId     = ptyDev->TYDEV_vxringidRdBuf;
             iFreeBytes = rngFreeBytes(ringId);
-            if (ptyDev->TYDEV_iOpt & OPT_LINE) {
-                iFreeBytes -= ptyDev->TYDEV_ucInNBytes + 1;
-            }
+            LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);/*  解锁 spinlock 打开中断      */
             
-            if (ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bXoff == LW_FALSE) {
-                                                                        /*  本地允许接收数据            */
-                if (iFreeBytes < _G_cTyXoffThreshold) {                 /*  如果输入缓冲区快要满了      */
-                    if (bReleaseTaskLevel == LW_FALSE) {                /*  这里需要立即激活接收线程    */
-                        bReleaseTaskLevel =  LW_TRUE;                   /*  否则将无法释放接收从而不能  */
-                                                                        /*  再次开启通信                */
-                        if (iOpt & OPT_LINE) {                          /*  行模式                      */
-                            rngPutAhead( ringId, (CHAR)ptyDev->TYDEV_ucInNBytes, 0);
-                            rngMoveAhead(ringId, (INT) ptyDev->TYDEV_ucInNBytes + 1);
-                            ptyDev->TYDEV_ucInNBytes = 0;
-                        }
-                    }
-                }
-            }
-        }
-        
-        LW_SPIN_UNLOCK_QUICK(&ptyDev->TYDEV_slLock, iregInterLevel);    /*  解锁 spinlock 打开中断      */
-        
-        if (iOpt & OPT_TANDEM) {                                        /*  流控制模式                  */
-            if (ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bXoff == LW_FALSE) {
-                                                                        /*  本地允许接收数据            */
+            if (!ptyDev->TYDEV_tydevrdstat.TYDEVRDSTAT_bXoff) {         /*  本地允许接收数据            */
                 if (iFreeBytes < _G_cTyXoffThreshold) {                 /*  如果输入缓冲区快要满了      */
                     _TyRdXoff(ptyDev, LW_TRUE);                         /*  发送 XOFF                   */
+                    bReleaseTaskLevel = LW_TRUE;                        /*  这里需要立即激活接收线程    */
                 }
             } else {
                 if (iFreeBytes > _G_cTyXonThreshold) {
@@ -1441,6 +1409,10 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
             API_SemaphoreBPost(ptyDev->TYDEV_hRdSyncSemB);              /*  激活等待任务                */
             SEL_WAKE_UP_ALL(&ptyDev->TYDEV_selwulList, SELREAD);        /*  select() 激活               */
         }
+    }
+    
+    if (bCharEchoed) {
+        iStatus = ERROR_NONE;
     }
     
     return  (iStatus);
