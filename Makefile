@@ -4,6 +4,36 @@
 #*********************************************************************************************************
 
 #*********************************************************************************************************
+# include config.mk
+#*********************************************************************************************************
+CONFIG_MK_EXIST = $(shell if [ -f ../config.mk ]; then echo exist; else echo notexist; fi;)
+ifeq ($(CONFIG_MK_EXIST), exist)
+include ../config.mk
+else
+CONFIG_MK_EXIST = $(shell if [ -f config.mk ]; then echo exist; else echo notexist; fi;)
+ifeq ($(CONFIG_MK_EXIST), exist)
+include config.mk
+else
+CONFIG_MK_EXIST =
+endif
+endif
+
+#*********************************************************************************************************
+# check configure
+#*********************************************************************************************************
+check_defined = \
+    $(foreach 1,$1,$(__check_defined))
+__check_defined = \
+    $(if $(value $1),, \
+      $(error Undefined $1$(if $(value 2), ($(strip $2)))))
+
+$(call check_defined, CONFIG_MK_EXIST, Please configure this project in RealCoder or \
+create a config.mk file!)
+$(call check_defined, SYLIXOS_BASE_PATH, SylixOS base project path)
+$(call check_defined, TOOLCHAIN_PREFIX, the prefix name of toolchain)
+$(call check_defined, DEBUG_LEVEL, debug level(debug or release))
+
+#*********************************************************************************************************
 # configure area you can set the following config to you own system
 # FPUFLAGS (-mfloat-abi=softfp -mfpu=vfpv3 ...)
 # CPUFLAGS (-mcpu=arm920t ...)
@@ -15,26 +45,11 @@ CPUFLAGS = -mcpu=arm920t
 #*********************************************************************************************************
 # toolchain select
 #*********************************************************************************************************
-TOOLCHAIN_PROBE = $(shell arm-sylixos-eabi-gcc -v 2>null && \
-					 (rm -rf null; echo commercial) || \
-					 (rm -rf null; echo opensource))
-
-ifneq (,$(findstring commercial, $(TOOLCHAIN_PROBE)))
-TOOLCHAIN_PREFIX = arm-sylixos-eabi-
-else 
-TOOLCHAIN_PREFIX = arm-none-eabi-
-endif
-
 CC  = $(TOOLCHAIN_PREFIX)gcc
 CXX = $(TOOLCHAIN_PREFIX)g++
 AS  = $(TOOLCHAIN_PREFIX)gcc
 AR  = $(TOOLCHAIN_PREFIX)ar
 LD  = $(TOOLCHAIN_PREFIX)g++
-
-#*********************************************************************************************************
-# debug options (debug or release)
-#*********************************************************************************************************
-DEBUG_LEVEL = debug
 
 #*********************************************************************************************************
 # build options
@@ -1241,9 +1256,9 @@ DEPS_XSIIPC  = $(addprefix $(DEPPATH)/, $(addsuffix .d, $(basename $(XSIIPC_SRCS
 #*********************************************************************************************************
 # include path
 #*********************************************************************************************************
-INCDIR  = "./SylixOS"
-INCDIR += "./SylixOS/include"
-INCDIR += "./SylixOS/include/inet"
+INCDIR  = -I"./SylixOS"
+INCDIR += -I"./SylixOS/include"
+INCDIR += -I"./SylixOS/include/inet"
 
 #*********************************************************************************************************
 # compiler preprocess
@@ -1260,45 +1275,14 @@ OPTIMIZE = -O2 -g1 -gdwarf-2											# Do NOT use -O3 and -Os
 endif										    						# -Os is not align for function
 																		# loop and jump.
 #*********************************************************************************************************
-# rm command parameter
-#*********************************************************************************************************
-UNAME = $(shell uname -sm)
-
-ifneq (,$(findstring Linux, $(UNAME)))
-HOST_OS = linux
-endif
-ifneq (,$(findstring Darwin, $(UNAME)))
-HOST_OS = darwin
-endif
-ifneq (,$(findstring Macintosh, $(UNAME)))
-HOST_OS = darwin
-endif
-ifneq (,$(findstring CYGWIN, $(UNAME)))
-HOST_OS = windows
-endif
-ifneq (,$(findstring windows, $(UNAME)))
-HOST_OS = windows
-endif
-
-ifeq ($(HOST_OS),)
-$(error Unable to determine HOST_OS from uname -sm: $(UNAME)!)
-endif
-
-ifeq ($(HOST_OS), windows) 
-RM_PARAM = -rdf
-else
-RM_PARAM = -rf
-endif
-
-#*********************************************************************************************************
 # depends and compiler parameter (cplusplus in kernel MUST NOT use exceptions and rtti)
 #*********************************************************************************************************
 DEPENDFLAG  = -MM
 CXX_EXCEPT  = -fno-exceptions -fno-rtti
 COMMONFLAGS = $(CPUFLAGS) $(OPTIMIZE) -Wall -fmessage-length=0 -fsigned-char -fno-short-enums
-ASFLAGS     = -x assembler-with-cpp $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(COMMONFLAGS) -c
-CFLAGS      = $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(COMMONFLAGS) -c
-CXXFLAGS    = $(DSYMBOL) $(addprefix -I,$(INCDIR)) $(CXX_EXCEPT) $(COMMONFLAGS) -c
+ASFLAGS     = -x assembler-with-cpp $(DSYMBOL) $(INCDIR) $(COMMONFLAGS) -c
+CFLAGS      = $(DSYMBOL) $(INCDIR) $(COMMONFLAGS) -c
+CXXFLAGS    = $(DSYMBOL) $(INCDIR) $(CXX_EXCEPT) $(COMMONFLAGS) -c
 ARFLAGS     = -r
 
 #*********************************************************************************************************
@@ -1394,7 +1378,7 @@ $(OBJPATH)/SylixOS/arch/arm/fpu/vfpv3/armVfpV3Asm.o: ./SylixOS/arch/arm/fpu/vfpv
 # link libsylixos.a object files
 #*********************************************************************************************************
 $(TARGET): $(OBJS)
-		-rm $(RM_PARAM) $(TARGET)
+		-rm -rf $(TARGET)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_APPL)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_ARCH)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_DEBUG)
@@ -1479,19 +1463,19 @@ $(XSIIPC_TARGET): $(OBJS_XSIIPC)
 # clean objects
 #*********************************************************************************************************
 clean:
-		-rm $(RM_PARAM) $(TARGET)
-		-rm $(RM_PARAM) $(DSOH_TARGET)
-		-rm $(RM_PARAM) $(VPMPDM_A_TARGET)
-		-rm $(RM_PARAM) $(VPMPDM_S_TARGET)
-		-rm $(RM_PARAM) $(XINPUT_TARGET)
-		-rm $(RM_PARAM) $(XSIIPC_TARGET)
-		-rm $(RM_PARAM) $(OBJPATH)
+		-rm -rf $(TARGET)
+		-rm -rf $(DSOH_TARGET)
+		-rm -rf $(VPMPDM_A_TARGET)
+		-rm -rf $(VPMPDM_S_TARGET)
+		-rm -rf $(XINPUT_TARGET)
+		-rm -rf $(XSIIPC_TARGET)
+		-rm -rf $(OBJPATH)
 
 #*********************************************************************************************************
 # clean project
 #*********************************************************************************************************
 clean_project:
-		-rm $(RM_PARAM) $(OUTPATH)
+		-rm -rf $(OUTPATH)
 
 #*********************************************************************************************************
 # END
