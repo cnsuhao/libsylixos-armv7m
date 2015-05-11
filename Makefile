@@ -1208,6 +1208,12 @@ XINPUT_TARGET = $(OUTPATH)/xinput.ko
 XSIIPC_TARGET = $(OUTPATH)/xsiipc.ko
 
 #*********************************************************************************************************
+# symbol target
+#*********************************************************************************************************
+SYMBOL_TARGET_C = $(OUTPATH)/symbol.c
+SYMBOL_TARGET_H = $(OUTPATH)/symbol.h
+
+#*********************************************************************************************************
 # libsylixos objects
 #*********************************************************************************************************
 OBJS_APPL    = $(addprefix $(OBJPATH)/, $(addsuffix .o, $(basename $(APPL_SRCS))))
@@ -1395,6 +1401,11 @@ $(TARGET): $(OBJS)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_SYMBOL)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_SYS)
 		$(AR) $(ARFLAGS) $(TARGET) $(OBJS_CPP)
+		cp SylixOS/hosttools/makesymbol/Makefile $(OUTDIR)
+		cp SylixOS/hosttools/makesymbol/makesymbol.bat $(OUTDIR)
+		cp SylixOS/hosttools/makesymbol/makesymbol.sh $(OUTDIR)
+		cp SylixOS/hosttools/makesymbol/nm.exe $(OUTDIR)
+		make -C $(OUTDIR)
 
 #*********************************************************************************************************
 # link libdsohandle.a object files
@@ -1469,7 +1480,9 @@ clean:
 		-rm -rf $(VPMPDM_S_TARGET)
 		-rm -rf $(XINPUT_TARGET)
 		-rm -rf $(XSIIPC_TARGET)
+		-rm -rf $(SYMBOL_TARGET_C) $(SYMBOL_TARGET_H)
 		-rm -rf $(OBJPATH)
+		-rm -rf $(DEPPATH)
 
 #*********************************************************************************************************
 # clean project
