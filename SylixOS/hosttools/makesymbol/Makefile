@@ -28,7 +28,8 @@ all:
 	makesymbol.bat
 else
 all:
-	makesymbol.sh
+	chmod +x makesymbol.sh
+	./makesymbol.sh
 endif
 
 #*********************************************************************************************************
