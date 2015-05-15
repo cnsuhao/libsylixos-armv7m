@@ -27,9 +27,8 @@
 *********************************************************************************************************/
 
 #define LW_CFG_CPU_ARCH_ARM             1                               /*  ARM family                  */
-#undef  LW_CFG_CPU_ARCH_X86                                             /*  Intel 80x86                 */
+#undef  LW_CFG_CPU_ARCH_X86                                             /*  i86 (80386 ~ PENTIUM)       */
 #undef  LW_CFG_CPU_ARCH_MIPS                                            /*  MIPS family                 */
-#undef  LW_CFG_CPU_ARCH_MIPS64                                          /*  MIPS 64bit                  */
 #undef  LW_CFG_CPU_ARCH_PPC                                             /*  PowerPC                     */
 
 /*********************************************************************************************************

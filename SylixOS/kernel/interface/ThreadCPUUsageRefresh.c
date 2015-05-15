@@ -59,9 +59,6 @@ ULONG  API_ThreadCPUUsageRefresh (VOID)
         return  (ERROR_KERNEL_NOT_RUNNING);
     }
     
-    
-    
-    
     __KERNEL_ENTER();                                                   /*  进入内核                    */
     if (__LW_TICK_CPUUSAGE_ISENABLE()) {
         __LW_TICK_CPUUSAGE_DISABLE();                                   /*  关闭测量                    */

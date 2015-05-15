@@ -29,6 +29,7 @@
 2013.07.18  使用新的获取 TCB 的方法, 确保 SMP 系统安全.
 2013.07.19  合并普通 CPU 中断和核间中断出口, 不再区分核间中断与普通中断出口.
 2013.12.12  这里不再处理中断 hook.
+2015.05.14  优化中断进入与退出处理.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -105,11 +106,6 @@ ULONG    API_InterEnter (VOID)
 {
     PLW_CLASS_CPU  pcpu;
     
-    if (!LW_SYS_STATUS_IS_RUNNING()) {                                  /*  系统必须已经启动            */
-        _ErrorHandle(ERROR_KERNEL_NOT_RUNNING);
-        return  (0);
-    }
-    
     pcpu = LW_CPU_GET_CUR();
     if (pcpu->CPU_ulInterNesting != LW_CFG_MAX_INTER_SRC) {
         pcpu->CPU_ulInterNesting++;
@@ -127,7 +123,7 @@ ULONG    API_InterEnter (VOID)
 }
 /*********************************************************************************************************
 ** 函数名称: API_InterExit
-** 功能描述: 内核中断出口函数
+** 功能描述: 内核中断出口函数 (在关中断的情况下被调用)
 ** 输　入  : NONE
 ** 输　出  : NONE
 ** 全局变量: 
@@ -137,15 +133,7 @@ ULONG    API_InterEnter (VOID)
 LW_API
 VOID    API_InterExit (VOID)
 {
-    INTREG         iregInterLevel;
     PLW_CLASS_CPU  pcpu;
-
-    if (!LW_SYS_STATUS_IS_RUNNING()) {                                  /*  系统必须已经启动            */
-        _ErrorHandle(ERROR_KERNEL_NOT_RUNNING);
-        return;
-    }
-        
-    iregInterLevel = KN_INT_DISABLE();                                  /*  关闭中断                    */
     
     pcpu = LW_CPU_GET_CUR();
     
@@ -167,7 +155,6 @@ VOID    API_InterExit (VOID)
             __fpuInterExit(pcpu);
         }
 #endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
-        KN_INT_ENABLE(iregInterLevel);
         return;
     }
     
@@ -178,8 +165,6 @@ VOID    API_InterExit (VOID)
         __fpuInterExit(pcpu);
     }
 #endif                                                                  /*  LW_CFG_CPU_FPU_EN > 0       */
-
-    KN_INT_ENABLE(iregInterLevel);
 }
 /*********************************************************************************************************
   END

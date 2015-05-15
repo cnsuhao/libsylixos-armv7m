@@ -156,7 +156,7 @@ static INT _IoOpen (PCHAR            pcName,
     
     iFd = iosFdNew(pdevhdrHdr, cFullFileName, PX_ERROR, iFlag);         /*  此时就确定了文件描述符名    */
     if (iFd == PX_ERROR) {
-	    _DebugHandle(__ERRORMESSAGE_LEVEL, "file can not create.\r\n");
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "file can not create.\r\n");
         iErrLevel = 1;
         goto    __error_handle;
     }
@@ -172,7 +172,7 @@ static INT _IoOpen (PCHAR            pcName,
             ulError   = API_GetLastError();
             iErrLevel = 2;
             goto    __error_handle;
-    	}
+        }
         
         /*
          *  驱动程序如果返回 FOLLOW_LINK_????, cFullFileName内部一定是目标的绝对地址, 即以/起始的文件名.
@@ -196,23 +196,23 @@ static INT _IoOpen (PCHAR            pcName,
             goto    __error_handle;
         }
     }
-	
-	if (iosFdSet(iFd, pdevhdrHdr, lValue, iFlag) != ERROR_NONE) {
-	    _DebugHandle(__ERRORMESSAGE_LEVEL, "file can not config.\r\n");
-	    ulError   = API_GetLastError();
-	    iErrLevel = 3;
+
+    if (iosFdSet(iFd, pdevhdrHdr, lValue, iFlag) != ERROR_NONE) {
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "file can not config.\r\n");
+        ulError   = API_GetLastError();
+        iErrLevel = 3;
         goto    __error_handle;
-	}
-	
-	if (iLinkCount) {                                                   /*  内部存在符号链接            */
-	    if (iosFdRealName(iFd, cFullFileName)) {
-	        _DebugHandle(__ERRORMESSAGE_LEVEL, "file can not set real name.\r\n");
-	        ulError   = API_GetLastError();
-	        iErrLevel = 3;
+    }
+
+    if (iLinkCount) {                                                   /*  内部存在符号链接            */
+        if (iosFdRealName(iFd, cFullFileName)) {
+            _DebugHandle(__ERRORMESSAGE_LEVEL, "file can not set real name.\r\n");
+            ulError   = API_GetLastError();
+            iErrLevel = 3;
             goto    __error_handle;
-	    }
-	}
-	
+        }
+    }
+
     if ((iFlag & O_SHLOCK) || (iFlag & O_EXLOCK)) {                     /*  需要直接加锁                */
         REGISTER PLW_FD_ENTRY  pfdentry;
         pfdentry = _IosFileGet(iFd, LW_FALSE);
@@ -235,7 +235,7 @@ static INT _IoOpen (PCHAR            pcName,
     MONITOR_EVT_INT2(MONITOR_EVENT_ID_IO, (bCreate ? MONITOR_EVENT_IO_CREAT : MONITOR_EVENT_IO_OPEN), 
                      iFlag, iMode, pcName);
     
-	return  (iFd);
+    return  (iFd);
     
 __error_handle:
     if ((iErrLevel > 2) && (iFlag & O_CREAT)) {
@@ -1174,14 +1174,14 @@ INT  API_IoDefPathCat (CPCHAR  pcName)
     /*
      *  pcName 如果是设备则 cNewPath 为该设备, 否则将链接到 _PathGetDef() 后面.
      */
-	if (_PathCat(_PathGetDef(), pcName, cNewPath) != ERROR_NONE) {
-	    return  (PX_ERROR);
-	}
-	
-	/*
-	 *  压缩目录, 去掉 . 和 ..
-	 */
-	_PathCondense(cNewPath);
+    if (_PathCat(_PathGetDef(), pcName, cNewPath) != ERROR_NONE) {
+        return  (PX_ERROR);
+    }
+
+    /*
+     *  压缩目录, 去掉 . 和 ..
+     */
+    _PathCondense(cNewPath);
 
     /*
      *  检查要压缩目录后的合法性
@@ -1444,8 +1444,8 @@ VOID  API_IoGlobalStdSet (INT  iStdFd, INT  iNewFd)
     }
 
     if (STD_VALID(iStdFd)) {
-	    _G_iIoStdFd[iStdFd] = iNewFd;
-	}
+        _G_iIoStdFd[iStdFd] = iNewFd;
+    }
 }
 /*********************************************************************************************************
 ** 函数名称: API_IoGlobalStdGet
@@ -1531,6 +1531,7 @@ VOID  API_IoTaskStdSet (LW_OBJECT_HANDLE  ulId,
 ** 全局变量: 
 ** 调用模块: 
 ** 注  意  : 在进程中可获取当前任务标准 IO 设置信息, 如果进程是有内核任务创建, 则继承内核任务 0 1 2 文件.
+
                                            API 函数
 *********************************************************************************************************/
 LW_API 

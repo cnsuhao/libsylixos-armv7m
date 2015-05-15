@@ -30,6 +30,9 @@ HISTORY
     2015-04-24: han.hui
     修正多核调度就绪表问题.
     
+    2015-05-14: han.hui
+    修正多核初始化死锁问题.
+    
 (STABLE-1.0.0)
 
 ++ New features:

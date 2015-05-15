@@ -48,14 +48,6 @@
 #include "mips/arch_regs.h"
 #include "mips/arch_mmu.h"
 
-#elif (defined LW_CFG_CPU_ARCH_MIPS64)
-#include "mips/arch64_types.h"
-#include "mips/arch64_compiler.h"
-#include "mips/arch64_float.h"
-#include "mips/arch64_limits.h"
-#include "mips/arch64_regs.h"
-#include "mips/arch64_mmu.h"
-
 #elif (defined LW_CFG_CPU_ARCH_PPC)
 #include "ppc/arch_types.h"
 #include "ppc/arch_compiler.h"

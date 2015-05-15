@@ -19,9 +19,6 @@
 #elif (defined LW_CFG_CPU_ARCH_MIPS)
 #include "arch/mips/elf/mipsElf.h"
 
-#elif (defined LW_CFG_CPU_ARCH_MIPS64)
-#include "arch/mips/elf/mips64Elf.h"
-
 #elif (defined LW_CFG_CPU_ARCH_PPC)
 #include "arch/ppc/elf/ppcElf.h"
 #endif  /*  LW_CFG_CPU_ARCH_ARM  */

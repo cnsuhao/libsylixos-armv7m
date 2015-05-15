@@ -34,13 +34,13 @@
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 /*********************************************************************************************************
 ** 函数名称: archIntHandle
-** 功能描述: bspIntHandle 需要调用此函数处理中断
+** 功能描述: bspIntHandle 需要调用此函数处理中断 (关闭中断情况被调用)
 ** 输　入  : ulVector         中断向量
 **           bPreemptive      中断是否可抢占
 ** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : 
+** 注  意  : 此函数退出时必须为中断关闭状态.
 *********************************************************************************************************/
 VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
 {
@@ -63,8 +63,9 @@ VOID  archIntHandle (ULONG  ulVector, BOOL  bPreemptive)
 
     irqret = API_InterVectorIsr(ulVector);                              /*  调用中断服务程序            */
     
+    KN_INT_DISABLE();                                                   /*  禁能中断                    */
+    
     if (bPreemptive) {
-        KN_INT_DISABLE();                                               /*  禁能中断                    */
         if (irqret != LW_IRQ_HANDLED_DISV) {
             VECTOR_OP_LOCK();
             __ARCH_INT_VECTOR_ENABLE(ulVector);                         /*  允许 vector 中断            */

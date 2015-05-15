@@ -38,6 +38,7 @@
             DMA 物理内存分配函数分配的物理内存可以直接访问, 因为 DMA 物理内存和虚拟空间绝不重复.
 2013.07.20  SMP 情况下 MMU 初始化加入主从核分离的初始化函数.
 2014.09.18  加入 API_VmmIoRemapEx() 可指定内存属性.
+2015.05.14  API_VmmLibSecondaryInit() 不加 VMM 锁.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -209,9 +210,7 @@ ULONG  API_VmmLibSecondaryInit (CPCHAR  pcMachineName)
 {
     ULONG    ulError;
     
-    __VMM_LOCK();
     ulError = __vmmLibSecondaryInit(pcMachineName);
-    __VMM_UNLOCK();
     
     _DebugHandle(__LOGMESSAGE_LEVEL, "secondary MMU initilaized.\r\n");
 

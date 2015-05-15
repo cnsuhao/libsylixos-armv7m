@@ -33,9 +33,6 @@
 #elif (defined LW_CFG_CPU_ARCH_MIPS)
 #include "mips/asm/assembler.h"
 
-#elif (defined LW_CFG_CPU_ARCH_MIPS64)
-#include "mips/asm/assembler64.h"
-
 #elif (defined LW_CFG_CPU_ARCH_PPC)
 #include "ppc/asm/assembler.h"
 #endif                                                                  /*  LW_CFG_CPU_ARCH_ARM         */
