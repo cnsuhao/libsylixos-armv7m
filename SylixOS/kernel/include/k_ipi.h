@@ -35,6 +35,9 @@ typedef struct __ipi_msg {
     VOIDFUNCPTR      IPIM_pfuncAsyncCall;                               /*  异步执行函数                */
     PVOID            IPIM_pvAsyncArg;                                   /*  异步执行参数                */
     INT              IPIM_iRet;                                         /*  同步执行函数返回值          */
+    INT              IPIM_iOption;                                      /*  执行选项                    */
+#define IPIM_OPT_NORMAL     0                                           /*  收到核间中断立即执行        */
+#define IPIM_OPT_NOKERN     1                                           /*  不能运行在内核状态中        */
     volatile INT     IPIM_iWait;                                        /*  等待信息                    */
 } LW_IPI_MSG;
 typedef LW_IPI_MSG  *PLW_IPI_MSG;
@@ -43,10 +46,16 @@ typedef LW_IPI_MSG  *PLW_IPI_MSG;
   核间中断短等待时间
 *********************************************************************************************************/
 
+#ifdef __ARCH_SPIN_NOTIFY
+#define LW_SPINLOCK_DELAY()     __ARCH_SPIN_DELAY()
+#define LW_SPINLOCK_NOTIFY()    __ARCH_SPIN_NOTIFY()
+#else
 #define LW_SPINLOCK_DELAY() \
         {   volatile INT i; \
             for (i = 0; i < 10; i++);    \
         }
+#define LW_SPINLOCK_NOTIFY()
+#endif                                                                  /*  __ARCH_SPIN_NOTIFY          */
 
 #endif                                                                  /*  __K_IPI_H                   */
 /*********************************************************************************************************

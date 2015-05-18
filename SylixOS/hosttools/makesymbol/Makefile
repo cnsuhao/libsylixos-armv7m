@@ -18,6 +18,9 @@ endif
 ifneq (,$(findstring windows, $(UNAME)))
 HOST_OS = windows
 endif
+ifneq (,$(findstring MINGW, $(UNAME)))
+HOST_OS = linux
+endif
 
 ifeq ($(HOST_OS),)
 $(error Unable to determine HOST_OS from uname -sm: $(UNAME)!)

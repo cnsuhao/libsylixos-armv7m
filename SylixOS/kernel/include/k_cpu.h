@@ -79,7 +79,9 @@ typedef struct __lw_cpu {
      *  核间中断待处理标志, 这里最多有 ULONG 位数个核间中断类型, 和 CPU 硬件中断向量原理相同
      */
     LW_SPINLOCK_DEFINE      (CPU_slIpi);                                /*  核间中断锁                  */
-    PLW_LIST_RING            CPU_pringMsg;                              /*  自定义核间中断参数          */
+    PLW_LIST_RING            CPU_pringMsg;                              /*  自定义核间中断参数链        */
+    volatile UINT            CPU_uiMsgCnt;                              /*  自定义核间中断数量          */
+    
     ULONG                    CPU_ulIPIVector;                           /*  核间中断向量                */
     FUNCPTR                  CPU_pfuncIPIClear;                         /*  核间中断清除函数            */
     PVOID                    CPU_pvIPIArg;                              /*  核间中断清除参数            */
@@ -104,11 +106,13 @@ typedef struct __lw_cpu {
 #define LW_IPI_FLUSH_CACHE_MSK  (1 << LW_IPI_FLUSH_CACHE)
 #define LW_IPI_DOWN_MSK         (1 << LW_IPI_DOWN)
 #define LW_IPI_CALL_MSK         (1 << LW_IPI_CALL)
-#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 
     /*
      *  spinlock 等待表
      */
+    volatile ULONG           CPU_ulSpinNesting;                         /*  spinlock 加锁数量           */
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+     
     union {
         LW_LIST_LINE         CPUQ_lineSpinlock;                         /*  PRIORITY 等待表             */
         LW_LIST_RING         CPUQ_ringSpinlock;                         /*  FIFO 等待表                 */
@@ -185,6 +189,16 @@ extern LW_CLASS_CPU          _K_cpuTable[];                             /*  处理
 #define LW_CPU_RDY_BMAP(pcpu)           (&(pcpu->CPU_pcbbmapReady.PCBM_bmap))
 #define LW_CPU_RDY_PPCB(pcpu, prio)     (&(pcpu->CPU_pcbbmapReady.PCBM_pcb[prio]))
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
+
+/*********************************************************************************************************
+  CPU spin nesting
+*********************************************************************************************************/
+
+#if LW_CFG_SMP_EN > 0
+#define LW_CPU_SPIN_NESTING_GET(pcpu)   ((pcpu)->CPU_ulSpinNesting)
+#define LW_CPU_SPIN_NESTING_INC(pcpu)   ((pcpu)->CPU_ulSpinNesting++)
+#define LW_CPU_SPIN_NESTING_DEC(pcpu)   ((pcpu)->CPU_ulSpinNesting--)
+#endif
 
 /*********************************************************************************************************
   CPU 状态

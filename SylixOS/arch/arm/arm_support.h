@@ -170,21 +170,33 @@ VOID    armMmuV7ForceDevType(UINT  uiType);                             /*  选择
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 
 /*********************************************************************************************************
-  ARM 处理器多核操作
+  ARM 处理器多核自旋锁操作
 *********************************************************************************************************/
 
 #if LW_CFG_SMP_EN > 0
 VOID    archSpinInit(spinlock_t  *psl);
 VOID    archSpinDelay(VOID);
+VOID    archSpinNotify(VOID);
+
+#define __ARCH_SPIN_INIT    archSpinInit
+#define __ARCH_SPIN_DELAY   archSpinDelay
+#define __ARCH_SPIN_NOTIFY  archSpinNotify
+
 INT     archSpinLock(spinlock_t  *psl);
 INT     archSpinTryLock(spinlock_t  *psl);
 INT     archSpinUnlock(spinlock_t  *psl);
 
-#define __ARCH_SPIN_INIT    archSpinInit
-#define __ARCH_SPIN_DELAY   archSpinDelay
 #define __ARCH_SPIN_LOCK    archSpinLock
 #define __ARCH_SPIN_TRYLOCK archSpinTryLock
 #define __ARCH_SPIN_UNLOCK  archSpinUnlock
+
+INT     archSpinLockRaw(spinlock_t  *psl);
+INT     archSpinTryLockRaw(spinlock_t  *psl);
+INT     archSpinUnlockRaw(spinlock_t  *psl);
+
+#define __ARCH_SPIN_LOCK_RAW    archSpinLockRaw
+#define __ARCH_SPIN_TRYLOCK_RAW archSpinTryLockRaw
+#define __ARCH_SPIN_UNLOCK_RAW  archSpinUnlockRaw
 
 ULONG   archMpCur(VOID);
 VOID    archMpInt(ULONG  ulCPUId);

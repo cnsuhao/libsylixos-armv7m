@@ -19,7 +19,7 @@
 ** 描        述: 系统钩子函数函数, 
 
 ** BUG
-2007.08.22  API_SystemHookAdd    出错误时，没有释放掉内存。
+2007.08.22  API_SystemHookAdd 出错误时，没有释放掉内存。
 2007.08.22  API_SystemHookDelete 在操作关键性链表没有关闭中断。
 2007.09.21  加入 _DebugHandle() 功能。
 2007.11.13  使用链表库对链表操作进行完全封装.
@@ -36,6 +36,7 @@
 2013.05.02  这里已经加入资源管理, 进程允许安装回调.
 2014.08.10  加入系统错误回调.
 2015.04.07  优化回调删除操作.
+2015.05.16  使用全新的 hook 接口.
 *********************************************************************************************************/
 /*********************************************************************************************************
 注意：
@@ -57,20 +58,18 @@
 /*********************************************************************************************************
 ** 函数名称: API_SystemHookAdd
 ** 功能描述: 添加一个系统 hook 功能函数
-** 输　入  : 
-**           hookfuncPtr                   HOOK 功能函数
-**           ulOpt                         HOOK 类型
+** 输　入  : hookfunc   HOOK 功能函数
+**           ulOpt      HOOK 类型
 ** 输　出  : ERROR
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
+ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfunc, ULONG  ulOpt)
 {
-             INTREG           iregInterLevel;
-             PLW_FUNC_NODE    pfuncnode;
-    REGISTER PLW_LIST_LINE    pline;
+    PLW_FUNC_NODE    pfuncnode;
+    INT              iAddRet;
     
     if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
         _DebugHandle(__ERRORMESSAGE_LEVEL, "called from ISR.\r\n");
@@ -79,7 +78,7 @@ ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
     }
              
 #if LW_CFG_ARG_CHK_EN > 0
-    if (!hookfuncPtr) {
+    if (!hookfunc) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "hookfuncPtr invalidate.\r\n");
         _ErrorHandle(ERROR_KERNEL_HOOK_NULL);
         return  (ERROR_KERNEL_HOOK_NULL);
@@ -93,54 +92,43 @@ ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         return  (ERROR_SYSTEM_LOW_MEMORY);
     }
     
-    pline = &pfuncnode->FUNCNODE_lineManage;                            /*  管理线链表指针              */
-    pfuncnode->FUNCNODE_hookfuncPtr = hookfuncPtr;
+    pfuncnode->FUNCNODE_hookfunc = hookfunc;
         
     switch (ulOpt) {
     
     case LW_OPTION_THREAD_CREATE_HOOK:                                  /*  线程建立钩子                */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbCreate.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbCreate.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ThreadCreate = _SysCreateHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_CREATE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ThreadCreate = HOOK_T_CREATE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbCreate.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbCreate.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_THREAD_DELETE_HOOK:                                  /*  线程删除钩子                */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbDelete.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbDelete.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ThreadDelete = _SysDeleteHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_DELETE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ThreadDelete = HOOK_T_DELETE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbDelete.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbDelete.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_THREAD_SWAP_HOOK:                                    /*  线程切换钩子                */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbSwap.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbSwap.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ThreadSwap = _SysSwapHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_SWAP, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ThreadSwap = HOOK_T_SWAP->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbSwap.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbSwap.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_THREAD_TICK_HOOK:                                    /*  系统时钟中断钩子            */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbTick.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbTick.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ThreadTick = _SysTickHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_TICK, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ThreadTick = HOOK_T_TICK->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbTick.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbTick.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_THREAD_INIT_HOOK:                                    /*  线程初始化钩子              */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbInit.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbInit.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ThreadInit = _SysInitHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_INIT, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ThreadInit = HOOK_T_INIT->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbInit.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbInit.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_THREAD_IDLE_HOOK:                                    /*  空闲线程钩子                */
@@ -150,154 +138,122 @@ ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
             _ErrorHandle(ERROR_KERNEL_RUNNING);
             return  (ERROR_KERNEL_RUNNING);
         }
-        if (_G_hookcbIdle.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ThreadIdle = _SysIdleHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_IDLE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ThreadIdle = HOOK_T_IDLE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbIdle.HOOKCB_plineHookHeader);
         break;
         
     case LW_OPTION_KERNEL_INITBEGIN:                                    /*  内核初始化开始钩子          */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbInitBegin.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbInitBegin.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_KernelInitBegin = _SysInitBeginHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_INITBEGIN, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_KernelInitBegin = HOOK_T_INITBEGIN->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbInitBegin.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbInitBegin.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_KERNEL_INITEND:                                      /*  内核初始化结束钩子          */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbInitEnd.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbInitEnd.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_KernelInitEnd = _SysInitEndHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_INITEND, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_KernelInitEnd = HOOK_T_INITEND->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbInitEnd.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbInitEnd.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_KERNEL_REBOOT:                                       /*  内核重新启动                */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbReboot.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbReboot.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_KernelReboot = _SysRebootHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_REBOOT, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_KernelReboot = HOOK_T_REBOOT->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbReboot.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbReboot.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_WATCHDOG_TIMER:                                      /*  看门狗定时器钩子            */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbWatchDog.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbWatchDog.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_WatchDogTimer = _SysWatchDogHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_WATCHDOG, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_WatchDogTimer = HOOK_T_WATCHDOG->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbWatchDog.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbWatchDog.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_OBJECT_CREATE_HOOK:                                  /*  创建内核对象钩子            */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbObjectCreate.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbObjectCreate.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ObjectCreate = _SysObjectCreateHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_OBJCREATE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ObjectCreate = HOOK_T_OBJCREATE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbObjectCreate.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbObjectCreate.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_OBJECT_DELETE_HOOK:                                  /*  删除内核对象钩子            */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbObjectDelete.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbObjectDelete.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_ObjectDelete = _SysObjectDeleteHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_OBJDELETE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_ObjectDelete = HOOK_T_OBJDELETE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbObjectDelete.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbObjectDelete.HOOKCB_slHook, iregInterLevel);
         break;
     
     case LW_OPTION_FD_CREATE_HOOK:                                      /*  文件描述符创建钩子          */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbFdCreate.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbFdCreate.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_FdCreate = _SysFdCreateHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_FDCREATE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_FdCreate = HOOK_T_FDCREATE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbFdCreate.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbFdCreate.HOOKCB_slHook, iregInterLevel);
         break;
     
     case LW_OPTION_FD_DELETE_HOOK:                                      /*  文件描述符删除钩子          */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbFdDelete.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbFdDelete.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_FdDelete = _SysFdDeleteHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_FDDELETE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_FdDelete = HOOK_T_FDDELETE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbFdDelete.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbFdDelete.HOOKCB_slHook, iregInterLevel);
         break;
     
     case LW_OPTION_CPU_IDLE_ENTER:                                      /*  CPU 进入空闲模式            */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbCpuIdleEnter.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbCpuIdleEnter.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_CpuIdleEnter = _SysCpuIdleEnterHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_IDLEENTER, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_CpuIdleEnter = HOOK_T_IDLEENTER->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbCpuIdleEnter.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbCpuIdleEnter.HOOKCB_slHook, iregInterLevel);
         break;
     
     case LW_OPTION_CPU_IDLE_EXIT:                                       /*  CPU 退出空闲模式            */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbCpuIdleExit.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbCpuIdleExit.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_CpuIdleExit = _SysCpuIdleExitHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_IDLEEXIT, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_CpuIdleExit = HOOK_T_IDLEEXIT->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbCpuIdleExit.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbCpuIdleExit.HOOKCB_slHook, iregInterLevel);
         break;
     
     case LW_OPTION_CPU_INT_ENTER:                                       /*  CPU 进入中断(异常)模式      */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbCpuIntEnter.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbCpuIntEnter.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_CpuIntEnter = _SysIntEnterHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_INTENTER, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_CpuIntEnter = HOOK_T_INTENTER->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbCpuIntEnter.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbCpuIntEnter.HOOKCB_slHook, iregInterLevel);
         break;
     
     case LW_OPTION_CPU_INT_EXIT:                                        /*  CPU 退出中断(异常)模式      */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbCpuIntExit.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbCpuIntExit.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_CpuIntExit = _SysIntExitHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_INTEXIT, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_CpuIntExit = HOOK_T_INTEXIT->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbCpuIntExit.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbCpuIntExit.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_STACK_OVERFLOW_HOOK:                                 /*  堆栈溢出                    */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbStkOverflow.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbStkOverflow.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_StkOverflow = _SysStkOverflowHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_STKOF, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_StkOverflow = HOOK_T_STKOF->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbStkOverflow.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbStkOverflow.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_FATAL_ERROR_HOOK:                                    /*  致命错误                    */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbFatalError.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbFatalError.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_FatalError = _SysFatalErrorHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_FATALERR, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_FatalError = HOOK_T_FATALERR->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbFatalError.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbFatalError.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_VPROC_CREATE_HOOK:                                   /*  进程建立钩子                */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbVpCreate.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbVpCreate.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_VpCreate = _SysVpCreateHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_VPCREATE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_VpCreate = HOOK_T_VPCREATE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbVpCreate.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbVpCreate.HOOKCB_slHook, iregInterLevel);
         break;
         
     case LW_OPTION_VPROC_DELETE_HOOK:                                   /*  进程删除钩子                */
-        LW_SPIN_LOCK_QUICK(&_G_hookcbVpDelete.HOOKCB_slHook, &iregInterLevel);
-        if (_G_hookcbVpDelete.HOOKCB_plineHookHeader == LW_NULL) {
-            _K_hookKernel.HOOK_VpDelete = _SysVpDeleteHook;
+        iAddRet = HOOK_F_ADD(HOOK_T_VPDELETE, pfuncnode);
+        if (iAddRet == ERROR_NONE) {
+            _K_hookKernel.HOOK_VpDelete = HOOK_T_VPDELETE->HOOKCB_pfuncCall;
         }
-        _List_Line_Add_Ahead(pline, &_G_hookcbVpDelete.HOOKCB_plineHookHeader);
-        LW_SPIN_UNLOCK_QUICK(&_G_hookcbVpDelete.HOOKCB_slHook, iregInterLevel);
         break;
     
     default:
@@ -307,40 +263,39 @@ ULONG  API_SystemHookAdd (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         return  (ERROR_KERNEL_OPT_NULL);
     }
     
+    if (iAddRet) {
+        __SHEAP_FREE(pfuncnode);                                        /*  释放内存                    */
+        _DebugHandle(__ERRORMESSAGE_LEVEL, "hook table full.\r\n");
+        _ErrorHandle(ERROR_KERNEL_HOOK_FULL);
+        return  (ERROR_KERNEL_HOOK_FULL);
+    }
+    
 #if LW_CFG_MODULELOADER_EN > 0
-    if (__PROC_GET_PID_CUR() && vprocFindProc((PVOID)hookfuncPtr)) {
+    if (__PROC_GET_PID_CUR() && vprocFindProc((PVOID)hookfunc)) {
         __resAddRawHook(&pfuncnode->FUNCNODE_resraw, (VOIDFUNCPTR)API_SystemHookDelete, 
-                        (PVOID)pfuncnode->FUNCNODE_hookfuncPtr, (PVOID)ulOpt, 0, 0, 0, 0);
+                        (PVOID)pfuncnode->FUNCNODE_hookfunc, (PVOID)ulOpt, 0, 0, 0, 0);
     } else {
         pfuncnode->FUNCNODE_resraw.RESRAW_bIsInstall = LW_FALSE;        /*  不需要回收操作             */
     }
-#else
-    __resAddRawHook(&pfuncnode->FUNCNODE_resraw, (VOIDFUNCPTR)API_SystemHookDelete, 
-                    (PVOID)pfuncnode->FUNCNODE_hookfuncPtr, (PVOID)ulOpt, 0, 0, 0, 0);
 #endif
     
-    return  (ERROR_NONE);
+    return  (iAddRet);
 }
 /*********************************************************************************************************
 ** 函数名称: API_SystemHookDelete
 ** 功能描述: 删除一个系统 hook 功能函数
-** 输　入  : 
-**           hookfuncPtr                   HOOK 功能函数
-**           ulOpt                         HOOK 类型
+** 输　入  : hookfunc  HOOK 功能函数
+**           ulOpt     HOOK 类型
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
                                            API 函数
 *********************************************************************************************************/
 LW_API  
-ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
+ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfunc, ULONG  ulOpt)
 {
-             INTREG                 iregInterLevel;
-             PLW_HOOK_CB            phookcb;
-             LW_HOOK_FUNC          *ppfunc;
-             
-             PLW_FUNC_NODE          pfuncnode;
-    REGISTER PLW_LIST_LINE          plinePtr;
+    PLW_FUNC_NODE   pfuncnode;
+    BOOL            bEmpty;
     
     if (LW_CPU_GET_CUR_NESTING()) {                                     /*  不能在中断中调用            */
         _DebugHandle(__ERRORMESSAGE_LEVEL, "called from ISR.\r\n");
@@ -349,7 +304,7 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
     }
     
 #if LW_CFG_ARG_CHK_EN > 0
-    if (!hookfuncPtr) {
+    if (!hookfunc) {
         _DebugHandle(__ERRORMESSAGE_LEVEL, "hookfuncPtr invalidate.\r\n");
         _ErrorHandle(ERROR_KERNEL_HOOK_NULL);
         return  (ERROR_KERNEL_HOOK_NULL);
@@ -359,113 +314,157 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
     switch (ulOpt) {
     
     case LW_OPTION_THREAD_CREATE_HOOK:                                  /*  线程建立钩子                */
-        phookcb = &_G_hookcbCreate;
-        ppfunc  = &_K_hookKernel.HOOK_ThreadCreate;
+        pfuncnode = HOOK_F_DEL(HOOK_T_CREATE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ThreadCreate = LW_NULL;
+        }
         break;
         
     case LW_OPTION_THREAD_DELETE_HOOK:                                  /*  线程删除钩子                */
-        phookcb = &_G_hookcbDelete;
-        ppfunc  = &_K_hookKernel.HOOK_ThreadDelete;
+        pfuncnode = HOOK_F_DEL(HOOK_T_DELETE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ThreadDelete = LW_NULL;
+        }
         break;
         
     case LW_OPTION_THREAD_SWAP_HOOK:                                    /*  线程切换钩子                */
-        phookcb = &_G_hookcbSwap;
-        ppfunc  = &_K_hookKernel.HOOK_ThreadSwap;
+        pfuncnode = HOOK_F_DEL(HOOK_T_SWAP, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ThreadSwap = LW_NULL;
+        }
         break;
         
     case LW_OPTION_THREAD_TICK_HOOK:                                    /*  系统时钟中断钩子            */
-        phookcb = &_G_hookcbTick;
-        ppfunc  = &_K_hookKernel.HOOK_ThreadTick;
+        pfuncnode = HOOK_F_DEL(HOOK_T_TICK, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ThreadTick = LW_NULL;
+        }
         break;
         
     case LW_OPTION_THREAD_INIT_HOOK:                                    /*  线程初始化钩子              */
-        phookcb = &_G_hookcbInit;
-        ppfunc  = &_K_hookKernel.HOOK_ThreadInit;
+        pfuncnode = HOOK_F_DEL(HOOK_T_INIT, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ThreadInit = LW_NULL;
+        }
         break;
         
     case LW_OPTION_THREAD_IDLE_HOOK:                                    /*  空闲线程钩子                */
-        phookcb = &_G_hookcbIdle;
-        ppfunc  = &_K_hookKernel.HOOK_ThreadIdle;
+        pfuncnode = HOOK_F_DEL(HOOK_T_IDLE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ThreadIdle = LW_NULL;
+        }
         break;
         
     case LW_OPTION_KERNEL_INITBEGIN:                                    /*  内核初始化开始钩子          */
-        phookcb = &_G_hookcbInitBegin;
-        ppfunc  = &_K_hookKernel.HOOK_KernelInitBegin;
+        pfuncnode = HOOK_F_DEL(HOOK_T_INITBEGIN, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_KernelInitBegin = LW_NULL;
+        }
         break;
         
     case LW_OPTION_KERNEL_INITEND:                                      /*  内核初始化结束钩子          */
-        phookcb = &_G_hookcbInitEnd;
-        ppfunc  = &_K_hookKernel.HOOK_KernelInitEnd;
+        pfuncnode = HOOK_F_DEL(HOOK_T_INITEND, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_KernelInitEnd = LW_NULL;
+        }
         break;
         
     case LW_OPTION_KERNEL_REBOOT:                                       /*  内核重新启动                */
-        phookcb = &_G_hookcbReboot;
-        ppfunc  = &_K_hookKernel.HOOK_KernelReboot;
+        pfuncnode = HOOK_F_DEL(HOOK_T_REBOOT, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_KernelReboot = LW_NULL;
+        }
         break;
         
     case LW_OPTION_WATCHDOG_TIMER:                                      /*  看门狗定时器钩子            */
-        phookcb = &_G_hookcbWatchDog;
-        ppfunc  = &_K_hookKernel.HOOK_WatchDogTimer;
+        pfuncnode = HOOK_F_DEL(HOOK_T_WATCHDOG, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_WatchDogTimer = LW_NULL;
+        }
         break;
         
     case LW_OPTION_OBJECT_CREATE_HOOK:                                  /*  创建内核对象钩子            */
-        phookcb = &_G_hookcbObjectCreate;
-        ppfunc  = &_K_hookKernel.HOOK_ObjectCreate;
+        pfuncnode = HOOK_F_DEL(HOOK_T_OBJCREATE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ObjectCreate = LW_NULL;
+        }
         break;
     
     case LW_OPTION_OBJECT_DELETE_HOOK:                                  /*  删除内核对象钩子            */
-        phookcb = &_G_hookcbObjectDelete;
-        ppfunc  = &_K_hookKernel.HOOK_ObjectDelete;
+        pfuncnode = HOOK_F_DEL(HOOK_T_OBJDELETE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_ObjectDelete = LW_NULL;
+        }
         break;
     
     case LW_OPTION_FD_CREATE_HOOK:                                      /*  文件描述符创建钩子          */
-        phookcb = &_G_hookcbFdCreate;
-        ppfunc  = &_K_hookKernel.HOOK_FdCreate;
+        pfuncnode = HOOK_F_DEL(HOOK_T_FDCREATE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_FdCreate = LW_NULL;
+        }
         break;
     
     case LW_OPTION_FD_DELETE_HOOK:                                      /*  文件描述符删除钩子          */
-        phookcb = &_G_hookcbFdDelete;
-        ppfunc  = &_K_hookKernel.HOOK_FdDelete;
+        pfuncnode = HOOK_F_DEL(HOOK_T_FDDELETE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_FdDelete = LW_NULL;
+        }
         break;
         
     case LW_OPTION_CPU_IDLE_ENTER:                                      /*  CPU 进入空闲模式            */
-        phookcb = &_G_hookcbCpuIdleEnter;
-        ppfunc  = &_K_hookKernel.HOOK_CpuIdleEnter;
+        pfuncnode = HOOK_F_DEL(HOOK_T_IDLEENTER, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_CpuIdleEnter = LW_NULL;
+        }
         break;
     
     case LW_OPTION_CPU_IDLE_EXIT:                                       /*  CPU 退出空闲模式            */
-        phookcb = &_G_hookcbCpuIdleExit;
-        ppfunc  = &_K_hookKernel.HOOK_CpuIdleExit;
+        pfuncnode = HOOK_F_DEL(HOOK_T_IDLEEXIT, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_CpuIdleExit = LW_NULL;
+        }
         break;
     
     case LW_OPTION_CPU_INT_ENTER:                                       /*  CPU 进入中断(异常)模式      */
-        phookcb = &_G_hookcbCpuIntEnter;
-        ppfunc  = &_K_hookKernel.HOOK_CpuIntEnter;
+        pfuncnode = HOOK_F_DEL(HOOK_T_INTENTER, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_CpuIntEnter = LW_NULL;
+        }
         break;
     
     case LW_OPTION_CPU_INT_EXIT:                                        /*  CPU 退出中断(异常)模式      */
-        phookcb = &_G_hookcbCpuIntExit;
-        ppfunc  = &_K_hookKernel.HOOK_CpuIntExit;
+        pfuncnode = HOOK_F_DEL(HOOK_T_INTEXIT, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_CpuIntExit = LW_NULL;
+        }
         break;
         
     case LW_OPTION_STACK_OVERFLOW_HOOK:                                 /*  堆栈溢出                    */
-        phookcb = &_G_hookcbStkOverflow;
-        ppfunc  = &_K_hookKernel.HOOK_StkOverflow;
+        pfuncnode = HOOK_F_DEL(HOOK_T_STKOF, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_StkOverflow = LW_NULL;
+        }
         break;
     
     case LW_OPTION_FATAL_ERROR_HOOK:                                    /*  致命错误                    */
-        phookcb = &_G_hookcbFatalError;
-        ppfunc  = &_K_hookKernel.HOOK_FatalError;
+        pfuncnode = HOOK_F_DEL(HOOK_T_FATALERR, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_FatalError = LW_NULL;
+        }
         break;
             
     case LW_OPTION_VPROC_CREATE_HOOK:                                   /*  进程建立钩子                */
-        phookcb = &_G_hookcbVpCreate;
-        ppfunc  = &_K_hookKernel.HOOK_VpCreate;
+        pfuncnode = HOOK_F_DEL(HOOK_T_VPCREATE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_VpCreate = LW_NULL;
+        }
         break;
         
     case LW_OPTION_VPROC_DELETE_HOOK:                                   /*  进程删除钩子                */
-        phookcb = &_G_hookcbVpDelete;
-        ppfunc  = &_K_hookKernel.HOOK_VpDelete;
+        pfuncnode = HOOK_F_DEL(HOOK_T_VPDELETE, hookfunc, &bEmpty);
+        if (bEmpty) {
+            _K_hookKernel.HOOK_VpDelete = LW_NULL;
+        }
         break;
     
     default:
@@ -474,37 +473,15 @@ ULONG  API_SystemHookDelete (LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt)
         return  (ERROR_KERNEL_OPT_NULL);
     }
     
-    LW_SPIN_LOCK(&phookcb->HOOKCB_slHook);
-    __KERNEL_ENTER();
-    for (plinePtr  = phookcb->HOOKCB_plineHookHeader;
-         plinePtr != LW_NULL;
-         plinePtr  = _list_line_get_next(plinePtr)) {                   /*  开始查询                    */
-         
-        pfuncnode = (PLW_FUNC_NODE)plinePtr;
-        if (pfuncnode->FUNCNODE_hookfuncPtr == hookfuncPtr) {
-            iregInterLevel = KN_INT_DISABLE();                          /*  关闭中断                    */
-            if (plinePtr == phookcb->HOOKCB_plineHookOp) {              /*  是否为当前操作的指针        */
-                phookcb->HOOKCB_plineHookOp = _list_line_get_next(plinePtr);
-            }
-            _List_Line_Del(plinePtr, &phookcb->HOOKCB_plineHookHeader);
-            if (phookcb->HOOKCB_plineHookHeader == LW_NULL) {
-                *ppfunc = LW_NULL;                                      /*  此向量不再拥有回调函数      */
-            }
-            KN_INT_ENABLE(iregInterLevel);                              /*  打开中断                    */
-             
-            LW_SPIN_UNLOCK(&phookcb->HOOKCB_slHook);
-            __KERNEL_EXIT();
-             
-            __resDelRawHook(&pfuncnode->FUNCNODE_resraw);
-            
-            __SHEAP_FREE(pfuncnode);
-            return  (ERROR_NONE);
-        }
+    if (pfuncnode) {
+        __resDelRawHook(&pfuncnode->FUNCNODE_resraw);
+        __SHEAP_FREE(pfuncnode);
+        return  (ERROR_NONE);
+    
+    } else {
+        _ErrorHandle(ERROR_KERNEL_HOOK_NULL);
+        return  (ERROR_KERNEL_HOOK_NULL);
     }
-    LW_SPIN_UNLOCK(&phookcb->HOOKCB_slHook);
-    __KERNEL_EXIT();
-
-    return  (ERROR_SYSTEM_HOOK_NULL);
 }
 /*********************************************************************************************************
   END

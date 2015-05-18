@@ -102,6 +102,7 @@ static INT  _SmpCallIpi (ULONG  ulCPUId, PLW_IPI_MSG  pipim)
     LW_SPIN_LOCK_IGNIRQ(&pcpuDst->CPU_slIpi);
     
     _List_Ring_Add_Last(&pipim->IPIM_ringManage, &pcpuDst->CPU_pringMsg);
+    pcpuDst->CPU_uiMsgCnt++;
 
     LW_CPU_ADD_IPI_PEND(ulCPUId, LW_IPI_CALL_MSK);
     KN_SMP_WMB();
@@ -150,6 +151,7 @@ static VOID  _SmpCallIpiAllOther (PLW_IPI_MSG  pipim)
 **           pvArg         同步参数
 **           pfuncAsync    异步执行函数
 **           pvAsync       异步执行参数
+**           iOpt          选项 IPIM_OPT_NORMAL / IPIM_OPT_NOKERN
 ** 输　出  : 调用返回值
 ** 全局变量: 
 ** 调用模块: 
@@ -158,7 +160,8 @@ INT  _SmpCallFunc (ULONG        ulCPUId,
                    FUNCPTR      pfunc, 
                    PVOID        pvArg,
                    VOIDFUNCPTR  pfuncAsync,
-                   PVOID        pvAsync)
+                   PVOID        pvAsync,
+                   INT          iOpt)
 {
     LW_IPI_MSG  ipim;
     
@@ -167,6 +170,7 @@ INT  _SmpCallFunc (ULONG        ulCPUId,
     ipim.IPIM_pfuncAsyncCall = pfuncAsync;
     ipim.IPIM_pvAsyncArg     = pvAsync;
     ipim.IPIM_iRet           = -1;
+    ipim.IPIM_iOption        = iOpt;
     ipim.IPIM_iWait          = 1;
     
     return  (_SmpCallIpi(ulCPUId, &ipim));
@@ -179,6 +183,7 @@ INT  _SmpCallFunc (ULONG        ulCPUId,
 **           pvArg         同步参数
 **           pfuncAsync    异步执行函数
 **           pvAsync       异步执行参数
+**           iOpt          选项 IPIM_OPT_NORMAL / IPIM_OPT_NOKERN
 ** 输　出  : NONE (无法确定返回值)
 ** 全局变量: 
 ** 调用模块: 
@@ -186,7 +191,8 @@ INT  _SmpCallFunc (ULONG        ulCPUId,
 VOID  _SmpCallFuncAllOther (FUNCPTR      pfunc, 
                             PVOID        pvArg,
                             VOIDFUNCPTR  pfuncAsync,
-                            PVOID        pvAsync)
+                            PVOID        pvAsync,
+                            INT          iOpt)
 {
     LW_IPI_MSG  ipim;
     
@@ -195,6 +201,7 @@ VOID  _SmpCallFuncAllOther (FUNCPTR      pfunc,
     ipim.IPIM_pfuncAsyncCall = pfuncAsync;
     ipim.IPIM_pvAsyncArg     = pvAsync;
     ipim.IPIM_iRet           = -1;
+    ipim.IPIM_iOption        = iOpt;
     ipim.IPIM_iWait          = 1;
     
     _SmpCallIpiAllOther(&ipim);
@@ -222,6 +229,7 @@ static VOID  _SmpProcFlushTlb (PLW_CLASS_CPU  pcpuCur)
 
     KN_SMP_MB();
     LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_FLUSH_TLB_MSK);                /*  清除                        */
+    LW_SPINLOCK_NOTIFY();
 }
 
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
@@ -241,6 +249,7 @@ static VOID  _SmpProcFlushCache (PLW_CLASS_CPU  pcpuCur)
     
     KN_SMP_MB();
     LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_FLUSH_CACHE_MSK);              /*  清除                        */
+    LW_SPINLOCK_NOTIFY();
 }
 
 #endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
@@ -256,6 +265,7 @@ static VOID  _SmpProcBoot (PLW_CLASS_CPU  pcpuCur)
 {
     KN_SMP_MB();
     LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_BOOT_MSK);                     /*  清除                        */
+    LW_SPINLOCK_NOTIFY();
 }
 /*********************************************************************************************************
 ** 函数名称: _SmpProcCallfunc
@@ -267,20 +277,34 @@ static VOID  _SmpProcBoot (PLW_CLASS_CPU  pcpuCur)
 *********************************************************************************************************/
 static VOID  _SmpProcCallfunc (PLW_CLASS_CPU  pcpuCur)
 {
+#define LW_KERNEL_OWN_CPU()     (_K_slKernel.SL_pcpuOwner)
+
+    UINT            i, uiCnt;
     PLW_IPI_MSG     pipim;
     PLW_LIST_RING   pringTemp;
+    PLW_LIST_RING   pringDelete;
     VOIDFUNCPTR     pfuncAsync;
     PVOID           pvAsync;
     
     LW_SPIN_LOCK(&pcpuCur->CPU_slIpi);
     
-    while (pcpuCur->CPU_pringMsg) {
-        pringTemp = pcpuCur->CPU_pringMsg;
-        _List_Ring_Del(pringTemp, &pcpuCur->CPU_pringMsg);
+    pringTemp = pcpuCur->CPU_pringMsg;
+    uiCnt     = pcpuCur->CPU_uiMsgCnt;
+    
+    for (i = 0; i < uiCnt; i++) {
+        pipim = _LIST_ENTRY(pringTemp, LW_IPI_MSG, IPIM_ringManage);
+        if ((LW_KERNEL_OWN_CPU() == pcpuCur) &&
+            (pipim->IPIM_iOption & IPIM_OPT_NOKERN)) {                  /*  此函数不能再内核锁定状态执行*/
+            pringTemp = _list_ring_get_next(pringTemp);
+            continue;
+        }
         
+        pringDelete = pringTemp;
+        pringTemp   = _list_ring_get_next(pringTemp);
+        _List_Ring_Del(pringDelete, &pcpuCur->CPU_pringMsg);            /*  删除一个节点                */
+        pcpuCur->CPU_uiMsgCnt--;
         LW_SPIN_UNLOCK(&pcpuCur->CPU_slIpi);
         
-        pipim = _LIST_ENTRY(pringTemp, LW_IPI_MSG, IPIM_ringManage);
         if (pipim->IPIM_pfuncCall) {
             pipim->IPIM_iRet = pipim->IPIM_pfuncCall(pipim->IPIM_pvArg);/*  执行同步调用                */
         }
@@ -290,6 +314,7 @@ static VOID  _SmpProcCallfunc (PLW_CLASS_CPU  pcpuCur)
         
         KN_SMP_MB();
         pipim->IPIM_iWait = 0;                                          /*  调用结束                    */
+        LW_SPINLOCK_NOTIFY();
         
         LW_SPIN_LOCK(&pcpuCur->CPU_slIpi);
         
@@ -299,7 +324,10 @@ static VOID  _SmpProcCallfunc (PLW_CLASS_CPU  pcpuCur)
     }
     
     KN_SMP_MB();
-    LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_CALL_MSK);                     /*  清除                        */
+    if (pcpuCur->CPU_pringMsg == LW_NULL) {
+        LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_CALL_MSK);                 /*  清除                        */
+        LW_SPINLOCK_NOTIFY();
+    }
     
     LW_SPIN_UNLOCK(&pcpuCur->CPU_slIpi);
 }
@@ -343,6 +371,19 @@ VOID  _SmpProcIpi (PLW_CLASS_CPU  pcpuCur)
     
     KN_SMP_MB();
     LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_NOP_MSK);                      /*  去掉 nop 类型核间中断       */
+    LW_SPINLOCK_NOTIFY();
+}
+/*********************************************************************************************************
+** 函数名称: _SmpUpdateIpi
+** 功能描述: 由于存在被延迟执行的 IPI CALL, 此函数会在合适的时机被调用, 尝试执行 IPI CALL.
+** 输　入  : pcpuCur   当前 CPU
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID  _SmpUpdateIpi (PLW_CLASS_CPU  pcpuCur)
+{
+    archMpInt(pcpuCur->CPU_ulCPUId);
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */

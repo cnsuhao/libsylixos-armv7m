@@ -49,7 +49,7 @@
 #define __SYLIXOS_VERSION               __SYLIXOS_MAKEVER(1, 1, 1)
 #define __SYLIXOS_VERPATCH              0x1                             /* 小于 0x10000 为测试版        */
                                                                         /* 等于 0x10000 为正式发布版本  */
-#define __SYLIXOS_VERSTR                "1.1.1-rc1"
+#define __SYLIXOS_VERSTR                "1.1.1-rc2"
 #define __SYLIXOS_RELSTR                "GEMINI(b)"
 
 #define __SYLIXOS_VERINFO               "SylixOS kernel version: "  \
@@ -81,7 +81,7 @@ __attribute__((weak)) char              __sylixos_version[] = __SYLIXOS_VERSTR;
                                         "\n [[[[    [[[[   [[[[[[  [[[[[[  [[  [[   [[[[    [[[[ "    \
                                         "\n           [[                                         "    \
                                         "\n          [[                                          "    \
-                                        "\n       [[[[       KERNEL: Long-Wing(C) 2006 - 2014\n\n"
+                                        "\n       [[[[       KERNEL: Long-Wing(C) 2006 - 2015\n\n"
                                         
 /*********************************************************************************************************
   系统配置与裁减头文件
@@ -164,6 +164,7 @@ __attribute__((weak)) char              __sylixos_version[] = __SYLIXOS_VERSTR;
 *********************************************************************************************************/
 #include "../SylixOS/kernel/include/k_value.h"                          /*  系统定义的特殊值文件        */
 #include "../SylixOS/kernel/include/k_option.h"
+#include "../SylixOS/kernel/include/k_hook.h"
 #include "../SylixOS/kernel/include/k_typemacro.h"
 /*********************************************************************************************************
   LIST & TREE

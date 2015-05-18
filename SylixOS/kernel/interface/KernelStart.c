@@ -74,6 +74,7 @@ static  VOID  _KernelPrimaryCoreStartup (PLW_CLASS_CPU   pcpuCur)
 #if LW_CFG_SMP_EN > 0
     KN_SMP_MB();                                                        /*  内存屏障, 确保之前操作已处理*/
     KN_PRIMARY_GO();                                                    /*  通知从核可以进入多任务模式  */
+    LW_SPINLOCK_NOTIFY();
 #endif                                                                  /*  LW_CFG_SMP_EN               */
 
     pcpuCur->CPU_iKernelCounter = 0;                                    /*  允许调度                    */
@@ -163,6 +164,7 @@ static VOID  _KernelBootSecondary (VOID)
 {
     KN_SMP_MB();                                                        /*  内存屏障, 确保之前操作已处理*/
     KN_SECONDARY_GO();                                                  /*  通知从核可以进行基本初始化  */
+    LW_SPINLOCK_NOTIFY();
 }
 
 #endif                                                                  /*  LW_CFG_SMP_EN               */

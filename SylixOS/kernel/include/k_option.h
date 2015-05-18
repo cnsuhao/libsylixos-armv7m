@@ -45,57 +45,6 @@
 #define  LW_OPTION_OBJECT_LOCAL                         0x00000000      /*  本地对象                    */
 
 /*********************************************************************************************************
-  HOOK (各种 ENTER 与 EXIT 可用于低功耗处理)
-  注意: 1.0.0 - rc40 后, LW_OPTION_THREAD_INIT_HOOK 与 LW_OPTION_THREAD_CREATE_HOOK 相同.
-  系统建立或者初始化任务时: 
-  首先调用 LW_OPTION_THREAD_INIT_HOOK, 
-  然后立即调用 LW_OPTION_THREAD_CREATE_HOOK
-*********************************************************************************************************/
-
-#define  LW_OPTION_THREAD_CREATE_HOOK                   1               /*  线程建立钩子                */
-#define  LW_OPTION_THREAD_DELETE_HOOK                   2               /*  线程删除钩子                */
-#define  LW_OPTION_THREAD_SWAP_HOOK                     3               /*  线程切换钩子                */
-#define  LW_OPTION_THREAD_TICK_HOOK                     4               /*  系统时钟中断钩子            */
-#define  LW_OPTION_THREAD_INIT_HOOK                     5               /*  线程初始化钩子              */
-#define  LW_OPTION_THREAD_IDLE_HOOK                     6               /*  空闲线程钩子                */
-#define  LW_OPTION_KERNEL_INITBEGIN                     7               /*  内核初始化开始钩子          */
-#define  LW_OPTION_KERNEL_INITEND                       8               /*  内核初始化结束钩子          */
-#define  LW_OPTION_KERNEL_REBOOT                        9               /*  内核重新启动                */
-#define  LW_OPTION_WATCHDOG_TIMER                       10              /*  看门狗定时器钩子            */
-
-/*********************************************************************************************************
-  OBJECT & FILE DESCRIPTOR HOOK
-*********************************************************************************************************/
-
-#define  LW_OPTION_OBJECT_CREATE_HOOK                   11              /*  创建内核对象钩子            */
-#define  LW_OPTION_OBJECT_DELETE_HOOK                   12              /*  删除内核对象钩子            */
-#define  LW_OPTION_FD_CREATE_HOOK                       13              /*  文件描述符创建钩子          */
-#define  LW_OPTION_FD_DELETE_HOOK                       14              /*  文件描述符删除钩子          */
-
-/*********************************************************************************************************
-  可用于 CPU 功耗管理的相关 HOOK
-*********************************************************************************************************/
-
-#define  LW_OPTION_CPU_IDLE_ENTER                       15              /*  CPU 进入空闲模式            */
-#define  LW_OPTION_CPU_IDLE_EXIT                        16              /*  CPU 退出空闲模式            */
-#define  LW_OPTION_CPU_INT_ENTER                        17              /*  CPU 进入中断(异常)模式      */
-#define  LW_OPTION_CPU_INT_EXIT                         18              /*  CPU 退出中断(异常)模式      */
-
-/*********************************************************************************************************
-  系统错误相关 HOOK
-*********************************************************************************************************/
-
-#define  LW_OPTION_STACK_OVERFLOW_HOOK                  25              /*  堆栈溢出                    */
-#define  LW_OPTION_FATAL_ERROR_HOOK                     26              /*  致命错误                    */
-
-/*********************************************************************************************************
-  进程相关 HOOK
-*********************************************************************************************************/
-
-#define  LW_OPTION_VPROC_CREATE_HOOK                    30              /*  进程建立钩子                */
-#define  LW_OPTION_VPROC_DELETE_HOOK                    31              /*  进程删除钩子                */
-
-/*********************************************************************************************************
   HEAP
 *********************************************************************************************************/
 

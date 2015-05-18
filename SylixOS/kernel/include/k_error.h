@@ -52,6 +52,7 @@
 #define  ERROR_KERNEL_MEMORY             314                            /*  内存地址出现错误            */
 #define  ERROR_KERNEL_LOCK               315                            /*  内核被锁定了                */
 #define  ERROR_KERNEL_CPU_NULL           316                            /*  指定 CPU 错误               */
+#define  ERROR_KERNEL_HOOK_FULL          317                            /*  hook 表已满                 */
 
 /*********************************************************************************************************
   线程错误 500 - 1000

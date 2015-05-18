@@ -114,6 +114,7 @@ VOID  _ThreadStatusChangeCur (PLW_CLASS_CPU    pcpuCur)
     ptcbCur = pcpuCur->CPU_ptcbTCBCur;                                  /*  当前线程                    */
     
     LW_CPU_CLR_IPI_PEND2(pcpuCur, LW_IPI_STATUS_REQ_MSK);               /*  清除核间中断标记            */
+    LW_SPINLOCK_NOTIFY();
     
     if (ptcbCur->TCB_plineStatusReqHeader) {                            /*  需要阻塞                    */
         if (__LW_THREAD_IS_READY(ptcbCur)) {

@@ -31,6 +31,7 @@
 2013.12.02  _SchedGetCandidate() 加入任务锁定层数参数, 因为调用此函数时, 任务可能进入了调度器自旋锁.
 2014.01.05  调度器故障跟踪功能不再放在扫描候选表操作中.
 2014.01.10  _SchedSeekThread() 放入 _CandTable.c 中.
+2015.05.17  _SchedGetCand() 会尝试一个发给自己的 IPI 执行被延迟的 IPI CALL.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -50,6 +51,11 @@ PLW_CLASS_TCB  _SchedGetCand (PLW_CLASS_CPU  pcpuCur, ULONG  ulCurMaxLock)
         return  (pcpuCur->CPU_ptcbTCBCur);
         
     } else {                                                            /*  可以执行线程切换            */
+#if LW_CFG_SMP_EN > 0
+        if (LW_CPU_GET_IPI_PEND2(pcpuCur) & LW_IPI_CALL_MSK) {          /*  由延迟的 IPI CALL 需要执行  */
+            _SmpUpdateIpi(pcpuCur);
+        }
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
         if (LW_CAND_ROT(pcpuCur)) {                                     /*  产生优先级卷绕              */
             _CandTableUpdate(pcpuCur);
         }

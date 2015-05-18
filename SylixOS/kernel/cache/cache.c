@@ -544,7 +544,8 @@ ULONG    API_CacheTextUpdate (PVOID  pvAdrs, size_t  stBytes)
     
     iregInterLevel = KN_INT_DISABLE();
     
-    _SmpCallFuncAllOther(__cacheTextUpdate, &tuarg, LW_NULL, LW_NULL);  /*  通知其他的 CPU              */
+    _SmpCallFuncAllOther(__cacheTextUpdate, &tuarg, 
+                         LW_NULL, LW_NULL, IPIM_OPT_NORMAL);            /*  通知其他的 CPU              */
     
     KN_INT_ENABLE(iregInterLevel);
 #endif                                                                  /*  LW_CFG_SMP_EN               */

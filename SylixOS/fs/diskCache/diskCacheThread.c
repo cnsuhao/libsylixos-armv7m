@@ -65,9 +65,7 @@ PVOID  __diskCacheThread (PVOID  pvArg)
         
         __LW_DISKCACHE_LIST_LOCK();
         _G_plineDiskCacheOp = _G_plineDiskCacheHeader;
-        
         while (_G_plineDiskCacheOp) {
-        
             pdiskcDiskCache = _LIST_ENTRY(_G_plineDiskCacheOp, 
                                           LW_DISKCACHE_CB, 
                                           DISKC_lineManage);

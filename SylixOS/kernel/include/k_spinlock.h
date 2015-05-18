@@ -127,6 +127,10 @@ BOOL    _SmpSpinTryLockIrq(spinlock_t *psl, INTREG  *piregInterLevel);
 INT     _SmpSpinUnlockIrq(spinlock_t *psl, INTREG  iregInterLevel);
 VOID    _SmpSpinUnlockIrqQuick(spinlock_t *psl, INTREG  iregInterLevel);
 
+VOID    _SmpSpinLockTask(spinlock_t *psl);
+BOOL    _SmpSpinTryLockTask(spinlock_t *psl);
+INT     _SmpSpinUnlockTask(spinlock_t *psl);
+
 #define LW_SPIN_INIT(psl)                   _SmpSpinInit(psl)
 
 #define LW_SPIN_LOCK(psl)                   _SmpSpinLock(psl)
@@ -143,6 +147,10 @@ VOID    _SmpSpinUnlockIrqQuick(spinlock_t *psl, INTREG  iregInterLevel);
 
 #define LW_SPIN_LOCK_QUICK(psl, pireg)      _SmpSpinLockIrq(psl, pireg)
 #define LW_SPIN_UNLOCK_QUICK(psl, ireg)     _SmpSpinUnlockIrqQuick(psl, ireg)
+
+#define LW_SPIN_LOCK_TASK(psl)              _SmpSpinLockTask(psl)
+#define LW_SPIN_TRYLOCK_TASK(psl)           _SmpSpinTryLockTask(psl)
+#define LW_SPIN_UNLOCK_TASK(psl)            _SmpSpinUnlockTask(psl)
 
 /*********************************************************************************************************
   SMP 调度器切换完成后专用释放函数
@@ -188,6 +196,10 @@ VOID    _UpSpinUnlockIrqQuick(spinlock_t *psl, INTREG  iregInterLevel);
 
 #define LW_SPIN_LOCK_QUICK(psl, pireg)      _UpSpinLockIrq(psl, pireg)
 #define LW_SPIN_UNLOCK_QUICK(psl, ireg)     _UpSpinUnlockIrqQuick(psl, ireg)
+
+#define LW_SPIN_LOCK_TASK(psl)              _UpSpinLock(psl)
+#define LW_SPIN_TRYLOCK_TASK(psl)           _UpSpinTryLock(psl)
+#define LW_SPIN_UNLOCK_TASK(psl)            _UpSpinUnlock(psl)
 
 /*********************************************************************************************************
   单处理器调度器切换完成后专用释放函数

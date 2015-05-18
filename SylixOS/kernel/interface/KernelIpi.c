@@ -28,6 +28,7 @@
 **           pvArg         同步参数
 **           pfuncAsync    异步执行函数
 **           pvAsync       异步执行参数
+**           iOpt          选项 IPIM_OPT_NORMAL / IPIM_OPT_NOKERN
 ** 输　出  : 同步调用返回值
 ** 全局变量: 
 ** 调用模块: 
@@ -40,7 +41,8 @@ INT  API_KernelSmpCall (ULONG        ulCPUId,
                         FUNCPTR      pfunc, 
                         PVOID        pvArg,
                         VOIDFUNCPTR  pfuncAsync,
-                        PVOID        pvAsync)
+                        PVOID        pvAsync, 
+                        INT          iOpt)
 {
     INTREG      iregInterLevel;
     INT         iRet;
@@ -52,7 +54,7 @@ INT  API_KernelSmpCall (ULONG        ulCPUId,
         return  (PX_ERROR);
     }
     
-    iRet = _SmpCallFunc(ulCPUId, pfunc, pvArg, pfuncAsync, pvAsync);
+    iRet = _SmpCallFunc(ulCPUId, pfunc, pvArg, pfuncAsync, pvAsync, iOpt);
     
     KN_INT_ENABLE(iregInterLevel);
     
@@ -65,6 +67,7 @@ INT  API_KernelSmpCall (ULONG        ulCPUId,
 **           pvArg         同步参数
 **           pfuncAsync    异步执行函数
 **           pvAsync       异步执行参数
+**           iOpt          选项 IPIM_OPT_NORMAL / IPIM_OPT_NOKERN
 ** 输　出  : NONE (无法确定返回值)
 ** 全局变量: 
 ** 调用模块: 
@@ -74,13 +77,14 @@ LW_API
 VOID  API_KernelSmpCallAllOther (FUNCPTR      pfunc, 
                                  PVOID        pvArg,
                                  VOIDFUNCPTR  pfuncAsync,
-                                 PVOID        pvAsync)
+                                 PVOID        pvAsync,
+                                 INT          iOpt)
 {
     INTREG      iregInterLevel;
     
     iregInterLevel = KN_INT_DISABLE();
     
-    _SmpCallFuncAllOther(pfunc, pvArg, pfuncAsync, pvAsync);
+    _SmpCallFuncAllOther(pfunc, pvArg, pfuncAsync, pvAsync, iOpt);
     
     KN_INT_ENABLE(iregInterLevel);
 }

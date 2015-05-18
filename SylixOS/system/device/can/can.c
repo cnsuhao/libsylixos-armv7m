@@ -266,9 +266,9 @@ static INT  __canQCount (__PCAN_QUEUE pcanq)
 *********************************************************************************************************/
 static VOID  __canFlushQueue (__PCAN_QUEUE pcanq)
 {
-    pcanq->CANQ_uiCounter       = 0;
-    pcanq->CANQ_pcanframeIn     = pcanq->CANQ_pcanframeBuffer;
-    pcanq->CANQ_pcanframeOut    = pcanq->CANQ_pcanframeBuffer;
+    pcanq->CANQ_uiCounter    = 0;
+    pcanq->CANQ_pcanframeIn  = pcanq->CANQ_pcanframeBuffer;
+    pcanq->CANQ_pcanframeOut = pcanq->CANQ_pcanframeBuffer;
 }
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: __canDeleteQueue

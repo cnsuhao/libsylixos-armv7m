@@ -394,11 +394,12 @@ VOID           _SchedSetPrio(PLW_CLASS_TCB  ptcb, UINT8  ucPriority);   /*  ÉèÖÃ
 #if LW_CFG_SMP_EN > 0
 VOID           _SmpSendIpi(ULONG  ulCPUId, ULONG  ulIPIVec, INT  iWait);
 VOID           _SmpSendIpiAllOther(ULONG  ulIPIVec, INT  iWait);
-INT            _SmpCallFunc(ULONG    ulCPUId, FUNCPTR  pfunc, PVOID    pvArg,
-                            VOIDFUNCPTR  pfuncAsync, PVOID    pvAsync);
-VOID           _SmpCallFuncAllOther(FUNCPTR  pfunc, PVOID    pvArg,
-                                    VOIDFUNCPTR  pfuncAsync, PVOID    pvAsync);
+INT            _SmpCallFunc(ULONG  ulCPUId, FUNCPTR  pfunc, PVOID  pvArg,
+                            VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync, INT  iOpt);
+VOID           _SmpCallFuncAllOther(FUNCPTR  pfunc, PVOID  pvArg,
+                                    VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync, INT  iOpt);
 VOID           _SmpProcIpi(PLW_CLASS_CPU  pcpuCur);
+VOID           _SmpUpdateIpi(PLW_CLASS_CPU  pcpuCur);
 #endif                                                                  /* LW_CFG_SMP_EN                */
 
 /*********************************************************************************************************

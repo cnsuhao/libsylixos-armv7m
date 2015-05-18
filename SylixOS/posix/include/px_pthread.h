@@ -280,8 +280,6 @@ LW_API int          pthread_spin_trylock(pthread_spinlock_t  *pspinlock);
 LW_API int          pthread_spin_lock_irq_np(pthread_spinlock_t  *pspinlock, pthread_int_t *irqctx);
 LW_API int          pthread_spin_unlock_irq_np(pthread_spinlock_t  *pspinlock, pthread_int_t irqctx);
 LW_API int          pthread_spin_trylock_irq_np(pthread_spinlock_t  *pspinlock, pthread_int_t *irqctx);
-LW_API int          pthread_spin_lock_quick_np(pthread_spinlock_t  *pspinlock, pthread_int_t *irqctx);
-LW_API int          pthread_spin_unlock_quick_np(pthread_spinlock_t  *pspinlock, pthread_int_t irqctx);
 #endif                                                                  /*  W_CFG_POSIXEX_EN > 0        */
 
 LW_API int          pthread_rwlockattr_init(pthread_rwlockattr_t  *prwlockattr);

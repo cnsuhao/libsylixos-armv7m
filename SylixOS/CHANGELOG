@@ -33,6 +33,12 @@ HISTORY
     2015-05-14: han.hui
     修正多核初始化死锁问题.
     
+    2015-05-15: han.hui
+    posix spin lock 不在使用内核 spin lock 实现.
+    
+    2015-05-16: han.hui
+    重新设计回调系统.
+    
 (STABLE-1.0.0)
 
 ++ New features:

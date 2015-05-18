@@ -141,6 +141,7 @@ static LW_INLINE VOID  _SchedCpuDown (PLW_CLASS_CPU  pcpuCur, BOOL  bIsIntSwtich
     
     LW_SPIN_UNLOCK_SCHED(&_K_slKernel, ptcbCur);                        /*  解锁内核 spinlock           */
 
+    LW_SPINLOCK_NOTIFY();
     bspCpuDown(ulCPUId);                                                /*  BSP 停止 CPU                */
     
     _BugHandle(LW_TRUE, LW_TRUE, "CPU Down error!\r\n");                /*  不会运行到这里              */
@@ -246,6 +247,11 @@ INT  _Schedule (VOID)
     ptcbCand = _SchedGetCand(pcpuCur, 1ul);                             /*  获得需要运行的线程          */
     if (ptcbCand != ptcbCur) {                                          /*  如果与当前运行的不同, 切换  */
         __LW_SCHEDULER_BUG_TRACE(ptcbCand);                             /*  调度器 BUG 检测             */
+
+#if LW_CFG_SMP_EN > 0                                                   /*  SMP 系统                    */
+        _BugHandle((LW_CPU_SPIN_NESTING_GET(pcpuCur) > 1ul), LW_FALSE,
+                   "pend on spin lock nesting status!\r\n");
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
         pcpuCur->CPU_bIsIntSwtich = LW_FALSE;                           /*  非中断调度                  */
         pcpuCur->CPU_ptcbTCBHigh  = ptcbCand;
         archTaskCtxSwitch(pcpuCur);                                     /*  线程切换,并释放内核自旋锁   */
@@ -300,6 +306,11 @@ VOID  _ScheduleInt (VOID)
     ptcbCand = _SchedGetCand(pcpuCur, 1ul);                             /*  获得需要运行的线程          */
     if (ptcbCand != ptcbCur) {                                          /*  如果与当前运行的不同, 切换  */
         __LW_SCHEDULER_BUG_TRACE(ptcbCand);                             /*  调度器 BUG 检测             */
+
+#if LW_CFG_SMP_EN > 0                                                   /*  SMP 系统                    */
+        _BugHandle((LW_CPU_SPIN_NESTING_GET(pcpuCur) > 1ul), LW_FALSE,
+                   "pend on spin lock nesting status!\r\n");
+#endif                                                                  /*  LW_CFG_SMP_EN > 0           */
         pcpuCur->CPU_bIsIntSwtich = LW_TRUE;                            /*  中断调度                    */
         pcpuCur->CPU_ptcbTCBHigh  = ptcbCand;
         archIntCtxLoad(pcpuCur);                                        /*  中断上下文中线程切换        */

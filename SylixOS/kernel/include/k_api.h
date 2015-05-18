@@ -98,9 +98,10 @@ LW_API ULONG            API_CpuPowerGet(UINT  *puiPowerLevel);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 /*********************************************************************************************************
-  SPINLOCK
+  SPINLOCK (此 API 仅供内核程序使用)
 *********************************************************************************************************/
 
+#ifdef __SYLIXOS_KERNEL
 LW_API INT              API_SpinInit(spinlock_t *psl);
 
 LW_API INT              API_SpinDestory(spinlock_t *psl);
@@ -120,6 +121,7 @@ LW_API INT              API_SpinUnlock(spinlock_t *psl);
 LW_API INT              API_SpinUnlockIrq(spinlock_t *psl, INTREG  iregInterLevel);
 
 LW_API INT              API_SpinUnlockQuick(spinlock_t *psl, INTREG  iregInterLevel);
+#endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 /*********************************************************************************************************
   OBJECT
@@ -1050,10 +1052,10 @@ LW_API ULONG            API_KernelHookDelete(ULONG  ulOpt);             /*  删除
 
 #if LW_CFG_SMP_EN > 0                                                   /*  核间中断调用                */
 LW_API INT              API_KernelSmpCall(ULONG  ulCPUId, FUNCPTR  pfunc, PVOID  pvArg,
-                                          VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync);
+                                          VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync, INT  iOpt);
 
 LW_API VOID             API_KernelSmpCallAllOther(FUNCPTR  pfunc, PVOID  pvArg,
-                                                  VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync);
+                                                  VOIDFUNCPTR  pfuncAsync, PVOID  pvAsync, INT  iOpt);
 #endif                                                                  /*  LW_CFG_SMP_EN > 0           */
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 

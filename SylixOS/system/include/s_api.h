@@ -382,9 +382,9 @@ LW_API ULONG             API_ThreadPoolStatus(LW_OBJECT_HANDLE         ulId,
 *********************************************************************************************************/
 
 #ifdef __SYLIXOS_KERNEL
-LW_API ULONG             API_SystemHookAdd(LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt);
+LW_API ULONG             API_SystemHookAdd(LW_HOOK_FUNC  hookfunc, ULONG  ulOpt);
 
-LW_API ULONG             API_SystemHookDelete(LW_HOOK_FUNC  hookfuncPtr, ULONG  ulOpt);
+LW_API ULONG             API_SystemHookDelete(LW_HOOK_FUNC  hookfunc, ULONG  ulOpt);
 #endif                                                                  /*  __SYLIXOS_KERNEL            */
 
 #endif                                                                  /*  __S_API_H                   */

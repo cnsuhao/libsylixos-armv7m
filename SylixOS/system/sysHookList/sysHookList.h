@@ -16,14 +16,10 @@
 **
 ** 文件创建日期: 2007 年 04 月 01 日
 **
-** 描        述: 系统钩子函数链头文件
-*********************************************************************************************************/
-/*********************************************************************************************************
-注意：
-      用户最好不要使用内核提供的 hook 功能，内核的 hook 功能是为系统级 hook 服务的，系统的 hook 有动态链表
-      的功能，一个系统 hook 功能可以添加多个函数
-      
-      API_SystemHookDelete() 调用的时机非常重要，不能在 hook 扫描链扫描时调用，可能会发生扫描链断裂的情况
+** 描        述: 系统钩子函数链头文件.
+**
+** BUG:
+2015.05.16  系统回调不再采用链式结构, 转而采用数组结构.
 *********************************************************************************************************/
 
 #ifndef  __SYSHOOKLIST_H
@@ -34,61 +30,22 @@
 *********************************************************************************************************/
 
 typedef struct {
-    LW_LIST_LINE              FUNCNODE_lineManage;                      /*  管理链表                    */
-    LW_HOOK_FUNC              FUNCNODE_hookfuncPtr;                     /*  钩子函数指针                */
-    LW_RESOURCE_RAW           FUNCNODE_resraw;                          /*  资源管理节点                */
+    LW_HOOK_FUNC            FUNCNODE_hookfunc;                          /*  钩子函数指针                */
+    LW_RESOURCE_RAW         FUNCNODE_resraw;                            /*  资源管理节点                */
 } LW_FUNC_NODE;
-typedef LW_FUNC_NODE         *PLW_FUNC_NODE;
-
-/*********************************************************************************************************
-  SYSTEM HOOK SERVICE ROUTINE
-*********************************************************************************************************/
-
-VOID  _SysCreateHook(LW_OBJECT_HANDLE  ulId, ULONG  ulOption);
-VOID  _SysDeleteHook(LW_OBJECT_HANDLE  ulId, PVOID  pvReturnVal, PLW_CLASS_TCB  ptcb);
-VOID  _SysSwapHook(LW_OBJECT_HANDLE   hOldThread, LW_OBJECT_HANDLE   hNewThread);
-VOID  _SysTickHook(INT64   i64Tick);
-VOID  _SysInitHook(LW_OBJECT_HANDLE  ulId, PLW_CLASS_TCB  ptcb);
-VOID  _SysIdleHook(VOID);
-VOID  _SysInitBeginHook(VOID);
-VOID  _SysInitEndHook(INT  iError);
-VOID  _SysRebootHook(INT  iRebootType);
-VOID  _SysWatchDogHook(LW_OBJECT_HANDLE  ulId);
-
-VOID  _SysObjectCreateHook(LW_OBJECT_HANDLE  ulId, ULONG  ulOption);
-VOID  _SysObjectDeleteHook(LW_OBJECT_HANDLE  ulId);
-VOID  _SysFdCreateHook(INT iFd, pid_t  pid);
-VOID  _SysFdDeleteHook(INT iFd, pid_t  pid);
-
-VOID  _SysCpuIdleEnterHook(LW_OBJECT_HANDLE  ulIdEnterFrom);
-VOID  _SysCpuIdleExitHook(LW_OBJECT_HANDLE  ulIdExitTo);
-VOID  _SysIntEnterHook(ULONG  ulVector, ULONG  ulNesting);
-VOID  _SysIntExitHook(ULONG  ulVector, ULONG  ulNesting);
-
-VOID  _SysStkOverflowHook(pid_t  pid, LW_OBJECT_HANDLE  ulId);
-VOID  _SysFatalErrorHook(pid_t  pid, LW_OBJECT_HANDLE  ulId, struct siginfo *psiginfo);
-
-VOID  _SysVpCreateHook(pid_t pid);
-VOID  _SysVpDeleteHook(pid_t pid, INT iExitCode);
-
-/*********************************************************************************************************
-  GLOBAL VAR
-*********************************************************************************************************/
-
-#ifdef   __SYSHOOKLIST_MAIN_FILE
-#define  __SYSHOOK_EXT
-#else
-#define  __SYSHOOK_EXT           extern
-#endif
+typedef LW_FUNC_NODE       *PLW_FUNC_NODE;
 
 /*********************************************************************************************************
   SYSTEM HOOK NODE
 *********************************************************************************************************/
 
+#define LW_SYS_HOOK_SIZE    16
+
 typedef struct {
-    PLW_LIST_LINE           HOOKCB_plineHookHeader;                     /*  钩子函数链                  */
-    PLW_LIST_LINE           HOOKCB_plineHookOp;                         /*  当前操作函数链              */
-    LW_SPINLOCK_DEFINE     (HOOKCB_slHook);                             /*  自旋锁                      */
+    VOIDFUNCPTR             HOOKCB_pfuncCall;                           /*  调用所有的回调节点          */
+    PLW_FUNC_NODE           HOOKCB_pfuncnode[LW_SYS_HOOK_SIZE];         /*  回调节点表                  */
+    UINT                    HOOKCB_uiCnt;                               /*  回调节点数                  */
+    LW_SPINLOCK_DEFINE     (HOOKCB_slHook);
 } LW_HOOK_CB;
 typedef LW_HOOK_CB         *PLW_HOOK_CB;
 
@@ -96,35 +53,75 @@ typedef LW_HOOK_CB         *PLW_HOOK_CB;
   HOOK CONTROL BLOCK
 *********************************************************************************************************/
 
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCreate;                       /*  线程建立钩子                */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbDelete;                       /*  线程删除钩子                */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbSwap;                         /*  线程切换钩子                */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbTick;                         /*  时钟中断钩子                */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbInit;                         /*  线程初始化钩子              */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbIdle;                         /*  空闲线程钩子                */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbInitBegin;                    /*  系统初始化开始时钩子        */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbInitEnd;                      /*  系统初始化结束时钩子        */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbReboot;                       /*  系统重新启动钩子            */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbWatchDog;                     /*  线程看门狗钩子              */
+typedef INT               (*LW_HOOK_FUNC_ADD)(PLW_HOOK_CB, PLW_FUNC_NODE);
+typedef PLW_FUNC_NODE     (*LW_HOOK_FUNC_DEL)(PLW_HOOK_CB, LW_HOOK_FUNC, BOOL *);
 
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbObjectCreate;                 /*  创建内核对象钩子            */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbObjectDelete;                 /*  删除内核对象钩子            */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbFdCreate;                     /*  文件描述符创建钩子          */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbFdDelete;                     /*  文件描述符删除钩子          */
+typedef struct {
+    LW_HOOK_FUNC_ADD        HOOKTBL_pfuncAdd;                           /*  加入一个回调节点            */
+    LW_HOOK_FUNC_DEL        HOOKTBL_pfuncDel;                           /*  删除一个回调节点            */
 
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCpuIdleEnter;                 /*  CPU 进入空闲模式            */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCpuIdleExit;                  /*  CPU 退出空闲模式            */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCpuIntEnter;                  /*  CPU 进入中断(异常)模式      */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbCpuIntExit;                   /*  CPU 退出中断(异常)模式      */
+    LW_HOOK_CB              HOOKTBL_hookcbCreate;
+    LW_HOOK_CB              HOOKTBL_hookcbDelete;
+    LW_HOOK_CB              HOOKTBL_hookcbSwap;
+    LW_HOOK_CB              HOOKTBL_hookcbTick;
+    LW_HOOK_CB              HOOKTBL_hookcbInit;
+    LW_HOOK_CB              HOOKTBL_hookcbIdle;
+    LW_HOOK_CB              HOOKTBL_hookcbInitBegin;
+    LW_HOOK_CB              HOOKTBL_hookcbInitEnd;
+    LW_HOOK_CB              HOOKTBL_hookcbReboot;
+    LW_HOOK_CB              HOOKTBL_hookcbWatchDog;
+    LW_HOOK_CB              HOOKTBL_hookcbObjectCreate;
+    LW_HOOK_CB              HOOKTBL_hookcbObjectDelete;
+    LW_HOOK_CB              HOOKTBL_hookcbFdCreate;
+    LW_HOOK_CB              HOOKTBL_hookcbFdDelete;
+    LW_HOOK_CB              HOOKTBL_hookcbCpuIdleEnter;
+    LW_HOOK_CB              HOOKTBL_hookcbCpuIdleExit;
+    LW_HOOK_CB              HOOKTBL_hookcbCpuIntEnter;
+    LW_HOOK_CB              HOOKTBL_hookcbCpuIntExit;
+    LW_HOOK_CB              HOOKTBL_hookcbStkOverflow;
+    LW_HOOK_CB              HOOKTBL_hookcbFatalError;
+    LW_HOOK_CB              HOOKTBL_hookcbVpCreate;
+    LW_HOOK_CB              HOOKTBL_hookcbVpDelete;
+} LW_HOOK_TABLE;
 
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbStkOverflow;                  /*  堆栈溢出                    */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbFatalError;                   /*  致命错误                    */
+/*********************************************************************************************************
+  各种 HOOK 表
+*********************************************************************************************************/
+#ifdef   __SYSHOOKLIST_MAIN_FILE
+#define  __SYSHOOK_EXT
+#else
+#define  __SYSHOOK_EXT           extern
+#endif
 
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbVpCreate;                     /*  进程建立钩子                */
-__SYSHOOK_EXT LW_HOOK_CB         _G_hookcbVpDelete;                     /*  进程删除钩子                */
+__SYSHOOK_EXT LW_HOOK_TABLE _G_hookTable;
+
+#define HOOK_F_ADD          (_G_hookTable.HOOKTBL_pfuncAdd)
+#define HOOK_F_DEL          (_G_hookTable.HOOKTBL_pfuncDel)
+
+#define HOOK_T_CREATE       (&(_G_hookTable.HOOKTBL_hookcbCreate))
+#define HOOK_T_DELETE       (&(_G_hookTable.HOOKTBL_hookcbDelete))
+#define HOOK_T_SWAP         (&(_G_hookTable.HOOKTBL_hookcbSwap))
+#define HOOK_T_TICK         (&(_G_hookTable.HOOKTBL_hookcbTick))
+#define HOOK_T_INIT         (&(_G_hookTable.HOOKTBL_hookcbInit))
+#define HOOK_T_IDLE         (&(_G_hookTable.HOOKTBL_hookcbIdle))
+#define HOOK_T_INITBEGIN    (&(_G_hookTable.HOOKTBL_hookcbInitBegin))
+#define HOOK_T_INITEND      (&(_G_hookTable.HOOKTBL_hookcbInitEnd))
+#define HOOK_T_REBOOT       (&(_G_hookTable.HOOKTBL_hookcbReboot))
+#define HOOK_T_WATCHDOG     (&(_G_hookTable.HOOKTBL_hookcbWatchDog))
+#define HOOK_T_OBJCREATE    (&(_G_hookTable.HOOKTBL_hookcbObjectCreate))
+#define HOOK_T_OBJDELETE    (&(_G_hookTable.HOOKTBL_hookcbObjectDelete))
+#define HOOK_T_FDCREATE     (&(_G_hookTable.HOOKTBL_hookcbFdCreate))
+#define HOOK_T_FDDELETE     (&(_G_hookTable.HOOKTBL_hookcbFdDelete))
+#define HOOK_T_IDLEENTER    (&(_G_hookTable.HOOKTBL_hookcbCpuIdleEnter))
+#define HOOK_T_IDLEEXIT     (&(_G_hookTable.HOOKTBL_hookcbCpuIdleExit))
+#define HOOK_T_INTENTER     (&(_G_hookTable.HOOKTBL_hookcbCpuIntEnter))
+#define HOOK_T_INTEXIT      (&(_G_hookTable.HOOKTBL_hookcbCpuIntExit))
+#define HOOK_T_STKOF        (&(_G_hookTable.HOOKTBL_hookcbStkOverflow))
+#define HOOK_T_FATALERR     (&(_G_hookTable.HOOKTBL_hookcbFatalError))
+#define HOOK_T_VPCREATE     (&(_G_hookTable.HOOKTBL_hookcbVpCreate))
+#define HOOK_T_VPDELETE     (&(_G_hookTable.HOOKTBL_hookcbVpDelete))
 
 #endif                                                                  /*  __SYSHOOKLIST_H             */
 /*********************************************************************************************************
   END
 *********************************************************************************************************/
-

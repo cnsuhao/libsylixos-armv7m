@@ -30,6 +30,7 @@
 2013.03.16  加入进程创建和删除回调.
 2013.12.12  中断 hook 加入向量与嵌套层数参数.
 2014.01.07  修正部分 hook 函数参数.
+2015.05.15  不同的 hook 使用不同的锁.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/include/k_kernel.h"
@@ -37,357 +38,353 @@
 #define  __SYSHOOKLIST_MAIN_FILE
 #include "sysHookList.h"
 /*********************************************************************************************************
-  hook 服务函数模板
+  HOOK 服务函数模板 (spinlock 版本)
 *********************************************************************************************************/
-#define __HOOK_TEMPLATE(hookcb, param)  \
-        INTREG           iregInterLevel;    \
-        PLW_FUNC_NODE    pfuncnode; \
-            \
-        LW_SPIN_LOCK_IRQ(&hookcb.HOOKCB_slHook, &iregInterLevel);   \
-        hookcb.HOOKCB_plineHookOp = hookcb.HOOKCB_plineHookHeader;  \
-        while (hookcb.HOOKCB_plineHookOp) { \
-            \
-            pfuncnode = (PLW_FUNC_NODE)hookcb.HOOKCB_plineHookOp;    \
-            hookcb.HOOKCB_plineHookOp =  \
-                _list_line_get_next(hookcb.HOOKCB_plineHookOp);  \
-                \
-            KN_INT_ENABLE(iregInterLevel);  \
-            pfuncnode->FUNCNODE_hookfuncPtr param;  \
-            iregInterLevel = KN_INT_DISABLE();  \
-        }   \
-        LW_SPIN_UNLOCK_IRQ(&hookcb.HOOKCB_slHook, iregInterLevel);
+#define __HOOK_TEMPLATE_SPIN(phookcb, param) \
+        do { \
+            INT             i; \
+            UINT            cnt = 0; \
+            INTREG          iregInterLevel; \
+            LW_HOOK_FUNC    pfuncHook; \
+             \
+            LW_SPIN_LOCK_QUICK(&((phookcb)->HOOKCB_slHook), &iregInterLevel); \
+            for (i = 0; i < LW_SYS_HOOK_SIZE; i++) { \
+                if ((phookcb)->HOOKCB_pfuncnode[i]) { \
+                    pfuncHook = (phookcb)->HOOKCB_pfuncnode[i]->FUNCNODE_hookfunc; \
+                    LW_SPIN_UNLOCK_QUICK(&((phookcb)->HOOKCB_slHook), iregInterLevel); \
+                    pfuncHook param; \
+                    LW_SPIN_LOCK_QUICK(&((phookcb)->HOOKCB_slHook), &iregInterLevel); \
+                    cnt++; \
+                    if (cnt >= phookcb->HOOKCB_uiCnt) { \
+                        break; \
+                    } \
+                } \
+            } \
+            LW_SPIN_UNLOCK_QUICK(&((phookcb)->HOOKCB_slHook), iregInterLevel); \
+        } while (0)
 /*********************************************************************************************************
-** 函数名称: _HookCbInit
-** 功能描述: 初始化钩子控制块
-** 输　入  : phookcb       hook 控制块
-** 输　出  : 
+  HOOK 服务函数模板 (不加锁)
+*********************************************************************************************************/
+#define __HOOK_TEMPLATE(phookcb, param) \
+        do { \
+            INT             i; \
+            UINT            cnt = 0; \
+            LW_HOOK_FUNC    pfuncHook; \
+             \
+            for (i = 0; i < LW_SYS_HOOK_SIZE; i++) { \
+                if ((phookcb)->HOOKCB_pfuncnode[i]) { \
+                    pfuncHook = (phookcb)->HOOKCB_pfuncnode[i]->FUNCNODE_hookfunc; \
+                    pfuncHook param; \
+                    cnt++; \
+                    if (cnt >= phookcb->HOOKCB_uiCnt) { \
+                        break; \
+                    } \
+                } \
+            } \
+        } while (0)
+/*********************************************************************************************************
+** 函数名称: _HookAddTemplate
+** 功能描述: HOOK 加入一个调用模板
+** 输　入  : phookcb       回调控制块
+**           pfuncnode     加入的新节点
+** 输　出  : 是否加入成功
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-static VOID _HookCbInit (PLW_HOOK_CB   phookcb)
+static INT  _HookAddTemplate (PLW_HOOK_CB  phookcb, PLW_FUNC_NODE  pfuncnode)
 {
-    phookcb->HOOKCB_plineHookHeader = LW_NULL;
-    phookcb->HOOKCB_plineHookOp     = LW_NULL;
-    LW_SPIN_INIT(&phookcb->HOOKCB_slHook);
+    INT      i;
+    INTREG   iregInterLevel;
+    
+    LW_SPIN_LOCK_QUICK(&phookcb->HOOKCB_slHook, &iregInterLevel);
+    for (i = 0; i < LW_SYS_HOOK_SIZE; i++) {
+        if (phookcb->HOOKCB_pfuncnode[i] == LW_NULL) {
+            phookcb->HOOKCB_pfuncnode[i] =  pfuncnode;
+            phookcb->HOOKCB_uiCnt++;
+            break;
+        }
+    }
+    LW_SPIN_UNLOCK_QUICK(&phookcb->HOOKCB_slHook, iregInterLevel);
+    
+    return  ((i < LW_SYS_HOOK_SIZE) ? ERROR_NONE : PX_ERROR);
 }
 /*********************************************************************************************************
-** 函数名称: _HookListInit
-** 功能描述: 初始化钩子函数链
-** 输　入  : 
-** 输　出  : 
+** 函数名称: _HookDelTemplate
+** 功能描述: 任务创建 HOOK 删除一个调用
+** 输　入  : pfunc         需要删除的调用
+**           bEmpty        删除后是否已经没有任何节点
+** 输　出  : 已经从链表中移除的节点
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID _HookListInit (VOID)
+static PLW_FUNC_NODE  _HookDelTemplate (PLW_HOOK_CB  phookcb, LW_HOOK_FUNC  hookfunc, BOOL  *bEmpty)
 {
-    _HookCbInit(&_G_hookcbCreate);
-    _HookCbInit(&_G_hookcbDelete);
-    _HookCbInit(&_G_hookcbSwap);
-    _HookCbInit(&_G_hookcbTick);
-    _HookCbInit(&_G_hookcbInit);
-    _HookCbInit(&_G_hookcbIdle);
-    _HookCbInit(&_G_hookcbInitBegin);
-    _HookCbInit(&_G_hookcbInitEnd);
-    _HookCbInit(&_G_hookcbReboot);
-    _HookCbInit(&_G_hookcbWatchDog);
+    INT             i;
+    INTREG          iregInterLevel;
+    PLW_FUNC_NODE   pfuncnode;
     
-    _HookCbInit(&_G_hookcbObjectCreate);
-    _HookCbInit(&_G_hookcbObjectDelete);
-    _HookCbInit(&_G_hookcbFdCreate);
-    _HookCbInit(&_G_hookcbFdDelete);
+    *bEmpty = LW_FALSE;
     
-    _HookCbInit(&_G_hookcbCpuIdleEnter);
-    _HookCbInit(&_G_hookcbCpuIdleExit);
-    _HookCbInit(&_G_hookcbCpuIntEnter);
-    _HookCbInit(&_G_hookcbCpuIntExit);
+    LW_SPIN_LOCK_QUICK(&phookcb->HOOKCB_slHook, &iregInterLevel);
+    for (i = 0; i < LW_SYS_HOOK_SIZE; i++) {
+        if (phookcb->HOOKCB_pfuncnode[i]) {
+            if (phookcb->HOOKCB_pfuncnode[i]->FUNCNODE_hookfunc == hookfunc) {
+                pfuncnode = phookcb->HOOKCB_pfuncnode[i];
+                phookcb->HOOKCB_pfuncnode[i] = LW_NULL;
+                phookcb->HOOKCB_uiCnt--;
+                if (!phookcb->HOOKCB_uiCnt) {
+                    *bEmpty = LW_TRUE;
+                }
+                break;
+            }
+        }
+    }
+    LW_SPIN_UNLOCK_QUICK(&phookcb->HOOKCB_slHook, iregInterLevel);
     
-    _HookCbInit(&_G_hookcbStkOverflow);
-    _HookCbInit(&_G_hookcbFatalError);
-    
-    _HookCbInit(&_G_hookcbVpCreate);
-    _HookCbInit(&_G_hookcbVpDelete);
+    return  ((i < LW_SYS_HOOK_SIZE) ? pfuncnode : LW_NULL);
 }
 /*********************************************************************************************************
-** 函数名称: _SysCreateHook
-** 功能描述: 线程建立钩子服务函数
+** 函数名称: _CreateHookCall
+** 功能描述: 任务创建 HOOK 调用
 ** 输　入  : ulId                      线程 Id
              ulOption                  建立选项
-** 输　出  : 
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysCreateHook (LW_OBJECT_HANDLE  ulId, ULONG   ulOption)
+static VOID  _CreateHookCall (LW_OBJECT_HANDLE  ulId, ULONG  ulOption)
 {
-    __HOOK_TEMPLATE(_G_hookcbCreate, (ulId, ulOption));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_CREATE, (ulId, ulOption));
 }
 /*********************************************************************************************************
-** 函数名称: _SysDeleteHook
-** 功能描述: 线程删除钩子服务函数
-** 输　入  : 
-**           ulId                      线程 Id
+** 函数名称: _DeleteHookCall
+** 功能描述: 任务删除 HOOK 调用
+** 输　入  : ulId                      线程 Id
 **           pvReturnVal               线程返回值
 **           ptcb                      线程 TCB
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysDeleteHook (LW_OBJECT_HANDLE  ulId, PVOID  pvReturnVal, PLW_CLASS_TCB  ptcb)
+static VOID  _DeleteHookCall (LW_OBJECT_HANDLE  ulId, PVOID  pvReturnVal, PLW_CLASS_TCB  ptcb)
 {
-    __HOOK_TEMPLATE(_G_hookcbDelete, (ulId, pvReturnVal, ptcb));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_DELETE, (ulId, pvReturnVal, ptcb));
 }
 /*********************************************************************************************************
-** 函数名称: _SysSwapHook
-** 功能描述: 线程删除钩子服务函数
+** 函数名称: _SwapHookCall
+** 功能描述: 任务切换 HOOK 调用
 ** 输　入  : hOldThread        老线程
 **           hNewThread        新线程
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysSwapHook (LW_OBJECT_HANDLE   hOldThread, LW_OBJECT_HANDLE   hNewThread)
+static VOID  _SwapHookCall (LW_OBJECT_HANDLE   hOldThread, LW_OBJECT_HANDLE   hNewThread)
 {
-    INTREG          iregInterLevel;
-    PLW_FUNC_NODE   pfuncnode;
-    
-    LW_SPIN_LOCK_QUICK(&_G_hookcbSwap.HOOKCB_slHook, &iregInterLevel);
-    _G_hookcbSwap.HOOKCB_plineHookOp = _G_hookcbSwap.HOOKCB_plineHookHeader;
-    while (_G_hookcbSwap.HOOKCB_plineHookOp) {
-        
-        pfuncnode = (PLW_FUNC_NODE)_G_hookcbSwap.HOOKCB_plineHookOp;
-        _G_hookcbSwap.HOOKCB_plineHookOp = 
-            _list_line_get_next(_G_hookcbSwap.HOOKCB_plineHookOp);
-        
-        KN_INT_ENABLE(iregInterLevel);
-        (pfuncnode->FUNCNODE_hookfuncPtr)(hOldThread, hNewThread);      /*  不允许改变任务状态          */
-        iregInterLevel = KN_INT_DISABLE();
-    }
-    LW_SPIN_UNLOCK_QUICK(&_G_hookcbSwap.HOOKCB_slHook, iregInterLevel);
+    __HOOK_TEMPLATE(HOOK_T_SWAP, (hOldThread, hNewThread));
 }
 /*********************************************************************************************************
-** 函数名称: _SysTickHook
-** 功能描述: 时钟中断钩子服务函数
+** 函数名称: _TickHookCall
+** 功能描述: TICK HOOK 调用
 ** 输　入  : i64Tick   当前 tick
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysTickHook (INT64   i64Tick)
+static VOID  _TickHookCall (INT64   i64Tick)
 {
-    INTREG           iregInterLevel;
-    PLW_FUNC_NODE    pfuncnode;
-    
-    LW_SPIN_LOCK_QUICK(&_G_hookcbTick.HOOKCB_slHook, &iregInterLevel);
-    _G_hookcbTick.HOOKCB_plineHookOp = _G_hookcbTick.HOOKCB_plineHookHeader;
-    while (_G_hookcbTick.HOOKCB_plineHookOp) {
-        
-        pfuncnode = (PLW_FUNC_NODE)_G_hookcbTick.HOOKCB_plineHookOp;
-        _G_hookcbTick.HOOKCB_plineHookOp = 
-            _list_line_get_next(_G_hookcbTick.HOOKCB_plineHookOp);
-        
-        KN_INT_ENABLE(iregInterLevel);
-        (pfuncnode->FUNCNODE_hookfuncPtr)(i64Tick);                     /*  不允许改变任务状态          */
-        iregInterLevel = KN_INT_DISABLE();
-    }
-    LW_SPIN_UNLOCK_QUICK(&_G_hookcbTick.HOOKCB_slHook, iregInterLevel);
+    __HOOK_TEMPLATE(HOOK_T_TICK, (i64Tick));
 }
 /*********************************************************************************************************
-** 函数名称: _SysInitHook
-** 功能描述: 线程初始化钩子函数链
+** 函数名称: _InitHookCall
+** 功能描述: 线程初始化 HOOK 调用
 ** 输　入  : ulId                      线程 Id
 **           ptcb                      线程 TCB
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysInitHook (LW_OBJECT_HANDLE  ulId, PLW_CLASS_TCB  ptcb)
+static VOID  _InitHookCall (LW_OBJECT_HANDLE  ulId, PLW_CLASS_TCB  ptcb)
 {
-    __HOOK_TEMPLATE(_G_hookcbInit, (ulId, ptcb));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_INIT, (ulId, ptcb));
 }
 /*********************************************************************************************************
-** 函数名称: _SysIdleHook
-** 功能描述: 空闲线程钩子函数链
-** 输　入  : 
-** 输　出  : 
+** 函数名称: _IdleHookCall
+** 功能描述: 空闲线程 HOOK 调用
+** 输　入  : NONE
+** 输　出  : NONE
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : 这里扫描时必须使用局部变量, 因为 SMP 系统多个 CPU 可能在同时执行 idle.
 *********************************************************************************************************/
-VOID  _SysIdleHook (VOID)
+static VOID  _IdleHookCall (VOID)
 {
-    PLW_FUNC_NODE    pfuncnode;
-    PLW_LIST_LINE    pline = _G_hookcbIdle.HOOKCB_plineHookHeader;
-    
-    while (pline) {
-        pfuncnode = (PLW_FUNC_NODE)pline;
-        pline     = _list_line_get_next(pline);
-        (pfuncnode->FUNCNODE_hookfuncPtr)();
-    }
+    __HOOK_TEMPLATE(HOOK_T_IDLE, ());
 }
 /*********************************************************************************************************
-** 函数名称: _SysInitBeginHook
-** 功能描述: 系统初始化开始时钩子
+** 函数名称: _InitBeginHookCall
+** 功能描述: 系统初始化开始 HOOK 调用
 ** 输　入  : 
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysInitBeginHook (VOID)
+static VOID  _InitBeginHookCall (VOID)
 {
-    __HOOK_TEMPLATE(_G_hookcbInitBegin, ());
+    __HOOK_TEMPLATE(HOOK_T_INITBEGIN, ());
 }
 /*********************************************************************************************************
-** 函数名称: _SysInitEndHook
-** 功能描述: 系统初始化结束时钩子
+** 函数名称: _InitEndHookCall
+** 功能描述: 系统初始化结束 HOOK 调用
 ** 输　入  : iError                    操作系统初始化是否出现错误   0 无错误   1 错误
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysInitEndHook (INT  iError)
+static VOID  _InitEndHookCall (INT  iError)
 {
-    __HOOK_TEMPLATE(_G_hookcbInitEnd, (iError));
+    __HOOK_TEMPLATE(HOOK_T_INITEND, (iError));
 }
 /*********************************************************************************************************
-** 函数名称: _SysRebootHook
-** 功能描述: 系统重启钩子
+** 函数名称: _RebootHookCall
+** 功能描述: 系统重启 HOOK 调用
 ** 输　入  : iRebootType                系统重新启动类型
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysRebootHook (INT  iRebootType)
+static VOID  _RebootHookCall (INT  iRebootType)
 {
-    __HOOK_TEMPLATE(_G_hookcbReboot, (iRebootType));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_REBOOT, (iRebootType));
 }
 /*********************************************************************************************************
-** 函数名称: _SysWatchDogHook
-** 功能描述: 线程看门狗钩子函数链
+** 函数名称: _WatchDogHookCall
+** 功能描述: 线程看门狗 HOOK 调用
 ** 输　入  : ulId                      线程 Id
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysWatchDogHook (LW_OBJECT_HANDLE  ulId)
+static VOID  _WatchDogHookCall (LW_OBJECT_HANDLE  ulId)
 {
-    __HOOK_TEMPLATE(_G_hookcbWatchDog, (ulId));
+    __HOOK_TEMPLATE(HOOK_T_WATCHDOG, (ulId));
 }
 /*********************************************************************************************************
-** 函数名称: _SysObjectCreateHook
-** 功能描述: 创建内核对象钩子
+** 函数名称: _ObjCreateHookCall
+** 功能描述: 创建内核对象 HOOK 调用
 ** 输　入  : ulId                      线程 Id
 **           ulOption                  创建选项
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysObjectCreateHook (LW_OBJECT_HANDLE  ulId, ULONG  ulOption)
+static VOID  _ObjCreateHookCall (LW_OBJECT_HANDLE  ulId, ULONG  ulOption)
 {
-    __HOOK_TEMPLATE(_G_hookcbObjectCreate, (ulId, ulOption));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_OBJCREATE, (ulId, ulOption));
 }
 /*********************************************************************************************************
-** 函数名称: _SysObjectDeleteHook
-** 功能描述: 删除内核对象钩子
+** 函数名称: _ObjDeleteHookCall
+** 功能描述: 删除内核对象 HOOK 调用
 ** 输　入  : ulId                      线程 Id
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysObjectDeleteHook (LW_OBJECT_HANDLE  ulId)
+static VOID  _ObjDeleteHookCall (LW_OBJECT_HANDLE  ulId)
 {
-    __HOOK_TEMPLATE(_G_hookcbObjectDelete, (ulId));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_OBJDELETE, (ulId));
 }
 /*********************************************************************************************************
-** 函数名称: _SysFdCreateHook
-** 功能描述: 文件描述符创建钩子
+** 函数名称: _FdCreateHookCall
+** 功能描述: 文件描述符创建 HOOK 调用
 ** 输　入  : iFd                       文件描述符
 **           pid                       进程id
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysFdCreateHook (INT iFd, pid_t  pid)
+static VOID  _FdCreateHookCall (INT iFd, pid_t  pid)
 {
-    __HOOK_TEMPLATE(_G_hookcbFdCreate, (iFd, pid));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_FDCREATE, (iFd, pid));
 }
 /*********************************************************************************************************
-** 函数名称: _SysFdDeleteHook
-** 功能描述: 文件描述符删除钩子
+** 函数名称: _FdDeleteHookCall
+** 功能描述: 文件描述符删除 HOOK 调用
 ** 输　入  : iFd                       文件描述符
 **           pid                       进程id
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysFdDeleteHook (INT iFd, pid_t  pid)
+static VOID  _FdDeleteHookCall (INT iFd, pid_t  pid)
 {
-    __HOOK_TEMPLATE(_G_hookcbFdDelete, (iFd, pid));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_FDDELETE, (iFd, pid));
 }
 /*********************************************************************************************************
-** 函数名称: _SysCpuIdleEnterHook
-** 功能描述: CPU 进入空闲模式
+** 函数名称: _IdleEnterHookCall
+** 功能描述: CPU 进入空闲模式 HOOK 调用
 ** 输　入  : ulIdEnterFrom             从哪个线程进入 idle
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysCpuIdleEnterHook (LW_OBJECT_HANDLE  ulIdEnterFrom)
+static VOID  _IdleEnterHookCall (LW_OBJECT_HANDLE  ulIdEnterFrom)
 {
-    __HOOK_TEMPLATE(_G_hookcbCpuIdleEnter, (ulIdEnterFrom));
+    __HOOK_TEMPLATE(HOOK_T_IDLEENTER, (ulIdEnterFrom));
 }
 /*********************************************************************************************************
-** 函数名称: _SysCpuIdleExitHook
-** 功能描述: CPU 退出空闲模式
+** 函数名称: _IdleExitHookCall
+** 功能描述: CPU 退出空闲模式 HOOK 调用
 ** 输　入  : ulIdExitTo                退出 idle 线程进入哪个线程
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysCpuIdleExitHook (LW_OBJECT_HANDLE  ulIdExitTo)
+static VOID  _IdleExitHookCall (LW_OBJECT_HANDLE  ulIdExitTo)
 {
-    __HOOK_TEMPLATE(_G_hookcbCpuIdleExit, (ulIdExitTo));
+    __HOOK_TEMPLATE(HOOK_T_IDLEEXIT, (ulIdExitTo));
 }
 /*********************************************************************************************************
-** 函数名称: _SysIntEnterHook
-** 功能描述: CPU 进入中断(异常)模式
+** 函数名称: _IntEnterHookCall
+** 功能描述: CPU 进入中断(异常)模式 HOOK 调用
 ** 输　入  : ulVector      中断向量
 **           ulNesting     当前嵌套层数
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysIntEnterHook (ULONG  ulVector, ULONG  ulNesting)
+static VOID  _IntEnterHookCall (ULONG  ulVector, ULONG  ulNesting)
 {
-    __HOOK_TEMPLATE(_G_hookcbCpuIntEnter, (ulVector, ulNesting));
+    __HOOK_TEMPLATE(HOOK_T_INTENTER, (ulVector, ulNesting));
 }
 /*********************************************************************************************************
-** 函数名称: _SysIntExitHook
-** 功能描述: CPU 退出中断(异常)模式
+** 函数名称: _IntExitHookCall
+** 功能描述: CPU 退出中断(异常)模式 HOOK 调用
 ** 输　入  : ulVector      中断向量
 **           ulNesting     当前嵌套层数
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysIntExitHook (ULONG  ulVector, ULONG  ulNesting)
+static VOID  _IntExitHookCall (ULONG  ulVector, ULONG  ulNesting)
 {
-    __HOOK_TEMPLATE(_G_hookcbCpuIntExit, (ulVector, ulNesting));
+    __HOOK_TEMPLATE(HOOK_T_INTEXIT, (ulVector, ulNesting));
 }
 /*********************************************************************************************************
-** 函数名称: _SysStkOverflowHook
-** 功能描述: 系统堆栈溢出回调
+** 函数名称: _StkOverflowHookCall
+** 功能描述: 系统堆栈溢出 HOOK 调用
 ** 输　入  : pid                       进程 id
 **           ulId                      线程 id
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysStkOverflowHook (pid_t  pid, LW_OBJECT_HANDLE  ulId)
+static VOID  _StkOverflowHookCall (pid_t  pid, LW_OBJECT_HANDLE  ulId)
 {
-    __HOOK_TEMPLATE(_G_hookcbStkOverflow, (pid, ulId));
+    __HOOK_TEMPLATE(HOOK_T_STKOF, (pid, ulId));
 }
 /*********************************************************************************************************
-** 函数名称: _SysFatalErrorHook
-** 功能描述: 系统致命错误
+** 函数名称: _FatalErrorHookCall
+** 功能描述: 系统致命错误 HOOK 调用
 ** 输　入  : pid                       进程 id
 **           ulId                      线程 id
 **           pinfo                     信号信息
@@ -395,34 +392,113 @@ VOID  _SysStkOverflowHook (pid_t  pid, LW_OBJECT_HANDLE  ulId)
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysFatalErrorHook (pid_t  pid, LW_OBJECT_HANDLE  ulId, struct siginfo *psiginfo)
+static VOID  _FatalErrorHookCall (pid_t  pid, LW_OBJECT_HANDLE  ulId, struct siginfo *psiginfo)
 {
-    __HOOK_TEMPLATE(_G_hookcbFatalError, (pid, ulId, psiginfo));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_FATALERR, (pid, ulId, psiginfo));
 }
 /*********************************************************************************************************
-** 函数名称: _SysVpCreateHook
-** 功能描述: 进程建立钩子服务函数
+** 函数名称: _VpCreateHookCall
+** 功能描述: 进程建立 HOOK 调用
 ** 输　入  : pid                       进程 id
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysVpCreateHook (pid_t pid)
+static VOID  _VpCreateHookCall (pid_t pid)
 {
-    __HOOK_TEMPLATE(_G_hookcbVpCreate, (pid));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_VPCREATE, (pid));
 }
 /*********************************************************************************************************
-** 函数名称: _SysVpDeleteHook
-** 功能描述: 进程删除钩子服务函数
+** 函数名称: _VpDeleteHookCall
+** 功能描述: 进程删除 HOOK 调用
 ** 输　入  : pid                       进程 id
 **           iExitCode                 进程返回值
 ** 输　出  : 
 ** 全局变量: 
 ** 调用模块: 
 *********************************************************************************************************/
-VOID  _SysVpDeleteHook (pid_t pid, INT iExitCode)
+static VOID  _VpDeleteHookCall (pid_t pid, INT iExitCode)
 {
-    __HOOK_TEMPLATE(_G_hookcbVpDelete, (pid, iExitCode));
+    __HOOK_TEMPLATE_SPIN(HOOK_T_VPDELETE, (pid, iExitCode));
+}
+/*********************************************************************************************************
+** 函数名称: _HookListInit
+** 功能描述: 初始化 HOOK 管理
+** 输　入  : NONE
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+VOID _HookListInit (VOID)
+{
+    LW_SPIN_INIT(&HOOK_T_CREATE->HOOKCB_slHook);
+    HOOK_T_CREATE->HOOKCB_pfuncCall = _CreateHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_DELETE->HOOKCB_slHook);
+    HOOK_T_DELETE->HOOKCB_pfuncCall = _DeleteHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_SWAP->HOOKCB_slHook);
+    HOOK_T_SWAP->HOOKCB_pfuncCall = _SwapHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_TICK->HOOKCB_slHook);
+    HOOK_T_TICK->HOOKCB_pfuncCall = _TickHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_INIT->HOOKCB_slHook);
+    HOOK_T_INIT->HOOKCB_pfuncCall = _InitHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_IDLE->HOOKCB_slHook);
+    HOOK_T_IDLE->HOOKCB_pfuncCall = _IdleHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_INITBEGIN->HOOKCB_slHook);
+    HOOK_T_INITBEGIN->HOOKCB_pfuncCall = _InitBeginHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_INITEND->HOOKCB_slHook);
+    HOOK_T_INITEND->HOOKCB_pfuncCall = _InitEndHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_REBOOT->HOOKCB_slHook);
+    HOOK_T_REBOOT->HOOKCB_pfuncCall = _RebootHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_WATCHDOG->HOOKCB_slHook);
+    HOOK_T_WATCHDOG->HOOKCB_pfuncCall = _WatchDogHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_OBJCREATE->HOOKCB_slHook);
+    HOOK_T_OBJCREATE->HOOKCB_pfuncCall = _ObjCreateHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_OBJDELETE->HOOKCB_slHook);
+    HOOK_T_OBJDELETE->HOOKCB_pfuncCall = _ObjDeleteHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_FDCREATE->HOOKCB_slHook);
+    HOOK_T_FDCREATE->HOOKCB_pfuncCall = _FdCreateHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_FDDELETE->HOOKCB_slHook);
+    HOOK_T_FDDELETE->HOOKCB_pfuncCall = _FdDeleteHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_IDLEENTER->HOOKCB_slHook);
+    HOOK_T_IDLEENTER->HOOKCB_pfuncCall = _IdleEnterHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_IDLEEXIT->HOOKCB_slHook);
+    HOOK_T_IDLEEXIT->HOOKCB_pfuncCall = _IdleExitHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_INTENTER->HOOKCB_slHook);
+    HOOK_T_INTENTER->HOOKCB_pfuncCall = _IntEnterHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_INTEXIT->HOOKCB_slHook);
+    HOOK_T_INTEXIT->HOOKCB_pfuncCall = _IntExitHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_STKOF->HOOKCB_slHook);
+    HOOK_T_STKOF->HOOKCB_pfuncCall = _StkOverflowHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_FATALERR->HOOKCB_slHook);
+    HOOK_T_FATALERR->HOOKCB_pfuncCall = _FatalErrorHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_VPCREATE->HOOKCB_slHook);
+    HOOK_T_VPCREATE->HOOKCB_pfuncCall = _VpCreateHookCall;
+    
+    LW_SPIN_INIT(&HOOK_T_VPDELETE->HOOKCB_slHook);
+    HOOK_T_VPDELETE->HOOKCB_pfuncCall = _VpDeleteHookCall;
+    
+    HOOK_F_ADD = _HookAddTemplate;
+    HOOK_F_DEL = _HookDelTemplate;
 }
 /*********************************************************************************************************
   END
