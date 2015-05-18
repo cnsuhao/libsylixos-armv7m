@@ -1204,6 +1204,7 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
              INT         iStatus     = ERROR_NONE;
              
     REGISTER INT         iFreeBytes;
+             BOOL        bNeedBsOrKill;
     
     
     if (ptyDev->TYDEV_pfuncProtoHook)
@@ -1297,10 +1298,20 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
             if (__TTY_BACKSPACE(ptyDev, cInchar)) {                     /*  退格键                      */
                 if (ptyDev->TYDEV_ucInNBytes) {
                     ptyDev->TYDEV_ucInNBytes--;
+                    bNeedBsOrKill = LW_TRUE;
+                
+                } else {
+                    bNeedBsOrKill = LW_FALSE;
                 }
             
             } else if (cInchar == __TTY_CC(ptyDev, VKILL)) {            /*  删除一行                    */
-                ptyDev->TYDEV_ucInNBytes = 0;
+                if (ptyDev->TYDEV_ucInNBytes) {
+                    ptyDev->TYDEV_ucInNBytes = 0;
+                    bNeedBsOrKill = LW_TRUE;
+                
+                } else {
+                    bNeedBsOrKill = LW_FALSE;
+                }
             
             } else if (cInchar == __TTY_CC(ptyDev, VEOF)) {             /*  结束键                      */
                 if (iFreeBytes > 0) {
@@ -1342,11 +1353,13 @@ INT  _TyIRd (TY_DEV_ID  ptyDev, CHAR   cInchar)
             
             if (iOpt & OPT_LINE) {                                      /*  行模式                      */
                 if (cInchar == __TTY_CC(ptyDev, VKILL)) {               /*  删除行                      */
-                    iNTemp = RNG_ELEM_PUT(ringId, '\n', iNTemp);        /*  输出 LF                     */
-                    bCharEchoed = LW_TRUE;                              /*  回显成功                    */
+                    if (bNeedBsOrKill) {
+                        iNTemp = RNG_ELEM_PUT(ringId, '\n', iNTemp);    /*  输出 LF                     */
+                        bCharEchoed = LW_TRUE;                          /*  回显成功                    */
+                    }
                 
                 } else if (__TTY_BACKSPACE(ptyDev, cInchar)) {          /*  退格键                      */
-                    if (ptyDev->TYDEV_ucInNBytes != 0) {                /*  这一行中已经有字符          */
+                    if (bNeedBsOrKill) {                                /*  这一行中已经有字符          */
                         CHAR    cBsCharList[3];
                         
                         cBsCharList[0] = cInchar;                       /*  退格序列                    */
