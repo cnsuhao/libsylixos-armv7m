@@ -97,7 +97,7 @@ PCHAR  lib_strerror (INT  iNum)
     /*
      *  ipc/network software (operational errors)
      */
-    case ENETUNREACH:   return  ("Network is unreachable");
+    case ENETUNREACH:   return  ("Network unreachable");
     case ENETRESET:     return  ("Network dropped connection on reset");
     case ECONNABORTED:  return  ("Software caused connection abort");
     case ECONNRESET:    return  ("Connection reset by peer");
@@ -111,7 +111,7 @@ PCHAR  lib_strerror (INT  iNum)
     case ENETDOWN:      return  ("Network is down");
     case ETXTBSY:       return  ("Text file busy");
     case ELOOP:         return  ("Too many levels of symbolic links");
-    case EHOSTUNREACH:  return  ("No route to host");
+    case EHOSTUNREACH:  return  ("Host unreachable");
     case ENOTBLK:       return  ("Block device required");
     case EHOSTDOWN:     return  ("Host is down");
 

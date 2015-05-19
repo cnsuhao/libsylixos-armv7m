@@ -125,7 +125,7 @@ static INT  __inetPingSend (INT  iSock, struct in_addr  inaddr, INT  iDataSize, 
                          
     __SHEAP_FREE(icmphdrEcho);
     
-    return (sstError ? ERR_OK : ERR_VAL);
+    return ((sstError > 0) ? ERR_OK : ERR_VAL);
 }
 /*********************************************************************************************************
 ** 函数名称: __inetPingRecv
@@ -248,9 +248,18 @@ INT  API_INetPing (struct in_addr  *pinaddr, INT  iTimes, INT  iDataSize, INT  i
     for (i = 0; ;) {
         if (__inetPingSend(iSock, *pinaddr, iDataSize, &usSeqRecv) < 0) { 
                                                                         /*  发送 icmp 数据包            */
-            fprintf(stderr, "icmp packet send error.\n");
+            fprintf(stderr, "error : %s.\n", lib_strerror(errno));
+            
+            i++;
+            if (i >= iTimes) {
+                break;
+            }
+            API_TimeSSleep(1);                                          /*  等待 1 S                    */
+            continue;
+        
+        } else {
+            i++;                                                        /*  发送次数 ++                 */
         }
-        i++;                                                            /*  发送次数 ++                 */
         
         ulTime1 = API_TimeGet();
         if (__inetPingRecv(iSock, usSeqRecv, &iTTLRecv) < 0) {          /*  接收 icmp 数据包            */
