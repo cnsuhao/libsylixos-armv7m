@@ -160,6 +160,15 @@ static LW_SYMBOL    _G_symLibc[] = {
     	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
     },
 #endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
+/*********************************************************************************************************
+  longjmp setjmp
+*********************************************************************************************************/
+    {   {LW_NULL, LW_NULL}, "_longjmp", (caddr_t)longjmp,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
+    {   {LW_NULL, LW_NULL}, "_setjmp", (caddr_t)setjmp,
+    	 LW_SYMBOL_FLAG_STATIC | LW_SYMBOL_FLAG_REN | LW_SYMBOL_FLAG_XEN
+    },
 };
 /*********************************************************************************************************
 ** º¯ÊýÃû³Æ: __symbolAddLibc
