@@ -1095,7 +1095,8 @@ ssize_t  packet_recvfrom (AF_PACKET_T *pafpacket, void *mem, size_t len, int fla
         }
         
         __AF_PACKET_UNLOCK();
-        ulError = API_SemaphoreBPend(pafpacket->PACKET_hCanRead, LW_OPTION_WAIT_INFINITE);
+        ulError = API_SemaphoreBPend(pafpacket->PACKET_hCanRead, 
+                                     pafpacket->PACKET_ulRecvTimeout);
         if (ulError) {
             _ErrorHandle(EWOULDBLOCK);                                  /*  µÈ´ý³¬Ê±                    */
             return  (sstTotal);

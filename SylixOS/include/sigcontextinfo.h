@@ -28,6 +28,7 @@ typedef ARCH_REG_CTX    SIGCONTEXT;                                     /*  пе╨е
 
 #define GET_PC(ctx)     ARCH_REG_CTX_GET_PC(ctx)
 #define GET_FRAME(ctx)  ARCH_REG_CTX_GET_FRAME(ctx)
+#define GET_STACK(ctx)  ARCH_REG_CTX_GET_STACK(ctx)
 
 #endif                                                                  /*  __STRINGS_H                 */
 /*********************************************************************************************************

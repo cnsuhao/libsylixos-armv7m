@@ -20,6 +20,7 @@
 **
 ** BUG:
 2014.08.15  _SC_NPROCESSORS_ONLN 返回为当前激活 CPU 个数.
+2015.05.25  加入对 _SC_PHYS_PAGES _SC_AVPHYS_PAGES 支持.
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "unistd.h"
@@ -176,6 +177,34 @@ long  sysconf (int name)
         
     case _SC_MAPPED_FILES:
         return  (1);
+        
+#if LW_CFG_VMM_EN > 0
+    case _SC_PHYS_PAGES:
+        {
+            INT     i, iPages = 0;
+            size_t  stPhySize;
+            for (i = 0; i < LW_CFG_VMM_ZONE_NUM; i++) {
+                if (API_VmmZoneStatus((ULONG)i, LW_NULL, &stPhySize, 
+                                      LW_NULL, LW_NULL, LW_NULL) == ERROR_NONE) {
+                    iPages += (INT)(stPhySize / LW_CFG_VMM_PAGE_SIZE);
+                }
+            }
+            return  (iPages);
+        }
+        
+    case _SC_AVPHYS_PAGES:
+        {
+            INT     i, iFreePages = 0;
+            ULONG   ulFreePages;
+            for (i = 0; i < LW_CFG_VMM_ZONE_NUM; i++) {
+                if (API_VmmZoneStatus((ULONG)i, LW_NULL, LW_NULL, 
+                                      LW_NULL, &ulFreePages, LW_NULL) == ERROR_NONE) {
+                    iFreePages += (INT)ulFreePages;
+                }
+            }
+            return  (iFreePages);
+        }
+#endif
         
     default:
         errno = EINVAL;

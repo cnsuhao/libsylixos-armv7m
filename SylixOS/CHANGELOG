@@ -13,6 +13,9 @@ HISTORY
     2015-04-18: han.hui
     系统 tick 频率等其他时间参数不再通过宏配置, 而是通过 bsp 传入的内核参数确定.
     
+    2015-05-25: han.hui
+    加入 _SC_PHYS_PAGES 与 _SC_AVPHYS_PAGES 支持.
+    
 ++ Bugfixes:
 
     2015-04-07: han.hui
@@ -38,6 +41,9 @@ HISTORY
     
     2015-05-16: han.hui
     重新设计回调系统.
+    
+    2015-05-25: han.hui
+    修正 AF_PACKET 接口接收超时错误.
     
 (STABLE-1.0.0)
 

@@ -49,10 +49,11 @@ extern "C" {
 *********************************************************************************************************/
 
 #define MAP_FILE                        0                               /*  File                        */
-#define MAP_SHARED                      1                               /*  Share changes.              */
-#define MAP_PRIVATE                     2                               /*  Changes are private.        */
-#define MAP_FIXED                       4                               /*  Interpret addr exactly.     */
-#define MAP_ANONYMOUS                   8                               /*  no fd rela this memory      */
+#define MAP_SHARED                      0x01                            /*  Share changes.              */
+#define MAP_PRIVATE                     0x02                            /*  Changes are private.        */
+#define MAP_FIXED                       0x04                            /*  Interpret addr exactly.     */
+#define MAP_ANONYMOUS                   0x08                            /*  no fd rela this memory      */
+#define MAP_NORESERVE                   0x10                            /*  Do not swap                 */
 
 #ifndef MAP_ANON
 #define MAP_ANON                        MAP_ANONYMOUS

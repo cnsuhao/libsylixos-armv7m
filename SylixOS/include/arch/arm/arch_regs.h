@@ -76,6 +76,7 @@ typedef struct {
 
 #define ARCH_REG_CTX_GET_PC(ctx)    ((void *)(ctx).REG_uiPc)
 #define ARCH_REG_CTX_GET_FRAME(ctx) ((void *)(ctx).REG_uiFp)
+#define ARCH_REG_CTX_GET_STACK(ctx) ((void *)&(ctx))                    /*  不准确, 仅为了兼容性设计    */
 
 /*********************************************************************************************************
   堆栈中的寄存器信息所占大小
