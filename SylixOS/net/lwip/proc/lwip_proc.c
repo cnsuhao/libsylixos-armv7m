@@ -2178,7 +2178,7 @@ static VOID  __procFsNetAodvRtPrint (struct aodv_rtnode *rt, PCHAR  pcBuffer,
     if_indextoname(rt->netif->num, cIfName);
     
     *pstOft = bnprintf(pcBuffer, stTotalSize, *pstOft,
-                       "%-18s %-18s %-8s %8d %-3s\n",
+                       "%-18s %-18s %-8s %6d %-3s\n",
                        cIpDest, cNextHop, cFlag, rt->hcnt, cIfName);
 }
 /*********************************************************************************************************
