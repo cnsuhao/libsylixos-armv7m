@@ -49,6 +49,7 @@
             存在 VMM 时不在使用 HEAP 进行分配, 保持算法一致性.
 2014.05.01  修正 mremap() 错误时的 errno.
 2014.07.15  编写独立的 mmap 资源释放函数.
+2015.06.01  使用新的 vmmMmap 系列函数实现 mmap 接口.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -176,394 +177,13 @@ int  mprotect (void  *pvAddr, size_t  stLen, int  iProt)
     
     if (API_VmmSetFlag(pvAddr, ulFlag) == ERROR_NONE) {                 /*  重新设置新的 flag           */
         return  (ERROR_NONE);
-    } else {
-        return  (PX_ERROR);
-    }
-    
-#else
-    return  (ERROR_NONE);
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-}
-/*********************************************************************************************************
-  mmap 控制块结构
-*********************************************************************************************************/
-typedef struct {
-    LW_LIST_LINE            PMAPN_lineManage;                           /*  双向链表                    */
-    PVOID                   PMAPN_pvAddr;                               /*  起始地址                    */
-    size_t                  PMAPN_stLen;                                /*  内存长度                    */
-    ULONG                   PMAPN_ulFlag;                               /*  内存属性                    */
-    INT                     PMAPN_iFd;                                  /*  关联文件                    */
-    mode_t                  PMAPN_mode;                                 /*  文件mode                    */
-    off_t                   PMAPN_off;                                  /*  文件映射偏移量              */
-    off_t                   PMAPN_offFSize;                             /*  文件大小                    */
-    INT                     PMAPN_iFlag;                                /*  mmap iFlag 参数             */
-    BOOL                    PMAPN_bBusy;                                /*  忙标志                      */
-    
-    dev_t                   PMAPN_dev;                                  /*  文件描述符对应 dev          */
-    ino64_t                 PMAPN_ino64;                                /*  文件描述符对应 inode        */
-    
-    LW_LIST_LINE_HEADER     PMAPN_plineUnmap;                           /*  已经 unmap 的区域           */
-    size_t                  PMAPN_stTotalUnmap;                         /*  已经 unmap 的总大小         */
-    
-    pid_t                   PMAPN_pid;                                  /*  映射进程的进程号            */
-    LW_RESOURCE_RAW         PMAPN_resraw;                               /*  资源管理节点                */
-} __PX_MAP_NODE;
-
-typedef struct {
-    LW_LIST_LINE            PMAPA_lineManage;                           /*  双向链表                    */
-                                                                        /*  此链表按地址从小到大排列    */
-    PVOID                   PMAPA_pvAddr;                               /*  起始地址                    */
-    size_t                  PMAPA_stLen;                                /*  内存长度                    */
-} __PX_MAP_AREA;
-/*********************************************************************************************************
-  mmap 所有缓冲区链表
-*********************************************************************************************************/
-static LW_LIST_LINE_HEADER  _G_plineMMapHeader = LW_NULL;
-/*********************************************************************************************************
-** 函数名称: __mmapNodeFind
-** 功能描述: 查找 mmap node
-** 输　入  : pvAddr        地址
-** 输　出  : mmap node
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-static __PX_MAP_NODE  *__mmapNodeFind (void  *pvAddr)
-{
-    __PX_MAP_NODE      *pmapn;
-    PLW_LIST_LINE       plineTemp;
-    
-    for (plineTemp  = _G_plineMMapHeader;
-         plineTemp != LW_NULL;
-         plineTemp  = _list_line_get_next(plineTemp)) {
-         
-        pmapn = (__PX_MAP_NODE *)plineTemp;
-        if (((addr_t)pvAddr >= (addr_t)pmapn->PMAPN_pvAddr) && 
-            ((addr_t)pvAddr <  ((addr_t)pmapn->PMAPN_pvAddr + pmapn->PMAPN_stLen))) {
-            return  (pmapn);
-        }
-    }
-    
-    return  (LW_NULL);
-}
-/*********************************************************************************************************
-** 函数名称: __mmapNodeFindShare
-** 功能描述: 查找 mmap 可以 share 的节点.
-** 输　入  : pmapnAbort         mmap node
-**           ulAbortAddr        发生缺页中断的地址 (页面对齐)
-**           pfuncCallback      回调函数
-** 输　出  : 回调函数返回值
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-#if LW_CFG_VMM_EN > 0
-
-static PVOID __mmapNodeFindShare (__PX_MAP_NODE  *pmapnAbort,
-                                  addr_t          ulAbortAddr,
-                                  PVOID         (*pfuncCallback)(PVOID  pvStartAddr, size_t  stOffset))
-{
-    __PX_MAP_NODE      *pmapn;
-    PLW_LIST_LINE       plineTemp;
-    PVOID               pvRet = LW_NULL;
-    off_t               oft;                                            /*  一定是 VMM 页面对齐         */
-    
-    oft = ((off_t)(ulAbortAddr - (addr_t)pmapnAbort->PMAPN_pvAddr) + pmapnAbort->PMAPN_off);
-    
-    for (plineTemp  = _G_plineMMapHeader;
-         plineTemp != LW_NULL;
-         plineTemp  = _list_line_get_next(plineTemp)) {
-         
-        pmapn = (__PX_MAP_NODE *)plineTemp;
-        
-        if (pmapn != pmapnAbort) {
-            if ((pmapn->PMAPN_iFd      >= 0) &&
-                (pmapnAbort->PMAPN_iFd >= 0) &&
-                (pmapn->PMAPN_dev   == pmapnAbort->PMAPN_dev) &&
-                (pmapn->PMAPN_ino64 == pmapnAbort->PMAPN_ino64)) {      /*  映射的文件相同              */
-                
-                
-                if ((oft >= pmapn->PMAPN_off) &&
-                    (oft <  (pmapn->PMAPN_off + pmapn->PMAPN_stLen))) { /*  范围以内                    */
-                    
-                    pvRet = pfuncCallback(pmapn->PMAPN_pvAddr,
-                                          (size_t)(oft - pmapn->PMAPN_off));
-                    if (pvRet) {
-                        break;
-                    }
-                }
-            }
-        }
-    }
-    
-    return  (pvRet);
-}
-
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-/*********************************************************************************************************
-** 函数名称: __mmapNodeAreaInsert
-** 功能描述: 将一个释放的区域记录插入 mmap node 区域表
-** 输　入  : pmapn     mmap node
-**           pmaparea  区域记录
-** 输　出  : 如果遇到地址冲突, 返回 PX_ERROR
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-static INT  __mmapNodeAreaInsert (__PX_MAP_NODE  *pmapn, __PX_MAP_AREA  *pmaparea)
-{
-             PLW_LIST_LINE       plineTemp;
-             
-    REGISTER __PX_MAP_AREA      *pmapareaTemp;
-    REGISTER __PX_MAP_AREA      *pmapareaLeft;
-    REGISTER __PX_MAP_AREA      *pmapareaRight;
-    
-    if (pmapn->PMAPN_plineUnmap == LW_NULL) {                           /*  还没有 unmap 过             */
-        _List_Line_Add_Ahead(&pmaparea->PMAPA_lineManage, 
-                             &pmapn->PMAPN_plineUnmap);                 /*  插入表头                    */
-        return  (ERROR_NONE);
-    }
-    
-    for (plineTemp  = pmapn->PMAPN_plineUnmap;
-         plineTemp != LW_NULL;
-         plineTemp  = _list_line_get_next(plineTemp)) {
-    
-        pmapareaTemp = (__PX_MAP_AREA *)plineTemp;
-        
-        if ((addr_t)pmapareaTemp->PMAPA_pvAddr > (addr_t)pmaparea->PMAPA_pvAddr) {
-            
-            pmapareaRight = pmapareaTemp;                               /*  此语句增强可阅读性...       */
-            /*
-             *  检测当前区域是否与右边区域有重叠
-             */
-            if (((addr_t)pmaparea->PMAPA_pvAddr + pmaparea->PMAPA_stLen) >
-                (addr_t)pmapareaRight->PMAPA_pvAddr) {
-                return  (PX_ERROR);                                     /*  有重叠                      */
-            
-            } else {
-                if (plineTemp == pmapn->PMAPN_plineUnmap) {             /*  插入至表头                  */
-                    _List_Line_Add_Ahead(&pmaparea->PMAPA_lineManage,
-                                         &pmapn->PMAPN_plineUnmap);
-                } else {                                                /*  插到左边                    */
-                    _List_Line_Add_Left(&pmaparea->PMAPA_lineManage, 
-                                        &pmapareaRight->PMAPA_lineManage);
-                }
-                return  (ERROR_NONE);
-            }
-        } else {
-            pmapareaLeft = pmapareaTemp;                                /*  此语句增强可阅读性...       */
-            /*
-             *  检测是否有区域重叠
-             */
-            if (((addr_t)pmapareaLeft->PMAPA_pvAddr + pmapareaLeft->PMAPA_stLen) >
-                (addr_t)pmaparea->PMAPA_pvAddr) {
-                return  (PX_ERROR);                                     /*  有重叠                      */
-            }
-        }
-    }
-    
-    /*
-     *  当前节点的地址比所有的节点都大
-     */
-    if (((addr_t)pmaparea->PMAPA_pvAddr + pmaparea->PMAPA_stLen) >
-        ((addr_t)pmapn->PMAPN_pvAddr + pmapn->PMAPN_stLen)) {           /*  不能超出 mmap 映射范围      */
-        return  (PX_ERROR);
     
     } else {
-        _List_Line_Add_Right(&pmaparea->PMAPA_lineManage,
-                             &pmapareaTemp->PMAPA_lineManage);          /*  插入到最后一个节点右边      */
-        return  (ERROR_NONE);
-    }
-}
-/*********************************************************************************************************
-** 函数名称: __mmapNodeFree
-** 功能描述: 释放一个指定 mmap node 所有的区域管理内存
-** 输　入  : pmapn     mmap node
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-static VOID  __mmapNodeAreaFree (__PX_MAP_NODE  *pmapn)
-{
-    REGISTER PLW_LIST_LINE  plineDel;
-    
-    while (pmapn->PMAPN_plineUnmap) {                                   /*  删除所有的区域节点          */
-        plineDel = pmapn->PMAPN_plineUnmap;
-        _List_Line_Del(plineDel, &pmapn->PMAPN_plineUnmap);
-        __SHEAP_FREE(plineDel);
-    }
-}
-/*********************************************************************************************************
-** 函数名称: __mmapMallocAreaFill
-** 功能描述: 缺页中断分配内存后, 将通过此函数填充文件数据 (注意, 此函数在 vmm lock 中执行!)
-** 输　入  : pmapn              mmap node
-**           ulDestPageAddr     拷贝目标地址 (页面对齐)
-**           ulMapPageAddr      最终会被映射的目标地址 (页面对齐)
-**           ulPageNum          新分配出的页面个数
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-#if LW_CFG_VMM_EN > 0
-
-static INT  __mmapMallocAreaFill (__PX_MAP_NODE    *pmapn, 
-                                  addr_t            ulDestPageAddr,
-                                  addr_t            ulMapPageAddr, 
-                                  ULONG             ulPageNum)
-{
-    off_t       offtRead;
-    
-    size_t      stReadLen;
-    addr_t      ulMapStartAddr = (addr_t)pmapn->PMAPN_pvAddr;
-    
-    if (pmapn->PMAPN_pid != getpid()) {                                 /*  如果不是创建进程            */
-        goto    __full_with_zero;
-    }
-    
-    if (!S_ISREG(pmapn->PMAPN_mode)) {                                  /*  非数据文件类型              */
-        goto    __full_with_zero;
-    }
-    
-    if ((ulMapPageAddr < ulMapStartAddr) || 
-        (ulMapPageAddr > (ulMapStartAddr + pmapn->PMAPN_stLen))) {      /*  致命错误, 页面内存地址错误  */
-        goto    __full_with_zero;
-    }
-    
-    offtRead  = (off_t)(ulMapPageAddr - ulMapStartAddr);                /*  内存地址偏移                */
-    offtRead += pmapn->PMAPN_off;                                       /*  加上文件起始偏移            */
-    
-    stReadLen = (size_t)(ulPageNum * LW_CFG_VMM_PAGE_SIZE);             /*  需要获取的数据大小          */
-    
-    /*
-     *  暂时不处理文件读取错误的情况. (注意, 最终是将文件内容拷入 ulDestPageAddr)
-     */
-    {
-        INT      iZNum;
-        ssize_t  sstNum = API_IosPRead(pmapn->PMAPN_iFd, 
-                                       (PCHAR)ulDestPageAddr, stReadLen,
-                                       offtRead);                       /*  读取文件内容                */
-        
-        sstNum = (sstNum >= 0) ? sstNum : 0;
-        iZNum = (INT)(stReadLen - sstNum);
-        
-        if (iZNum > 0) {
-            lib_bzero((PVOID)(ulDestPageAddr + sstNum), iZNum);         /*  未使用部分清零              */
-        }
-    }
-    
-    return  (ERROR_NONE);
-    
-__full_with_zero:
-    lib_bzero((PVOID)ulDestPageAddr, 
-              (INT)(ulPageNum * LW_CFG_VMM_PAGE_SIZE));                 /*  全部清零                    */
-    
-    return  (ERROR_NONE);
-}
-
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-/*********************************************************************************************************
-** 函数名称: __mmapMalloc
-** 功能描述: 分配内存
-** 输　入  : pmapnode      mmap node
-**           stLen         内存大小
-**           pvArg         填充函数参数
-**           iFlags        mmap flags
-**           ulFlag        内存属性
-** 输　出  : 内存地址
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-static PVOID  __mmapMalloc (__PX_MAP_NODE  *pmapnode, size_t  stLen, PVOID  pvArg, 
-                            INT  iFlags, ULONG  ulFlag)
-{
-    PVOID    pvMem;
-
-#if LW_CFG_VMM_EN > 0
-    pvMem = API_VmmMallocAreaEx(stLen, __mmapMallocAreaFill, pvArg, iFlags, ulFlag);
-    if (pvMem) {
-        API_VmmSetFindShare(pvMem, __mmapNodeFindShare, pvArg);
-    }
-#else
-    pvMem = __SHEAP_ALLOC_ALIGN(stLen, LW_CFG_VMM_PAGE_SIZE);
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-
-    return  (pvMem);
-}
-/*********************************************************************************************************
-** 函数名称: __mmapFree
-** 功能描述: 内存释放
-** 输　入  : pmapnode      mmap node
-**           pvAddr        内存地址
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-static VOID  __mmapFree (__PX_MAP_NODE  *pmapnode, PVOID  pvAddr)
-{
-#if LW_CFG_VMM_EN > 0
-    API_VmmFreeArea(pvAddr);
-#else
-    __SHEAP_FREE(pvAddr);
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-}
-/*********************************************************************************************************
-** 函数名称: __mmapReclaim
-** 功能描述: mmap 回收
-** 输　入  : pmapnode      mmap node
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-*********************************************************************************************************/
-#if LW_CFG_MODULELOADER_EN > 0
-
-static VOID  __mmapReclaim (__PX_MAP_NODE  *pmapnode)
-{
-#if LW_CFG_MONITOR_EN > 0
-    PVOID   pvAddr = pmapnode->PMAPN_pvAddr;
-    size_t  stLen  = pmapnode->PMAPN_stLen;
-#endif                                                                  /*  LW_CFG_MONITOR_EN > 0       */
-    
-    __PX_LOCK();
-    _List_Line_Del(&pmapnode->PMAPN_lineManage, 
-                   &_G_plineMMapHeader);                                /*  从管理链表中删除            */
-    __PX_UNLOCK();
-    
-    __mmapNodeAreaFree(pmapnode);                                       /*  释放区域管理内存            */
-    __mmapFree(pmapnode, pmapnode->PMAPN_pvAddr);                       /*  释放内存                    */
-    
-    __resDelRawHook(&pmapnode->PMAPN_resraw);
-    
-    __SHEAP_FREE(pmapnode);
-        
-    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_MUNMAP,
-                      pvAddr, stLen, LW_NULL);
-}
-
-#endif                                                                  /*  LW_CFG_MODULELOADER_EN > 0  */
-/*********************************************************************************************************
-** 函数名称: mmapfd
-** 功能描述: 获得 mmap 区域的文件描述符
-** 输　入  : pvAddr        地址
-** 输　出  : 文件描述符
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-*********************************************************************************************************/
-LW_API  
-int  mmapfd (void  *pvAddr)
-{
-    __PX_MAP_NODE       *pmapnode;
-    int                  iFd;
-    
-    __PX_LOCK();
-    pmapnode = __mmapNodeFind(pvAddr);
-    if (pmapnode == LW_NULL) {
-        __PX_UNLOCK();
-        errno = EINVAL;
         return  (PX_ERROR);
     }
-    
-    iFd = pmapnode->PMAPN_iFd;
-    __PX_UNLOCK();
-    
-    return  (iFd);
+#else
+    return  (ERROR_NONE);
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 }
 /*********************************************************************************************************
 ** 函数名称: mmap
@@ -577,37 +197,22 @@ int  mmapfd (void  *pvAddr)
 ** 输　出  : 文件映射后的内存地址
 ** 全局变量: 
 ** 调用模块: 
-** 注  意  : 如果是 REG 文件, 也首先使用驱动程序的 mmap. 共享内存设备的 mmap 直接会完成映射.
                                            API 函数
 *********************************************************************************************************/
 LW_API  
 void  *mmap (void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, off_t  off)
 {
-    __PX_MAP_NODE       *pmapnode;
-    struct stat64        stat64Fd;
-    ULONG                ulFlag = LW_VMM_FLAG_READ;
-    
 #if LW_CFG_VMM_EN > 0
-    LW_DEV_MMAP_AREA     dmap;
-    INT                  iError;
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+    PVOID   pvRet;
+    INT     iFlags;
+    ULONG   ulFlag = LW_VMM_FLAG_FAIL;
     
-    INT                  iErrLevel = 0;
-
-    if (pvAddr != LW_NULL) {                                            /*  这里必须为 NULL             */
-        errno = EINVAL;
-        return  (MAP_FAILED);
+    if (iProt & PROT_READ) {                                            /*  可读                        */
+        ulFlag |= LW_VMM_FLAG_READ;
     }
-    
-    if (iProt & (~(PROT_READ | PROT_WRITE | PROT_EXEC))) {
-        errno = ENOTSUP;
-        return  (MAP_FAILED);
-    }
-    
     if (iProt & PROT_WRITE) {
-        ulFlag |= LW_VMM_FLAG_RDWR;                                     /*  可读写                      */
+        ulFlag |= LW_VMM_FLAG_RDWR;                                     /*  可写                        */
     }
-    
     if (iProt & PROT_EXEC) {
         ulFlag |= LW_VMM_FLAG_EXEC;                                     /*  可执行                      */
     }
@@ -616,116 +221,28 @@ void  *mmap (void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, off
         errno = ENOTSUP;
         return  (MAP_FAILED);
     }
+    if (iFlag & MAP_ANONYMOUS) {
+        iFd = PX_ERROR;
+    }
     
-    if (!ALIGNED(off, LW_CFG_VMM_PAGE_SIZE) || stLen == 0) {            /*  off 必须页对齐              */
+    if (iFlag & MAP_SHARED) {
+        iFlags = LW_VMM_SHARED_CHANGE;
+    
+    } else if (iFlag & MAP_PRIVATE) {
+        iFlags = LW_VMM_PRIVATE_CHANGE;
+    
+    } else {
         errno = EINVAL;
         return  (MAP_FAILED);
     }
     
-    if (!(iFlag & MAP_ANONYMOUS)) {                                     /*  与文件描述符相关            */
-        if (fstat64(iFd, &stat64Fd) < 0) {                              /*  获得文件 stat               */
-            errno = EBADF;
-            return  (MAP_FAILED);
-        }
-        
-        if (off > stat64Fd.st_size) {                                   /*  off 越界                    */
-            errno = ENXIO;
-            return  (MAP_FAILED);
-        }
-        
-    } else {
-        iFd = PX_ERROR;
-        stat64Fd.st_mode = (mode_t)0;                                   /*  文件描述符无关              */
-    }
+    pvRet = API_VmmMmap(pvAddr, stLen, iFlags, ulFlag, iFd, off);
     
-    if (iFlag & MAP_SHARED) {                                           /*  多进程共享                  */
-#if LW_CFG_CACHE_EN > 0
-        if (API_CacheLocation(DATA_CACHE) == CACHE_LOCATION_VIVT) {     /*  处理器为虚拟地址 CACHE      */
-            ulFlag &= ~(LW_VMM_FLAG_CACHEABLE | LW_VMM_FLAG_BUFFERABLE);/*  共享内存不允许 CACHE        */
-        }
-#endif                                                                  /*  LW_CFG_CACHE_EN > 0         */
-    }
-    
-    pmapnode = (__PX_MAP_NODE *)__SHEAP_ALLOC(sizeof(__PX_MAP_NODE));   /*  创建控制块                  */
-    if (pmapnode == LW_NULL) {
-        errno = ENOMEM;
-        return  (MAP_FAILED);
-    }
-    
-    pmapnode->PMAPN_pvAddr = __mmapMalloc(pmapnode, stLen, (PVOID)pmapnode, iFlag, ulFlag);
-    if (pmapnode->PMAPN_pvAddr == LW_NULL) {                            /*  申请映射内存                */
-        errno     = ENOMEM;
-        iErrLevel = 1;
-        goto    __error_handle;
-    }
-    
-    pmapnode->PMAPN_stLen    = stLen;
-    pmapnode->PMAPN_ulFlag   = ulFlag;
-    pmapnode->PMAPN_iFd      = iFd;
-    pmapnode->PMAPN_mode     = stat64Fd.st_mode;
-    pmapnode->PMAPN_off      = off;
-    pmapnode->PMAPN_offFSize = stat64Fd.st_size;
-    pmapnode->PMAPN_iFlag    = iFlag;
-    pmapnode->PMAPN_bBusy    = LW_FALSE;
-    
-    pmapnode->PMAPN_dev      = stat64Fd.st_dev;
-    pmapnode->PMAPN_ino64    = stat64Fd.st_ino;
-    
-    pmapnode->PMAPN_plineUnmap   = LW_NULL;                             /*  没有 unmap                  */
-    pmapnode->PMAPN_stTotalUnmap = 0;
-    
-    if (!(iFlag & MAP_ANONYMOUS)) {                                     /*  与文件描述符相关            */
-        API_IosFdRefInc(iFd);                                           /*  对文件描述符引用 ++         */
-        
-#if LW_CFG_VMM_EN > 0
-        dmap.DMAP_pvAddr   = pmapnode->PMAPN_pvAddr;
-        dmap.DMAP_stLen    = pmapnode->PMAPN_stLen;
-        dmap.DMAP_offPages = (pmapnode->PMAPN_off >> LW_CFG_VMM_PAGE_SHIFT);
-        dmap.DMAP_ulFlag   = ulFlag;
-        
-        iError = API_IosMmap(iFd, &dmap);                               /*  尝试调用设备驱动            */
-        if ((iError < ERROR_NONE) && 
-            (errno != ERROR_IOS_DRIVER_NOT_SUP)) {                      /*  驱动程序报告错误            */
-            iErrLevel = 2;
-            goto    __error_handle;
-        }
+    return  ((pvRet != LW_VMM_MAP_FAILED) ? pvRet : MAP_FAILED);
 #else
-        if (S_ISREG(stat64Fd.st_mode)) {                                /*  普通数据文件                */
-            pread(iFd, pmapnode->PMAPN_pvAddr, stLen, off);             /*  读取文件内容                */
-        
-        } else {
-            errno     = ENOSYS;
-            iErrLevel = 2;
-            goto    __error_handle;
-        }
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-    }
-    
-    __PX_LOCK();
-    _List_Line_Add_Ahead(&pmapnode->PMAPN_lineManage, 
-                         &_G_plineMMapHeader);                          /*  加入管理链表                */
-    __PX_UNLOCK();
-    
-    pmapnode->PMAPN_pid = getpid();                                     /*  获得当前进程 pid            */
-    __resAddRawHook(&pmapnode->PMAPN_resraw, __mmapReclaim, 
-                    pmapnode, 0, 0, 0, 0, 0);                           /*  加入资源管理器              */
-
-    MONITOR_EVT_LONG5(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_MMAP,
-                      pmapnode->PMAPN_pvAddr, 
-                      iFd, stLen, iProt, iFlag, LW_NULL);
-
-    return  (pmapnode->PMAPN_pvAddr);
-    
-__error_handle:
-    if (iErrLevel > 1) {
-        API_IosFdRefDec(iFd);                                           /*  对文件描述符引用 --         */
-        __mmapFree(pmapnode, pmapnode->PMAPN_pvAddr);
-    }
-    if (iErrLevel > 0) {
-        __SHEAP_FREE(pmapnode);
-    }
-    
+    errno = ENOSYS;
     return  (MAP_FAILED);
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 }
 /*********************************************************************************************************
 ** 函数名称: mmap64 (sylixos 内部 off_t 本身就是 64bit)
@@ -757,115 +274,29 @@ void  *mmap64 (void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, o
 ** 输　出  : 重新设置后的内存区域地址
 ** 全局变量: 
 ** 调用模块: 
+                                           API 函数
 *********************************************************************************************************/
 LW_API  
 void  *mremap (void *pvAddr, size_t stOldSize, size_t stNewSize, int iFlag, ...)
 {
-    __PX_MAP_NODE   *pmapnode;
-    PVOID            pvRetAddr = MAP_FAILED;
-    PVOID            pvTmpAddr;
+#if LW_CFG_VMM_EN > 0
+    PVOID   pvRet;
+    INT     iMoveEn;
 
     if (iFlag & MREMAP_FIXED) {
         errno = ENOTSUP;
         return  (MAP_FAILED);
     }
     
-    if (!ALIGNED(pvAddr, LW_CFG_VMM_PAGE_SIZE) || (stNewSize == 0)) {
-        errno = EINVAL;
-        return  (MAP_FAILED);
-    }
+    iMoveEn = (iFlag & MREMAP_MAYMOVE) ? 1 : 0;
     
-    __PX_LOCK();
-    pmapnode = __mmapNodeFind(pvAddr);
-    if (pmapnode == LW_NULL) {
-        __PX_UNLOCK();
-        errno = EINVAL;
-        return  (MAP_FAILED);
-    }
-    if (pmapnode->PMAPN_bBusy) {
-        __PX_UNLOCK();
-        errno = EBUSY;
-        return  (MAP_FAILED);
-    }
+    pvRet = API_VmmMremap(pvAddr, stOldSize, stNewSize, iMoveEn);
     
-    if (pmapnode->PMAPN_stLen > stNewSize) {                            /*  进行拆分                    */
-        
-#if LW_CFG_VMM_EN > 0
-        PVOID   pvSplit = API_VmmSplitArea(pmapnode->PMAPN_pvAddr, stNewSize);
-        
-        if (pvSplit == LW_NULL) {
-            __PX_UNLOCK();
-            return  (MAP_FAILED);
-        
-        } else {
-            pmapnode->PMAPN_stLen = stNewSize;
-            API_VmmFreeArea(pvSplit);
-        }
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-        pvRetAddr = pvAddr;
-    
-    } else if (pmapnode->PMAPN_stLen < stNewSize) {                     /*  进行扩展                    */
-
-#if LW_CFG_VMM_EN > 0
-        LW_DEV_MMAP_AREA    dmap;
-        INT                 iError;
-
-        if (API_VmmExpandArea(pmapnode->PMAPN_pvAddr, 
-                              (stNewSize - pmapnode->PMAPN_stLen))) {
-                              
-            if (iFlag & MREMAP_MAYMOVE) {                               /*  允许重新映射                */
-                pvRetAddr = __mmapMalloc(pmapnode, stNewSize, (PVOID)pmapnode, 
-                                         pmapnode->PMAPN_iFlag, 
-                                         pmapnode->PMAPN_ulFlag);
-                if (pvRetAddr) {                                        /*  新的内存分配成功            */
-                    if (pmapnode->PMAPN_iFd >= 0) {
-                        dmap.DMAP_pvAddr   = pvRetAddr;
-                        dmap.DMAP_stLen    = stNewSize;
-                        dmap.DMAP_offPages = (pmapnode->PMAPN_off >> LW_CFG_VMM_PAGE_SHIFT);
-                        dmap.DMAP_ulFlag   = pmapnode->PMAPN_ulFlag;
-                        
-                        iError = API_IosMmap(pmapnode->PMAPN_iFd, &dmap);
-                        if ((iError < ERROR_NONE) && 
-                            (errno != ERROR_IOS_DRIVER_NOT_SUP)) {      /*  驱动程序报告错误            */
-                            __mmapFree(pmapnode, pvRetAddr);
-                            pvRetAddr = MAP_FAILED;
-                            goto    __out_without_unlock;
-                        }
-                        
-                        dmap.DMAP_pvAddr   = pmapnode->PMAPN_pvAddr;
-                        dmap.DMAP_stLen    = pmapnode->PMAPN_stLen;
-                        dmap.DMAP_offPages = (pmapnode->PMAPN_off >> LW_CFG_VMM_PAGE_SHIFT);
-                        dmap.DMAP_ulFlag   = pmapnode->PMAPN_ulFlag;
-                        API_IosUnmap(pmapnode->PMAPN_iFd, &dmap);       /*  调用设备驱动                */
-                    }
-                    
-                    pvTmpAddr = pmapnode->PMAPN_pvAddr;
-                    pmapnode->PMAPN_pvAddr = pvRetAddr;
-                    pmapnode->PMAPN_stLen  = stNewSize;
-                    __mmapFree(pmapnode, pvTmpAddr);                    /*  释放之前的内存              */
-                
-                } else {
-                    errno     = ENOMEM;
-                    pvRetAddr = MAP_FAILED;
-                }
-            } else {
-                errno = ENOMEM;
-            }
-        } else {                                                        /*  直接扩展成功                */
-            pmapnode->PMAPN_stLen = stNewSize;
-            pvRetAddr             = pvAddr;
-        }
+    return  ((pvRet != LW_VMM_MAP_FAILED) ? pvRet : MAP_FAILED);
 #else
-        errno = ENOTSUP;
+    errno = ENOSYS;
+    return  (MAP_FAILED);
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-    } else {                                                            /*  没有变化                    */
-        pvRetAddr = pvAddr;
-    }
-    
-__out_without_unlock:
-    __PX_UNLOCK();
-    
-    return  (pvRetAddr);
 }
 /*********************************************************************************************************
 ** 函数名称: munmap
@@ -880,94 +311,12 @@ __out_without_unlock:
 LW_API  
 int  munmap (void  *pvAddr, size_t  stLen)
 {
-    __PX_MAP_NODE       *pmapnode;
-    __PX_MAP_AREA       *pmaparea;
-    
 #if LW_CFG_VMM_EN > 0
-    LW_DEV_MMAP_AREA     dmap;
+    return  (API_VmmMunmap(pvAddr, stLen));
+#else
+    errno = ENOSYS;
+    return  (PX_ERROR);
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-    
-    if (!ALIGNED(pvAddr, LW_CFG_VMM_PAGE_SIZE) || (stLen == 0)) {       /*  pvAddr 必须页对齐           */
-        errno = EINVAL;
-        return  (PX_ERROR);
-    }
-    
-    pmaparea = (__PX_MAP_AREA *)__SHEAP_ALLOC(sizeof(__PX_MAP_AREA));   /*  创建内存区域节点            */
-    if (pmaparea == LW_NULL) {
-        errno = ENOMEM;
-        return  (PX_ERROR);
-    }
-    
-    __PX_LOCK();
-    pmapnode = __mmapNodeFind(pvAddr);
-    if (pmapnode == LW_NULL) {
-        __PX_UNLOCK();
-        __SHEAP_FREE(pmaparea);
-        errno = EINVAL;
-        return  (PX_ERROR);
-    }
-    if (pmapnode->PMAPN_bBusy) {                                        /*  忙状态                      */
-        __PX_UNLOCK();
-        __SHEAP_FREE(pmaparea);
-        errno = EBUSY;
-        return  (PX_ERROR);
-    }
-    
-    pmaparea->PMAPA_pvAddr = pvAddr;
-    pmaparea->PMAPA_stLen  = stLen;
-    
-    if (__mmapNodeAreaInsert(pmapnode, pmaparea) < ERROR_NONE) {
-        __PX_UNLOCK();
-        __SHEAP_FREE(pmaparea);
-        errno = EINVAL;                                                 /*  解除映射的内存区域错误      */
-        return  (PX_ERROR);
-    }
-    
-    pmapnode->PMAPN_stTotalUnmap += stLen;
-    
-    if (pmapnode->PMAPN_stTotalUnmap >= pmapnode->PMAPN_stLen) {        /*  所有的内存都是 unmap 了     */
-        _List_Line_Del(&pmapnode->PMAPN_lineManage, 
-                       &_G_plineMMapHeader);                            /*  从管理链表中删除            */
-        __PX_UNLOCK();
-        
-        if ((pmapnode->PMAPN_iFd >= 0) &&
-            (pmapnode->PMAPN_pid == getpid())) {                        /*  注意: 不是创建进程不减少引用*/
-#if LW_CFG_VMM_EN > 0
-            dmap.DMAP_pvAddr   = pmapnode->PMAPN_pvAddr;
-            dmap.DMAP_stLen    = pmapnode->PMAPN_stLen;
-            dmap.DMAP_offPages = (pmapnode->PMAPN_off >> LW_CFG_VMM_PAGE_SHIFT);
-            dmap.DMAP_ulFlag   = pmapnode->PMAPN_ulFlag;
-            API_IosUnmap(pmapnode->PMAPN_iFd, &dmap);                   /*  调用设备驱动                */
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-            API_IosFdRefDec(pmapnode->PMAPN_iFd);                       /*  对文件描述符引用 --         */
-        }
-        
-        __mmapNodeAreaFree(pmapnode);                                   /*  释放区域管理内存            */
-        __mmapFree(pmapnode, pmapnode->PMAPN_pvAddr);                   /*  释放内存                    */
-        
-#if LW_CFG_MODULELOADER_EN > 0
-        __resDelRawHook(&pmapnode->PMAPN_resraw);
-#endif                                                                  /*  LW_CFG_MODULELOADER_EN      */
-        __SHEAP_FREE(pmapnode);
-        
-        MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_MUNMAP,
-                          pvAddr, stLen, LW_NULL);
-        
-        return  (ERROR_NONE);
-    
-    } else {
-        pmapnode->PMAPN_bBusy = LW_TRUE;                                /*  设置为忙状态                */
-        __PX_UNLOCK();
-        
-#if LW_CFG_VMM_EN > 0
-        API_VmmInvalidateArea(pmapnode->PMAPN_pvAddr, pvAddr, stLen);   /*  释放相关区域物理内存        */
-                                                                        /*  暂不使用虚拟空间拆散        */
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-        KN_SMP_MB();
-        pmapnode->PMAPN_bBusy = LW_FALSE;
-        
-        return  (ERROR_NONE);
-    }
 }
 /*********************************************************************************************************
 ** 函数名称: msync
@@ -983,187 +332,14 @@ int  munmap (void  *pvAddr, size_t  stLen)
 LW_API  
 int  msync (void  *pvAddr, size_t  stLen, int  iFlag)
 {
-    __PX_MAP_NODE       *pmapnode;
-    off_t                off;
-    size_t               stWriteLen;
-    
-    if (!ALIGNED(pvAddr, LW_CFG_VMM_PAGE_SIZE) || stLen == 0) {         /*  pvAddr 必须页对齐           */
-        errno = EINVAL;
-        return  (PX_ERROR);
-    }
-    
-    __THREAD_CANCEL_POINT();                                            /*  测试取消点                  */
-    
-    __PX_LOCK();
-    pmapnode = __mmapNodeFind(pvAddr);
-    if (pmapnode == LW_NULL) {
-        __PX_UNLOCK();
-        errno = EINVAL;
-        return  (PX_ERROR);
-    }
-    if (pmapnode->PMAPN_bBusy) {
-        __PX_UNLOCK();
-        errno = EBUSY;
-        return  (PX_ERROR);
-    }
-    if (!S_ISREG(pmapnode->PMAPN_mode)) {
-        __PX_UNLOCK();
-        return  (ERROR_NONE);                                           /*  非数据文件直接退出          */
-    }
-    if (((addr_t)pvAddr + stLen) > 
-        ((addr_t)pmapnode->PMAPN_pvAddr + pmapnode->PMAPN_stLen)) {
-        __PX_UNLOCK();
-        errno = ENOMEM;                                                 /*  需要同步的内存越界          */
-        return  (PX_ERROR);
-    }
-    pmapnode->PMAPN_bBusy = LW_TRUE;                                    /*  设置为忙状态                */
-    __PX_UNLOCK();
-    
-    off = pmapnode->PMAPN_off 
-        + (off_t)((addr_t)pvAddr - (addr_t)pmapnode->PMAPN_pvAddr);     /*  计算写入/无效文件偏移量     */
-        
-    stWriteLen = (size_t)(pmapnode->PMAPN_offFSize - off);
-    stWriteLen = (stWriteLen > stLen) ? stLen : stWriteLen;             /*  确定写入/无效文件的长度     */
-    
-    if (!(iFlag & MS_INVALIDATE)) {
-                 INT        i;
-        REGISTER ULONG      ulPageNum = (ULONG) (stWriteLen >> LW_CFG_VMM_PAGE_SHIFT);
-        REGISTER size_t     stExcess  = (size_t)(stWriteLen & ~LW_CFG_VMM_PAGE_MASK);
-                 addr_t     ulAddr    = (addr_t)pvAddr;
 #if LW_CFG_VMM_EN > 0
-                 ULONG      ulFlag;
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-                 
-        for (i = 0; i < ulPageNum; i++) {
-#if LW_CFG_VMM_EN > 0
-            if ((API_VmmGetFlag((PVOID)ulAddr, &ulFlag) == ERROR_NONE) &&
-                (ulFlag & LW_VMM_FLAG_WRITABLE)) {                      /*  内存必须有效才可写          */
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-                if (pwrite(pmapnode->PMAPN_iFd, (CPVOID)ulAddr, 
-                           LW_CFG_VMM_PAGE_SIZE, off) != 
-                           LW_CFG_VMM_PAGE_SIZE) {                      /*  写入文件                    */
-                    KN_SMP_MB();
-                    pmapnode->PMAPN_bBusy = LW_FALSE;
-                    return  (PX_ERROR);
-                }
-#if LW_CFG_VMM_EN > 0
-            }
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-            ulAddr += LW_CFG_VMM_PAGE_SIZE;
-            off    += LW_CFG_VMM_PAGE_SIZE;
-        }
-        
-        if (stExcess) {
-#if LW_CFG_VMM_EN > 0
-            if ((API_VmmGetFlag((PVOID)ulAddr, &ulFlag) == ERROR_NONE) &&
-                (ulFlag & LW_VMM_FLAG_WRITABLE)) {                      /*  内存必须有效才可写          */
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-                if (pwrite(pmapnode->PMAPN_iFd, (CPVOID)ulAddr, 
-                           stExcess, off) != stExcess) {                /*  写入文件                    */
-                    KN_SMP_MB();
-                    pmapnode->PMAPN_bBusy = LW_FALSE;
-                    return  (PX_ERROR);
-                }
-#if LW_CFG_VMM_EN > 0
-            }
-#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-        }
-                 
-        if (iFlag & MS_SYNC) {
-            ioctl(pmapnode->PMAPN_iFd, FIOSYNC, 0);
-        }
-    } else {                                                            /*  需要读出文件内容            */
+    INT     iInval = (iFlag & MS_INVALIDATE) ? 1 : 0;
     
-#if LW_CFG_VMM_EN > 0
-        API_VmmInvalidateArea(pmapnode->PMAPN_pvAddr, 
-                              pvAddr, 
-                              stLen);                                   /*  释放对应的物理内存          */
+    return  (API_VmmMsync(pvAddr, stLen, iInval));
 #else
-        caddr_t     pcAddr  = (caddr_t)pvAddr;
-        size_t      stTotal = 0;
-        ssize_t     sstReadNum;
-        off_t       oftSeek = off;
-        
-        while (stTotal < stWriteLen) {
-            sstReadNum = pread(pmapnode->PMAPN_iFd, &pcAddr[stTotal], (stWriteLen - stTotal), oftSeek);
-            if (sstReadNum <= 0) {
-                break;
-            }
-            stTotal += (size_t)sstReadNum;
-            oftSeek += (off_t)sstReadNum;
-        }
-        
-        if (stTotal < stWriteLen) {
-            KN_SMP_MB();
-            pmapnode->PMAPN_bBusy = LW_FALSE;
-            errno = EIO;
-            return  (PX_ERROR);
-        }
+    errno = ENOSYS;
+    return  (PX_ERROR);
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
-    }
-
-    KN_SMP_MB();
-    pmapnode->PMAPN_bBusy = LW_FALSE;
-    
-    MONITOR_EVT_LONG3(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_MSYNC,
-                      pvAddr, stLen, iFlag, LW_NULL);
-    
-    return  (ERROR_NONE);
-}
-/*********************************************************************************************************
-** 函数名称: mmapShow
-** 功能描述: 显示当前系统映射的所有文件内存.
-** 输　入  : NONE
-** 输　出  : NONE
-** 全局变量: 
-** 调用模块: 
-                                           API 函数
-*********************************************************************************************************/
-LW_API  
-VOID  mmapShow (VOID)
-{
-    const CHAR          cMmapInfoHdr[] = 
-    "  ADDR     SIZE        OFFSET      WRITE SHARE  PID   FD\n"
-    "-------- -------- ---------------- ----- ----- ----- ----\n";
-    
-    __PX_MAP_NODE      *pmapn;
-    PLW_LIST_LINE       plineTemp;
-    PCHAR               pcWrite;
-    PCHAR               pcShare;
-    
-    printf(cMmapInfoHdr);
-    
-    __PX_LOCK();
-    for (plineTemp  = _G_plineMMapHeader;
-         plineTemp != LW_NULL;
-         plineTemp  = _list_line_get_next(plineTemp)) {
-        
-        pmapn = (__PX_MAP_NODE *)plineTemp;
-        
-        if (pmapn->PMAPN_ulFlag & LW_VMM_FLAG_WRITABLE) {
-            pcWrite = "true ";
-        } else {
-            pcWrite = "false";
-        }
-        
-        if (pmapn->PMAPN_iFlag & MAP_SHARED) {
-            pcShare = "true ";
-        } else {
-            pcShare = "false";
-        }
-        
-        printf("%08lx %8lx %16llx %s %s %5d %4d\n", 
-               (addr_t)pmapn->PMAPN_pvAddr,
-               (ULONG)pmapn->PMAPN_stLen,
-               pmapn->PMAPN_off,
-               pcWrite,
-               pcShare,
-               pmapn->PMAPN_pid,
-               pmapn->PMAPN_iFd);
-    }
-    __PX_UNLOCK();
-    
-    printf("\n");
 }
 /*********************************************************************************************************
 ** 函数名称: shm_open

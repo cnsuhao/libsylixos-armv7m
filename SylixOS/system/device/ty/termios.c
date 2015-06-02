@@ -560,6 +560,30 @@ int  tcsetattr (int  fd, int  opt, const struct termios  *tp)
     
     return  (ERROR_NONE);
 }
+/*********************************************************************************************************
+** 函数名称: cfmakeraw
+** 功能描述: 将选项设置为原始模式.
+** 输　入  : tp      termios 结构
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+void  cfmakeraw (struct termios *tp)
+{
+    if (!tp) {
+        return;
+    }
+    
+    tp->c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP
+                 | INLCR | IGNCR | ICRNL | IXON);
+    tp->c_oflag &= ~OPOST;
+    tp->c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    tp->c_cflag &= ~(CSIZE | PARENB);
+    tp->c_cflag |= CS8;
+}
+
 #endif                                                                  /*  (LW_CFG_DEVICE_EN > 0) &&   */
                                                                         /*  (LW_CFG_SIO_DEVICE_EN > 0)  */
 /*********************************************************************************************************

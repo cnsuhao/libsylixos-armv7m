@@ -49,7 +49,7 @@
 #define __SYLIXOS_VERSION               __SYLIXOS_MAKEVER(1, 1, 1)
 #define __SYLIXOS_VERPATCH              0x1                             /* 小于 0x10000 为测试版        */
                                                                         /* 等于 0x10000 为正式发布版本  */
-#define __SYLIXOS_VERSTR                "1.1.1-rc2"
+#define __SYLIXOS_VERSTR                "1.1.1-rc3"
 #define __SYLIXOS_RELSTR                "GEMINI(b)"
 
 #define __SYLIXOS_VERINFO               "SylixOS kernel version: "  \
@@ -241,8 +241,9 @@ __attribute__((weak)) char              __sylixos_version[] = __SYLIXOS_VERSTR;
 /*********************************************************************************************************
   MMU & CACHE
 *********************************************************************************************************/
-#include "../SylixOS/kernel/vmm/vmm.h"
 #include "../SylixOS/kernel/cache/cache.h"
+#include "../SylixOS/kernel/vmm/vmm.h"
+#include "../SylixOS/kernel/vmm/vmmMmap.h"
 #ifdef   __SYLIXOS_KERNEL
 #include "../SylixOS/kernel/vmm/pageLib.h"
 #include "../SylixOS/kernel/vmm/vmmArea.h"

@@ -192,6 +192,8 @@ LW_API ULONG        API_VmmExpandArea(PVOID  pvVirtualMem, size_t  stExpSize);
 
 LW_API PVOID        API_VmmSplitArea(PVOID  pvVirtualMem, size_t  stSize);
 
+LW_API ULONG        API_VmmMergeArea(PVOID  pvVirtualMem1, PVOID  pvVirtualMem2);
+
 LW_API ULONG        API_VmmPCountInArea(PVOID  pvVirtualMem, ULONG  *pulPageNum);
                                                                         /*  统计缺页中断分配的内存页面  */
 

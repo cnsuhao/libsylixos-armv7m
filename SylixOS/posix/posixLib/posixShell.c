@@ -37,7 +37,7 @@
 *********************************************************************************************************/
 static INT  __tshellMmaps (INT  iArgC, PCHAR  *ppcArgV)
 {
-    mmapShow();
+    API_VmmMmapShow();
     
     return  (ERROR_NONE);
 }

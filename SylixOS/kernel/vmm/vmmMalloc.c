@@ -40,6 +40,7 @@
 2013.09.13  API_VmmShareArea() 如果存在的共享页面发生改变或者并且具有 MAP_PRIVATE 选项, 则应该重启分配.
 2013.09.14  加入 API_VmmSetFindShare() 功能.
 2013.12.20  API_VmmShareArea() 目标页面不存在时, 将开辟新的物理页面.
+2015.05.26  加入 API_VmmMergeArea() 合并虚拟空间功能.
 *********************************************************************************************************/
 #define  __SYLIXOS_STDIO
 #define  __SYLIXOS_KERNEL
@@ -142,6 +143,23 @@ static VOID  __vmmSplitAreaHook (PLW_VMM_PAGE  pvmpagePhysical,
         __pageUnlink(pvmpageVirtual, pvmpagePhysical);                  /*  解除连接关系                */
         __pageLink(pvmpageVirtualSplit, pvmpagePhysical);
     }
+}
+/*********************************************************************************************************
+** 函数名称: __vmmMergeAreaHook
+** 功能描述: API_VmmMergeArea 回调函数
+** 输　入  : pvmpagePhysical       pvmpageVirtualR 内的一个物理页面控制块
+**           pvmpageVirtualL       虚拟分区低地址段
+**           pvmpageVirtualR       虚拟分区高地址段
+** 输　出  : NONE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+static VOID  __vmmMergeAreaHook (PLW_VMM_PAGE  pvmpagePhysical,
+                                 PLW_VMM_PAGE  pvmpageVirtualL,
+                                 PLW_VMM_PAGE  pvmpageVirtualR)
+{
+    __pageUnlink(pvmpageVirtualR, pvmpagePhysical);                     /*  解除连接关系                */
+    __pageLink(pvmpageVirtualL, pvmpagePhysical);
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmMalloc
@@ -448,13 +466,7 @@ VOID  API_VmmFreeArea (PVOID  pvVirtualMem)
 {
     REGISTER PLW_VMM_PAGE           pvmpageVirtual;
     REGISTER PLW_VMM_PAGE_PRIVATE   pvmpagep;
-    
              addr_t                 ulAddr = (addr_t)pvVirtualMem;
-             
-    if (pvVirtualMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return;
-    }
     
     __VMM_LOCK();
     pvmpageVirtual = __areaVirtualSearchPage(ulAddr);
@@ -510,11 +522,6 @@ ULONG  API_VmmExpandArea (PVOID  pvVirtualMem, size_t  stExpSize)
              
     REGISTER ULONG          ulExpPageNum = (ULONG) (stExpSize >> LW_CFG_VMM_PAGE_SHIFT);
     REGISTER size_t         stExcess     = (size_t)(stExpSize & ~LW_CFG_VMM_PAGE_MASK);
-             
-    if (pvVirtualMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (EINVAL);
-    }
     
     if (stExcess) {
         ulExpPageNum++;                                                 /*  确定分页数量                */
@@ -539,9 +546,6 @@ ULONG  API_VmmExpandArea (PVOID  pvVirtualMem, size_t  stExpSize)
         return  (ulError);
     }
     __VMM_UNLOCK();
-    
-    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_EXPAND, 
-                      pvVirtualMem, stExpSize, LW_NULL);
     
     return  (ERROR_NONE);
 }
@@ -568,11 +572,7 @@ PVOID  API_VmmSplitArea (PVOID  pvVirtualMem, size_t  stSize)
              
     REGISTER ULONG          ulPageNum = (ULONG) (stSize >> LW_CFG_VMM_PAGE_SHIFT);
     REGISTER size_t         stExcess  = (size_t)(stSize & ~LW_CFG_VMM_PAGE_MASK);
-             
-    if (pvVirtualMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (LW_NULL);
-    }
+    
     
     if (stExcess) {
         ulPageNum++;                                                    /*  确定分页数量                */
@@ -631,10 +631,86 @@ PVOID  API_VmmSplitArea (PVOID  pvVirtualMem, size_t  stSize)
                             pvmpageVirtualSplit);                       /*  插入逻辑空间反查表          */
     __VMM_UNLOCK();
 
-    MONITOR_EVT_LONG2(MONITOR_EVENT_ID_VMM, MONITOR_EVENT_VMM_SPLIT, 
-                      pvVirtualMem, stSize, LW_NULL);
-
     return  ((PVOID)pvmpageVirtualSplit->PAGE_ulPageAddr);
+}
+/*********************************************************************************************************
+** 函数名称: API_VmmMergeArea
+** 功能描述: 合并虚拟空间
+** 输　入  : pvVirtualMem1   虚拟地址区域 1
+**           pvVirtualMem2   虚拟地址区域 2
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+                                           API 函数
+*********************************************************************************************************/
+LW_API  
+ULONG  API_VmmMergeArea (PVOID  pvVirtualMem1, PVOID  pvVirtualMem2)
+{
+    PLW_VMM_PAGE    pvmpageVirtualL;
+    PLW_VMM_PAGE    pvmpageVirtualR;
+    
+    PLW_VMM_PAGE_PRIVATE   pvmpagep;
+    
+    addr_t          ulAddrL;
+    addr_t          ulAddrR;
+    
+    if (pvVirtualMem1 < pvVirtualMem2) {
+        ulAddrL = (addr_t)pvVirtualMem1;
+        ulAddrR = (addr_t)pvVirtualMem2;
+    
+    } else {
+        ulAddrL = (addr_t)pvVirtualMem2;
+        ulAddrR = (addr_t)pvVirtualMem1;
+    }
+    
+    __VMM_LOCK();
+    pvmpageVirtualL = __areaVirtualSearchPage(ulAddrL);
+    if (pvmpageVirtualL == LW_NULL) {
+        __VMM_UNLOCK();
+        _ErrorHandle(ERROR_VMM_VIRTUAL_PAGE);                           /*  无法反向查询虚拟页面控制块  */
+        return  (ERROR_VMM_VIRTUAL_PAGE);
+    }
+    
+    pvmpageVirtualR = __areaVirtualSearchPage(ulAddrR);
+    if (pvmpageVirtualR == LW_NULL) {
+        __VMM_UNLOCK();
+        _ErrorHandle(ERROR_VMM_VIRTUAL_PAGE);                           /*  无法反向查询虚拟页面控制块  */
+        return  (ERROR_VMM_VIRTUAL_PAGE);
+    }
+    
+    if ((pvmpageVirtualL->PAGE_ulPageAddr + pvmpageVirtualL->PAGE_ulCount) != 
+         pvmpageVirtualR->PAGE_ulPageAddr) {                            /*  非连续页面不能进行合并      */
+        __VMM_UNLOCK();
+        _ErrorHandle(ERROR_VMM_VIRTUAL_ADDR);
+        return  (ERROR_VMM_PAGE_INVAL);
+    }
+    
+    pvmpagep = (PLW_VMM_PAGE_PRIVATE)pvmpageVirtualR->PAGE_pvAreaCb;
+    if (pvmpagep == LW_NULL) {
+        __VMM_UNLOCK();
+        _ErrorHandle(ERROR_VMM_PAGE_INVAL);
+        return  (ERROR_VMM_PAGE_INVAL);
+    }
+    
+    __pageTraversalLink(pvmpageVirtualR, 
+                        __vmmMergeAreaHook, 
+                        pvmpageVirtualL,
+                        pvmpageVirtualR,
+                        LW_NULL,
+                        LW_NULL,
+                        LW_NULL,
+                        LW_NULL);                                       /*  遍历对应的物理页面          */
+
+    __areaVirtualUnlinkPage(pvmpageVirtualR->PAGE_ulPageAddr,
+                            pvmpageVirtualR);
+                            
+    _List_Line_Del(&pvmpagep->PAGEP_lineManage, &_K_plineVmmVAddrSpaceHeader);
+    __KHEAP_FREE(pvmpagep);                                             /*  释放缺页中断管理模块        */
+    
+    __pageMerge(pvmpageVirtualL, pvmpageVirtualR);                      /*  合并页面                    */
+    __VMM_UNLOCK();
+    
+    return  (ERROR_NONE);
 }
 /*********************************************************************************************************
 ** 函数名称: API_VmmSetFiller
@@ -654,11 +730,6 @@ ULONG  API_VmmSetFiller (PVOID  pvVirtualMem, FUNCPTR  pfuncFiller, PVOID  pvArg
     REGISTER PLW_VMM_PAGE           pvmpageVirtual;
     REGISTER PLW_VMM_PAGE_PRIVATE   pvmpagep;
              addr_t                 ulAddr = (addr_t)pvVirtualMem;
-
-    if (pvVirtualMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (EINVAL);
-    }
     
     __VMM_LOCK();
     pvmpageVirtual = __areaVirtualSearchPage(ulAddr);
@@ -699,11 +770,6 @@ ULONG  API_VmmSetFindShare (PVOID  pvVirtualMem, PVOIDFUNCPTR  pfuncFindShare, P
     REGISTER PLW_VMM_PAGE           pvmpageVirtual;
     REGISTER PLW_VMM_PAGE_PRIVATE   pvmpagep;
              addr_t                 ulAddr = (addr_t)pvVirtualMem;
-
-    if (pvVirtualMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (EINVAL);
-    }
     
     __VMM_LOCK();
     pvmpageVirtual = __areaVirtualSearchPage(ulAddr);
@@ -744,7 +810,7 @@ ULONG  API_VmmPCountInArea (PVOID  pvVirtualMem, ULONG  *pulPageNum)
              addr_t                 ulAddr    = (addr_t)pvVirtualMem;
              ULONG                  ulCounter = 0ul;
              
-    if ((pvVirtualMem == LW_NULL) || (pulPageNum == LW_NULL)) {
+    if (pulPageNum == LW_NULL) {
         _ErrorHandle(EINVAL);
         return  (EINVAL);
     }
@@ -787,13 +853,7 @@ ULONG  API_VmmInvalidateArea (PVOID  pvVirtualMem, PVOID  pvSubMem, size_t  stSi
 {
     REGISTER PLW_VMM_PAGE           pvmpageVirtual;
     REGISTER PLW_VMM_PAGE_PRIVATE   pvmpagep;
-    
              addr_t                 ulAddr = (addr_t)pvVirtualMem;
-             
-    if (pvVirtualMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (EINVAL);
-    }
     
     __VMM_LOCK();
     pvmpageVirtual = __areaVirtualSearchPage(ulAddr);
@@ -861,11 +921,6 @@ ULONG  API_VmmPreallocArea (PVOID       pvVirtualMem,
              size_t                 stRealSize;
              ULONG                  ulOldFlag;
              ULONG                  ulError;
-
-    if (pvVirtualMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (EINVAL);
-    }
     
     __VMM_LOCK();
     pvmpageVirtual = __areaVirtualSearchPage(ulAddr);
@@ -993,13 +1048,8 @@ ULONG  API_VmmShareArea (PVOID      pvVirtualMem1,
              addr_t                 ulAddr2 = (addr_t)pvVirtualMem2;
              ULONG                  ulPageNum;
              ULONG                  ulError;
-             
              ULONG                  ulFlag;
     
-    if ((pvVirtualMem1 == LW_NULL) || (pvVirtualMem2 == LW_NULL)) {
-        _ErrorHandle(EINVAL);
-        return  (EINVAL);
-    }
     
     if (!ALIGNED(stStartOft1, LW_CFG_VMM_PAGE_SIZE) ||
         !ALIGNED(stStartOft2, LW_CFG_VMM_PAGE_SIZE) ||
@@ -1161,11 +1211,6 @@ ULONG  API_VmmRemapArea (PVOID      pvVirtualAddr,
     if (ulPageNum < 1) {
         _ErrorHandle(EINVAL);
         return  (ERROR_VMM_VIRTUAL_ADDR);
-    }
-    
-    if (pvVirtualAddr == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return  (EINVAL);
     }
     
     if (!ALIGNED(pvVirtualAddr,  LW_CFG_VMM_PAGE_SIZE) ||

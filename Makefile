@@ -548,6 +548,7 @@ SylixOS/kernel/vmm/vmm.c \
 SylixOS/kernel/vmm/vmmAbort.c \
 SylixOS/kernel/vmm/vmmArea.c \
 SylixOS/kernel/vmm/vmmMalloc.c \
+SylixOS/kernel/vmm/vmmMmap.c \
 SylixOS/kernel/vmm/vmmSwap.c
 
 #*********************************************************************************************************

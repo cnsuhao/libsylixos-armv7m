@@ -114,7 +114,7 @@ typedef LW_VMM_PAGE        *PLW_VMM_PAGE;
   映射地址无效
 *********************************************************************************************************/
 
-#define PAGE_MAP_ADDR_INV   ((addr_t)-1)
+#define PAGE_MAP_ADDR_INV   ((addr_t)PX_ERROR)
 
 /*********************************************************************************************************
   init
@@ -143,9 +143,11 @@ VOID          __pageFree(PLW_VMM_ZONE   pvmzone,
 ULONG         __pageSplit(PLW_VMM_PAGE   pvmpage, 
                           PLW_VMM_PAGE  *ppvmpageSplit, 
                           ULONG          ulPageNum,
-                          PVOID          pvAreaCb);
+                          PVOID          pvAreaCb);                     /*  页面拆分                    */
 ULONG         __pageExpand(PLW_VMM_PAGE   pvmpage, 
-                           ULONG          ulExpPageNum);
+                           ULONG          ulExpPageNum);                /*  页面扩展                    */
+ULONG         __pageMerge(PLW_VMM_PAGE   pvmpageL, 
+                          PLW_VMM_PAGE   pvmpageR);                     /*  页面合并                    */
 VOID          __pageLink(PLW_VMM_PAGE   pvmpageVirtual, 
                          PLW_VMM_PAGE   pvmpagePhysical);               /*  页面连接                    */
 VOID          __pageUnlink(PLW_VMM_PAGE  pvmpageVirtual, 

@@ -519,10 +519,6 @@ static PCHAR  __vmmAbortTypeStr (ULONG  ulAbortType)
 *********************************************************************************************************/
 static VOID  __vmmAbortDump (PLW_VMM_PAGE_FAIL_CTX  pvmpagefailctx)
 {
-#if LW_CFG_POSIX_EN > 0
-LW_API  int  mmapfd(void  *pvAddr);
-#endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
-
              addr_t                 ulAbortAddr = pvmpagefailctx->PAGEFCTX_ulAbortAddr;
              LW_OBJECT_HANDLE       ulOwner;
              PCHAR                  pcTail = LW_NULL;
@@ -541,12 +537,13 @@ LW_API  int  mmapfd(void  *pvAddr);
     if (pvmpageVirtual) {
         pvmpagep = (PLW_VMM_PAGE_PRIVATE)pvmpageVirtual->PAGE_pvAreaCb;
         if (pvmpagep->PAGEP_pfuncFiller) {
-#if LW_CFG_POSIX_EN > 0
-            INT     iFd = mmapfd((void *)ulAbortAddr);                  /*  获得地址对应的文件描述符    */
-            snprintf(cMmapMsg, 128, "address in mmap, fd %d\n", iFd);
-#endif                                                                  /*  LW_CFG_POSIX_EN > 0         */
+            PLW_VMM_MAP_NODE  pmapn = (PLW_VMM_MAP_NODE)pvmpagep->PAGEP_pvArg;
+            
+            snprintf(cMmapMsg, 128, "address in mmap, fdesc %d pid %d\n", 
+                     pmapn->MAPN_iFd, pmapn->MAPN_pid);
+            
             pcTail = cMmapMsg;
-        
+            
         } else {
             pcTail = "address in vmm.";
         }

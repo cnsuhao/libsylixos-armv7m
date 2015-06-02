@@ -314,6 +314,10 @@ INT  __resPidReclaim (pid_t  pid)
     
     vprocIoReclaim(pid, LW_FALSE);                                      /*  回收进程所有打开的文件      */
     
+#if LW_CFG_VMM_EN > 0
+    API_VmmMmapReclaim(pid);
+#endif                                                                  /*  LW_CFG_VMM_EN > 0           */
+    
     for (i = 0; i < LW_CFG_MAX_THREAD_POOLS; i++) {
         presh = &_G_reshThreadPoolBuffer[i];
         if ((presh->RESH_pid == pid) && !presh->RESH_bIsGlobal) {

@@ -102,7 +102,6 @@ LW_API int      munlock(const void  *pvAddr, size_t  stLen);
 LW_API int      mlockall(int  iFlag);
 LW_API int      munlockall(void);
 LW_API int      mprotect(void  *pvAddr, size_t  stLen, int  iProt);
-LW_API int      mmapfd(void  *pvAddr);
 LW_API void    *mmap(void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, off_t  off);
 LW_API void    *mmap64(void  *pvAddr, size_t  stLen, int  iProt, int  iFlag, int  iFd, off64_t  off);
 LW_API void    *mremap(void *pvAddr, size_t stOldSize, size_t stNewSize, int iFlag, ...);
@@ -127,12 +126,6 @@ LW_API int      posix_madvise(void *addr, size_t len, int advice);
 
 LW_API int      shm_open(const char *name, int oflag, mode_t mode);
 LW_API int      shm_unlink(const char * name);
-
-/*********************************************************************************************************
-  EXT API
-*********************************************************************************************************/
-
-LW_API VOID     mmapShow(VOID);
 
 #ifdef __cplusplus
 }

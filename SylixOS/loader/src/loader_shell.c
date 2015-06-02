@@ -464,7 +464,7 @@ static INT  __tshellModuleReg (INT  iArgC, PCHAR  *ppcArgV)
     pvModule = moduleRegister(ppcArgV[1]);                              /*  ÏòÄÚºË×¢²áÄ£¿é              */
     
     if (pvModule) {
-        printf("module %s register ok, handle : 0x%lx\n", ppcArgV[1], (ULONG)pvModule);
+        printf("module %s register ok, handle : 0x%lx\n", ppcArgV[1], (addr_t)pvModule);
         return  (ERROR_NONE);
     } else {
         if (errno == EACCES) {

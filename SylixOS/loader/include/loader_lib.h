@@ -94,7 +94,9 @@ typedef struct lw_ld_vproc {
     
     INT                     VP_iExitMode;                               /*  退出模式                    */
     LW_LD_VPROC_T           VP_vptimer[3];                              /*  REAL / VIRTUAL / PROF 定时器*/
-    ULONG                   VP_ulPad[9];                                /*  预留                        */
+    
+    LW_LIST_LINE_HEADER     VP_plineMap;                                /*  虚拟内存空间                */
+    ULONG                   VP_ulPad[8];                                /*  预留                        */
 } LW_LD_VPROC;
 
 /*********************************************************************************************************

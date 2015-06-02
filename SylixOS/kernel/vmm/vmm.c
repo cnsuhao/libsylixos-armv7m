@@ -182,6 +182,8 @@ ULONG  API_VmmLibPrimaryInit (LW_VMM_ZONE_DESC       vmzone[],
         return  (API_GetLastError());
     }
     
+    __vmmMapInit();                                                     /*  初始化映射管理库            */
+    
     ulError = __vmmLibPrimaryInit(mmugdesc, pcMachineName);             /*  初始化底层 MMU              */
     if (ulError) {
         _ErrorHandle(ulError);
@@ -356,10 +358,6 @@ VOID  API_VmmPhyFree (PVOID  pvPhyMem)
              addr_t         ulAddr = (addr_t)pvPhyMem;
              ULONG          ulZoneIndex;
 
-    if (pvPhyMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return;
-    }
     __VMM_LOCK();
     ulZoneIndex = __vmmPhysicalGetZone(ulAddr);
     if (ulZoneIndex >= LW_CFG_VMM_ZONE_NUM) {
@@ -532,10 +530,6 @@ VOID  API_VmmDmaFree (PVOID  pvDmaMem)
              addr_t         ulAddr = (addr_t)pvDmaMem;
              ULONG          ulZoneIndex;
 
-    if (pvDmaMem == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return;
-    }
     __VMM_LOCK();
     ulZoneIndex = __vmmPhysicalGetZone(ulAddr);
     if (ulZoneIndex >= LW_CFG_VMM_ZONE_NUM) {
@@ -662,11 +656,6 @@ VOID  API_VmmIoUnmap (PVOID  pvVirtualAddr)
 {
     REGISTER PLW_VMM_PAGE   pvmpageVirtual;
              addr_t         ulAddr = (addr_t)pvVirtualAddr;
-    
-    if (pvVirtualAddr == LW_NULL) {
-        _ErrorHandle(EINVAL);
-        return;
-    }
     
     __VMM_LOCK();
     pvmpageVirtual = __areaVirtualSearchPage(ulAddr);

@@ -215,17 +215,18 @@ struct termios {
   termios api
 *********************************************************************************************************/
 
-speed_t cfgetispeed(const struct termios *);
-speed_t cfgetospeed(const struct termios *);
-int     cfsetispeed(struct termios *, speed_t);
-int     cfsetospeed(struct termios *, speed_t);
-int     tcdrain(int);
-int     tcflow(int, int);
-int     tcflush(int, int);
-int     tcgetattr(int, struct termios *);
-pid_t   tcgetsid(int);
-int     tcsendbreak(int, int);
-int     tcsetattr(int, int, const struct termios *);
+LW_API speed_t cfgetispeed(const struct termios *);
+LW_API speed_t cfgetospeed(const struct termios *);
+LW_API int     cfsetispeed(struct termios *, speed_t);
+LW_API int     cfsetospeed(struct termios *, speed_t);
+LW_API int     tcdrain(int);
+LW_API int     tcflow(int, int);
+LW_API int     tcflush(int, int);
+LW_API int     tcgetattr(int, struct termios *);
+LW_API pid_t   tcgetsid(int);
+LW_API int     tcsendbreak(int, int);
+LW_API int     tcsetattr(int, int, const struct termios *);
+LW_API void    cfmakeraw(struct termios *);
 
 #ifdef __cplusplus
 }

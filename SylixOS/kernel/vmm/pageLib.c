@@ -666,7 +666,7 @@ ULONG  __pageSplit (PLW_VMM_PAGE   pvmpage,
     PLW_VMM_PAGE    pvmpageSplit;
 
     if (pvmpage->PAGE_iPageType != __VMM_PAGE_TYPE_VIRTUAL) {           /*  只能拆分虚拟页面            */
-        _ErrorHandle(ERROR_VMM_PAGE_INVAL);                             /*  缺少内核内存                */
+        _ErrorHandle(ERROR_VMM_PAGE_INVAL);
         return  (ERROR_VMM_PAGE_INVAL);
     }
 
@@ -691,6 +691,35 @@ ULONG  __pageSplit (PLW_VMM_PAGE   pvmpage,
     __pageInitLink(pvmpageSplit);
     
     *ppvmpageSplit = pvmpageSplit;
+    
+    return  (ERROR_NONE);
+}
+/*********************************************************************************************************
+** 函数名称: __pageMerge
+** 功能描述: 合并两个连续的虚拟页面 (调用者需保证页面连续性)
+** 输　入  : pvmpageL         低地址页面
+**           pvmpageR         高地址页面
+** 输　出  : ERROR CODE
+** 全局变量: 
+** 调用模块: 
+*********************************************************************************************************/
+ULONG  __pageMerge (PLW_VMM_PAGE   pvmpageL, 
+                    PLW_VMM_PAGE   pvmpageR)
+{
+    PLW_LIST_LINE   plineDummyHeader = LW_NULL;                         /*  用于参数传递的头            */
+    
+    if ((pvmpageL->PAGE_iPageType != __VMM_PAGE_TYPE_VIRTUAL) ||
+        (pvmpageR->PAGE_iPageType != __VMM_PAGE_TYPE_VIRTUAL)) {        /*  只能合并虚拟页面            */
+        _ErrorHandle(ERROR_VMM_PAGE_INVAL);
+        return  (ERROR_VMM_PAGE_INVAL);
+    }
+    
+    pvmpageL->PAGE_ulCount += pvmpageR->PAGE_ulCount;                   /*  合并分页段                  */
+    
+    _List_Line_Del(&pvmpageR->PAGE_lineManage,
+                   &plineDummyHeader);                                  /*  从邻居链表中删除            */
+    
+    __pageCbFree(pvmpageR);                                             /*  释放页面控制块内存          */
     
     return  (ERROR_NONE);
 }
