@@ -17,6 +17,9 @@
 ** 文件创建日期: 2012 年 01 月 10 日
 **
 ** 描        述: sio -> termios 有限兼容库.
+**
+** BUG:
+2015.06.02  加入波特率转换表
 *********************************************************************************************************/
 #define  __SYLIXOS_KERNEL
 #include "SylixOS.h"
@@ -25,6 +28,98 @@
   裁剪宏
 *********************************************************************************************************/
 #if (LW_CFG_DEVICE_EN > 0) && (LW_CFG_SIO_DEVICE_EN > 0)
+/*********************************************************************************************************
+  波特率表
+*********************************************************************************************************/
+#define TBAUD_SZ    16
+
+struct termios_baud {
+    const LONG      baud;
+    const tcflag_t  bcode;
+};
+
+static const struct termios_baud   baud_table[TBAUD_SZ] = {
+    {0,     B0}, 
+    {50,    B50}, 
+    {75,    B75}, 
+    {110,   B110}, 
+    {134,   B134}, 
+    {150,   B150}, 
+    {200,   B200}, 
+    {300,   B300}, 
+    {600,   B600}, 
+    {1200,  B1200}, 
+    {1800,  B1800}, 
+    {2400,  B2400}, 
+    {4800,  B4800}, 
+    {9600,  B9600}, 
+    {19200, B19200}, 
+    {38400, B38400}
+};
+
+static const struct termios_baud   baud_table_ex[TBAUD_SZ] = {
+    {57600,   B57600},
+    {115200,  B115200},
+    {230400,  B230400},
+    {460800,  B460800},
+    {500000,  B500000},
+    {576000,  B576000},
+    {921600,  B921600},
+    {1000000, B1000000},
+    {1152000, B1152000},
+    {1500000, B1500000},
+    {2000000, B2000000},
+    {2500000, B2500000},
+    {3000000, B3000000},
+    {3500000, B3500000},
+    {4000000, B4000000}
+};
+/*********************************************************************************************************
+  波特率表操作
+*********************************************************************************************************/
+static LW_INLINE  tcflag_t  baud_to_bcode (LONG  baud)
+{
+    int  i;
+    const struct termios_baud  *pbaudtbl;
+    
+    if (baud >= 57600) {
+        pbaudtbl = baud_table_ex;
+        
+    } else {
+        pbaudtbl = baud_table;
+    }
+    
+    for (i = 0; i < TBAUD_SZ; i++) {
+        if (pbaudtbl->baud == baud) {
+            return  (pbaudtbl->bcode);
+        }
+        pbaudtbl++;
+    }
+    
+    return  (0);
+}
+
+static LW_INLINE  LONG  bcode_to_baud (tcflag_t  bcode)
+{
+    int  i;
+    const struct termios_baud  *pbaudtbl;
+    
+    if (bcode & CBAUDEX) {
+        pbaudtbl = baud_table_ex;
+        
+    } else {
+        pbaudtbl = baud_table;
+    }
+    
+    for (i = 0; i < TBAUD_SZ; i++) {
+        if (pbaudtbl->bcode == bcode) {
+            return  (pbaudtbl->baud);
+        }
+        pbaudtbl++;
+    }
+    
+    return  (9600);
+}
 /*********************************************************************************************************
 ** 函数名称: cfgetispeed
 ** 功能描述: 获得 termios 结构中的输入波特率
@@ -276,88 +371,7 @@ int  tcgetattr (int  fd, struct termios *tp)
         tp->c_cflag |= PARODD;
     }
     
-    switch (lBaud) {
-    
-    case 50:
-        tp->c_cflag |= B50;
-        break;
-        
-    case 75:
-        tp->c_cflag |= B75;
-        break;
-        
-    case 110:
-        tp->c_cflag |= B110;
-        break;
-        
-    case 134:
-        tp->c_cflag |= B134;
-        break;
-    
-    case 150:
-        tp->c_cflag |= B150;
-        break;
-    
-    case 200:
-        tp->c_cflag |= B200;
-        break;
-        
-    case 300:
-        tp->c_cflag |= B300;
-        break;
-        
-    case 600:
-        tp->c_cflag |= B600;
-        break;
-    
-    case 1200:
-        tp->c_cflag |= B1200;
-        break;
-    
-    case 1800:
-        tp->c_cflag |= B1800;
-        break;
-    
-    case 2400:
-        tp->c_cflag |= B2400;
-        break;
-        
-    case 4800:
-        tp->c_cflag |= B4800;
-        break;
-    
-    case 9600:
-        tp->c_cflag |= B9600;
-        break;
-    
-    case 19200:
-        tp->c_cflag |= B19200;
-        break;
-    
-    case 38400:
-        tp->c_cflag |= B38400;
-        break;
-    
-    case 57600:
-        tp->c_cflag |= B57600;
-        break;
-    
-    case 115200:
-        tp->c_cflag |= B115200;
-        break;
-    
-    case 230400:
-        tp->c_cflag |= B230400;
-        break;
-    
-    case 460800:
-        tp->c_cflag |= B460800;
-        break;
-    
-    default:
-        tp->c_cflag |= B0;
-        break;
-    }
+    tp->c_cflag |= baud_to_bcode(lBaud);
     
     return  (ERROR_NONE);
 }
@@ -445,92 +459,7 @@ int  tcsetattr (int  fd, int  opt, const struct termios  *tp)
         lHwOpt |= PARODD;
     }
     
-    switch (tp->c_cflag & CBAUD) {
-    
-    case B0:
-        lBaud = 0;
-        break;
-        
-    case B50:
-        lBaud = 50;
-        break;
-        
-    case B75:
-        lBaud = 75;
-        break;
-        
-    case B110:
-        lBaud = 110;
-        break;
-        
-    case B134:
-        lBaud = 134;
-        break;
-        
-    case B150:
-        lBaud = 150;
-        break;
-        
-    case B200:
-        lBaud = 200;
-        break;
-        
-    case B300:
-        lBaud = 300;
-        break;
-        
-    case B600:
-        lBaud = 600;
-        break;
-        
-    case B1200:
-        lBaud = 1200;
-        break;
-        
-    case B1800:
-        lBaud = 1800;
-        break;
-        
-    case B2400:
-        lBaud = 2400;
-        break;
-        
-    case B4800:
-        lBaud = 4800;
-        break;
-        
-    case B9600:
-        lBaud = 9600;
-        break;
-        
-    case B19200:
-        lBaud = 19200;
-        break;
-        
-    case B38400:
-        lBaud = 38400;
-        break;
-        
-    case B57600:
-        lBaud = 57600;
-        break;
-        
-    case B115200:
-        lBaud = 115200;
-        break;
-        
-    case B230400:
-        lBaud = 230400;
-        break;
-        
-    case B460800:
-        lBaud = 460800;
-        break;
-        
-    default:
-        lBaud = 9600;
-        break;
-    }
+    lBaud = bcode_to_baud(tp->c_cflag & CBAUD);
     
     iError = ioctl(fd, FIOGETOPTIONS, &lOptOld);
     if (iError < ERROR_NONE) {

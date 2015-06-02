@@ -146,6 +146,17 @@ struct termios {
 #define  B115200    0x10020000
 #define  B230400    0x10030000
 #define  B460800    0x10040000
+#define  B500000    0x10050000
+#define  B576000    0x10060000
+#define  B921600    0x10070000
+#define  B1000000   0x10080000
+#define  B1152000   0x10090000
+#define  B1500000   0x100a0000
+#define  B2000000   0x100b0000
+#define  B2500000   0x100c0000
+#define  B3000000   0x100d0000
+#define  B3500000   0x100e0000
+#define  B4000000   0x100f0000
 
 #define CIBAUD      0x00000000                                          /* input baud rate (not used)   */
 #define CRTSCTS     0x20000000                                          /* flow control                 */
