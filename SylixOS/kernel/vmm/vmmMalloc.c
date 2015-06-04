@@ -623,6 +623,7 @@ PVOID  API_VmmSplitArea (PVOID  pvVirtualMem, size_t  stSize)
                         LW_NULL);                                       /*  遍历对应的物理页面          */
                         
     *pvmpagepSplit = *pvmpagep;
+    pvmpagepSplit->PAGEP_pvmpageVirtual = pvmpageVirtualSplit;          /*  回指向新的虚拟地址控制块    */
     
     _List_Line_Add_Ahead(&pvmpagepSplit->PAGEP_lineManage, 
                          &_K_plineVmmVAddrSpaceHeader);                 /*  连入缺页中断查找表          */

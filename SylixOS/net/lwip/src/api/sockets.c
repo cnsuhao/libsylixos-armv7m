@@ -166,7 +166,7 @@
 #define LWIP_SO_SNDRCVTIMEO_SET(optval, val)  do { \
   s32_t loc = (val); \
   ((struct timeval *)(optval))->tv_sec = (loc) / 1000U; \
-  ((struct timeval *)(optval))->tv_sec = ((loc) % 1000U) * 1000U; }while(0)
+  ((struct timeval *)(optval))->tv_usec = ((loc) % 1000U) * 1000U; }while(0)
 #define LWIP_SO_SNDRCVTIMEO_GET_MS(optval) ((((struct timeval *)(optval))->tv_sec * 1000U) + (((struct timeval *)(optval))->tv_usec / 1000U))
 
 
@@ -1842,7 +1842,7 @@ lwip_getsockopt_impl(int s, int level, int optname, void *optval, socklen_t *opt
           *(int *)optval = val;
         } else if (*optlen == sizeof(struct timeval)) {
           ((struct timeval *)optval)->tv_sec = val / 1000U;
-          ((struct timeval *)optval)->tv_sec = (val % 1000U) * 1000U;
+          ((struct timeval *)optval)->tv_usec = (val % 1000U) * 1000U;
         } else {
           return EINVAL;
         }
@@ -1858,7 +1858,7 @@ lwip_getsockopt_impl(int s, int level, int optname, void *optval, socklen_t *opt
           *(int *)optval = (int)val;
         } else if (*optlen == sizeof(struct timeval)) {
           ((struct timeval *)optval)->tv_sec = val / 1000U;
-          ((struct timeval *)optval)->tv_sec = (val % 1000U) * 1000U;
+          ((struct timeval *)optval)->tv_usec = (val % 1000U) * 1000U;
         } else {
           return EINVAL;
         }

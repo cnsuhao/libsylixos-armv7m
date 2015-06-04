@@ -204,7 +204,7 @@ static INT  __vmmMapnFill (PLW_VMM_MAP_NODE    pmapn,
     }
     
     if ((ulMapPageAddr < ulMapStartAddr) || 
-        (ulMapPageAddr > (ulMapStartAddr + pmapn->MAPN_stLen))) {       /*  ÖÂÃü´íÎó, Ò³ÃæÄÚ´æµØÖ·´íÎó  */
+        (ulMapPageAddr >= (ulMapStartAddr + pmapn->MAPN_stLen))) {      /*  ÖÂÃü´íÎó, Ò³ÃæÄÚ´æµØÖ·´íÎó  */
         goto    __full_with_zero;
     }
     
@@ -374,7 +374,7 @@ static PVOID  __vmmMmapNew (size_t  stLen, INT  iFlags, ULONG  ulFlag, int  iFd,
             _ErrorHandle(EBADF);
             return  (LW_VMM_MAP_FAILED);
         }
-        if (off > stat64Fd.st_size) {                                   /*  off Ô½½ç                    */
+        if (off >= stat64Fd.st_size) {                                  /*  off Ô½½ç                    */
             _ErrorHandle(ENXIO);
             return  (LW_VMM_MAP_FAILED);
         }
