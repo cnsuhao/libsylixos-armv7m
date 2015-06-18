@@ -98,11 +98,21 @@
 #  define FUNC_LABEL(func)          func:
 #  define LINE_LABEL(line)          line:
 
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+#  define FUNC_DEF(func)  \
+        .code   16; \
+        .thumb; \
+        .balign 4;  \
+        .type func, %function; \
+		.syntax unified; \
+func:
+#else
 #  define FUNC_DEF(func)  \
         .code   32; \
         .balign 4;  \
         .type func, %function;  \
 func:
+#endif                                  /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
 
 #  define FUNC_END()    \
         .ltorg

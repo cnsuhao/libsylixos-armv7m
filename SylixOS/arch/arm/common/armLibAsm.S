@@ -56,6 +56,10 @@
 ;*********************************************************************************************************/
 
 FUNC_DEF(archIntDisable)
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+	MRS     R0 , PRIMASK                ;/*  Set prio int mask to mask all (except faults)               */
+    CPSID   I
+#else
     MRS     R0 , CPSR
     ORR     R1 , R0, #0x80
     MSR     CPSR_c, R1
@@ -63,18 +67,27 @@ FUNC_DEF(archIntDisable)
     AND     R2 , R2, #0x80
     CMP     R2 , #0x80
     BNE     archIntDisable
+#endif                                   /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
     BX      LR
     FUNC_END()
     
 FUNC_DEF(archIntEnable)
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+    MSR     PRIMASK, R0
+#else
     MSR     CPSR_c, R0
+#endif                                   /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
     BX      LR
     FUNC_END()
     
 FUNC_DEF(archIntEnableForce)
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+    CPSIE   I                            /*  Enable interrupts at processor level                        */
+#else
     MRS     R0 , CPSR
     BIC     R0 , R0, #0x80
     MSR     CPSR_c, R0
+#endif                                   /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
     BX      LR
     FUNC_END()
     

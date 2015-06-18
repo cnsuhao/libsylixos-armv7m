@@ -43,6 +43,33 @@
 typedef UINT        ARCH_REG_T;
 
 typedef struct {
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+    ARCH_REG_T      REG_uiPRIMASK;
+    ARCH_REG_T      REG_uiR4;
+    ARCH_REG_T      REG_uiR5;
+    ARCH_REG_T      REG_uiR6;
+    ARCH_REG_T      REG_uiR7;
+    ARCH_REG_T      REG_uiR8;
+    ARCH_REG_T      REG_uiR9;
+    ARCH_REG_T      REG_uiR10;
+    ARCH_REG_T      REG_uiR11;
+    ARCH_REG_T      REG_uiExcRet;
+
+    ARCH_REG_T      REG_uiR0;
+    ARCH_REG_T      REG_uiR1;
+    ARCH_REG_T      REG_uiR2;
+    ARCH_REG_T      REG_uiR3;
+    ARCH_REG_T      REG_uiR12;
+    ARCH_REG_T      REG_uiR14;
+    ARCH_REG_T      REG_uiR15;
+    ARCH_REG_T      REG_uiXpsr;
+
+#define REG_uiFp            REG_uiR11
+#define REG_uiIp            REG_uiR12
+#define REG_uiLr            REG_uiR14
+#define REG_uiPc            REG_uiR15
+#define REG_uiCpsr          REG_uiXpsr
+#else
     ARCH_REG_T      REG_uiCpsr;
     ARCH_REG_T      REG_uiR0;
     ARCH_REG_T      REG_uiR1;
@@ -59,6 +86,7 @@ typedef struct {
     ARCH_REG_T      REG_uiIp;
     ARCH_REG_T      REG_uiLr;
     ARCH_REG_T      REG_uiPc;
+#endif                                  /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
 } ARCH_REG_CTX;
 
 /*********************************************************************************************************

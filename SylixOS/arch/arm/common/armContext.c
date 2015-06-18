@@ -51,6 +51,26 @@ PLW_STACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
     pfpctx->FP_uiFp = (ARCH_REG_T)LW_NULL;
     pfpctx->FP_uiLr = (ARCH_REG_T)LW_NULL;
     
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+    pregctx->REG_uiCpsr = 0x01000000L;
+    pregctx->REG_uiR0   = (ARCH_REG_T)pvArg;
+    pregctx->REG_uiR1   = 0x01010101;
+    pregctx->REG_uiR2   = 0x02020202;
+    pregctx->REG_uiR3   = 0x03030303;
+    pregctx->REG_uiR4   = 0x04040404;
+    pregctx->REG_uiR5   = 0x05050505;
+    pregctx->REG_uiR6   = 0x06060606;
+    pregctx->REG_uiR7   = 0x07070707;
+    pregctx->REG_uiR8   = 0x08080808;
+    pregctx->REG_uiR9   = 0x09090909;
+    pregctx->REG_uiR10  = 0x10101010;
+    pregctx->REG_uiFp   = pfpctx->FP_uiFp;
+    pregctx->REG_uiIp   = 0x12121212;
+    pregctx->REG_uiLr   = 0xFFFFFFFEL;
+    pregctx->REG_uiPc   = (ARCH_REG_T)pfuncTask;
+    pregctx->REG_uiExcRet  = 0xFFFFFFFD;
+    pregctx->REG_uiPRIMASK = 0;
+#else
     pregctx->REG_uiCpsr = (ARCH_ARM_SVC32MODE | 0x40);
     
     pregctx->REG_uiR0  = (ARCH_REG_T)pvArg;
@@ -68,6 +88,7 @@ PLW_STACK  archTaskCtxCreate (PTHREAD_START_ROUTINE  pfuncTask,
     pregctx->REG_uiIp  = 0x12121212;
     pregctx->REG_uiLr  = (ARCH_REG_T)pfuncTask;
     pregctx->REG_uiPc  = (ARCH_REG_T)pfuncTask;
+#endif                                  /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
     
     return  ((PLW_STACK)pregctx);
 }
@@ -107,6 +128,15 @@ VOID  archTaskCtxSetFp (PLW_STACK  pstkDest, PLW_STACK  pstkSrc)
 *********************************************************************************************************/
 #if LW_CFG_DEVICE_EN > 0
 
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+VOID  archTaskCtxShow (INT  iFd, PLW_STACK  pstkTop)
+{
+    /*
+     * TODO
+     */
+    while (1);
+}
+#else
 VOID  archTaskCtxShow (INT  iFd, PLW_STACK  pstkTop)
 {
     CHAR        cCpsr[32 + 1] = "\0";
@@ -217,6 +247,7 @@ VOID  archTaskCtxShow (INT  iFd, PLW_STACK  pstkTop)
     fdprintf(iFd, "lr  = 0x%08x  ", pstkTop[14]);
     fdprintf(iFd, "pc  = 0x%08x\n", pstkTop[15]);
 }
+#endif                                  /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
 
 #endif                                                                  /*  LW_CFG_DEVICE_EN > 0        */
 /*********************************************************************************************************

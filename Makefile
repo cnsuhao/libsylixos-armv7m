@@ -40,7 +40,7 @@ $(call check_defined, DEBUG_LEVEL, debug level(debug or release))
 # NOTICE: libsylixos, BSP and other kernel modules projects CAN NOT use vfp!
 #*********************************************************************************************************
 FPUFLAGS = -mfloat-abi=softfp -mfpu=vfpv3
-CPUFLAGS = -mcpu=arm920t
+CPUFLAGS = -march=armv7-m -mthumb -Wa,-mimplicit-it=thumb,
 
 #*********************************************************************************************************
 # toolchain select
@@ -60,7 +60,7 @@ BUILD_PROCESS_SUP_LIB = 1
 #*********************************************************************************************************
 # do you want build some usefull kernel module
 #*********************************************************************************************************
-BUILD_KERNEL_MODULE = 1
+BUILD_KERNEL_MODULE = 0
 
 #*********************************************************************************************************
 # do not change the following code

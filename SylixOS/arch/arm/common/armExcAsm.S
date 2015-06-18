@@ -24,9 +24,144 @@
 #endif
 
 #include <arch/assembler.h>
+#include <config/kernel/kernel_cfg.h>
 
     FILE_BEGIN()
     
+#if defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)
+/*********************************************************************************************************
+  ARMv7M 体系构架相关异常处理函数
+*********************************************************************************************************/
+    IMPORT_LABEL(armv7mIntHandle)
+    IMPORT_LABEL(armv7mSvcHandle)
+    EXPORT_LABEL(archIntEntry)
+    EXPORT_LABEL(archSwiEntry)
+    EXPORT_LABEL(armv7mIntCtxLoad)
+
+;/*********************************************************************************************************
+;  中断入口
+;*********************************************************************************************************/
+
+FUNC_DEF(archIntEntry)
+    ;/* R0 用于记录异常号 */
+
+    ;/* R3 记录 PRIMASK, 并关中断 */
+    MRS     R3 , PRIMASK
+    CPSID   I
+
+    ;/* R2 等于异常进入前使用的 SP */
+    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    ITE     EQ                                                  ;/*  next two instructions conditional   */
+    MRSEQ   R2, MSP
+    MRSNE   R2, PSP
+
+    ;/* 保存余下的 R3-11, R14 寄存器到异常进入前使用的 SP */
+    SUBS    R2 , R2, #0x28
+    STM     R2 , {R3-R11, LR}
+
+    ;/* 异常进入前使用的 SP 等于 R2 */
+    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    MSRNE   PSP, R2
+
+    ;/* 现在使用的是 MSP, 所以无论如何都设置 MSP */
+    MSR     MSP, R2
+
+    ;/* R0, R2 放置到 R4, R5 */
+    MOV     R4, R0
+    MOV     R5, R2
+
+    ;/* 调用 API_InterEnter */
+    LDR     R1 , =API_InterEnter
+    BLX     R1
+
+    ;/* 如果发生中断嵌套, 跳转到 2 */
+    CMP     R0 , #1
+    BNE     2f
+
+    ;/* 调用 API_InterStackBaseGet, 获得当前 CPU 中断堆栈栈顶并设置 MSP */
+1:
+    LDR     R1 , =API_InterStackBaseGet
+    BLX     R1
+    MSR     MSP, R0
+
+    ;/* R4, R5 恢复到 R0, R1 */
+2:
+    MOV     R0, R4
+    MOV     R1, R5
+
+    ;/* 调用 armv7mIntHandle(UINT32  uiVector, ARCH_REG_CTX  *pregctx) */
+    LDR     R2 , =armv7mIntHandle
+    BLX     R2
+
+FUNC_DEF(armv7mIntCtxLoad)
+    ;/* 恢复 R3-11, R14 寄存器 */
+    LDM     R0 , {R3-R11, LR}
+    ADDS    R0 , R0, #0x28
+
+    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    ITE     EQ                                                  ;/*  next two instructions conditional   */
+    MSREQ   MSP, R0
+    MSRNE   PSP, R0
+
+    MSR     PRIMASK , R3
+
+    BX      LR
+    FUNC_END()
+
+;/*********************************************************************************************************
+;  swi 入口
+;*********************************************************************************************************/
+
+FUNC_DEF(archSwiEntry)
+    ;/* R0 用于记录异常号 */
+
+    ;/* R3 记录 PRIMASK, 并关中断 */
+    MRS     R3 , PRIMASK
+    CPSID   I
+
+    ;/* R2 等于异常进入前使用的 SP */
+    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    ITE     EQ                                                  ;/*  next two instructions conditional   */
+    MRSEQ   R2, MSP
+    MRSNE   R2, PSP
+
+    ;/* 保存余下的 R3-11, R14 寄存器到异常进入前使用的 SP */
+    SUBS    R2 , R2, #0x28
+    STM     R2 , {R3-R11, LR}
+
+    ;/* 异常进入前使用的 SP 等于 R2 */
+    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    MSRNE   PSP, R2
+
+    ;/* 现在使用的是 MSP, 所以无论如何都设置 MSP */
+    MSR     MSP, R2
+
+    ;/* R2 放置到 R1 */
+    MOV     R1, R2
+
+    ;/* 调用 armv7mSvcHandle(UINT32  uiVector, ARCH_REG_CTX  *pregctx) */
+    LDR     R2 , =armv7mSvcHandle
+    BLX     R2
+
+    ;/* 恢复 R3-11, R14 寄存器 */
+    LDM     R0 , {R3-R11, LR}
+    ADDS    R0 , R0, #0x28
+
+    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    ITE     EQ                                                  ;/*  next two instructions conditional   */
+    MSREQ   MSP, R0
+    MSRNE   PSP, R0
+
+    MSR     PRIMASK , R3
+
+    BX      LR
+    FUNC_END()
+
+#else
+/*********************************************************************************************************
+  ARM 体系构架相关异常处理函数
+*********************************************************************************************************/
+
     IMPORT_LABEL(API_ThreadTcbInter)
     IMPORT_LABEL(API_InterStackBaseGet)
     IMPORT_LABEL(API_InterGetNesting)
@@ -318,6 +453,7 @@ FUNC_DEF(archSwiEntry)
     SWI_ENTRY
     FUNC_END()
 
+#endif                                   /*  defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)       */
     FILE_END()
 
 ;/*********************************************************************************************************

@@ -697,6 +697,39 @@ __abort_return:
     errno = pvmpagefailctx->PAGEFCTX_iLastErrno;                        /*  恢复之前的 errno            */
     archSigCtxLoad(pvmpagefailctx->PAGEFCTX_pvStackRet);                /*  从 page fail 上下文中返回   */
 }
+#else
+static PCHAR  __vmmAbortTypeStr (ULONG  ulAbortType)
+{
+    switch (ulAbortType) {
+
+    case LW_VMM_ABORT_TYPE_TERMINAL:
+        return  ("cpu extremity error");
+
+    case LW_VMM_ABORT_TYPE_MAP:
+        return  ("memory map");
+
+    case LW_VMM_ABORT_TYPE_WRITE:
+        return  ("can not write");
+
+    case LW_VMM_ABORT_TYPE_FPE:
+        return  ("float points");
+
+    case LW_VMM_ABORT_TYPE_BUS:
+        return  ("bus");
+
+    case LW_VMM_ABORT_TYPE_BREAK:
+        return  ("break points");
+
+    case LW_VMM_ABORT_TYPE_SYS:
+        return  ("syscall");
+
+    case LW_VMM_ABORT_TYPE_UNDEF:
+        return  ("undefined instruction");
+
+    default:
+        return  ("unknown");
+    }
+}
 #endif                                                                  /*  LW_CFG_VMM_EN > 0           */
 /*********************************************************************************************************
    以下函数没有 MMU 时也可使用, 主要用来处理各种异常

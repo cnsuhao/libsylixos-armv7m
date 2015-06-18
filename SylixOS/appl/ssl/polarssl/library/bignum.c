@@ -945,6 +945,7 @@ __attribute__ ((noinline))
 #endif
 void mpi_mul_hlp( size_t i, t_uint *s, t_uint *d, t_uint b )
 {
+#if !(defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__))
     t_uint c = 0, t = 0;
 
 #if defined(MULADDC_HUIT)
@@ -1002,6 +1003,7 @@ void mpi_mul_hlp( size_t i, t_uint *s, t_uint *d, t_uint b )
         *d += c; c = ( *d < c ); d++;
     }
     while( c != 0 );
+#endif /* !(defined(__ARM_ARCH_7M__) || defined(__ARM_ARCH_7EM__)) */
 }
 
 /*
