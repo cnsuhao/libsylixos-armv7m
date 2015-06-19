@@ -36,9 +36,9 @@
 #define LW_CFG_POSIX_EN                     1                           /*  是否使能 posix 兼容库       */
 #define LW_CFG_POSIXEX_EN                   1                           /*  是否是能 posix 扩展库       */
 #define LW_CFG_POSIX_INTER_EN               1                           /*  是否使能 sem mqueue 信号中断*/
-#define LW_CFG_POSIX_AIO_STK_SIZE           (8 * LW_CFG_KB_SIZE)        /*  aio 代理线程默认堆栈大小    */
+#define LW_CFG_POSIX_AIO_STK_SIZE           (2 * LW_CFG_KB_SIZE)        /*  aio 代理线程默认堆栈大小    */
 #define LW_CFG_POSIX_AIO_MAX_THREAD         5                           /*  posix aio 最多的代理线程数量*/
-#define LW_CFG_PTHREAD_DEFAULT_STK_SIZE     (8 * LW_CFG_KB_SIZE)        /*  posix 线程默认堆栈大小      */
+#define LW_CFG_PTHREAD_DEFAULT_STK_SIZE     (2 * LW_CFG_KB_SIZE)        /*  posix 线程默认堆栈大小      */
 
 #endif                                                                  /*  __POSIX_CFG_H               */
 /*********************************************************************************************************

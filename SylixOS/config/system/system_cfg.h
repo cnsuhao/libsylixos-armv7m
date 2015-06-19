@@ -26,20 +26,20 @@
 *                               控件总数量控制
 *********************************************************************************************************/
 
-#define LW_CFG_MAX_DRIVERS                      64      /*  系统使用的最多驱动程序              < 65535 */
-#define LW_CFG_MAX_FILES                        200     /*  系统文件描述符个数，                < 65536 */
+#define LW_CFG_MAX_DRIVERS                      32      /*  系统使用的最多驱动程序              < 65535 */
+#define LW_CFG_MAX_FILES                        16      /*  系统文件描述符个数，                < 65536 */
 
-#define LW_CFG_MAX_THREAD_POOLS                 2       /*  系统管理的最大线程池数量，          < 65535 */
-#define LW_CFG_MAX_EXCEMSGS                     20      /*  系统异常消息缓冲的最大数量          < 65536 */
-#define LW_CFG_MAX_LOGMSGS                      20      /*  系统日志消息缓冲的最大数量          < 65536 */
+#define LW_CFG_MAX_THREAD_POOLS                 1       /*  系统管理的最大线程池数量，          < 65535 */
+#define LW_CFG_MAX_EXCEMSGS                     5       /*  系统异常消息缓冲的最大数量          < 65536 */
+#define LW_CFG_MAX_LOGMSGS                      5       /*  系统日志消息缓冲的最大数量          < 65536 */
 
-#define LW_CFG_MAX_DMA_CHANNELS                 64      /*  系统的 DMA 通道数量                 < 65535 */
-#define LW_CFG_MAX_DMA_LISTNODES                64      /*  系统 DMA 请求作业队列的数量, 超过此数量,    */
+#define LW_CFG_MAX_DMA_CHANNELS                 32      /*  系统的 DMA 通道数量                 < 65535 */
+#define LW_CFG_MAX_DMA_LISTNODES                5       /*  系统 DMA 请求作业队列的数量, 超过此数量,    */
                                                         /*  系统将使用动态内存分配节点                  */
 
-#define LW_CFG_MAX_SIGQUEUE_NODES               100     /*  系统所有信号等待队列最大节点数              */
+#define LW_CFG_MAX_SIGQUEUE_NODES               5       /*  系统所有信号等待队列最大节点数              */
 
-#define LW_CFG_MAX_GPIOS                        256     /*  系统总 GPIO 数量                            */
+#define LW_CFG_MAX_GPIOS                        64      /*  系统总 GPIO 数量                            */
 
 /*********************************************************************************************************
 *                                     DMA 功能管理
@@ -94,8 +94,8 @@
                                                         /*  详细情况请见 doc/FAQ 帮助文档               */
                                                         
                                                         /*  建议不要改动以下两个配置                    */
-#define LW_CFG_PATH_MAX                         512     /*  最长的目录名长短                            */
-#define LW_CFG_DIR_MAX                          256     /*  最深的目录级数                              */
+#define LW_CFG_PATH_MAX                         128     /*  最长的目录名长短                            */
+#define LW_CFG_DIR_MAX                          8       /*  最深的目录级数                              */
 
 /*********************************************************************************************************
 *                                     兼容 Linux 新加入可等待异步事件功能
@@ -128,9 +128,9 @@
 *********************************************************************************************************/
 
 #define LW_CFG_INOTIFY_EN                       1       /*  是否支持 linux 系统兼容的 inotify 功能      */
-#define LW_CFG_INOTIFY_MAX_QUEUE_EVENTS         256     /*  最大事件队列长度                            */
-#define LW_CFG_INOTIFY_MAX_INSTANCES            128     /*  最多可以创建多少个 inotify 实例             */
-#define LW_CFG_INOTIFY_MAX_WATCHES              2048    /*  inotify 最大的 watcher 数量                 */
+#define LW_CFG_INOTIFY_MAX_QUEUE_EVENTS         16      /*  最大事件队列长度                            */
+#define LW_CFG_INOTIFY_MAX_INSTANCES            2       /*  最多可以创建多少个 inotify 实例             */
+#define LW_CFG_INOTIFY_MAX_WATCHES              128     /*  inotify 最大的 watcher 数量                 */
 
 /*********************************************************************************************************
 *                                      GPIO 标准接口
@@ -154,7 +154,7 @@
 *********************************************************************************************************/
 	
 #define LW_CFG_SPIPE_EN                         1       /*  是否允许系统提供字符流管道通信支持          */
-#define LW_CFG_SPIPE_DEFAULT_SIZE               (16 * 1024)
+#define LW_CFG_SPIPE_DEFAULT_SIZE               (128)
                                                         /*  pipe 与 mkfifo 创建的管道大小               */
                                                         /*  注意: 不得小于 PIPE_BUF 定义 (limits.h)     */
 /*********************************************************************************************************
@@ -294,9 +294,9 @@
 #define LW_CFG_HOTPLUG_EN                       1       /*  是否允许系统提供热插拔消息支持              */
 #define LW_CFG_HOTPLUG_OPTION                   LW_OPTION_THREAD_STK_CHK
                                                         /*  热插拔消息服务线程选项                      */
-#define LW_CFG_HOTPLUG_MAX_MSGS                 8       /*  最大并发消息数量(即系统可缓冲的消息数量)    */
+#define LW_CFG_HOTPLUG_MAX_MSGS                 4       /*  最大并发消息数量(即系统可缓冲的消息数量)    */
 
-#define LW_CFG_HOTPLUG_DEV_DEFAULT_BUFSIZE      4096    /*  /dev/hotplug 设备默认缓冲区大小             */
+#define LW_CFG_HOTPLUG_DEV_DEFAULT_BUFSIZE      256     /*  /dev/hotplug 设备默认缓冲区大小             */
 
 #endif                                                  /*  __SYSTEM_CFG_H                              */
 /*********************************************************************************************************

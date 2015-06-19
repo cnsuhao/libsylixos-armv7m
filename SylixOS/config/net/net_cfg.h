@@ -74,13 +74,13 @@
                      lwip 缓存配置 (以下配置决定 RAM 使用量和 lwip 效率)
 *********************************************************************************************************/
 
-#define LW_CFG_LWIP_MEM_SIZE            (512 * LW_CFG_KB_SIZE)          /*  lwip 内存大小               */
-#define LW_CFG_LWIP_MSG_SIZE            512                             /*  lwip 内部消息队列缓冲长度   */
+#define LW_CFG_LWIP_MEM_SIZE            (32 * LW_CFG_KB_SIZE)           /*  lwip 内存大小               */
+#define LW_CFG_LWIP_MSG_SIZE            32                              /*  lwip 内部消息队列缓冲长度   */
 #define LW_CFG_LWIP_POOL_SIZE           1600                            /*  lwip POOL 内存块大小        */
                                                                         /*  注意: 必须是字对齐的        */
 
-#define LW_CFG_LWIP_NUM_PBUFS           256                             /*  系统总 pbuf 数量            */
-#define LW_CFG_LWIP_NUM_NETBUF          256                             /*  缓冲网络分组 netbuf 数量    */
+#define LW_CFG_LWIP_NUM_PBUFS           32                              /*  系统总 pbuf 数量            */
+#define LW_CFG_LWIP_NUM_NETBUF          32                              /*  缓冲网络分组 netbuf 数量    */
 #define LW_CFG_LWIP_NUM_POOLS           LW_CFG_LWIP_MSG_SIZE            /*  等长缓冲总数量(高速缓冲)    */
                                                                         /*  驱动程序与 AF_PACKET 使用   */
                                                                         
@@ -115,12 +115,12 @@
 #define LW_CFG_LWIP_NUM_PPP             0                               /*  lwip ppp 最大会话数         */
 #endif                                                                  /*  __GNUC__                    */
 
-#define LW_CFG_LWIP_JOBQUEUE_SIZE       256                             /*  sylixos job queue size      */
+#define LW_CFG_LWIP_JOBQUEUE_SIZE       32                              /*  sylixos job queue size      */
 #define LW_CFG_LWIP_STK_SIZE            4096                            /*  lwip thread default stksize */
 
-#define LW_CFG_LWIP_TCP_PCB             100                             /*  允许同时的 TCP 连接数       */
-#define LW_CFG_LWIP_UDP_PCB             100                             /*  允许同时的 UDP 数量         */
-#define LW_CFG_LWIP_RAW_PCB             20                              /*  允许同时的 RAW 数量         */
+#define LW_CFG_LWIP_TCP_PCB             10                              /*  允许同时的 TCP 连接数       */
+#define LW_CFG_LWIP_UDP_PCB             10                              /*  允许同时的 UDP 数量         */
+#define LW_CFG_LWIP_RAW_PCB             1                               /*  允许同时的 RAW 数量         */
 
 #define LW_CFG_LWIP_DHCP                1                               /*  是否允许 DHCP 协议          */
 #define LW_CFG_LWIP_AUTOIP              1                               /*  自动分析获取 IP             */
@@ -147,7 +147,7 @@
 *********************************************************************************************************/
 
 #define LW_CFG_LWIP_IGMP                1                               /*  是否使能 IGMP               */
-#define LW_CFG_LWIP_IGMP_GROUP          20                              /*  可加入的 IGMP 组最大数量    */
+#define LW_CFG_LWIP_IGMP_GROUP          2                               /*  可加入的 IGMP 组最大数量    */
 
 /*********************************************************************************************************
 *                                       lwip 以太网设置
@@ -156,7 +156,7 @@
 * 则推荐为 1 , 这样可以减少虚拟 ARP 数据包的数量, 从而减少无谓的无线数据包碰撞可能性. 
 *********************************************************************************************************/
 
-#define LW_CFG_LWIP_ARP_TABLE_SIZE      100                             /*  以太网接口 ARP 表大小       */
+#define LW_CFG_LWIP_ARP_TABLE_SIZE      10                              /*  以太网接口 ARP 表大小       */
 #define LW_CFG_LWIP_ARP_TRUST_IP_MAC    1                               /*  接收 IP 包是否更新 ARP      */
                                                                         /*  windows 不信任, 建议为 0    */
 #define LW_CFG_LWIP_ETH_PAD_SIZE        2                               /*  以太包头填充对齐数量        */

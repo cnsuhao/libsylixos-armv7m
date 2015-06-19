@@ -35,17 +35,17 @@
 *                                        系统对象个数管理                                                  
 *********************************************************************************************************/
 
-#define LW_CFG_MAX_EVENTS                       1500    /*  系统使用事件的最大个数              < 65535 */
-#define LW_CFG_MAX_EVENTSETS                    100     /*  系统使用事件集的最大个数            < 65535 */
-#define LW_CFG_MAX_PARTITIONS                   30      /*  系统定长分区内存管理最大分区数      < 65535 */
-#define LW_CFG_MAX_REGIONS                      20      /*  系统变长分区内存管理对大分区数      < 65535 */
-#define LW_CFG_MAX_MSGQUEUES                    300     /*  系统消息队列最大个数                < 65535 */
-#define LW_CFG_MAX_TIMERS                       100     /*  系统使用总定时器最大个数            < 65535 */
-#define LW_CFG_MAX_THREADS                      100     /*  系统管理的最大线程数量，            < 65535 */
-#define LW_CFG_MAX_RMSS                         30      /*  系统管理的最大精度单调调度器数量    < 65535 */
-#define LW_CFG_MAX_INTER_SRC                    128     /*  系统使用中断向量表大小,中断源数量   <  9999 */
-#define LW_CFG_MAX_NOTEPADS                     4       /*  系统每个线程使用的记事本数量        <   255 */
-#define LW_CFG_MAX_THREAD_GLB_VARS              20      /*  系统总共需要使用的全局变量私有化个数< 65535 */
+#define LW_CFG_MAX_EVENTS                       128     /*  系统使用事件的最大个数              < 65535 */
+#define LW_CFG_MAX_EVENTSETS                    4       /*  系统使用事件集的最大个数            < 65535 */
+#define LW_CFG_MAX_PARTITIONS                   10      /*  系统定长分区内存管理最大分区数      < 65535 */
+#define LW_CFG_MAX_REGIONS                      2       /*  系统变长分区内存管理对大分区数      < 65535 */
+#define LW_CFG_MAX_MSGQUEUES                    10      /*  系统消息队列最大个数                < 65535 */
+#define LW_CFG_MAX_TIMERS                       4       /*  系统使用总定时器最大个数            < 65535 */
+#define LW_CFG_MAX_THREADS                      64      /*  系统管理的最大线程数量，            < 65535 */
+#define LW_CFG_MAX_RMSS                         4       /*  系统管理的最大精度单调调度器数量    < 65535 */
+#define LW_CFG_MAX_INTER_SRC                    64      /*  系统使用中断向量表大小,中断源数量   <  9999 */
+#define LW_CFG_MAX_NOTEPADS                     1       /*  系统每个线程使用的记事本数量        <   255 */
+#define LW_CFG_MAX_THREAD_GLB_VARS              4       /*  系统总共需要使用的全局变量私有化个数< 65535 */
 
 /*********************************************************************************************************
 *                                        事件优先级等待队列入口数
@@ -70,9 +70,9 @@
 *********************************************************************************************************/
 
 #define LW_CFG_ERRORMESSAGE_EN                  1       /*  是否允许将系统故障信息打印 (独立于任何服务) */
-#define LW_CFG_LOGMESSAGE_EN                    1       /*  是否允许将系统运行状态打印 (独立于任何服务) */
+#define LW_CFG_LOGMESSAGE_EN                    0       /*  是否允许将系统运行状态打印 (独立于任何服务) */
 #define LW_CFG_BUGMESSAGE_EN                    1       /*  是否允许将系统运行BUG打印  (独立于任何服务) */
-#define LW_CFG_ERRORMESSAGE_DETAIL_EN           1       /*  是否需要打印详细错误信息                    */
+#define LW_CFG_ERRORMESSAGE_DETAIL_EN           0       /*  是否需要打印详细错误信息                    */
 
 /*********************************************************************************************************
 *                                        系统跟踪与监控管理
@@ -80,7 +80,7 @@
 * 依存关系: 无
 *********************************************************************************************************/
 
-#define LW_CFG_MONITOR_EN                       1       /*  是否允许系统提供监控信息                    */
+#define LW_CFG_MONITOR_EN                       0       /*  是否允许系统提供监控信息                    */
 
 /*********************************************************************************************************
 *                                          系统内核管理
@@ -91,7 +91,7 @@
 #define LW_CFG_ARG_CHK_EN                       1       /*  是否允许系统参数查错                        */
 #define LW_CFG_CPU_HOOKS_EN                     1       /*  是否允许系统的钩子函数连接                  */
 #define LW_CFG_SOFTWARE_WATCHDOG_EN             1       /*  是否允许任务软件看门狗功能 (任务级)         */
-#define LW_CFG_OBJECT_NAME_SIZE                 32      /*  系统提供控件名字最大长度                    */
+#define LW_CFG_OBJECT_NAME_SIZE                 16      /*  系统提供控件名字最大长度                    */
 #define LW_CFG_ERRORNO_AUTO_CLEAR               0       /*  是否在 API 正确时, 自动将 errno 清零        */
 #define LW_CFG_PANIC_FUNC                       1       /*  0: panic 系统重新启动, 1: 当前任务挂起      */
 #define LW_CFG_STK_EMPTY_FLAG                   0xab    /*  堆栈空闲区域填充字节内容(用于堆栈检查)      */

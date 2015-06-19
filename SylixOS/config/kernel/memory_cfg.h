@@ -37,24 +37,24 @@
 *                                       (不包括网络与其他扩展子系统相关线程)
 *********************************************************************************************************/
 
-#define LW_CFG_INT_STK_SIZE                         (4 * LW_CFG_KB_SIZE)/*  系统中断堆栈大小 (字节)     */
-#define LW_CFG_THREAD_DEFAULT_STK_SIZE              (4 * LW_CFG_KB_SIZE)/*  系统默认堆栈大小            */
-#define LW_CFG_THREAD_DEFAULT_GUARD_SIZE            (1 * LW_CFG_KB_SIZE)/*  堆栈警戒区大小              */
+#define LW_CFG_INT_STK_SIZE                         (2 * LW_CFG_KB_SIZE)/*  系统中断堆栈大小 (字节)     */
+#define LW_CFG_THREAD_DEFAULT_STK_SIZE              (2 * LW_CFG_KB_SIZE)/*  系统默认堆栈大小            */
+#define LW_CFG_THREAD_DEFAULT_GUARD_SIZE            (128)               /*  堆栈警戒区大小              */
 
-#define LW_CFG_THREAD_IDLE_STK_SIZE                 (4 * LW_CFG_KB_SIZE)/*  系统空闲任务堆栈大小        */
-#define LW_CFG_THREAD_SIG_STK_SIZE                  (4 * LW_CFG_KB_SIZE)/*  系统信号管理任务堆栈大小    */
-#define LW_CFG_THREAD_LOG_STK_SIZE                  (4 * LW_CFG_KB_SIZE)/*  系统日志管理任务堆栈大小    */
-#define LW_CFG_THREAD_ITMR_STK_SIZE                 (4 * LW_CFG_KB_SIZE)/*  系统任务定时器服务堆栈大小  */
-#define LW_CFG_THREAD_POWERM_STK_SIZE               (4 * LW_CFG_KB_SIZE)/*  系统功耗管理器线程堆栈大小  */
-#define LW_CFG_THREAD_DISKCACHE_STK_SIZE            (4 * LW_CFG_KB_SIZE)/*  系统磁盘缓冲背景线程堆栈大小*/
-#define LW_CFG_THREAD_HOTPLUG_STK_SIZE              (8 * LW_CFG_KB_SIZE)/*  系统热插拔背景线程堆栈大小  */
-#define LW_CFG_THREAD_RECLAIM_STK_SIZE             (16 * LW_CFG_KB_SIZE)/*  系统资源回收线程堆栈大小    */
+#define LW_CFG_THREAD_IDLE_STK_SIZE                 (1 * LW_CFG_KB_SIZE)/*  系统空闲任务堆栈大小        */
+#define LW_CFG_THREAD_SIG_STK_SIZE                  (2 * LW_CFG_KB_SIZE)/*  系统信号管理任务堆栈大小    */
+#define LW_CFG_THREAD_LOG_STK_SIZE                  (2 * LW_CFG_KB_SIZE)/*  系统日志管理任务堆栈大小    */
+#define LW_CFG_THREAD_ITMR_STK_SIZE                 (2 * LW_CFG_KB_SIZE)/*  系统任务定时器服务堆栈大小  */
+#define LW_CFG_THREAD_POWERM_STK_SIZE               (2 * LW_CFG_KB_SIZE)/*  系统功耗管理器线程堆栈大小  */
+#define LW_CFG_THREAD_DISKCACHE_STK_SIZE            (2 * LW_CFG_KB_SIZE)/*  系统磁盘缓冲背景线程堆栈大小*/
+#define LW_CFG_THREAD_HOTPLUG_STK_SIZE              (4 * LW_CFG_KB_SIZE)/*  系统热插拔背景线程堆栈大小  */
+#define LW_CFG_THREAD_RECLAIM_STK_SIZE              (4 * LW_CFG_KB_SIZE)/*  系统资源回收线程堆栈大小    */
 
 /*********************************************************************************************************
 *                                          STDIO DEFAULT BUFFER SIZE
 *********************************************************************************************************/
 
-#define LW_CFG_STDIO_BUFFER_SIZE                    512                 /*  标准缓冲 IO 初始缓冲大小    */
+#define LW_CFG_STDIO_BUFFER_SIZE                    32                  /*  标准缓冲 IO 初始缓冲大小    */
 
 /*********************************************************************************************************
 *                                          HEAP 

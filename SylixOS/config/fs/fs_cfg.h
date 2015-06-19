@@ -28,10 +28,10 @@
              2: I/O 系统
 *********************************************************************************************************/
 
-#define LW_CFG_MAX_VOLUMES                  20                          /*  系统同时支持的卷的数量      */
+#define LW_CFG_MAX_VOLUMES                  2                           /*  系统同时支持的卷的数量      */
                                                                         /*  MAX 255                     */
                                                                         
-#define LW_CFG_MAX_DISKPARTS                10                          /*  每个物理磁盘支持的最大逻辑  */
+#define LW_CFG_MAX_DISKPARTS                4                           /*  每个物理磁盘支持的最大逻辑  */
                                                                         /*  分区数量, (包含扩展分区)    */
                                                                         /*  常见于硬盘等大容量设备      */
                                                                         
@@ -120,7 +120,7 @@
 *********************************************************************************************************/
 
 #define LW_CFG_YAFFS_EN                     1                           /*  是否允许 YAFFS 文件系统     */
-#define LW_CFG_YAFFS_MAX_FILES              100                         /*  可以同时打开的 YAFFS 文件数 */
+#define LW_CFG_YAFFS_MAX_FILES              5                           /*  可以同时打开的 YAFFS 文件数 */
 
 #define LW_CFG_YAFFS_UNMOUNT_VOL            1                           /*  卸载 YAFFS 卷时 unmount 操作*/
 

@@ -35,15 +35,15 @@
 
 #define LW_CFG_SHELL_EN                         1                       /*  是否允许系统提供 tshell     */
 #define LW_CFG_SHELL_THREAD_OPTION              LW_OPTION_THREAD_STK_CHK/*  tshell 线程 option          */
-#define LW_CFG_SHELL_THREAD_STK_SIZE            (32 * LW_CFG_KB_SIZE)   /*  tshell 线程堆栈大小         */
+#define LW_CFG_SHELL_THREAD_STK_SIZE            (8 * LW_CFG_KB_SIZE)    /*  tshell 线程堆栈大小         */
 
 /*********************************************************************************************************
 *                                 SHELL 系统配置
 *********************************************************************************************************/
 
-#define LW_CFG_SHELL_MAX_COMMANDLEN             512                     /*  最长的 shell 命令长度       */
-#define LW_CFG_SHELL_MAX_KEYWORDLEN             64                      /*  最长的 shell 关键字长度     */
-#define LW_CFG_SHELL_MAX_PARAMNUM               64                      /*  最多的 shell 参数个数       */
+#define LW_CFG_SHELL_MAX_COMMANDLEN             128                     /*  最长的 shell 命令长度       */
+#define LW_CFG_SHELL_MAX_KEYWORDLEN             16                      /*  最长的 shell 关键字长度     */
+#define LW_CFG_SHELL_MAX_PARAMNUM               8                       /*  最多的 shell 参数个数       */
 #define LW_CFG_SHELL_KEY_HASH_SIZE              79                      /*  命令哈希表的大小, (素数)    */
 
 /*********************************************************************************************************
@@ -58,7 +58,7 @@
 *                                 变量系统配置
 *********************************************************************************************************/
 
-#define LW_CFG_SHELL_MAX_VARNAMELEN             64                      /*  最长的变量名                */
+#define LW_CFG_SHELL_MAX_VARNAMELEN             32                      /*  最长的变量名                */
 #define LW_CFG_SHELL_VAR_HASH_SIZE              43                      /*  变量哈希表的大小, (素数)    */
                                                                         /*  本应该使用自适应的算法, 自动*/
                                                                         /*  调整哈希表的大小, 但是这个  */

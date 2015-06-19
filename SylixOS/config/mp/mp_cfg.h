@@ -55,7 +55,7 @@
 
 #define LW_CFG_MPI_EN                   1               /*  并行分布式计算系统支持                      */
 #define LW_CFG_PROCESSOR_NUMBER         1               /*  当前 MPI 处理器号                           */
-#define LW_CFG_MAX_MPDPMAS              2               /*  系统双通道 RAM 缓冲区个数         < 65535   */
+#define LW_CFG_MAX_MPDPMAS              1               /*  系统双通道 RAM 缓冲区个数         < 65535   */
 
 #endif                                                  /*  __MP_CFG_H                                  */
 /*********************************************************************************************************
