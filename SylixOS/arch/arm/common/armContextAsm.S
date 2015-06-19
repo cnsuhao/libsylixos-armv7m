@@ -93,10 +93,10 @@ FUNC_DEF(archCrtCtxSwitch)
 ;*********************************************************************************************************/
 
 FUNC_DEF(archIntCtxLoad)
-    MOV     R4, R0                                                      ;/*  当前 CPU 信息入栈           */
+    MOV     R4 , R0                                                     ;/*  当前 CPU 信息入栈           */
     LDR     R1 , =_SchedSwp                                             ;/*  _SchedSwp();                */
     BLX     R1
-    MOV     R0, R4                                                      ;/*  当前 CPU 信息出栈           */
+    MOV     R0 , R4                                                     ;/*  当前 CPU 信息出栈           */
 
     LDR     R1 , [R0]                                                   ;/*  R0 = stack current          */
     LDR     R0 , [R1]

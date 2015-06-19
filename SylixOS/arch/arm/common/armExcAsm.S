@@ -50,25 +50,25 @@ FUNC_DEF(archIntEntry)
     CPSID   I
 
     ;/* R2 等于异常进入前使用的 SP */
-    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    TST     LR , #0x04                                          ;/*  nonzero if context on process stack */
     ITE     EQ                                                  ;/*  next two instructions conditional   */
-    MRSEQ   R2, MSP
-    MRSNE   R2, PSP
+    MRSEQ   R2 , MSP
+    MRSNE   R2 , PSP
 
     ;/* 保存余下的 R3-11, R14 寄存器到异常进入前使用的 SP */
     SUBS    R2 , R2, #0x28
     STM     R2 , {R3-R11, LR}
 
     ;/* 异常进入前使用的 SP 等于 R2 */
-    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    TST     LR , #0x04                                           ;/*  nonzero if context on process stack */
     MSRNE   PSP, R2
 
     ;/* 现在使用的是 MSP, 所以无论如何都设置 MSP */
     MSR     MSP, R2
 
     ;/* R0, R2 放置到 R4, R5 */
-    MOV     R4, R0
-    MOV     R5, R2
+    MOV     R4 , R0
+    MOV     R5 , R2
 
     ;/* 调用 API_InterEnter */
     LDR     R1 , =API_InterEnter
@@ -86,8 +86,8 @@ FUNC_DEF(archIntEntry)
 
     ;/* R4, R5 恢复到 R0, R1 */
 2:
-    MOV     R0, R4
-    MOV     R1, R5
+    MOV     R0 , R4
+    MOV     R1 , R5
 
     ;/* 调用 armv7mIntHandle(UINT32  uiVector, ARCH_REG_CTX  *pregctx) */
     LDR     R2 , =armv7mIntHandle
@@ -103,7 +103,7 @@ FUNC_DEF(armv7mIntCtxLoad)
     MSREQ   MSP, R0
     MSRNE   PSP, R0
 
-    MSR     PRIMASK , R3
+    MSR     PRIMASK, R3
 
     BX      LR
     FUNC_END()
@@ -120,24 +120,24 @@ FUNC_DEF(archSwiEntry)
     CPSID   I
 
     ;/* R2 等于异常进入前使用的 SP */
-    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    TST     LR , #0x04                                          ;/*  nonzero if context on process stack */
     ITE     EQ                                                  ;/*  next two instructions conditional   */
-    MRSEQ   R2, MSP
-    MRSNE   R2, PSP
+    MRSEQ   R2 , MSP
+    MRSNE   R2 , PSP
 
     ;/* 保存余下的 R3-11, R14 寄存器到异常进入前使用的 SP */
     SUBS    R2 , R2, #0x28
     STM     R2 , {R3-R11, LR}
 
     ;/* 异常进入前使用的 SP 等于 R2 */
-    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    TST     LR , #0x04                                          ;/*  nonzero if context on process stack */
     MSRNE   PSP, R2
 
     ;/* 现在使用的是 MSP, 所以无论如何都设置 MSP */
     MSR     MSP, R2
 
     ;/* R2 放置到 R1 */
-    MOV     R1, R2
+    MOV     R1 , R2
 
     ;/* 调用 armv7mSvcHandle(UINT32  uiVector, ARCH_REG_CTX  *pregctx) */
     LDR     R2 , =armv7mSvcHandle
@@ -147,12 +147,12 @@ FUNC_DEF(archSwiEntry)
     LDM     R0 , {R3-R11, LR}
     ADDS    R0 , R0, #0x28
 
-    TST     LR, #0x04                                           ;/*  nonzero if context on process stack */
+    TST     LR , #0x04                                          ;/*  nonzero if context on process stack */
     ITE     EQ                                                  ;/*  next two instructions conditional   */
     MSREQ   MSP, R0
     MSRNE   PSP, R0
 
-    MSR     PRIMASK , R3
+    MSR     PRIMASK, R3
 
     BX      LR
     FUNC_END()
